@@ -1,0 +1,34 @@
+# Secrets and local tool state
+.env
+temp.md
+.firecrawl/
+.vscode/
+
+# Immutable private sources
+novels/
+
+# Private Weaver state and generated knowledge
+.weaver/
+private/
+runs/
+receipts/
+wiki/
+vault/
+generated-wiki/
+generated-vault/
+
+# Python-generated files
+__pycache__/
+*.py[oc]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+wheels/
+*.egg-info/
+
+# Virtual environments
+.venv/
