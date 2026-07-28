@@ -6,30 +6,30 @@
 - [x] Owner confirmed the compromised Firecrawl credential was rotated.
 - [x] `temp.md` is absent from the current working tree.
 - [x] Public/private ignore rules are implemented.
-- [ ] Staged-file audit finds no credentials or novel text.
+- [x] Staged-file audit finds no credentials or novel text.
 
 ## Gate B — Deterministic implementation
 
-- [ ] Provider-neutral model types exist.
-- [ ] `ModelClient.complete(request)` is asynchronous.
-- [ ] DeepSeek aliases are exact.
-- [ ] Adapter uses an explicit timeout and `max_retries=0`.
-- [ ] Normal content, JSON mode, and function calls normalize correctly.
-- [ ] Function argument strings are not silently repaired.
-- [ ] Usage includes reasoning and cache details when returned.
-- [ ] Fake client is deterministic.
-- [ ] Fake and live CLI modes are explicit and never fall back.
-- [ ] Private receipts are redacted and owner-only.
-- [ ] Required deterministic commands pass.
+- [x] Provider-neutral model types exist.
+- [x] `ModelClient.complete(request)` is asynchronous.
+- [x] DeepSeek aliases are exact.
+- [x] Adapter uses an explicit timeout and `max_retries=0`.
+- [x] Normal content, JSON mode, and function calls normalize correctly.
+- [x] Function argument strings are not silently repaired.
+- [x] Usage includes reasoning and cache details when returned.
+- [x] Fake client is deterministic.
+- [x] Fake and live CLI modes are explicit and never fall back.
+- [x] Private receipts are redacted and owner-only.
+- [x] Required deterministic commands pass.
 
 ## Gate C — Live evidence
 
-- [ ] Flash JSON call completed.
-- [ ] Repeated Flash prefix recorded cache fields.
-- [ ] Pro forced function call normalized correctly.
-- [ ] Returned model IDs, latency, usage, and finish reasons were recorded.
-- [ ] No novel text was sent.
-- [ ] No literary-quality conclusion was drawn.
+- [x] Flash JSON call completed.
+- [x] Repeated Flash prefix recorded cache fields.
+- [x] Pro forced function call normalized correctly.
+- [x] Returned model IDs, latency, usage, and finish reasons were recorded.
+- [x] No novel text was sent.
+- [x] No literary-quality conclusion was drawn.
 
 ## Gate D — Review and decision
 
