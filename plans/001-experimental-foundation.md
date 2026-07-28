@@ -2,7 +2,12 @@
 
 ## Status
 
-Implementation admitted on 2026-07-28 after the owner:
+**Accepted by the owner on 2026-07-29.**
+
+Implementation, deterministic verification, the live smoke, one bounded
+repair, both independent rechecks, and the final human decision are complete.
+
+Implementation was admitted on 2026-07-28 after the owner:
 
 1. confirmed the exposed Firecrawl credential was rotated; and
 2. confirmed the “What I understood” section in

@@ -6,6 +6,9 @@ Initial candidate: `ae179f56fca9f6e9d1bcf3f07000fa7f9d842d6f`.
 
 Both reviewers received the same committed candidate packet.
 
+Repaired candidate:
+`a9972f231b362fa11425f4db25cd4d21a181f843`.
+
 ## Review 1 — Architecture and privacy
 
 - Model: `deepseek-v4-pro`
@@ -37,13 +40,22 @@ repair. The applied changes:
 
 ## Recheck 1
 
-Pending.
+- Model: `deepseek-v4-pro`
+- Candidate: `a9972f231b362fa11425f4db25cd4d21a181f843`
+- Status: pass
+- Findings: none
+- Note: no regression, privacy leak, or remaining blocker.
 
 ## Recheck 2
 
-Pending.
+- Model: `deepseek-v4-pro`
+- Candidate: `a9972f231b362fa11425f4db25cd4d21a181f843`
+- Status: pass
+- Findings: none
+- Resolved:
+  - staged-file audit evidence is now recorded;
+  - the guardrails edge is explicit in both diagram sources.
 
 ## Remaining blockers
 
-Implementation, deterministic evidence, live smoke, and independent reviews
-are pending. The learning and credential gates are complete.
+None. The owner accepted Plan 001 on 2026-07-29.

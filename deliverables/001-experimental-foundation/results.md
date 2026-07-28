@@ -2,8 +2,8 @@
 
 ## Status
 
-Implementation and the synthetic live smoke completed on 2026-07-28.
-Independent reviews and the owner's final decision remain pending.
+Implementation, the synthetic live smoke, and independent reviews completed on
+2026-07-28. The owner accepted Plan 001 on 2026-07-29.
 
 ## Hypotheses
 
@@ -63,6 +63,25 @@ Before both checkpoint commits, the staged path list was inspected and excluded
 `.env`, `temp.md`, `.firecrawl/`, `.weaver/`, `.vscode/`, and `novels/`.
 Credential-shaped-value scans over the staged diff returned no match. Plan 001
 did not open novel files or copy novel source text into candidate files.
+
+## Independent review observations
+
+Initial frozen candidate:
+`ae179f56fca9f6e9d1bcf3f07000fa7f9d842d6f`
+
+- Pro architecture/privacy review: pass with no findings.
+- Pro tests/evidence review: blocked on one unrecorded audit item and one
+  diagram-source clarity issue.
+
+Flash proposed the single admitted repair pass. The repaired candidate was
+frozen as `a9972f231b362fa11425f4db25cd4d21a181f843`, and the full deterministic
+floor still passed.
+
+Both Pro reviewers independently rechecked that same repaired commit:
+
+- Architecture/privacy recheck: pass, zero findings.
+- Tests/evidence recheck: pass, both findings resolved, zero remaining
+  findings.
 
 ## Known limits
 

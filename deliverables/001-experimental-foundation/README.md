@@ -8,9 +8,9 @@ Public evidence belongs here. Private run receipts do not.
 | `plan.md` | Stable pointer to the canonical plan | Drafted |
 | `learning.md` | Source-backed beginner learning note and confirmation gate | Awaiting owner confirmation |
 | `results.md` | Deterministic and live observations | Recorded |
-| `decision.md` | Owner's final accept/reject decision | Blocked |
+| `decision.md` | Owner's final accept/reject decision | Accepted 2026-07-29 |
 | `rubric.md` | Acceptance and review checklist | Drafted |
-| `review-ledger.md` | Independent reviewer findings and rechecks | Not started |
+| `review-ledger.md` | Independent reviewer findings and rechecks | Complete; no remaining blocker |
 | `architecture.drawio` | Editable architecture diagram | Complete |
 | `architecture.svg` | Reproducible PNG render source | Complete |
 | `architecture.png` | Rendered architecture diagram | Complete and visually inspected |

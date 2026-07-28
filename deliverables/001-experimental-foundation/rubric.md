@@ -33,9 +33,9 @@
 
 ## Gate D — Review and decision
 
-- [ ] Architecture/privacy Pro review has no blocker.
-- [ ] Test/evidence Pro review has no blocker.
-- [ ] Accepted findings were repaired at most once.
-- [ ] Both reviewers rechecked the unchanged repaired candidate.
-- [ ] Owner inspected learning, diagrams, live evidence, and results.
-- [ ] Owner finalized `decision.md`.
+- [x] Architecture/privacy Pro review has no blocker.
+- [x] Test/evidence Pro review has no blocker.
+- [x] Accepted findings were repaired at most once.
+- [x] Both reviewers rechecked the unchanged repaired candidate.
+- [x] Owner inspected learning, diagrams, live evidence, and results.
+- [x] Owner finalized `decision.md`.
