@@ -40,8 +40,43 @@ correct two-request tool exchange for both `deepseek-v4-flash` and
 
 ## Live observations
 
-None yet. Flash and Pro each get one attempt only after every deterministic
-check passes and the owner gives explicit live permission.
+The owner admitted the live run on 2026-07-30. The command ran Flash first and
+Pro second, with one attempt per model and no retry or fallback.
+
+Private receipt:
+
+```text
+.weaver/runs/provider-tool-contract-20260730T092102-a3af35a23aa7
+```
+
+Safe observations:
+
+| Model | Request 1 | Request 2 | Latency 1 | Latency 2 | Argument bytes | Final bytes | Outcome |
+| --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| `deepseek-v4-flash` | `tool_use` | `stop` | 1691.241 ms | 1134.182 ms | 18 | 55 | Passed |
+| `deepseek-v4-pro` | `tool_use` | `stop` | 1333.552 ms | 1230.163 ms | 18 | 73 | Passed |
+
+- Both call IDs were present.
+- Both argument hashes and final-text hashes are 64-character SHA-256 values.
+- Thinking stayed disabled.
+- The run completed four API requests total.
+- DeepSeek did not report token counts in these streamed responses. The receipt
+  keeps the usage fields with `null` values rather than inventing numbers.
+- The receipt directory is mode `700`; all five files are mode `600`.
+- The receipt contains no credential, raw arguments, actual call ID value,
+  prompt text, final prose, provider body, or reasoning text.
+
+## Architecture observations
+
+- `architecture.drawio` parses as valid XML.
+- The Draw.io structural validator reports 33 cells, 21 vertices, 10 edges,
+  zero errors, and zero warnings.
+- Every edge has its required geometry child.
+- `architecture.svg` parses as valid XML.
+- The Draw.io desktop CLI is unavailable, so no CLI export was attempted.
+- ImageMagick rendered the SVG to a capped 1400 by 900 PNG for inspection.
+- The preview has no clipped labels, overlapping shapes, missing acceptance
+  branch, off-canvas content, or broken connection.
 
 ## Failures
 

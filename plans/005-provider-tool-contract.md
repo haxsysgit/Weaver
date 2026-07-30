@@ -7,7 +7,7 @@
 
 ## Status
 
-- **State:** Deterministic floor passed; explicit live permission pending
+- **State:** Deterministic and live contracts passed; independent review active
 - **Priority:** P1
 - **Effort:** M
 - **Risk:** Low for deterministic work; medium for live-provider uncertainty

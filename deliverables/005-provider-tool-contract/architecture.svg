@@ -1,0 +1,170 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" role="img" aria-labelledby="title description">
+  <title id="title">Plan 005 provider-neutral tool payload contract architecture</title>
+  <desc id="description">Neutral Weaver messages cross a replaceable provider adapter and the real OpenAI SDK. Mock and live transports prove the same linked tool round trip. Flash and Pro must both pass before private evidence reaches the human gate.</desc>
+  <defs>
+    <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#4F81BD" />
+    </marker>
+    <marker id="arrow-grey" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#666666" />
+    </marker>
+    <marker id="arrow-purple" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#9673A6" />
+    </marker>
+    <marker id="arrow-yellow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#D6B656" />
+    </marker>
+    <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#82B366" />
+    </marker>
+    <marker id="arrow-red" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#B85450" />
+    </marker>
+    <style>
+      text { font-family: Inter, "DejaVu Sans", Arial, sans-serif; fill: #172033; }
+      .lane-title { font-size: 16px; font-weight: 700; }
+      .node-title { font-size: 13px; font-weight: 700; text-anchor: middle; }
+      .node-copy { font-size: 11px; text-anchor: middle; fill: #394554; }
+      .edge { fill: none; stroke-width: 2.2; }
+      .edge-label { font-size: 11px; font-weight: 700; }
+    </style>
+  </defs>
+
+  <rect width="1400" height="900" fill="#FFFFFF" />
+  <text x="40" y="48" font-size="26" font-weight="700">Plan 005: provider-neutral tool payload contract</text>
+  <text x="40" y="78" font-size="15" fill="#52606D">Neutral messages cross the real SDK, replay one linked result, and pass only when Flash and Pro finish.</text>
+
+  <g>
+    <rect x="40" y="110" width="310" height="350" rx="14" fill="#F8FBFE" stroke="#4F81BD" stroke-width="2" />
+    <rect x="40" y="110" width="310" height="38" rx="14" fill="#E8F3FC" />
+    <path d="M40 148 H350" stroke="#4F81BD" stroke-width="2" />
+    <text x="60" y="136" class="lane-title" fill="#24476B">Neutral Weaver exchange</text>
+  </g>
+  <g>
+    <rect x="380" y="110" width="220" height="350" rx="14" fill="#FCFCFC" stroke="#666666" stroke-width="2" />
+    <rect x="380" y="110" width="220" height="38" rx="14" fill="#F5F5F5" />
+    <path d="M380 148 H600" stroke="#666666" stroke-width="2" />
+    <text x="400" y="136" class="lane-title" fill="#333333">Provider adapter</text>
+  </g>
+  <g>
+    <rect x="630" y="110" width="260" height="350" rx="14" fill="#FCF9FF" stroke="#9673A6" stroke-width="2" />
+    <rect x="630" y="110" width="260" height="38" rx="14" fill="#E1D5E7" />
+    <path d="M630 148 H890" stroke="#9673A6" stroke-width="2" />
+    <text x="650" y="136" class="lane-title" fill="#4C3868">Real OpenAI SDK</text>
+  </g>
+  <g>
+    <rect x="920" y="110" width="430" height="350" rx="14" fill="#FFFDF6" stroke="#D6B656" stroke-width="2" />
+    <rect x="920" y="110" width="430" height="38" rx="14" fill="#FFF2CC" />
+    <path d="M920 148 H1350" stroke="#D6B656" stroke-width="2" />
+    <text x="940" y="136" class="lane-title" fill="#5D4A00">Transport paths</text>
+  </g>
+  <g>
+    <rect x="200" y="540" width="500" height="280" rx="14" fill="#FAFDFA" stroke="#82B366" stroke-width="2" />
+    <rect x="200" y="540" width="500" height="38" rx="14" fill="#D5E8D4" />
+    <path d="M200 578 H700" stroke="#82B366" stroke-width="2" />
+    <text x="220" y="566" class="lane-title" fill="#285A31">Two-model acceptance</text>
+  </g>
+  <g>
+    <rect x="760" y="540" width="590" height="280" rx="14" fill="#FFF9F8" stroke="#B85450" stroke-width="2" />
+    <rect x="760" y="540" width="590" height="38" rx="14" fill="#F8CECC" />
+    <path d="M760 578 H1350" stroke="#B85450" stroke-width="2" />
+    <text x="780" y="566" class="lane-title" fill="#7A241E">Private evidence and human gate</text>
+  </g>
+
+  <g>
+    <rect x="65" y="175" width="260" height="70" rx="12" fill="#D9EAF7" stroke="#4F81BD" stroke-width="2" />
+    <text x="195" y="198" class="node-title">Request 1</text>
+    <text x="195" y="218" class="node-copy">neutral messages + tool schema</text>
+    <text x="195" y="235" class="node-copy">thinking disabled</text>
+  </g>
+  <g>
+    <rect x="65" y="270" width="260" height="82" rx="12" fill="#FFF7D6" stroke="#D6B656" stroke-width="3" />
+    <text x="195" y="293" class="node-title">Assistant tool call + fixed result</text>
+    <text x="195" y="315" class="node-copy">same call ID</text>
+    <text x="195" y="334" class="node-copy">raw arguments preserved</text>
+  </g>
+  <g>
+    <rect x="65" y="382" width="260" height="58" rx="12" fill="#DCEFE0" stroke="#4D8C57" stroke-width="2" />
+    <text x="195" y="405" class="node-title">Request 2 → final response</text>
+    <text x="195" y="425" class="node-copy">tool stays available, forced choice removed</text>
+  </g>
+
+  <g>
+    <rect x="405" y="220" width="170" height="120" rx="12" fill="#F5F5F5" stroke="#666666" stroke-width="3" />
+    <text x="490" y="245" class="node-title">Thin registration</text>
+    <text x="490" y="269" class="node-copy">adapter converts neutral messages</text>
+    <text x="490" y="291" class="node-copy">DeepSeek today</text>
+    <text x="490" y="312" class="node-copy">replaceable later</text>
+  </g>
+
+  <g>
+    <rect x="660" y="180" width="200" height="76" rx="12" fill="#F3E8F7" stroke="#9673A6" stroke-width="2" />
+    <text x="760" y="205" class="node-title">HTTP JSON serializer</text>
+    <text x="760" y="228" class="node-copy">messages, tools, tool choice</text>
+  </g>
+  <g>
+    <rect x="660" y="320" width="200" height="76" rx="12" fill="#F3E8F7" stroke="#9673A6" stroke-width="2" />
+    <text x="760" y="345" class="node-title">Streaming SSE parser</text>
+    <text x="760" y="368" class="node-copy">split deltas, finishes, usage</text>
+  </g>
+
+  <g>
+    <rect x="950" y="215" width="170" height="100" rx="12" fill="#FFF7D6" stroke="#D6B656" stroke-width="2" />
+    <text x="1035" y="241" class="node-title">MockTransport</text>
+    <text x="1035" y="264" class="node-copy">exact bodies, no network</text>
+    <text x="1035" y="285" class="node-copy">repeatable suite</text>
+  </g>
+  <g>
+    <rect x="1150" y="215" width="170" height="100" rx="12" fill="#FFE9B8" stroke="#D6B656" stroke-width="3" />
+    <text x="1235" y="241" class="node-title">DeepSeek live</text>
+    <text x="1235" y="264" class="node-copy">Flash then Pro</text>
+    <text x="1235" y="285" class="node-copy">one attempt, four requests max</text>
+  </g>
+
+  <g>
+    <rect x="235" y="610" width="180" height="70" rx="12" fill="#DCEFE0" stroke="#4D8C57" stroke-width="2" />
+    <text x="325" y="636" class="node-title">Flash branch</text>
+    <text x="325" y="659" class="node-copy">tool_use → stop</text>
+  </g>
+  <g>
+    <rect x="485" y="610" width="180" height="70" rx="12" fill="#DCEFE0" stroke="#4D8C57" stroke-width="2" />
+    <text x="575" y="636" class="node-title">Pro branch</text>
+    <text x="575" y="659" class="node-copy">tool_use → stop</text>
+  </g>
+  <g>
+    <rect x="340" y="730" width="220" height="66" rx="12" fill="#E8F5E9" stroke="#82B366" stroke-width="3" />
+    <text x="450" y="756" class="node-title">Both pass</text>
+    <text x="450" y="779" class="node-copy">candidate may move to review</text>
+  </g>
+
+  <g>
+    <rect x="790" y="620" width="240" height="120" rx="12" fill="#FFF7D6" stroke="#D6B656" stroke-width="2" />
+    <text x="910" y="646" class="node-title">Metadata-only receipt</text>
+    <text x="910" y="669" class="node-copy">finishes, presence, hashes, lengths</text>
+    <text x="910" y="690" class="node-copy">latency + reported usage</text>
+    <text x="910" y="711" class="node-copy">700 directory / 600 files</text>
+  </g>
+  <g>
+    <rect x="1080" y="620" width="240" height="120" rx="12" fill="#FCE8E6" stroke="#B85450" stroke-width="3" />
+    <text x="1200" y="646" class="node-title">Human decision</text>
+    <text x="1200" y="669" class="node-copy">tests + diagram + two reviews</text>
+    <text x="1200" y="692" class="node-copy">accept or reject</text>
+  </g>
+
+  <path d="M195 245 V270" class="edge" stroke="#4F81BD" marker-end="url(#arrow-blue)" />
+  <path d="M195 352 V382" class="edge" stroke="#82B366" marker-end="url(#arrow-green)" />
+  <path d="M350 285 H380" class="edge" stroke="#666666" marker-end="url(#arrow-grey)" />
+  <text x="355" y="274" class="edge-label" fill="#333333">neutral</text>
+  <path d="M600 285 H630" class="edge" stroke="#9673A6" marker-end="url(#arrow-purple)" />
+  <text x="604" y="274" class="edge-label" fill="#4C3868">payload</text>
+  <path d="M890 285 H920" class="edge" stroke="#D6B656" marker-end="url(#arrow-yellow)" />
+  <text x="895" y="274" class="edge-label" fill="#5D4A00">JSON / SSE</text>
+  <path d="M1135 460 V500 H450 V540" class="edge" stroke="#82B366" marker-end="url(#arrow-green)" />
+  <text x="770" y="492" class="edge-label" fill="#285A31">same contract</text>
+  <path d="M325 680 V712 H450 V730" class="edge" stroke="#82B366" marker-end="url(#arrow-green)" />
+  <path d="M575 680 V712 H450 V730" class="edge" stroke="#82B366" marker-end="url(#arrow-green)" />
+  <path d="M700 680 H790" class="edge" stroke="#D6B656" marker-end="url(#arrow-yellow)" />
+  <text x="716" y="668" class="edge-label" fill="#5D4A00">safe evidence</text>
+  <path d="M1030 680 H1080" class="edge" stroke="#B85450" marker-end="url(#arrow-red)" />
+  <text x="1037" y="668" class="edge-label" fill="#7A241E">owner gate</text>
+</svg>

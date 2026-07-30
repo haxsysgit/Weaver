@@ -17,9 +17,9 @@
 | Fake experiment passes without credentials | Passed | Fake CLI run and private receipt |
 | Live mode has no fallback | Passed | CLI dispatch and provider settings |
 | Missing live key creates no client or receipt | Passed | CLI test and command evidence |
-| One attempt per live model, four requests maximum | Not run | Live results |
-| Both live models pass | Not run | Live results |
+| One attempt per live model, four requests maximum | Passed | Admitted live receipt |
+| Both live models pass | Passed | Flash and Pro live records |
 | Receipts are private and reasoning-free | Passed | Permissions and content audit |
-| Draw.io source and preview are linked and inspected | Not started | README and diagram evidence |
+| Draw.io source and preview are linked and inspected | Passed | README, XML validation, SVG render inspection |
 | Two reviews have no blocker | Not started | Review ledger |
 | Owner records final decision | Pending | `decision.md` |
