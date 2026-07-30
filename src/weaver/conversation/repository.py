@@ -126,11 +126,6 @@ class ConversationRepository:
             "UPDATE run SET phase = ? WHERE id = ?", (phase, run_id)
         )
 
-    async def _update_turn_status(self, turn_id: str, status: str) -> None:
-        await self._db.execute(
-            "UPDATE turn SET status = ? WHERE id = ?", (status, turn_id)
-        )
-
     async def _next_sequence(self, conversation_id: str) -> int:
         cursor = await self._db.execute(
             "SELECT COALESCE(MAX(sequence), 0) + 1 FROM conversation_item WHERE conversation_id = ?",

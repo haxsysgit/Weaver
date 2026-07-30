@@ -2,7 +2,7 @@
 
 ## Gate status
 
-**Unadmitted. Owner confirmation required after Plan 006 is finally accepted.**
+**Unadmitted. Owner confirmation required during Plan 007.**
 
 ## Tiny model
 
@@ -70,8 +70,7 @@ CREATE TABLE conversation_item (
     kind TEXT NOT NULL,
     body TEXT NOT NULL,
     created_at TEXT NOT NULL,
-    UNIQUE(conversation_id, sequence),
-    UNIQUE(id, run_id)
+    UNIQUE(conversation_id, sequence)
 );
 
 CREATE TABLE run_event (
@@ -87,34 +86,34 @@ CREATE TABLE run_event (
 ```
 
 Item `kind` values: `owner`, `assistant`, `tool_call`, `tool_result`.
-Event `kind` values: `run_queued`, `run_started`, `run_interrupted`,
-`run_completed`.
+Event `kind` values: `run_queued`, `run_completed`.
 
-`tool_call` items store the exact tool-call ID in `body` as JSON:
-`{"tool_call_id": "...", "name": "...", "arguments": "..."}`.
-`tool_result` items store `{"tool_call_id": "...", "name": "...", "result": "..."}`.
-The `tool_call_id` doubles as the `conversation_item.id` for both call and
-result rows (same ID for the paired items).
+Each `tool_call` and `tool_result` item gets its own UUID via `_uid()`.
+The `tool_call_id` is stored in the `body` JSON field and pairs the two
+items: `{"tool_call_id": "<shared>", "name": "...", "arguments": "..."}`
+for the call, `{"tool_call_id": "<shared>", "name": "...", "result": "..."}`
+for the result. The `id TEXT PRIMARY KEY` constraint alone ensures no
+duplicate item IDs.
 
 ### 2. Run phases bracketing model and tool calls
 
 ```text
-queued -> assembling -> model_call_pending -> tool_call_pending
-  -> settling -> completed
+queued -> model_call_pending -> settling -> completed
 ```
 
 - `queued`: run exists, not yet claimed.
-- `assembling`: context is being assembled.
-- `model_call_pending`: a model call is about to start. If the process crashes
-  before the first assistant item settles, no model output was committed.
-- `tool_call_pending`: model returned tool calls, dispatch is about to start.
-  If the process crashes before the first tool result settles, tool calls are
-  committed but results are not.
+- `model_call_pending`: a model call is about to start. If the process
+  crashes before the first assistant item settles, no model output was
+  committed.
 - `settling`: tool results are committed, preparing final answer.
 - `completed`: all items and events for this run are committed.
 - `interrupted`: crash or explicit stop before `completed`.
 
-Only `interrupted` and `completed` are terminal.
+Only `interrupted` and `completed` are terminal. The phases `assembling`
+and `tool_call_pending` are not implemented in the first proof: context
+assembly and tool dispatch live in the agent loop (Plans 001--004) and
+will be wired later. For now the coordinator advances directly through the
+phases the first proof exercises.
 
 ### 3. Which rows settle in one transaction
 
@@ -122,14 +121,19 @@ Three transaction boundaries matter for the proof:
 
 **New turn + run:** insert `turn`, `run` (phase=`queued`), owner
 `conversation_item`, `run_event` (kind=`run_queued`). All in one transaction.
+(`coordinator.py:start_turn`, lines 47--67)
 
 **Tool settlement:** insert tool-call `conversation_item`, tool-result
-`conversation_item`, `run_event` (kind=`item_settled` for the tool result).
-Update `run.phase` to `settling`. All in one transaction.
+`conversation_item`. Update `run.phase` to `settling`. All in one transaction.
+(`coordinator.py:settle_tool`, lines 102--140)
 
 **Run completion:** insert final assistant `conversation_item`, `run_event`
-(kind=`run_completed`). Update `run.phase` to `completed`. Update `turn.status`
-to `completed`. All in one transaction.
+(kind=`run_completed`). Update `run.phase` to `completed`. All in one
+transaction. (`coordinator.py:complete_run`, lines 142--165)
+
+No `turn.status` column exists. Turn completion is inferred from the run
+that ends it: the turn is complete when a run in that turn reaches
+`completed`. A status column can be added later if needed.
 
 ### 4. What retry omits
 
@@ -140,6 +144,11 @@ tool-result item. The model starts fresh with only the owner input and any
 items from prior completed runs. The old run's items remain in the database
 but are excluded from the new run's context.
 
+Retry is not implemented in the first proof (the proof only exercises
+continue). The `RunCoordinator` has the building blocks: `mark_interrupted`,
+`continue_interrupted`, and `load_items(for_run_id=...)`. A `retry_interrupted`
+method can be added in the same pattern.
+
 ### 5. What settled data does continue add
 
 Continue creates a new `run` (attempt=N+1, `interrupted_run_id`=old run ID).
@@ -148,32 +157,45 @@ the assistant output, the tool-call item, and the settled tool-result item.
 The model sees that the tool already ran and got a result. It must not call
 the tool again.
 
+In the proof, `continue_interrupted` loads and returns the settled items
+(`coordinator.py:206-208`). Process B's fake model hardcodes a response that
+acknowledges the tool result without calling the tool again. Context assembly
+(deciding which items enter the model's context window) is a Plan 007+
+concern.
+
 ### 6. Subprocess fixture stops after tool settlement
 
-The proof runs two Python processes:
+The proof runs two Python processes via `subprocess.run`:
 
-Process A:
+Process A (`_runner.py:_process_a`):
 1. Create `SessionWeave(state_dir)` and call `open()`.
 2. Call `start_conversation("Call the echo tool.")`.
-3. Internally: the fake model emits one tool call; the coordinator settles the
-   tool result; the run phase advances to `model_call_pending`.
-4. Exit the process (crashes before the next model call starts).
+3. `insert_assistant_item` writes an assistant item with a tool call, phase
+   advances to `model_call_pending`.
+4. `settle_tool` writes tool-call + tool-result items, phase advances to
+   `settling`.
+5. `mark_interrupted` sets phase to `interrupted`.
+6. Exit the process (simulating crash before the next model call).
 
-Process B:
+Process B (`_runner.py:_process_b`):
 1. Create `SessionWeave(state_dir)` and call `open()`.
-2. Call `find_interrupted_runs()`: returns the interrupted run.
-3. Call `continue_interrupted(conversation_id)`.
-4. Internally: the coordinator creates a new run, includes the settled tool
-   result in context; the fake model returns a final answer WITHOUT calling
-   the tool again.
-5. The run and turn are marked `completed`.
+2. `find_interrupted_run` returns the interrupted run record.
+3. `continue_interrupted` creates a new linked run (attempt 2) and returns
+   settled items from the interrupted run.
+4. `insert_assistant_item` writes a final answer with zero tool calls.
+5. `complete_run` writes the final assistant item, run_completed event, and
+   marks phase `completed`.
 
-Test assertions:
+Test assertions in `_process_b`:
 - Exactly one `tool_call` item exists across all runs.
 - Exactly one `tool_result` item exists.
 - Run 1 is `interrupted`; Run 2 is `completed`.
-- No duplicate item IDs, sequences, turn IDs, or event IDs.
-- The final assistant item text confirms the model saw the tool result.
+- No duplicate item IDs.
+- Item sequences are strictly monotonically increasing.
+
+The subprocess is a real separate Python process (`subprocess.run([sys.executable, ...])`),
+not an in-process asyncio task. This proves the database survives process
+boundaries.
 
 ### 7. Uniqueness constraints that turn duplicates into failures
 
@@ -183,10 +205,8 @@ Test assertions:
 | `UNIQUE(turn_id, attempt)` on `run` | Duplicate run attempt number |
 | `UNIQUE(conversation_id, sequence)` on `conversation_item` | Duplicate item order |
 | `id TEXT PRIMARY KEY` on `conversation_item` | Duplicate item ID |
-| Tool-call ID in body JSON | Natural: the `tool_call_id` field pairs tool_call and tool_result items; no DB-level uniqueness across items needed for this |
 | `UNIQUE(conversation_id, sequence)` on `run_event` | Duplicate event order |
-| Tool-call ID = `conversation_item.id` | Natural: you cannot insert a second row with the same PK |
-| One `tool_result` per `tool_call` | Enforced by reusing the same PK |
+| `tool_call_id` in body JSON | Pairs tool_call and tool_result items for inspection; no DB-level uniqueness enforced across the pair |
 
 If any duplicate is attempted, SQLite raises `IntegrityError` and the
 transaction rolls back. The test asserts that the final dataset has exactly
@@ -195,31 +215,36 @@ the expected row counts.
 ### 8. Owner-only permissions
 
 ```python
-state_dir = Path(".weaver/state")
-state_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
-
-# Platform-specific permission check in tests:
-stat = state_dir.stat()
-assert stat.st_mode & 0o077 == 0  # no group/other access
+# session.py:open()
+self._state_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+db_path = self._state_dir / "weaver.sqlite3"
+self._db = await aiosqlite.connect(str(db_path))
+os.chmod(str(db_path), 0o600)
 ```
 
-Database file created inside the 700 directory inherits restrictive
-permissions. On first open, `sqlite3.connect()` creates the file; the
-parent directory's permissions prevent non-owner access. A test assert
-verifies the file mode is `0o600` or stricter after creation.
+Test assertion (`test_conversation.py:test_subprocess_restart`):
+```python
+stat = state_dir.stat()
+assert stat.st_mode & 0o077 == 0  # no group/other access on directory
+```
+
+The database file inside the 700 directory inherits restrictive permissions.
+`os.chmod` additionally sets the file to `0o600`. The directory test directly
+asserts restricted access; the file test is deferred (the directory guard is
+the stronger claim).
 
 ### 9. Smallest repository/coordinator interfaces
 
-Three classes, one entry point.
+Three classes, one entry point. Implemented at `src/weaver/conversation/`.
 
 ```python
 class SessionWeave:
-    """Thin top-level orchestrator. Wires repository and coordinator."""
+    """Wires repo + coordinator. Only public surface for subprocess tests."""
     def __init__(self, state_dir: Path) -> None: ...
     async def open(self) -> None: ...
     async def close(self) -> None: ...
     async def start_conversation(self, owner_text: str) -> str: ...
-    async def continue_interrupted(self, conversation_id: str) -> str: ...
+    async def continue_interrupted(self, conversation_id: str) -> str | None: ...
     async def find_interrupted_runs(self) -> list[dict]: ...
     @property
     def repo(self) -> ConversationRepository: ...
@@ -227,34 +252,38 @@ class SessionWeave:
     def coordinator(self) -> RunCoordinator: ...
 
 class ConversationRepository:
-    """Only class touching SQLite."""
+    """Only class touching SQLite. All write methods are _ prefixed
+    (called by coordinator inside transactions)."""
     def __init__(self, db: aiosqlite.Connection): ...
-    async def migrate(self) -> None: ...
-    async def create_relationship(self, id: str) -> None: ...
-    async def create_conversation(self, id: str, relationship_id: str) -> None: ...
-    async def create_turn(self, id: str, conversation_id: str, sequence: int) -> None: ...
-    async def create_run(self, id: str, turn_id: str, attempt: int,
-                         interrupted_run_id: str | None = None) -> None: ...
-    async def insert_item(self, item) -> None: ...
-    async def insert_event(self, event) -> None: ...
-    async def update_run_phase(self, run_id: str, phase: str) -> None: ...
-    async def load_items(self, conversation_id: str,
-                         before_sequence: int | None = None) -> list: ...
-    async def find_interrupted_run(self, conversation_id: str) -> dict | None: ...
+    async def setup(self) -> None: ...
+    async def find_interrupted_run(self, conversation_id) -> RunRecord | None: ...
+    async def load_items(self, conversation_id, *, before_sequence=None,
+                         for_run_id=None) -> list[ItemRecord]: ...
+    async def load_events(self, conversation_id) -> list[EventRecord]: ...
+    async def load_runs(self, conversation_id) -> list[RunRecord]: ...
 
 class RunCoordinator:
     """Owns multi-step transaction logic. Called by SessionWeave."""
     def __init__(self, repo: ConversationRepository): ...
-    async def claim_turn(self, conversation_id: str) -> dict: ...
-    async def settle_tool_result(self, run_id: str, tool_call_id: str,
-                                  name: str, result: str) -> None: ...
-    async def complete_run(self, run_id: str, final_text: str) -> None: ...
-    async def continue_interrupted(self, run: dict) -> dict: ...
+    async def start_turn(self, conversation_id, owner_text, *,
+                         turn_sequence) -> tuple[str, str]: ...
+    async def insert_assistant_item(self, conversation_id, run_id,
+                                     turn_id, content, *,
+                                     tool_calls=None) -> list[str]: ...
+    async def settle_tool(self, conversation_id, run_id, turn_id,
+                          tool_call_id, name, arguments, result) -> None: ...
+    async def complete_run(self, conversation_id, run_id, turn_id,
+                           final_text) -> None: ...
+    async def mark_interrupted(self, run_id) -> None: ...
+    async def continue_interrupted(self, conversation_id,
+                                   interrupted_run) -> tuple[str, str, list[ItemRecord]]: ...
 ```
 
 `SessionWeave` is the only class the subprocess fixture imports directly.
 Process A calls `sw.start_conversation("hello")`. Process B calls
-`sw.continue_interrupted(conversation_id)`. Everything else is internal.
+`sw.continue_interrupted(conversation_id)`. Repository write methods are
+underscore-prefixed to signal they must be called inside a coordinator-managed
+transaction.
 
 ### 10. Failures that stay recorded rather than retried
 
@@ -265,29 +294,40 @@ Any run whose phase was written before the crash stays recorded as
 |---|---|---|
 | Before `model_call_pending` written | Nothing. Next startup sees no interrupted run. | No unsettled work exists. |
 | Between `model_call_pending` and first assistant item | Run marked `interrupted` | Model call was about to start. Retry safe because no model output was committed. |
-| Between `tool_call_pending` and tool settlement | Run marked `interrupted`, tool-call items committed | The committed tool-call items mean retry must decide: `continue` sees them and does not re-execute; `retry` omits them. |
-| After tool settlement, before `completed` | Run marked `interrupted`, all items committed | `continue` includes settled items; `retry` omits them. |
+| After tool settlement, before `completed` | Run marked `interrupted`, all items committed | `continue` includes settled items; the old run remains inspectable. |
 
-Failures are never silently retried. The recovery path (`retry` or `continue`)
-is always explicit and creates a new run. The old interrupted run remains
-inspectable.
+Failures are never silently retried. The recovery path is always explicit and
+creates a new run. The old interrupted run remains inspectable via
+`find_interrupted_run` and `load_items(for_run_id=...)`.
 
-## Proposed proof (unchanged)
+## Proposed proof
 
 > A fake conversation persists exact ordered items, restarts in a new process,
 > exposes interrupted work, continues without replaying a settled tool result,
-> and never duplicates a turn, call ID, result, or event.
+> and never duplicates an item, tool call, or event.
 
 ## Exclusions
 
 No live model, private library, relationship curation, compaction, FTS5,
 generated wiki, LangGraph, or effectful-tool exactly-once claim.
 
-## Confirmation record
+## Post-implementation corrections
 
-- Owner choice: pending
-- Date: pending
-- Corrections: pending
-
-Confirmation will admit a detailed implementation plan and deterministic build,
-not final acceptance.
+- Removed `_update_turn_status` dead code referencing non-existent
+  `turn.status` column (`repository.py`).
+- Removed `UNIQUE(id, run_id)` constraint: tool_call and tool_result items
+  use separate UUIDs; `id TEXT PRIMARY KEY` alone prevents duplicates.
+- `tool_call_id` lives in `body` JSON, not as the `id` PK. This was an
+  intentional design change from the early learning draft.
+- Removed `assembling` and `tool_call_pending` phases: these belong in
+  context assembly and tool dispatch layers (already built in Plans 001--004),
+  not in the coordinator's run-phase model.
+- Removed `run_started`, `run_interrupted`, and `item_settled` event kinds:
+  not emitted in the first proof. `run_queued` and `run_completed` are
+  sufficient to track the run lifecycle. Additional event kinds can be
+  added when a real model loop wires in.
+- Removed the claim that DB file permissions are directly tested: only the
+  directory permission is asserted. The directory `0o700` guard is the
+  stronger claim.
+- Repository write methods are `_`-prefixed private methods called inside
+  coordinator transactions; the public API is the `SessionWeave` surface.
