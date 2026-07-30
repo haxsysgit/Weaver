@@ -4,7 +4,13 @@ import stat
 import pytest
 
 from weaver.experiment import run_model_smoke
-from weaver.fake import FakeModelClient
+from weaver.model_layer import (
+    DEEPSEEK_FLASH,
+    DEEPSEEK_MODELS,
+    DEEPSEEK_PRO,
+    FakeModelProvider,
+    ModelLayer,
+)
 from weaver.receipts import REDACTED, ReceiptWriter, sanitize
 
 
@@ -53,8 +59,17 @@ def test_receipt_writer_rejects_path_traversal(tmp_path) -> None:
 
 @pytest.mark.asyncio
 async def test_fake_smoke_writes_complete_safe_receipt(tmp_path) -> None:
+    model_layer = ModelLayer()
+    model_layer.register_provider(
+        FakeModelProvider(
+            "deepseek",
+            models=DEEPSEEK_MODELS,
+        )
+    )
     result = await run_model_smoke(
-        FakeModelClient(),
+        model_layer,
+        flash_model=DEEPSEEK_FLASH,
+        pro_model=DEEPSEEK_PRO,
         mode="fake",
         receipt_root=tmp_path / "runs",
     )

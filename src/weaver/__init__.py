@@ -1,26 +1,33 @@
-"""Weaver — a synthetic lifelong reader."""
+"""Weaver, a synthetic lifelong reader."""
 
-from .client import ModelClient, ToolSchema
-from .model import (
-    Message,
+from .model_layer import (
+    ModelLayer,
+    ModelMessage,
+    ModelProvider,
+    ModelReasoning,
     ModelRequest,
     ModelResponse,
+    ModelSpec,
+    ModelStopReason,
     ModelStreamEvent,
     ModelStreamEventType,
-    ToolCall,
-    ToolDefinition,
-    Usage,
+    ModelToolCall,
+    ModelToolSchema,
+    ModelUsage,
 )
 
 __all__ = [
-    "Message",
-    "ModelClient",
+    "ModelLayer",
+    "ModelMessage",
+    "ModelProvider",
+    "ModelReasoning",
     "ModelRequest",
     "ModelResponse",
+    "ModelSpec",
+    "ModelStopReason",
     "ModelStreamEvent",
     "ModelStreamEventType",
-    "ToolCall",
-    "ToolDefinition",
-    "ToolSchema",
-    "Usage",
+    "ModelToolCall",
+    "ModelToolSchema",
+    "ModelUsage",
 ]

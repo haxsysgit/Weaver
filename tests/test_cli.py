@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from weaver import cli
 
 
@@ -16,7 +14,7 @@ def test_fake_cli_succeeds_without_network_or_credential(
         def __init__(self, *args, **kwargs):
             raise AssertionError("fake mode attempted to construct live client")
 
-    monkeypatch.setattr(cli, "DeepSeekClient", NetworkMustNotBeConstructed)
+    monkeypatch.setattr(cli, "DeepSeekProvider", NetworkMustNotBeConstructed)
 
     exit_code = cli.run(["experiment", "model-smoke", "--fake"])
 

@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 
 from .config import MODEL_ALIASES
+from .model_layer.deepseek import DEEPSEEK_MODELS
 from .receipts import secure_directory
 
 
@@ -30,9 +31,13 @@ def run_doctor(state_path: Path, *, credential_present: bool) -> list[dict[str, 
     }
     checks.append(
         {
-            "name": "model_aliases",
-            "ok": dict(MODEL_ALIASES) == expected_aliases,
-            "detail": "flash/pro aliases match the admitted DeepSeek IDs",
+            "name": "model_catalogue",
+            "ok": (
+                dict(MODEL_ALIASES) == expected_aliases
+                and {model.model_id for model in DEEPSEEK_MODELS}
+                == set(expected_aliases.values())
+            ),
+            "detail": "flash/pro aliases match the admitted model catalogue",
         }
     )
     for dependency in ("openai", "dotenv"):

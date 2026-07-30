@@ -17,10 +17,16 @@ from .corpus.tools import (
     inspect_novel_corpus,
     update_novel_corpus,
 )
-from .deepseek import DeepSeekClient
 from .doctor import run_doctor
 from .experiment import run_model_smoke
-from .fake import FakeModelClient
+from .model_layer import (
+    DEEPSEEK_FLASH,
+    DEEPSEEK_MODELS,
+    DEEPSEEK_PRO,
+    DeepSeekProvider,
+    FakeModelProvider,
+    ModelLayer,
+)
 
 
 def _state_root() -> Path:
@@ -160,7 +166,10 @@ def run(argv: Sequence[str] | None = None) -> int:
         )
 
     if args.fake:
-        client = FakeModelClient()
+        provider = FakeModelProvider(
+            "deepseek",
+            models=DEEPSEEK_MODELS,
+        )
         mode = "fake"
         secrets: tuple[str, ...] = ()
         timeout = None
@@ -169,7 +178,7 @@ def run(argv: Sequence[str] | None = None) -> int:
         if not api_key:
             print("ERROR live execution requires DEEPSEEK_KEY; no call was made.")
             return 2
-        client = DeepSeekClient(
+        provider = DeepSeekProvider(
             api_key,
             timeout_seconds=DEFAULT_TIMEOUT_SECONDS,
         )
@@ -177,9 +186,21 @@ def run(argv: Sequence[str] | None = None) -> int:
         secrets = (api_key,)
         timeout = DEFAULT_TIMEOUT_SECONDS
 
+    model_layer = ModelLayer()
+    model_layer.register_provider(provider)
+    flash_model = model_layer.get_model(
+        DEEPSEEK_FLASH.provider_id,
+        DEEPSEEK_FLASH.model_id,
+    )
+    pro_model = model_layer.get_model(
+        DEEPSEEK_PRO.provider_id,
+        DEEPSEEK_PRO.model_id,
+    )
     result = asyncio.run(
         run_model_smoke(
-            client,
+            model_layer,
+            flash_model=flash_model,
+            pro_model=pro_model,
             mode=mode,
             receipt_root=state_root,
             secrets=secrets,

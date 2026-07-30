@@ -1,13 +1,21 @@
+import asyncio
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from time import perf_counter
 from typing import Any
 
-from .client import ModelClient
 from .config import EXPERIMENT_VERSION
 from .errors import ExperimentValidationError, WeaverError
-from .model import Message, ModelRequest, ModelResponse, ToolDefinition
+from .model_layer import (
+    ModelLayer,
+    ModelMessage,
+    ModelRequest,
+    ModelResponse,
+    ModelSpec,
+    ModelStopReason,
+    ModelToolSchema,
+)
 from .receipts import ReceiptWriter, utc_now
 
 _SYSTEM_PREFIX = (
@@ -23,16 +31,18 @@ class ExperimentResult:
     error_category: str | None = None
 
 
-def _requests() -> list[tuple[str, ModelRequest]]:
+def _requests(
+    flash_model: ModelSpec,
+    pro_model: ModelSpec,
+) -> list[tuple[str, ModelSpec, ModelRequest]]:
     flash_request = ModelRequest(
-        model="flash",
         messages=(
-            Message(
+            ModelMessage(
                 role="system",
                 content=_SYSTEM_PREFIX
                 + " Return only a JSON object with the requested fields.",
             ),
-            Message(
+            ModelMessage(
                 role="user",
                 content=(
                     'Return JSON exactly shaped like {"experiment":"model-smoke",'
@@ -40,11 +50,10 @@ def _requests() -> list[tuple[str, ModelRequest]]:
                 ),
             ),
         ),
-        max_tokens=128,
+        max_output_tokens=128,
         response_format="json_object",
-        thinking=False,
     )
-    tool = ToolDefinition(
+    tool = ModelToolSchema(
         name="record_synthetic_marker",
         description="Record a marker used only by the synthetic transport test.",
         parameters={
@@ -58,10 +67,9 @@ def _requests() -> list[tuple[str, ModelRequest]]:
         },
     )
     pro_request = ModelRequest(
-        model="pro",
         messages=(
-            Message(role="system", content=_SYSTEM_PREFIX),
-            Message(
+            ModelMessage(role="system", content=_SYSTEM_PREFIX),
+            ModelMessage(
                 role="user",
                 content=(
                     "Call record_synthetic_marker with label foundation and "
@@ -69,20 +77,27 @@ def _requests() -> list[tuple[str, ModelRequest]]:
                 ),
             ),
         ),
-        max_tokens=128,
+        max_output_tokens=128,
         tools=(tool,),
         tool_choice=tool.name,
-        thinking=False,
     )
     return [
-        ("flash-json", flash_request),
-        ("flash-json-repeat", flash_request),
-        ("pro-forced-tool", pro_request),
+        ("flash-json", flash_model, flash_request),
+        ("flash-json-repeat", flash_model, flash_request),
+        ("pro-forced-tool", pro_model, pro_request),
     ]
 
 
-def _request_payload(label: str, request: ModelRequest) -> dict[str, Any]:
-    return {"label": label, "request": asdict(request)}
+def _request_payload(
+    label: str,
+    model: ModelSpec,
+    request: ModelRequest,
+) -> dict[str, Any]:
+    return {
+        "label": label,
+        "model": asdict(model),
+        "request": asdict(request),
+    }
 
 
 def _response_payload(
@@ -90,12 +105,15 @@ def _response_payload(
     response: ModelResponse,
     latency_ms: float,
 ) -> dict[str, Any]:
+    assistant = response.assistant_message
     return {
         "label": label,
+        "provider_id": response.provider_id,
         "model_id": response.model_id,
-        "content": response.content,
-        "finish_reason": response.finish_reason,
-        "tool_calls": [asdict(call) for call in response.tool_calls],
+        "content": assistant.content,
+        "stop_reason": response.stop_reason.value,
+        "raw_stop_reason": response.raw_stop_reason,
+        "tool_calls": [asdict(call) for call in assistant.tool_calls],
         "usage": asdict(response.usage),
         "latency_ms": round(latency_ms, 3),
         "outcome": "passed",
@@ -104,8 +122,12 @@ def _response_payload(
 
 def _validate(label: str, response: ModelResponse) -> None:
     if label.startswith("flash-json"):
+        if response.stop_reason != ModelStopReason.STOP:
+            raise ExperimentValidationError(
+                f"{label} did not finish with a normal stop."
+            )
         try:
-            content = json.loads(response.content or "")
+            content = json.loads(response.assistant_message.content or "")
         except json.JSONDecodeError as exc:
             raise ExperimentValidationError(
                 f"{label} did not return valid JSON."
@@ -121,17 +143,22 @@ def _validate(label: str, response: ModelResponse) -> None:
             )
         return
 
-    if len(response.tool_calls) != 1:
+    if response.stop_reason != ModelStopReason.TOOL_USE:
+        raise ExperimentValidationError(
+            "pro-forced-tool did not finish with tool use."
+        )
+    tool_calls = response.assistant_message.tool_calls
+    if len(tool_calls) != 1:
         raise ExperimentValidationError(
             "pro-forced-tool did not return exactly one normalized tool call."
         )
-    call = response.tool_calls[0]
+    call = tool_calls[0]
     if call.name != "record_synthetic_marker":
         raise ExperimentValidationError(
             "pro-forced-tool returned the wrong function name."
         )
     try:
-        arguments = json.loads(call.arguments)
+        arguments = json.loads(call.arguments_json)
     except json.JSONDecodeError as exc:
         raise ExperimentValidationError(
             "pro-forced-tool returned invalid argument JSON."
@@ -142,9 +169,22 @@ def _validate(label: str, response: ModelResponse) -> None:
         )
 
 
+def _failed_response(
+    label: str,
+    error_category: str,
+) -> dict[str, Any]:
+    return {
+        "label": label,
+        "outcome": "failed",
+        "error_category": error_category,
+    }
+
+
 async def run_model_smoke(
-    client: ModelClient,
+    model_layer: ModelLayer,
     *,
+    flash_model: ModelSpec,
+    pro_model: ModelSpec,
     mode: str,
     receipt_root: Path,
     secrets: tuple[str, ...] = (),
@@ -156,28 +196,55 @@ async def run_model_smoke(
         secrets=secrets,
     )
     started_at = utc_now()
-    requests = _requests()
+    requests = _requests(flash_model, pro_model)
     writer.write_json(
         "request.json",
-        [_request_payload(label, request) for label, request in requests],
+        [
+            _request_payload(label, model, request)
+            for label, model, request in requests
+        ],
     )
     responses: list[dict[str, Any]] = []
     outcome = "passed"
     error_category: str | None = None
 
-    for label, request in requests:
+    for label, model, request in requests:
         writer.append_event(
             {
                 "at": utc_now(),
                 "event": "call_started",
                 "label": label,
-                "model_alias": request.model,
+                "provider_id": model.provider_id,
+                "model_id": model.model_id,
             }
         )
         started = perf_counter()
         try:
-            response = await client.complete(request)
+            response = await model_layer.complete(
+                model,
+                request,
+                asyncio.Event(),
+            )
             latency_ms = (perf_counter() - started) * 1000
+            if response.stop_reason in {
+                ModelStopReason.ERROR,
+                ModelStopReason.ABORTED,
+            }:
+                outcome = "failed"
+                error_category = (
+                    response.error_category or response.stop_reason.value
+                )
+                responses.append(_failed_response(label, error_category))
+                writer.append_event(
+                    {
+                        "at": utc_now(),
+                        "event": "call_failed",
+                        "label": label,
+                        "error_category": error_category,
+                    }
+                )
+                break
+
             _validate(label, response)
             normalized = _response_payload(label, response, latency_ms)
             responses.append(normalized)
@@ -186,8 +253,10 @@ async def run_model_smoke(
                     "at": utc_now(),
                     "event": "call_completed",
                     "label": label,
+                    "provider_id": response.provider_id,
                     "model_id": response.model_id,
-                    "finish_reason": response.finish_reason,
+                    "stop_reason": response.stop_reason.value,
+                    "raw_stop_reason": response.raw_stop_reason,
                     "latency_ms": normalized["latency_ms"],
                     "usage": normalized["usage"],
                 }
@@ -195,14 +264,9 @@ async def run_model_smoke(
         except WeaverError as exc:
             outcome = "failed"
             error_category = exc.category
-            responses.append(
-                {
-                    "label": label,
-                    "outcome": "failed",
-                    "error_category": exc.category,
-                    "status_code": exc.status_code,
-                }
-            )
+            failed = _failed_response(label, exc.category)
+            failed["status_code"] = exc.status_code
+            responses.append(failed)
             writer.append_event(
                 {
                     "at": utc_now(),
@@ -216,13 +280,7 @@ async def run_model_smoke(
         except Exception:
             outcome = "failed"
             error_category = "internal"
-            responses.append(
-                {
-                    "label": label,
-                    "outcome": "failed",
-                    "error_category": "internal",
-                }
-            )
+            responses.append(_failed_response(label, "internal"))
             writer.append_event(
                 {
                     "at": utc_now(),
@@ -242,7 +300,7 @@ async def run_model_smoke(
         "started_at": started_at,
         "finished_at": utc_now(),
         "settings": {
-            "stream": False,
+            "stream": True,
             "max_retries": 0,
             "timeout_seconds": timeout_seconds,
         },
@@ -251,8 +309,10 @@ async def run_model_smoke(
         "calls": [
             {
                 "label": response["label"],
+                "provider_id": response.get("provider_id"),
                 "model_id": response.get("model_id"),
-                "finish_reason": response.get("finish_reason"),
+                "stop_reason": response.get("stop_reason"),
+                "raw_stop_reason": response.get("raw_stop_reason"),
                 "latency_ms": response.get("latency_ms"),
                 "usage": response.get("usage"),
                 "outcome": response["outcome"],
