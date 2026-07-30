@@ -2,15 +2,13 @@
 
 ## Status
 
-**Final owner decision pending.**
+**Accepted.**
 
 The learning gate was confirmed on 2026-07-30 with three corrections. The
-documentation candidate is recorded in
-[`../../docs/decisions/006-conversation-architecture.md`](../../docs/decisions/006-conversation-architecture.md).
+architecture decision, diagram, independent reviews, repair pass, and rechecks
+all passed. Plan 007 is redirected to a restart-safe proof.
 
-- Final owner choice: pending
-- Date: pending
-- Accepted, revise, or reject: pending
-- Reason: pending
-
-Passing checks and independent reviews do not close this gate.
+- Final owner choice: accepted
+- Date: 2026-07-30
+- Reason: all rubric requirements pass; two independent reviews found zero
+  blockers; verification floor clean (156 tests, lint, 64 packages).

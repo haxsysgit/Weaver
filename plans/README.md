@@ -11,17 +11,15 @@ evidence, review, and human decision gates must also be complete.
 | [003 - Weaver model layer and preserved tool protocol](003-preserve-tool-protocol.md) | Accepted 2026-07-30 | Plan 002 accepted | Add a provider-independent model layer, keep complete tool calls, and refuse inactive tools |
 | [004 - Make cancellation and side effects explicit](004-cancellation-and-side-effects.md) | Accepted 2026-07-30 | Plan 003 accepted | Cancel running async tools cooperatively and block unapproved effect classes |
 | [005 - Provider-neutral tool payload contract](005-provider-tool-contract.md) | Accepted 2026-07-30 | Plan 004 accepted | Prove the neutral two-request tool round trip through the real SDK path for Flash and Pro |
-| [006 - Durable conversation architecture](006-durable-conversation-architecture.md) | Learning confirmed; final owner gate pending | Plan 005 accepted | Record direct coordination, canonical conversation evidence, recovery, context, and optional adapters |
+| [006 - Durable conversation architecture](006-durable-conversation-architecture.md) | Accepted | Plan 005 accepted | Record direct coordination, canonical conversation evidence, recovery, context, and optional adapters |
 | [007 - Restart-safe conversation proof](007-restart-safe-conversation-proof.md) | Unadmitted; learning cycle required | Plan 006 accepted | Prove exact fake conversation history survives a subprocess restart without replay or duplicates |
 | 008 - Direct-reading baseline | Deferred | Plans 002-007 accepted | Blind Flash/Pro comparison over selected chapter packets |
 | 009 - First compiled-memory experiment | Deferred | Plan 008 accepted | Compare bounded compiled Markdown memory with direct rereading |
 
 ## Execution order
 
-The owner admitted the original Plans 003-007 planning batch. Plans 003-005 are
-accepted. Plan 006 has a confirmed learning gate and an open final gate. Its
-replacement Plan 007 draft is unadmitted because the earlier chat-first design
-was superseded.
+Plans 003-006 are accepted. Plan 007 is unadmitted and requires a complete
+learning cycle before its owner gate.
 
 1. Confirm each plan's `learning.md`.
 2. Implement, test, use, inspect, review, and decide Plan 003.

@@ -6,15 +6,14 @@
 
 ## Status
 
-- **State:** Learning confirmed; documentation candidate in review; final owner
-  decision pending
+- **State:** Accepted (2026-07-30)
 - **Priority:** P1
 - **Depends on:** Plan 005 accepted
 - **Category:** Research, architecture, and docs
 - **Admitted source:** Owner-supplied Plan 006 implementation request,
   2026-07-30
 - **Learning gate:** Confirmed with corrections on 2026-07-30
-- **Final gate:** Open
+- **Final gate:** Closed (2026-07-30)
 
 ## Goal
 
@@ -152,4 +151,4 @@ deletion safety, and diagram/preview agreement.
 - [ ] Diagram source and preview inspected.
 - [x] Two reviews and rechecks have no blocker.
 - [x] Full verification floor passes.
-- [ ] Owner records the final Plan 006 decision.
+- [x] Owner records the final Plan 006 decision.
