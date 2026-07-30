@@ -1,4 +1,4 @@
-"""Explicit tool registry — no auto-discovery or plugins.
+"""Explicit tool registry with no auto-discovery or plugins.
 
 Tools are registered by name. Dispatch receives the active set, enforces
 membership, and passes execution context.
@@ -41,7 +41,7 @@ class ToolExecutionContext:
 
 @dataclass
 class ToolDefinition:
-    """One registered tool — name, schema, handler, and policy metadata."""
+    """One registered tool with its schema, handler, and policy metadata."""
 
     name: str
     description: str
@@ -63,7 +63,7 @@ class ToolResult:
 
 
 class ToolRegistry:
-    """Explicit registry — no import-time discovery.
+    """Explicit registry with no import-time discovery.
 
     Tools are registered by name. Duplicate registration raises ValueError.
     """
@@ -99,9 +99,11 @@ class ToolRegistry:
         self,
         tool_name: str,
         raw_arguments: str,
+        *,
+        active_names: tuple[str, ...],
         context: ToolExecutionContext,
     ) -> ToolResult:
-        """Parse arguments, enforce membership, and execute the tool."""
+        """Check registration and activity before parsing and execution."""
         tool = self._tools.get(tool_name)
         if tool is None:
             return ToolResult(
@@ -110,13 +112,32 @@ class ToolRegistry:
                 error=f"Tool {tool_name!r} is not registered.",
             )
 
+        if tool_name not in active_names:
+            return ToolResult(
+                ok=False,
+                error_code="inactive_tool",
+                error=f"Tool {tool_name!r} is not active.",
+            )
+
+        if not raw_arguments.strip():
+            return ToolResult(
+                ok=False,
+                error_code="malformed_arguments",
+                error="Tool arguments are not valid JSON.",
+            )
         try:
-            arguments = json.loads(raw_arguments) if raw_arguments.strip() else {}
+            arguments = json.loads(raw_arguments)
         except json.JSONDecodeError:
             return ToolResult(
                 ok=False,
                 error_code="malformed_arguments",
                 error="Tool arguments are not valid JSON.",
+            )
+        if not isinstance(arguments, dict):
+            return ToolResult(
+                ok=False,
+                error_code="invalid_arguments",
+                error="Tool arguments must be a JSON object.",
             )
 
         try:
@@ -129,7 +150,6 @@ class ToolRegistry:
                 error="Tool execution failed.",
             )
 
-        # Truncate overly large results
         if tool.max_result_chars > 0:
             serialized = json.dumps(result)
             if len(serialized) > tool.max_result_chars:

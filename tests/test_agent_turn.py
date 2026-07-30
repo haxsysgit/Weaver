@@ -10,7 +10,12 @@ from weaver.agent.messages import (
     UserMessage,
 )
 from weaver.agent.session import AgentSession
-from weaver.agent.tools import EffectKind, ToolDefinition, ToolRegistry
+from weaver.agent.tools import (
+    EffectKind,
+    ToolDefinition,
+    ToolExecutionContext,
+    ToolRegistry,
+)
 from weaver.agent.turn import TurnExitReason, run_turn
 from weaver import (
     FakeModelProvider,
@@ -181,6 +186,88 @@ async def execute_turn(
         persist_message=persist_message,
         max_model_steps=max_model_steps,
     )
+
+
+def tool_context() -> ToolExecutionContext:
+    return ToolExecutionContext(
+        session_id="session",
+        turn_id="turn",
+        call_id="call",
+        cancel_event=asyncio.Event(),
+    )
+
+
+class TestActiveDispatch:
+    async def test_unknown_tool_is_checked_first(self) -> None:
+        result = await make_registry().dispatch(
+            "missing",
+            "",
+            active_names=(),
+            context=tool_context(),
+        )
+
+        assert not result.ok
+        assert result.error_code == "unknown_tool"
+
+    async def test_registered_inactive_tool_is_checked_before_json(self) -> None:
+        starts = {}
+        result = await make_registry(starts).dispatch(
+            "echo",
+            "",
+            active_names=(),
+            context=tool_context(),
+        )
+
+        assert not result.ok
+        assert result.error_code == "inactive_tool"
+        assert starts == {}
+
+    @pytest.mark.parametrize("arguments_json", ["", " ", '{"broken":}'])
+    async def test_blank_or_malformed_json_is_rejected(
+        self,
+        arguments_json,
+    ) -> None:
+        starts = {}
+        result = await make_registry(starts).dispatch(
+            "echo",
+            arguments_json,
+            active_names=("echo",),
+            context=tool_context(),
+        )
+
+        assert not result.ok
+        assert result.error_code == "malformed_arguments"
+        assert starts == {}
+
+    @pytest.mark.parametrize("arguments_json", ["[]", '"text"', "1", "null"])
+    async def test_non_object_json_is_rejected(
+        self,
+        arguments_json,
+    ) -> None:
+        starts = {}
+        result = await make_registry(starts).dispatch(
+            "echo",
+            arguments_json,
+            active_names=("echo",),
+            context=tool_context(),
+        )
+
+        assert not result.ok
+        assert result.error_code == "invalid_arguments"
+        assert starts == {}
+
+    async def test_active_tool_runs_once(self) -> None:
+        starts = {}
+        result = await make_registry(starts).dispatch(
+            "echo",
+            '{"message":"hello"}',
+            active_names=("echo",),
+            context=tool_context(),
+        )
+
+        assert result.ok
+        assert result.result == {"echo": {"message": "hello"}}
+        assert starts == {"echo": 1}
 
 
 class TestTurnProtocol:

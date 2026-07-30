@@ -32,7 +32,7 @@ def safe_error(category: str) -> str:
 
 def safe_tool_error(code: str) -> str:
     """Map a tool result code to text safe for events and provider projection."""
-    if code in {"unknown_tool", "tool_unavailable"}:
+    if code in {"unknown_tool", "inactive_tool", "tool_unavailable"}:
         return safe_error("tool_unavailable")
     if code in {"malformed_arguments", "invalid_arguments"}:
         return safe_error("tool_invalid_arguments")

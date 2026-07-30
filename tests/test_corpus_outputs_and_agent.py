@@ -146,7 +146,7 @@ async def test_agent_registry_exposes_five_typed_metadata_only_tools(
 
     assert [schema.name for schema in schemas] == list(names)
     assert all(
-        schema.input_schema.get("additionalProperties") is False
+        schema.parameters.get("additionalProperties") is False
         for schema in schemas
     )
     context = ToolExecutionContext(
@@ -158,7 +158,8 @@ async def test_agent_registry_exposes_five_typed_metadata_only_tools(
     dispatched = await registry.dispatch(
         "inspect_novel_corpus",
         '{"novel_id":"shadow-slave"}',
-        context,
+        active_names=names,
+        context=context,
     )
     assert dispatched.ok
     assert dispatched.result["ok"] is True
@@ -170,7 +171,8 @@ async def test_agent_registry_exposes_five_typed_metadata_only_tools(
     invalid = await registry.dispatch(
         "fetch_novel_chapters",
         '{"novel_id":"shadow-slave","start_chapter":0}',
-        context,
+        active_names=names,
+        context=context,
     )
     assert invalid.ok
     assert invalid.result["ok"] is False
@@ -199,7 +201,8 @@ async def test_large_preview_stays_within_agent_result_limit(tmp_path) -> None:
                 end_chapter=82,
             ).model_dump(mode="json")
         ),
-        context,
+        active_names=("fetch_novel_chapters",),
+        context=context,
     )
 
     assert dispatched.ok

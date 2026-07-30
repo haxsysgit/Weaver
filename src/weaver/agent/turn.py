@@ -309,7 +309,8 @@ async def run_turn(
             tool_result = await tool_registry.dispatch(
                 tool_call.name,
                 tool_call.arguments_json,
-                context,
+                active_names=active_tools,
+                context=context,
             )
 
             result_evidence = ToolResultMessage(
