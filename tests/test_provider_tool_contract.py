@@ -1,12 +1,15 @@
 import json
 from pathlib import Path
 
+import httpx
 import pytest
+from openai import AsyncOpenAI
 
 from weaver import (
     DEEPSEEK_FLASH,
     DEEPSEEK_MODELS,
     DEEPSEEK_PRO,
+    DeepSeekProvider,
     FakeModelProvider,
     ModelLayer,
     ModelMessage,
@@ -83,6 +86,182 @@ def layer_with(responses: tuple[ModelResponse, ...]):
     model_layer = ModelLayer()
     model_layer.register_provider(provider)
     return model_layer, provider
+
+
+def sse_response(*events: dict) -> httpx.Response:
+    body = "".join(
+        f"data: {json.dumps(event, separators=(',', ':'))}\n\n"
+        for event in events
+    )
+    body += "data: [DONE]\n\n"
+    return httpx.Response(
+        200,
+        content=body.encode(),
+        headers={"content-type": "text/event-stream"},
+    )
+
+
+def tool_call_stream(model_id: str) -> httpx.Response:
+    return sse_response(
+        {
+            "id": "chatcmpl-synthetic-tool",
+            "object": "chat.completion.chunk",
+            "created": 1,
+            "model": model_id,
+            "choices": [
+                {
+                    "index": 0,
+                    "delta": {
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": [
+                            {
+                                "index": 0,
+                                "id": "call-synthetic-001",
+                                "type": "function",
+                                "function": {
+                                    "name": "synthetic_lookup",
+                                    "arguments": '{"item":',
+                                },
+                            }
+                        ],
+                    },
+                    "finish_reason": None,
+                }
+            ],
+        },
+        {
+            "id": "chatcmpl-synthetic-tool",
+            "object": "chat.completion.chunk",
+            "created": 1,
+            "model": model_id,
+            "choices": [
+                {
+                    "index": 0,
+                    "delta": {
+                        "tool_calls": [
+                            {
+                                "index": 0,
+                                "function": {"arguments": '"status"}'},
+                            }
+                        ]
+                    },
+                    "finish_reason": None,
+                }
+            ],
+        },
+        {
+            "id": "chatcmpl-synthetic-tool",
+            "object": "chat.completion.chunk",
+            "created": 1,
+            "model": model_id,
+            "choices": [
+                {
+                    "index": 0,
+                    "delta": {},
+                    "finish_reason": "tool_calls",
+                }
+            ],
+        },
+        {
+            "id": "chatcmpl-synthetic-tool",
+            "object": "chat.completion.chunk",
+            "created": 1,
+            "model": model_id,
+            "choices": [],
+            "usage": {
+                "prompt_tokens": 30,
+                "completion_tokens": 8,
+                "total_tokens": 38,
+                "prompt_cache_hit_tokens": 0,
+                "prompt_cache_miss_tokens": 30,
+                "completion_tokens_details": {"reasoning_tokens": 0},
+            },
+        },
+    )
+
+
+def final_text_stream(model_id: str) -> httpx.Response:
+    return sse_response(
+        {
+            "id": "chatcmpl-synthetic-final",
+            "object": "chat.completion.chunk",
+            "created": 2,
+            "model": model_id,
+            "choices": [
+                {
+                    "index": 0,
+                    "delta": {
+                        "role": "assistant",
+                        "content": "Synthetic contract ",
+                    },
+                    "finish_reason": None,
+                }
+            ],
+        },
+        {
+            "id": "chatcmpl-synthetic-final",
+            "object": "chat.completion.chunk",
+            "created": 2,
+            "model": model_id,
+            "choices": [
+                {
+                    "index": 0,
+                    "delta": {"content": "complete."},
+                    "finish_reason": None,
+                }
+            ],
+        },
+        {
+            "id": "chatcmpl-synthetic-final",
+            "object": "chat.completion.chunk",
+            "created": 2,
+            "model": model_id,
+            "choices": [
+                {
+                    "index": 0,
+                    "delta": {},
+                    "finish_reason": "stop",
+                }
+            ],
+        },
+        {
+            "id": "chatcmpl-synthetic-final",
+            "object": "chat.completion.chunk",
+            "created": 2,
+            "model": model_id,
+            "choices": [],
+            "usage": {
+                "prompt_tokens": 45,
+                "completion_tokens": 4,
+                "total_tokens": 49,
+                "prompt_cache_hit_tokens": 0,
+                "prompt_cache_miss_tokens": 45,
+                "completion_tokens_details": {"reasoning_tokens": 0},
+            },
+        },
+    )
+
+
+def sdk_backed_layer(
+    transport: httpx.MockTransport,
+) -> tuple[ModelLayer, AsyncOpenAI]:
+    http_client = httpx.AsyncClient(transport=transport)
+    sdk_client = AsyncOpenAI(
+        api_key="test-only-key",
+        base_url="https://deepseek.invalid/v1",
+        http_client=http_client,
+        max_retries=0,
+        timeout=1.0,
+    )
+    model_layer = ModelLayer()
+    model_layer.register_provider(
+        DeepSeekProvider(
+            "test-only-key",
+            sdk_client=sdk_client,
+        )
+    )
+    return model_layer, sdk_client
 
 
 @pytest.mark.asyncio
@@ -286,3 +465,119 @@ async def test_receipt_keeps_only_safe_contract_metadata(tmp_path: Path) -> None
     assert FINAL_TEXT not in combined
     assert "call-synthetic-001" not in combined
     assert "reasoning_content" not in combined
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("model", [DEEPSEEK_FLASH, DEEPSEEK_PRO])
+async def test_real_sdk_serializes_and_parses_complete_tool_contract(
+    tmp_path: Path,
+    model,
+) -> None:
+    request_bodies: list[dict] = []
+
+    def handle_request(request: httpx.Request) -> httpx.Response:
+        request_bodies.append(json.loads(request.content))
+        if len(request_bodies) == 1:
+            return tool_call_stream(model.model_id)
+        if len(request_bodies) == 2:
+            return final_text_stream(model.model_id)
+        raise AssertionError("contract attempted more than two SDK requests")
+
+    transport = httpx.MockTransport(handle_request)
+    model_layer, sdk_client = sdk_backed_layer(transport)
+    try:
+        result = await run_provider_tool_contract(
+            model_layer,
+            (model,),
+            mode="fake-sdk",
+            receipt_root=tmp_path / "runs",
+        )
+    finally:
+        await sdk_client.close()
+
+    assert result.outcome == "passed"
+    assert len(request_bodies) == 2
+    first_body, second_body = request_bodies
+
+    assert first_body["model"] == model.model_id
+    assert first_body["stream"] is True
+    assert first_body["stream_options"] == {"include_usage": True}
+    assert first_body["thinking"] == {"type": "disabled"}
+    assert first_body["tool_choice"] == {
+        "type": "function",
+        "function": {"name": "synthetic_lookup"},
+    }
+    assert first_body["tools"][0]["function"]["name"] == "synthetic_lookup"
+
+    assert second_body["model"] == model.model_id
+    assert second_body["stream"] is True
+    assert second_body["stream_options"] == {"include_usage": True}
+    assert second_body["thinking"] == {"type": "disabled"}
+    assert second_body["tools"] == first_body["tools"]
+    assert "tool_choice" not in second_body
+    assert second_body["messages"][-2:] == [
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "call-synthetic-001",
+                    "type": "function",
+                    "function": {
+                        "name": "synthetic_lookup",
+                        "arguments": RAW_ARGUMENTS,
+                    },
+                }
+            ],
+        },
+        {
+            "role": "tool",
+            "content": '{"status":"ok"}',
+            "tool_call_id": "call-synthetic-001",
+        },
+    ]
+    assert second_body["messages"][:2] == first_body["messages"]
+    assert "reasoning_content" not in json.dumps(request_bodies)
+
+    record = json.loads((result.run_dir / "response.json").read_text())[0]
+    assert record["first_finish_reason"] == "tool_use"
+    assert record["first_raw_finish_reason"] == "tool_calls"
+    assert record["second_finish_reason"] == "stop"
+    assert record["second_raw_finish_reason"] == "stop"
+    assert record["first_usage"]["total_tokens"] == 38
+    assert record["second_usage"]["total_tokens"] == 49
+
+
+@pytest.mark.asyncio
+async def test_real_sdk_has_no_retry_or_second_request_after_provider_error(
+    tmp_path: Path,
+) -> None:
+    requests: list[httpx.Request] = []
+
+    def handle_request(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            500,
+            json={
+                "error": {
+                    "message": "synthetic provider failure",
+                    "type": "server_error",
+                }
+            },
+        )
+
+    transport = httpx.MockTransport(handle_request)
+    model_layer, sdk_client = sdk_backed_layer(transport)
+    try:
+        result = await run_provider_tool_contract(
+            model_layer,
+            (DEEPSEEK_FLASH,),
+            mode="fake-sdk",
+            receipt_root=tmp_path / "runs",
+        )
+    finally:
+        await sdk_client.close()
+
+    assert result.outcome == "failed"
+    assert result.error_category == "first_provider"
+    assert len(requests) == 1
