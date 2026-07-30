@@ -1,0 +1,407 @@
+import asyncio
+import json
+from collections.abc import AsyncIterator
+from typing import Any
+
+import openai
+from openai import AsyncOpenAI
+
+from weaver.config import DEEPSEEK_BASE_URL, DEFAULT_TIMEOUT_SECONDS
+from weaver.errors import MissingCredentialError
+
+from .types import (
+    ModelMessage,
+    ModelRequest,
+    ModelResponse,
+    ModelSpec,
+    ModelStopReason,
+    ModelStreamEvent,
+    ModelStreamEventType,
+    ModelToolCall,
+    ModelUsage,
+)
+
+DEEPSEEK_FLASH = ModelSpec(
+    provider_id="deepseek",
+    model_id="deepseek-v4-flash",
+    api_family="openai-chat-completions",
+    default_output_tokens=4096,
+    supports_reasoning=True,
+)
+DEEPSEEK_PRO = ModelSpec(
+    provider_id="deepseek",
+    model_id="deepseek-v4-pro",
+    api_family="openai-chat-completions",
+    default_output_tokens=4096,
+    supports_reasoning=True,
+)
+DEEPSEEK_MODELS = (DEEPSEEK_FLASH, DEEPSEEK_PRO)
+
+
+def _field(value: Any, name: str, default: Any = None) -> Any:
+    if value is None:
+        return default
+    if isinstance(value, dict):
+        return value.get(name, default)
+    return getattr(value, name, default)
+
+
+def _stable_arguments_json(arguments: Any) -> str:
+    if isinstance(arguments, str):
+        return arguments
+    if arguments is None:
+        return ""
+    return json.dumps(
+        arguments,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+
+
+class DeepSeekProvider:
+    provider_id = "deepseek"
+    models = DEEPSEEK_MODELS
+
+    def __init__(
+        self,
+        api_key: str | None,
+        *,
+        timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
+        sdk_client: Any | None = None,
+    ) -> None:
+        if not api_key or not api_key.strip():
+            raise MissingCredentialError()
+        self._client = sdk_client or AsyncOpenAI(
+            api_key=api_key,
+            base_url=DEEPSEEK_BASE_URL,
+            timeout=timeout_seconds,
+            max_retries=0,
+        )
+
+    async def stream(
+        self,
+        model: ModelSpec,
+        request: ModelRequest,
+        cancel_event: asyncio.Event,
+        *,
+        max_output_tokens: int,
+    ) -> AsyncIterator[ModelStreamEvent]:
+        if cancel_event.is_set():
+            yield self._terminal_event(
+                model=model,
+                stop_reason=ModelStopReason.ABORTED,
+                raw_stop_reason="cancelled",
+                error_category="cancelled",
+            )
+            return
+
+        payload = self._request_payload(
+            model,
+            request,
+            max_output_tokens=max_output_tokens,
+        )
+        try:
+            stream = await self._client.chat.completions.create(**payload)
+        except openai.APITimeoutError:
+            yield self._error_event(model, "timeout")
+            return
+        except openai.APIConnectionError:
+            yield self._error_event(model, "connection")
+            return
+        except openai.APIStatusError as error:
+            category = self._status_category(error.status_code)
+            yield self._error_event(model, category)
+            return
+        except Exception:
+            yield self._error_event(model, "provider")
+            return
+
+        content_parts: list[str] = []
+        tool_buffers: dict[int, dict[str, Any]] = {}
+        raw_stop_reason = ""
+        usage = ModelUsage()
+
+        try:
+            async for chunk in stream:
+                if cancel_event.is_set():
+                    await self._close_stream(stream)
+                    yield self._terminal_event(
+                        model=model,
+                        stop_reason=ModelStopReason.ABORTED,
+                        raw_stop_reason="cancelled",
+                        error_category="cancelled",
+                    )
+                    return
+
+                choices = _field(chunk, "choices", ()) or ()
+                if not choices:
+                    raw_usage = _field(chunk, "usage")
+                    if raw_usage is not None:
+                        usage = self._normalize_usage(raw_usage)
+                    continue
+
+                choice = choices[0]
+                finish_reason = _field(choice, "finish_reason")
+                if finish_reason:
+                    raw_stop_reason = str(finish_reason)
+                delta = _field(choice, "delta")
+
+                content = _field(delta, "content")
+                if content:
+                    content_text = str(content)
+                    content_parts.append(content_text)
+                    yield ModelStreamEvent(
+                        event_type=ModelStreamEventType.TEXT_DELTA,
+                        delta=content_text,
+                    )
+
+                reasoning = _field(delta, "reasoning_content")
+                if reasoning:
+                    yield ModelStreamEvent(
+                        event_type=ModelStreamEventType.REASONING_DELTA,
+                        delta=str(reasoning),
+                    )
+
+                tool_deltas = _field(delta, "tool_calls", ()) or ()
+                for tool_delta in tool_deltas:
+                    self._add_tool_delta(tool_buffers, tool_delta)
+        except asyncio.CancelledError:
+            await self._close_stream(stream)
+            yield self._terminal_event(
+                model=model,
+                stop_reason=ModelStopReason.ABORTED,
+                raw_stop_reason="cancelled",
+                error_category="cancelled",
+            )
+            return
+        except Exception:
+            yield self._error_event(model, "provider")
+            return
+
+        tool_calls = self._build_tool_calls(tool_buffers)
+        stop_reason = self._normalize_stop_reason(raw_stop_reason)
+        error_category = None
+        if stop_reason == ModelStopReason.ERROR:
+            error_category = "provider_stop"
+        response = ModelResponse(
+            assistant_message=ModelMessage(
+                role="assistant",
+                content="".join(content_parts) or None,
+                tool_calls=tool_calls,
+            ),
+            provider_id=self.provider_id,
+            model_id=model.model_id,
+            stop_reason=stop_reason,
+            raw_stop_reason=raw_stop_reason,
+            usage=usage,
+            error_category=error_category,
+        )
+        yield ModelStreamEvent(
+            event_type=ModelStreamEventType.RESPONSE_COMPLETE,
+            response=response,
+        )
+
+    @staticmethod
+    def _request_payload(
+        model: ModelSpec,
+        request: ModelRequest,
+        *,
+        max_output_tokens: int,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "model": model.model_id,
+            "messages": [
+                DeepSeekProvider._message_payload(message)
+                for message in request.messages
+            ],
+            "max_tokens": max_output_tokens,
+            "stream": True,
+            "stream_options": {"include_usage": True},
+            "extra_body": {
+                "thinking": {
+                    "type": (
+                        "enabled"
+                        if request.reasoning.enabled
+                        else "disabled"
+                    ),
+                }
+            },
+        }
+        if request.reasoning.effort is not None:
+            payload["extra_body"]["reasoning_effort"] = (
+                request.reasoning.effort
+            )
+        if request.response_format == "json_object":
+            payload["response_format"] = {"type": "json_object"}
+        if request.tools:
+            payload["tools"] = [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": tool.name,
+                        "description": tool.description,
+                        "parameters": tool.parameters,
+                        "strict": tool.strict,
+                    },
+                }
+                for tool in request.tools
+            ]
+        if request.tool_choice is not None:
+            payload["tool_choice"] = {
+                "type": "function",
+                "function": {"name": request.tool_choice},
+            }
+        return payload
+
+    @staticmethod
+    def _message_payload(message: ModelMessage) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "role": message.role,
+            "content": message.content,
+        }
+        if message.name is not None:
+            payload["name"] = message.name
+        if message.tool_call_id is not None:
+            payload["tool_call_id"] = message.tool_call_id
+        if message.tool_calls:
+            payload["tool_calls"] = [
+                {
+                    "id": tool_call.call_id,
+                    "type": "function",
+                    "function": {
+                        "name": tool_call.name,
+                        "arguments": tool_call.arguments_json,
+                    },
+                }
+                for tool_call in message.tool_calls
+            ]
+        return payload
+
+    @staticmethod
+    def _add_tool_delta(
+        buffers: dict[int, dict[str, Any]],
+        tool_delta: Any,
+    ) -> None:
+        index = int(_field(tool_delta, "index", 0))
+        buffer = buffers.setdefault(
+            index,
+            {
+                "call_id": "",
+                "name": "",
+                "argument_parts": [],
+                "structured_arguments": None,
+            },
+        )
+        call_id = _field(tool_delta, "id")
+        if call_id:
+            buffer["call_id"] = str(call_id)
+
+        function = _field(tool_delta, "function")
+        name = _field(function, "name")
+        if name:
+            buffer["name"] += str(name)
+        arguments = _field(function, "arguments")
+        if isinstance(arguments, str):
+            buffer["argument_parts"].append(arguments)
+        elif arguments is not None:
+            buffer["structured_arguments"] = arguments
+
+    @staticmethod
+    def _build_tool_calls(
+        buffers: dict[int, dict[str, Any]],
+    ) -> tuple[ModelToolCall, ...]:
+        calls: list[ModelToolCall] = []
+        for index in sorted(buffers):
+            buffer = buffers[index]
+            argument_parts = buffer["argument_parts"]
+            if argument_parts:
+                arguments_json = "".join(argument_parts)
+            else:
+                arguments_json = _stable_arguments_json(
+                    buffer["structured_arguments"]
+                )
+            calls.append(
+                ModelToolCall(
+                    call_id=buffer["call_id"],
+                    name=buffer["name"],
+                    arguments_json=arguments_json,
+                )
+            )
+        return tuple(calls)
+
+    @staticmethod
+    def _normalize_stop_reason(raw_reason: str) -> ModelStopReason:
+        if raw_reason == "stop":
+            return ModelStopReason.STOP
+        if raw_reason in {"tool_calls", "function_call"}:
+            return ModelStopReason.TOOL_USE
+        if raw_reason == "length":
+            return ModelStopReason.LENGTH
+        return ModelStopReason.ERROR
+
+    @staticmethod
+    def _normalize_usage(raw_usage: Any) -> ModelUsage:
+        details = _field(raw_usage, "completion_tokens_details")
+        return ModelUsage(
+            input_tokens=_field(raw_usage, "prompt_tokens"),
+            output_tokens=_field(raw_usage, "completion_tokens"),
+            total_tokens=_field(raw_usage, "total_tokens"),
+            reasoning_tokens=_field(details, "reasoning_tokens"),
+            cache_hit_tokens=_field(raw_usage, "prompt_cache_hit_tokens"),
+            cache_miss_tokens=_field(raw_usage, "prompt_cache_miss_tokens"),
+        )
+
+    @staticmethod
+    def _terminal_event(
+        *,
+        model: ModelSpec,
+        stop_reason: ModelStopReason,
+        raw_stop_reason: str,
+        error_category: str | None,
+    ) -> ModelStreamEvent:
+        response = ModelResponse(
+            assistant_message=ModelMessage(
+                role="assistant",
+                content=None,
+            ),
+            provider_id=model.provider_id,
+            model_id=model.model_id,
+            stop_reason=stop_reason,
+            raw_stop_reason=raw_stop_reason,
+            error_category=error_category,
+        )
+        return ModelStreamEvent(
+            event_type=ModelStreamEventType.RESPONSE_COMPLETE,
+            response=response,
+        )
+
+    @staticmethod
+    def _error_event(
+        model: ModelSpec,
+        error_category: str,
+    ) -> ModelStreamEvent:
+        return DeepSeekProvider._terminal_event(
+            model=model,
+            stop_reason=ModelStopReason.ERROR,
+            raw_stop_reason="provider_error",
+            error_category=error_category,
+        )
+
+    @staticmethod
+    async def _close_stream(stream: Any) -> None:
+        try:
+            await stream.close()
+        except (AttributeError, NotImplementedError):
+            pass
+
+    @staticmethod
+    def _status_category(status_code: int) -> str:
+        if status_code == 401:
+            return "authentication"
+        if status_code == 402:
+            return "balance"
+        if status_code == 429:
+            return "rate_limit"
+        if status_code in {400, 422}:
+            return "invalid_request"
+        return "provider"
