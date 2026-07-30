@@ -1,14 +1,15 @@
 # Plan 005 Deliverables
 
-This folder holds public, synthetic-only evidence for the DeepSeek tool payload
-contract.
+This folder holds public, synthetic-only evidence for Weaver's provider-neutral
+tool payload contract. DeepSeek is the live provider used for this experiment,
+but no shared Weaver type gains a DeepSeek-only field.
 
 | File | Purpose | Current state |
 | --- | --- | --- |
-| `plan.md` | Pointer to the canonical implementation plan | Draft |
-| `learning.md` | Plain-language understanding and owner gate | Pending owner |
-| `results.md` | SDK-boundary and explicit live observations | Not started |
-| `rubric.md` | Acceptance checklist | Draft |
+| `plan.md` | Pointer to the canonical implementation plan | Active |
+| `learning.md` | Plain-language understanding and owner gate | Confirmed |
+| `results.md` | SDK-boundary and explicit live observations | Baseline recorded |
+| `rubric.md` | Acceptance checklist | Active |
 | `review-ledger.md` | Independent reviews and rechecks | Not started |
 | `decision.md` | Owner's final decision | Pending |
 

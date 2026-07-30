@@ -1,10 +1,11 @@
-# Learning Note: Prove the DeepSeek tool payload contract
+# Learning Note: Provider-neutral tool payload contract
 
 ## Gate status
 
-**Pending owner confirmation.**
+**Confirmed by the owner on 2026-07-30.**
 
-Plan 005 starts only after Plan 004 is accepted.
+Plan 004 is accepted. Plan 005's deterministic build is admitted. Live access
+still has a separate human gate after every deterministic check passes.
 
 ## Tiny model
 
@@ -28,14 +29,55 @@ the live service.
 
 ### Explicit live proof
 
-After every deterministic check passes, run one synthetic DeepSeek exchange:
+After every deterministic check passes and the owner gives explicit permission,
+run one synthetic round trip for each admitted model:
 
-1. force a harmless synthetic tool call;
-2. send a fixed synthetic result with the same call ID;
-3. require a final assistant response;
-4. record metadata in private state.
+1. run `deepseek-v4-flash`;
+2. run `deepseek-v4-pro`;
+3. force one harmless synthetic tool call per model;
+4. send a fixed synthetic result with the same call ID;
+5. require a final assistant response;
+6. record metadata in private state.
 
 No novel or web content is involved.
+
+Both models must pass. A failure in one model does not stop the other model from
+running, but it does stop Plan 005 from passing.
+
+## Confirmed boundary
+
+### Accepted decisions
+
+1. Shared Weaver messages stay provider-neutral. `ModelRequest`,
+   `ModelMessage`, `ModelToolCall`, `ModelToolSchema`, `ModelResponse`, and
+   `ExperimentResult` stay unchanged.
+2. The round trip is owned by a named experiment runner. It does not change
+   `ModelProvider`, `AgentSession`, `run_turn()`, tool policies, cancellation,
+   or registry dispatch.
+3. Thinking stays disabled on both requests with
+   `ModelReasoning(enabled=False)`.
+4. The live order is stable: Flash, then Pro.
+5. Each model gets one attempt. The complete live run may make at most four API
+   requests.
+6. There are no retries, model fallbacks, library reads, web calls, or external
+   tool calls.
+7. The first request forces `synthetic_lookup`. The second request keeps the
+   schema available but removes the forced choice.
+
+### Deferred capability
+
+DeepSeek's checked rule says a thinking-enabled tool loop must replay the
+assistant's reasoning content before the linked tool result. Weaver does not
+have provider-neutral reasoning replay state yet. Plan 005 therefore keeps
+thinking disabled and defers thinking-enabled tool loops to a later admitted
+plan.
+
+### Adapter evidence
+
+Pi commit `d7b02636a0c7e8e615d0cff70679d18d2ff59573` keeps provider
+registration thin while shared adapters own message conversion. That supports
+the same boundary here: provider registration selects the provider, while
+Weaver's shared model layer owns neutral messages.
 
 ## What I understood
 
@@ -43,7 +85,7 @@ No novel or web content is involved.
 2. The new deterministic test must use the real `openai.AsyncOpenAI` HTTP
    serializer and stream parser. Replacing `completions.create()` with another
    stub would repeat the current blind spot.
-3. The test captures two outgoing JSON bodies.
+3. The test captures two outgoing JSON bodies for each model.
 4. The second body must contain one assistant tool-call message followed by one
    tool-result message with the same call ID.
 5. Tool name, type, raw synthetic arguments, content, and ordering are asserted
@@ -55,8 +97,8 @@ No novel or web content is involved.
 8. The default test suite makes no network call.
 9. Fake and live experiment modes stay explicit. There is no fallback.
 10. Live mode requires `DEEPSEEK_KEY` before creating a request or receipt.
-11. One live attempt is recorded. A provider failure is evidence, not a reason
-    for hidden retries.
+11. One attempt per live model is recorded. A provider failure is evidence, not
+    a reason for hidden retries.
 12. Receipts may record IDs, hashes, finish reasons, usage, model, timing, and
     safe categories. They must not record credentials, novel content, chat
     transcripts, or raw reasoning.
@@ -109,11 +151,20 @@ One without the other leaves a gap.
 - provider reliability over time;
 - retry or failover policy.
 
+## Baseline recorded at the gate
+
+- `uv run pytest -q`: 142 passed
+- `uv pip check`: 64 packages compatible
+- `uv run ruff check src/weaver tests`: one existing unused `ebooklib` import
+  in `src/weaver/corpus/service.py`
+- Installed SDK: `openai` 2.49.0
+
+The owner approved removing that unused import as a Plan 005 scope exception so
+the full lint floor can pass.
+
 ## Confirmation record
 
-- Owner choice: pending
-- Date: pending
-- Corrections or added constraints: pending
-
-Confirming approves this test and evidence shape. Live access still needs an
-explicit admission during Plan 005 execution.
+- Owner choice: confirmed
+- Date: 2026-07-30
+- Added constraints: both Flash and Pro must pass; thinking remains disabled;
+  deterministic checks must finish before a separate live permission gate

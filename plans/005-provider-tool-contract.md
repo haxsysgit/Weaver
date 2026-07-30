@@ -1,13 +1,13 @@
-# Plan 005: Prove the DeepSeek tool payload contract
+# Plan 005: Provider-neutral tool payload contract
 
 > **Executor instructions:** Execute only after Plans 003 and 004 are accepted.
 > The deterministic SDK-boundary test comes before any live call. Live mode
-> must be explicit, must never fall back to fake mode, and gets one recorded
-> attempt unless the owner admits another.
+> must be explicit, must never fall back to fake mode, and gets one attempt per
+> model.
 
 ## Status
 
-- **State:** Draft; owner confirmation of `learning.md` pending
+- **State:** Active; learning confirmed, deterministic build admitted, live gate pending
 - **Priority:** P1
 - **Effort:** M
 - **Risk:** Low for deterministic work; medium for live-provider uncertainty
@@ -18,16 +18,17 @@
 
 ## Goal
 
-Prove that Weaver's tool round trip survives the actual OpenAI SDK
-serialization used for DeepSeek:
+Prove that Weaver's neutral messages survive a complete tool round trip through
+the actual OpenAI-compatible SDK path:
 
 ```text
-user request -> assistant tool call -> tool result -> final assistant answer
+request -> assistant tool call -> linked tool result -> final answer
 ```
 
-The default suite will intercept the real SDK request body with an in-process
-HTTP transport. A separate explicit live smoke will use synthetic content only
-and record metadata without raw reasoning.
+DeepSeek is today's live provider. No shared Weaver type gains a
+DeepSeek-specific field. Thinking stays disabled throughout this plan. Both
+`deepseek-v4-flash` and `deepseek-v4-pro` must pass before Plan 005 can be
+accepted.
 
 ## Why this matters
 
@@ -41,17 +42,28 @@ actually uses.
 
 ## Current state
 
-- `src/weaver/deepseek.py:125-288` streams DeepSeek-compatible responses.
-- `src/weaver/deepseek.py:290-300` builds message payload dictionaries.
-- `tests/test_deepseek.py:16-30` uses a stub completion object.
+- `src/weaver/model_layer/deepseek.py` streams DeepSeek-compatible responses
+  and converts neutral messages into provider payloads.
+- `tests/test_deepseek_provider.py` uses a stub completion object.
 - `tests/test_agent_turn.py:128-154` proves a fake tool round trip, but does not
   inspect an SDK HTTP body.
 - `src/weaver/experiment.py` and `src/weaver/receipts.py` contain the admitted
   fake/live experiment and private receipt patterns from Plan 001.
 - `src/weaver/cli.py:40-47` currently admits only `model-smoke`.
 
-Plans 003 and 004 will change the request types and loop signatures. Reread
-their accepted result files before execution.
+Plans 003 and 004 are accepted. Their request types, turn loop, tool policies,
+and cancellation behavior stay unchanged.
+
+The confirmed baseline is 142 passing tests, 64 compatible packages, OpenAI
+2.49.0, and one existing unused `ebooklib` import. The owner approved removing
+that import as a narrow lint cleanup.
+
+DeepSeek's checked rule requires reasoning replay when thinking is enabled
+during tool loops. That capability is deferred. Both requests use
+`ModelReasoning(enabled=False)`.
+
+Pi commit `d7b02636a0c7e8e615d0cff70679d18d2ff59573` supports thin
+provider registration with shared adapters owning message conversion.
 
 ## Contract to prove
 
@@ -107,20 +119,25 @@ Add `provider-tool-contract` as an admitted experiment. It should:
 2. force one harmless synthetic tool call through `tool_choice`;
 3. send the synthetic tool result back in a second request;
 4. require a final assistant response;
-5. record model ID, provider, finish reasons, call-ID presence, argument hash,
-   usage, timing, and outcome in ignored owner-only state;
-6. keep `reasoning_content` ephemeral;
-7. never access the private library or web.
+5. run Flash and then Pro, continuing to Pro if Flash fails;
+6. record model ID, provider, finish reasons, call-ID presence, argument hash,
+   usage, timing, final-text metadata, outcome, and safe error category in
+   ignored owner-only state;
+7. keep `reasoning_content` ephemeral;
+8. never access the private library or web.
 
 Provide `--fake` for deterministic CLI testing. Fake and live modes must be
 visibly different.
+
+Each model gets one attempt and at most two requests. The full live command can
+make at most four API requests. There are no retries or fallbacks.
 
 ## Scope
 
 ### In scope
 
-- `tests/test_deepseek_tool_contract.py` (new)
-- `tests/test_deepseek.py`, only for shared adapter assertions if needed
+- `tests/test_provider_tool_contract.py` (new)
+- `tests/test_deepseek_provider.py`, only for shared adapter assertions if needed
 - `src/weaver/experiment.py`
 - `src/weaver/receipts.py`, only if the existing safe schema needs a named
   contract experiment field
@@ -131,7 +148,8 @@ visibly different.
 
 ### Out of scope
 
-- changing tool semantics from Plans 003 and 004;
+- changing `ModelProvider`, `AgentSession`, `run_turn()`, shared model types,
+  tool semantics, cancellation, or registry dispatch from Plans 003 and 004;
 - private-library, Firecrawl, or novel access;
 - chat UI;
 - LangGraph;
@@ -144,13 +162,14 @@ visibly different.
 
 | Purpose | Command | Expected result |
 | --- | --- | --- |
-| Contract test | `uv run pytest -q tests/test_deepseek_tool_contract.py` | The actual SDK emits two correctly linked request bodies |
-| Focused suite | `uv run pytest -q tests/test_deepseek.py tests/test_cli.py tests/test_deepseek_tool_contract.py` | All focused tests pass |
+| Contract test | `uv run pytest -q tests/test_provider_tool_contract.py` | The actual SDK emits two correctly linked request bodies for both models |
+| Focused suite | `uv run pytest -q tests/test_provider_tool_contract.py tests/test_deepseek_provider.py tests/test_cli.py tests/test_receipts.py` | All focused tests pass |
 | Full tests | `uv run pytest -q` | All tests pass |
 | Lint | `uv run ruff check src/weaver tests` | Exit 0 |
 | Package check | `uv pip check` | All installed packages compatible |
 | Explicit fake use | `uv run weaver experiment provider-tool-contract --fake` | Pass, private receipt path printed |
-| Explicit live use | `uv run weaver experiment provider-tool-contract --live` | Pass or one clearly recorded provider failure |
+| Missing live key | `env -u DEEPSEEK_KEY uv run weaver experiment provider-tool-contract --live` | Refuses before client or receipt creation |
+| Explicit live use | `uv run weaver experiment provider-tool-contract --live` | Both round trips pass, or both outcomes are recorded without retry |
 
 The live command runs only after deterministic verification and explicit owner
 admission for live access.
@@ -162,9 +181,9 @@ admission for live access.
 Create a small helper that returns standards-shaped SSE bytes. Keep it in the
 test file. Capture request JSON through `httpx.Request.content`.
 
-Use the actual `DeepSeekClient` with an injected `AsyncOpenAI` configured with
-the mock transport. Run the accepted custom turn loop with one active synthetic
-read tool.
+Use the actual `DeepSeekProvider` with an injected `AsyncOpenAI` configured
+with the mock transport. Run the provider-neutral experiment runner with one
+synthetic tool schema.
 
 Assert both outgoing payloads and the final `TurnResult`.
 
@@ -202,10 +221,11 @@ text fields.
 
 **Verify:** all deterministic gates pass.
 
-### Step 5: Run one explicit live attempt
+### Step 5: Run one explicit attempt per model
 
 Run the live command only with owner admission and an environment credential.
-Do not echo the credential. Do not silently retry or change models.
+Do not echo the credential. Run Flash, then Pro, once each, with no retry or
+fallback.
 
 If DeepSeek rejects the payload, record the exact safe provider category and
 the metadata needed to inspect the request shape. Keep any raw provider body in
@@ -243,17 +263,19 @@ Required cases:
 
 ## Done criteria
 
-- [ ] The owner confirmed Plan 005 `learning.md`.
-- [ ] Plan 004 is accepted.
+- [x] The owner confirmed Plan 005 `learning.md`.
+- [x] Plan 004 is accepted.
 - [ ] A deterministic test passes through the real SDK HTTP serializer and
       streaming parser.
 - [ ] The captured second request has linked assistant and tool messages.
 - [ ] Negative protocol cases are covered.
 - [ ] Fake mode passes without network or credentials.
 - [ ] Live mode is explicit and has no fallback.
-- [ ] One admitted live attempt is recorded.
+- [ ] One admitted attempt per live model is recorded.
+- [ ] Both live models pass.
 - [ ] Receipts contain no credential, library content, or raw reasoning.
 - [ ] Full tests, lint, and package checks pass.
+- [ ] Editable Draw.io source and rendered preview are linked and inspected.
 - [ ] Reviews have no open blocker.
 - [ ] The owner recorded Plan 005's final decision.
 
