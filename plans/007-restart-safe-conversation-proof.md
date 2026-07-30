@@ -6,7 +6,7 @@
 
 ## Status
 
-- **State:** Unadmitted draft; learning cycle required
+- **State:** Learning answered; owner confirmation pending
 - **Depends on:** Plan 006 finally accepted
 - **Category:** Deterministic storage and recovery proof
 - **Previous draft:** Superseded temporary CLI and live metadata-chat design
