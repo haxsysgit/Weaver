@@ -1,22 +1,30 @@
-# Plan 011: Direct-reading baseline
+# Plan 011 Deliverables
 
-## Status
+This folder holds public, content-free evidence for the direct-reading
+baseline: the first time Weaver reads a novel.
 
-**Planned.** Learning gate is the next step.
+## Architecture
 
-## Goal
+![Plan 011 architecture](architecture.svg)
 
-Compare Flash and Pro reading the same novel packet blind. The first time
-Weaver reads a novel.
+- Editable source: [`architecture.drawio`](architecture.drawio)
+- Rendered preview: [`architecture.svg`](architecture.svg)
 
-## Deliverables
+The visual shows the reading pipeline: corpus packet assembly, blind Flash
+and Pro calls with identical chapter text and questions, comparison matrix,
+and receipt output. Chapter text stays inside the model request and is never
+written to disk in results.
 
-| File | Purpose |
-|---|---|
-| `plan.md` | Pointer to canonical plan |
-| `learning.md` | Learning gate questions and answers |
-| `rubric.md` | Acceptance checklist |
-| `results.md` | Implementation results |
-| `review-ledger.md` | Independent review findings |
-| `decision.md` | Owner acceptance record |
-| `architecture.drawio` | Diagram (before acceptance) |
+| File | Purpose | Current state |
+| --- | --- | --- |
+| `plan.md` | Pointer to the canonical implementation plan | Planned 2026-07-30 |
+| `learning.md` | Plain-language understanding and owner gate | Pending confirmation |
+| `architecture.drawio` | Editable reading-pipeline architecture | Pending |
+| `architecture.svg` | Rendered architecture preview | Pending |
+| `results.md` | Deterministic observations and executed commands | Pending implementation |
+| `rubric.md` | Acceptance checklist | Pending implementation |
+| `review-ledger.md` | Independent findings, repairs, and rechecks | Pending implementation |
+| `decision.md` | Owner's final accept or reject record | Pending |
+
+No novel prose, chats, credentials, private receipts, or raw model reasoning
+belong here. Chapter text is explicitly excluded from all deliverable files.

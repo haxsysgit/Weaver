@@ -1,22 +1,29 @@
-# Plan 010: TUI entrypoint
+# Plan 010 Deliverables
 
-## Status
+This folder holds public, content-free evidence for the TUI entrypoint:
+the first chat window the owner uses to talk to Weaver.
 
-**Planned.** Learning gate is the next step.
+## Architecture
 
-## Goal
+![Plan 010 architecture](architecture.svg)
 
-Give the owner a working chat window. `weaver chat` opens a Textual TUI with
-direct `await session.send()` integration.
+- Editable source: [`architecture.drawio`](architecture.drawio)
+- Rendered preview: [`architecture.svg`](architecture.svg)
 
-## Deliverables
+The visual shows the Textual TUI widget tree (Header, RichLog, Input), the
+async event-loop integration with `SessionWeave.send()`, the fake/live mode
+selection based on `DEEPSEEK_KEY`, and the tool registration boundary.
 
-| File | Purpose |
-|---|---|
-| `plan.md` | Pointer to canonical plan |
-| `learning.md` | Learning gate questions and answers |
-| `rubric.md` | Acceptance checklist |
-| `results.md` | Implementation results |
-| `review-ledger.md` | Independent review findings |
-| `decision.md` | Owner acceptance record |
-| `architecture.drawio` | Diagram (before acceptance) |
+| File | Purpose | Current state |
+| --- | --- | --- |
+| `plan.md` | Pointer to the canonical implementation plan | Planned 2026-07-30 |
+| `learning.md` | Plain-language understanding and owner gate | Pending confirmation |
+| `architecture.drawio` | Editable TUI architecture | Pending |
+| `architecture.svg` | Rendered architecture preview | Pending |
+| `results.md` | Deterministic observations and executed commands | Pending implementation |
+| `rubric.md` | Acceptance checklist | Pending implementation |
+| `review-ledger.md` | Independent findings, repairs, and rechecks | Pending implementation |
+| `decision.md` | Owner's final accept or reject record | Pending |
+
+No novel prose, chats, credentials, private receipts, or raw model reasoning
+belong here.

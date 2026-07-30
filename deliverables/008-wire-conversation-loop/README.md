@@ -1,24 +1,29 @@
-# Plan 008: Wire the conversation loop
+# Plan 008 Deliverables
 
-## Status
+This folder holds public, content-free evidence for wiring the conversation
+loop: the first time `SessionWeave.send()` calls `run_turn()`.
 
-**Planned.** Learning gate is the next step.
+## Architecture
 
-## Goal
+![Plan 008 architecture](architecture.svg)
 
-Zip `conversation/` and `agent/` into one working conversation.
-`SessionWeave.send()` calls `run_turn()` with a fake model, tool calls go
-through `ToolRegistry.dispatch`, and results settle as `conversation_item`
-rows.
+- Editable source: [`architecture.drawio`](architecture.drawio)
+- Rendered preview: [`architecture.svg`](architecture.svg)
 
-## Deliverables
+The visual shows the ItemRecord-to-ConversationMessage adapter, the persist
+callback seam, the run-turn-in-run phase lifecycle, and the SessionWeave
+send() flow from owner input to TurnResult.
 
-| File | Purpose |
-|---|---|
-| `plan.md` | Pointer to canonical plan |
-| `learning.md` | Learning gate questions and answers |
-| `rubric.md` | Acceptance checklist |
-| `results.md` | Implementation results |
-| `review-ledger.md` | Independent review findings |
-| `decision.md` | Owner acceptance record |
-| `architecture.drawio` | Diagram (before acceptance) |
+| File | Purpose | Current state |
+| --- | --- | --- |
+| `plan.md` | Pointer to the canonical implementation plan | Planned 2026-07-30 |
+| `learning.md` | Plain-language understanding and owner gate | Pending confirmation |
+| `architecture.drawio` | Editable conversation-loop architecture | Pending |
+| `architecture.svg` | Rendered architecture preview | Pending |
+| `results.md` | Deterministic observations and executed commands | Pending implementation |
+| `rubric.md` | Acceptance checklist | Pending implementation |
+| `review-ledger.md` | Independent findings, repairs, and rechecks | Pending implementation |
+| `decision.md` | Owner's final accept or reject record | Pending |
+
+No novel prose, chats, credentials, private receipts, or raw model reasoning
+belong here.
