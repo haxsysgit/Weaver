@@ -153,24 +153,20 @@ the tool again.
 The proof runs two Python processes:
 
 Process A:
-1. Create state directory + database.
-2. Run migrations.
-3. Insert relationship, conversation, turn, run.
-4. Insert owner item.
-5. Insert fake assistant item with tool call.
-6. Insert tool-call item, tool-result item, update phase to `settling`
-   in one transaction.
-7. Update phase to `model_call_pending` (simulates "about to make next model
-   call").
-8. Exit the process.
+1. Create `SessionWeave(state_dir)` and call `open()`.
+2. Call `start_conversation("Call the echo tool.")`.
+3. Internally: the fake model emits one tool call; the coordinator settles the
+   tool result; the run phase advances to `model_call_pending`.
+4. Exit the process (crashes before the next model call starts).
 
 Process B:
-1. Open the same database.
-2. Query `run` where `phase != 'completed'`.
-3. Find the interrupted run.
-4. Execute `continue`: create new run (attempt 2), include settled items.
-5. Fake model returns final answer (sees tool result, does not call tool).
-6. Commit final items and mark run + turn completed.
+1. Create `SessionWeave(state_dir)` and call `open()`.
+2. Call `find_interrupted_runs()`: returns the interrupted run.
+3. Call `continue_interrupted(conversation_id)`.
+4. Internally: the coordinator creates a new run, includes the settled tool
+   result in context; the fake model returns a final answer WITHOUT calling
+   the tool again.
+5. The run and turn are marked `completed`.
 
 Test assertions:
 - Exactly one `tool_call` item exists across all runs.
@@ -213,10 +209,24 @@ verifies the file mode is `0o600` or stricter after creation.
 
 ### 9. Smallest repository/coordinator interfaces
 
-Two repository classes, one coordinator function. No abstract base classes.
+Three classes, one entry point.
 
 ```python
+class SessionWeave:
+    """Thin top-level orchestrator. Wires repository and coordinator."""
+    def __init__(self, state_dir: Path) -> None: ...
+    async def open(self) -> None: ...
+    async def close(self) -> None: ...
+    async def start_conversation(self, owner_text: str) -> str: ...
+    async def continue_interrupted(self, conversation_id: str) -> str: ...
+    async def find_interrupted_runs(self) -> list[dict]: ...
+    @property
+    def repo(self) -> ConversationRepository: ...
+    @property
+    def coordinator(self) -> RunCoordinator: ...
+
 class ConversationRepository:
+    """Only class touching SQLite."""
     def __init__(self, db: aiosqlite.Connection): ...
     async def migrate(self) -> None: ...
     async def create_relationship(self, id: str) -> None: ...
@@ -232,6 +242,7 @@ class ConversationRepository:
     async def find_interrupted_run(self, conversation_id: str) -> dict | None: ...
 
 class RunCoordinator:
+    """Owns multi-step transaction logic. Called by SessionWeave."""
     def __init__(self, repo: ConversationRepository): ...
     async def claim_turn(self, conversation_id: str) -> dict: ...
     async def settle_tool_result(self, run_id: str, tool_call_id: str,
@@ -240,8 +251,9 @@ class RunCoordinator:
     async def continue_interrupted(self, run: dict) -> dict: ...
 ```
 
-`ConversationRepository` is the only class touching SQLite. `RunCoordinator`
-calls the repository and owns the multi-step transaction logic.
+`SessionWeave` is the only class the subprocess fixture imports directly.
+Process A calls `sw.start_conversation("hello")`. Process B calls
+`sw.continue_interrupted(conversation_id)`. Everything else is internal.
 
 ### 10. Failures that stay recorded rather than retried
 
