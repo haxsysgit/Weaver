@@ -163,6 +163,7 @@ def _assistant_message(
 
 async def run_turn(
     *,
+    session_id: str,
     turn_id: str,
     model_layer: ModelLayer,
     model: ModelSpec,
@@ -331,7 +332,7 @@ async def run_turn(
                 break
 
             context = ToolExecutionContext(
-                session_id="",
+                session_id=session_id,
                 turn_id=turn_id,
                 call_id=tool_call.call_id,
                 cancel_event=cancel_event,

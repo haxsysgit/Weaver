@@ -80,6 +80,7 @@ class AgentSession:
 
         try:
             result = await run_turn(
+                session_id=self.session_id,
                 turn_id=turn_id,
                 model_layer=self._model_layer,
                 model=self._model,

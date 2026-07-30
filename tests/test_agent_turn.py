@@ -168,6 +168,8 @@ async def execute_turn(
     layer: ModelLayer,
     model: ModelSpec,
     *,
+    session_id: str = "session-1",
+    turn_id: str = "turn-1",
     registry: ToolRegistry | None = None,
     active_tools: tuple[str, ...] = (),
     history=None,
@@ -177,7 +179,8 @@ async def execute_turn(
     execution_policy: ToolExecutionPolicy | None = None,
 ):
     return await run_turn(
-        turn_id="turn-1",
+        session_id=session_id,
+        turn_id=turn_id,
         model_layer=layer,
         model=model,
         system_prompt="You are Weaver.",
@@ -772,3 +775,247 @@ class TestTurnBoundaries:
         assert session.turn_count == 2
         assert len(session.history) == 4
         assert isinstance(session.history[0], UserMessage)
+
+
+class TestToolExecutionEvidence:
+    async def test_session_turn_and_call_ids_reach_handler(self) -> None:
+        received_ids: list[tuple[str, str, str]] = []
+
+        async def handler(arguments, context):
+            received_ids.append(
+                (
+                    context.session_id,
+                    context.turn_id,
+                    context.call_id,
+                )
+            )
+            return {"state": "read"}
+
+        registry = ToolRegistry()
+        registry.register(
+            ToolDefinition(
+                name="inspect",
+                description="Inspect state.",
+                parameters={"type": "object"},
+                handler=handler,
+                effect_kind=EffectKind.READ,
+            )
+        )
+        call = tool_call("call-context", "inspect", "{}")
+        layer, model, _ = scripted_layer(
+            tool_response(call),
+            stop_response("Inspection finished."),
+        )
+        session = AgentSession(
+            session_id="session-real",
+            model_layer=layer,
+            model=model,
+            system_prompt="You are Weaver.",
+            tool_registry=registry,
+            execution_policy=ToolExecutionPolicy.read_only(),
+            active_tools=("inspect",),
+        )
+
+        result = await session.send("Inspect")
+
+        assert received_ids == [
+            ("session-real", result.turn_id, "call-context")
+        ]
+
+    async def test_session_cancel_reaches_running_handler(self) -> None:
+        handler_started = asyncio.Event()
+        cleanup_finished = asyncio.Event()
+
+        async def handler(arguments, context):
+            handler_started.set()
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                cleanup_finished.set()
+                raise
+
+        registry = ToolRegistry()
+        registry.register(
+            ToolDefinition(
+                name="waiting-read",
+                description="Wait for cancellation.",
+                parameters={"type": "object"},
+                handler=handler,
+                effect_kind=EffectKind.READ,
+            )
+        )
+        layer, model, provider = scripted_layer(
+            tool_response(
+                tool_call("call-session-cancel", "waiting-read", "{}")
+            )
+        )
+        session = AgentSession(
+            session_id="session-cancel",
+            model_layer=layer,
+            model=model,
+            system_prompt="You are Weaver.",
+            tool_registry=registry,
+            execution_policy=ToolExecutionPolicy.read_only(),
+            active_tools=("waiting-read",),
+        )
+        send_task = asyncio.create_task(session.send("Wait"))
+
+        await handler_started.wait()
+        session.cancel()
+        result = await send_task
+
+        assert cleanup_finished.is_set()
+        assert result.exit_reason == TurnExitReason.INTERRUPTED
+        assert result.tool_starts == 1
+        assert len(provider.calls) == 1
+
+    async def test_turn_counts_only_handlers_that_started(self) -> None:
+        starts: dict[str, int] = {}
+
+        async def complete_handler(arguments, context):
+            starts["complete"] = starts.get("complete", 0) + 1
+            return {"state": "complete"}
+
+        async def blocked_handler(arguments, context):
+            starts["blocked"] = starts.get("blocked", 0) + 1
+            return {"state": "blocked"}
+
+        async def failed_handler(arguments, context):
+            starts["failed"] = starts.get("failed", 0) + 1
+            raise RuntimeError("expected test failure")
+
+        registry = ToolRegistry()
+        for name, handler, effect_kind in (
+            ("complete", complete_handler, EffectKind.READ),
+            ("blocked", blocked_handler, EffectKind.INTERNAL_WRITE),
+            ("failed", failed_handler, EffectKind.READ),
+        ):
+            registry.register(
+                ToolDefinition(
+                    name=name,
+                    description=f"Run {name}.",
+                    parameters={"type": "object"},
+                    handler=handler,
+                    effect_kind=effect_kind,
+                )
+            )
+        calls = (
+            tool_call("call-complete", "complete", "{}"),
+            tool_call("call-blocked", "blocked", "{}"),
+            tool_call("call-failed", "failed", "{}"),
+        )
+        layer, model, _ = scripted_layer(
+            tool_response(*calls),
+            stop_response("Batch settled."),
+        )
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=registry,
+            active_tools=("complete", "blocked", "failed"),
+        )
+
+        results = [
+            message
+            for message in result.new_messages
+            if isinstance(message, ToolResultMessage)
+        ]
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert result.tool_starts == 2
+        assert starts == {"complete": 1, "failed": 1}
+        assert [
+            (message.call_id, message.ok, message.error_code)
+            for message in results
+        ] == [
+            ("call-complete", True, None),
+            ("call-blocked", False, "effect_not_allowed"),
+            ("call-failed", False, "tool_failed"),
+        ]
+
+    async def test_cancelled_batch_settles_every_linked_call(self) -> None:
+        first_started = asyncio.Event()
+        first_cleanup_finished = asyncio.Event()
+        cancel_event = asyncio.Event()
+        starts: dict[str, int] = {}
+
+        async def first_handler(arguments, context):
+            starts["first"] = starts.get("first", 0) + 1
+            first_started.set()
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                first_cleanup_finished.set()
+                raise
+
+        async def later_handler(arguments, context):
+            starts["later"] = starts.get("later", 0) + 1
+            return {"state": "should not run"}
+
+        registry = ToolRegistry()
+        registry.register(
+            ToolDefinition(
+                name="first",
+                description="Wait for cancellation.",
+                parameters={"type": "object"},
+                handler=first_handler,
+                effect_kind=EffectKind.READ,
+            )
+        )
+        registry.register(
+            ToolDefinition(
+                name="later",
+                description="Must stay stopped.",
+                parameters={"type": "object"},
+                handler=later_handler,
+                effect_kind=EffectKind.READ,
+            )
+        )
+        calls = (
+            tool_call("call-first", "first", "{}"),
+            tool_call("call-second", "later", "{}"),
+            tool_call("call-third", "later", "{}"),
+        )
+        layer, model, provider = scripted_layer(tool_response(*calls))
+        turn_task = asyncio.create_task(
+            execute_turn(
+                layer,
+                model,
+                registry=registry,
+                active_tools=("first", "later"),
+                cancel_event=cancel_event,
+            )
+        )
+
+        await first_started.wait()
+        cancel_event.set()
+        result = await turn_task
+
+        result_messages = [
+            message
+            for message in result.new_messages
+            if isinstance(message, ToolResultMessage)
+        ]
+        call_messages = [
+            message
+            for message in result.new_messages
+            if isinstance(message, ToolCallMessage)
+        ]
+        assert first_cleanup_finished.is_set()
+        assert result.exit_reason == TurnExitReason.INTERRUPTED
+        assert result.tool_starts == 1
+        assert starts == {"first": 1}
+        assert len(provider.calls) == 1
+        assert [message.call_id for message in call_messages] == [
+            "call-first",
+            "call-second",
+            "call-third",
+        ]
+        assert [
+            (message.call_id, message.error_code)
+            for message in result_messages
+        ] == [
+            ("call-first", "cancelled"),
+            ("call-second", "cancelled"),
+            ("call-third", "cancelled"),
+        ]
