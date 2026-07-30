@@ -21,5 +21,5 @@
 | Both live models pass | Passed | Flash and Pro live records |
 | Receipts are private and reasoning-free | Passed | Permissions and content audit |
 | Draw.io source and preview are linked and inspected | Passed | README, XML validation, SVG render inspection |
-| Two reviews have no blocker | Not started | Review ledger |
-| Owner records final decision | Pending | `decision.md` |
+| Two reviews have no blocker | Passed | Review ledger |
+| Owner records final decision | Passed | `decision.md`, 2026-07-30 |

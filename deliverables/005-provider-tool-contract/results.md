@@ -2,8 +2,9 @@
 
 ## Status
 
-The learning gate is confirmed, Plan 004 is accepted, and the deterministic
-floor passes. Live access has not been admitted.
+Plan 005 is accepted. The learning gate, deterministic floor, admitted live
+contracts, diagram inspection, independent reviews, rechecks, and owner
+decision all pass.
 
 ## Hypothesis
 
@@ -37,6 +38,12 @@ correct two-request tool exchange for both `deepseek-v4-flash` and
   prose, credentials, provider bodies, or reasoning text.
 - After the repair, `env -u DEEPSEEK_KEY ... --live` exits 2 before client or
   receipt creation. The existing fake receipt count stayed unchanged.
+- The final post-review floor repeated the same result: 33 focused tests, 156
+  full tests, clean lint, 64 compatible packages, clean diff check, and zero
+  Draw.io validator findings.
+- Final fake mode passed at
+  `.weaver/runs/provider-tool-contract-20260730T093204-7ef3ab67f922`.
+- The final missing-key check exited 2 and kept the receipt count at three.
 
 ## Live observations
 
@@ -77,6 +84,15 @@ Safe observations:
 - ImageMagick rendered the SVG to a capped 1400 by 900 PNG for inspection.
 - The preview has no clipped labels, overlapping shapes, missing acceptance
   branch, off-canvas content, or broken connection.
+
+## Independent review observations
+
+- Frozen candidate: `3f12fdd`.
+- Provider-contract review: passed with no implementation blocker.
+- Evidence and privacy review: found two public-document status mismatches.
+- One repair pass corrected the stale live status and completed checklist.
+- Provider reviewer recheck: passed with no remaining blocker.
+- Evidence and privacy reviewer recheck: passed with no remaining blocker.
 
 ## Failures
 

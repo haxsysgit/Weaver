@@ -7,7 +7,7 @@
 
 ## Status
 
-- **State:** Deterministic and live contracts passed; independent review active
+- **State:** Accepted by the owner on 2026-07-30
 - **Priority:** P1
 - **Effort:** M
 - **Risk:** Low for deterministic work; medium for live-provider uncertainty
@@ -265,19 +265,19 @@ Required cases:
 
 - [x] The owner confirmed Plan 005 `learning.md`.
 - [x] Plan 004 is accepted.
-- [ ] A deterministic test passes through the real SDK HTTP serializer and
+- [x] A deterministic test passes through the real SDK HTTP serializer and
       streaming parser.
-- [ ] The captured second request has linked assistant and tool messages.
-- [ ] Negative protocol cases are covered.
-- [ ] Fake mode passes without network or credentials.
-- [ ] Live mode is explicit and has no fallback.
-- [ ] One admitted attempt per live model is recorded.
-- [ ] Both live models pass.
-- [ ] Receipts contain no credential, library content, or raw reasoning.
-- [ ] Full tests, lint, and package checks pass.
-- [ ] Editable Draw.io source and rendered preview are linked and inspected.
-- [ ] Reviews have no open blocker.
-- [ ] The owner recorded Plan 005's final decision.
+- [x] The captured second request has linked assistant and tool messages.
+- [x] Negative protocol cases are covered.
+- [x] Fake mode passes without network or credentials.
+- [x] Live mode is explicit and has no fallback.
+- [x] One admitted attempt per live model is recorded.
+- [x] Both live models pass.
+- [x] Receipts contain no credential, library content, or raw reasoning.
+- [x] Full tests, lint, and package checks pass.
+- [x] Editable Draw.io source and rendered preview are linked and inspected.
+- [x] Reviews have no open blocker.
+- [x] The owner recorded Plan 005's final decision.
 
 ## STOP conditions
 
