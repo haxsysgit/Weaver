@@ -13,8 +13,9 @@ than weakening validation or treating them as fixed.
 
 A custom Weaver agent can hand repetitive corpus work to a deterministic,
 typed pipeline while the LLM stays responsible only for understanding the
-request and choosing an allowed tool. LangGraph, if admitted later, needs to
-own only the conversation loop.
+request and choosing an allowed tool. Plan 006 later chose a direct
+Weaver-owned coordinator first. LangGraph remains a possible adapter and never
+owns this private-library pipeline.
 
 ## Built candidate
 

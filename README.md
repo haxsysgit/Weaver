@@ -71,6 +71,25 @@ When something more complex is needed, the failure is proven first.
 **One experiment at a time.** The fastest way to build something nobody
 understands is to build everything at once. Weaver doesn't do that.
 
+## 🧭 Build order
+
+Weaver separates three stages that are easy to blur together:
+
+1. **Durable conversation ledger:** keep exact turns, tool evidence, restart
+   state, recovery choices, and reconnect events.
+2. **Relationship continuity:** remember owner-attributed preferences,
+   theories, shared history, and Weaver's own revisable opinions.
+3. **Literary understanding:** test direct reading first, then compare
+   source-linked compiled memory against it.
+
+Plan 006 defines the first stage. Plan 007 will prove restart safety with a fake
+conversation before any live chat. Relationship curation and literary memory
+remain later capabilities.
+
+Numbered plans and gate states live in [`plans/README.md`](plans/README.md).
+The accepted documentation direction for durable conversation is
+[`docs/decisions/006-conversation-architecture.md`](docs/decisions/006-conversation-architecture.md).
+
 
 ## 🔒 Private by design
 

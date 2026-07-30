@@ -71,13 +71,14 @@ await export_novel(novel_id, format, through_chapter=None)
 ```
 
 A thin CLI may expose the same functions for human checks. Tool logic must not
-live in the CLI. Deep Agents, LangGraph, and Pydantic AI remain possible later
-wrappers; this plan chooses none of them.
+live in the CLI. Coordinator frameworks remain possible later wrappers; this
+plan chooses none of them.
 
-Weaver remains a custom agent and owns its tools and system behavior. If
-LangGraph is used later, its admitted job is the conversation loop only. It
-does not become the corpus pipeline, tool implementation, or whole Weaver
-architecture. Future tools may inspect novels, update known web-backed
+Weaver remains a custom agent and owns its tools and system behavior. Plan 006
+chooses a Weaver-owned direct conversation coordinator first. If LangGraph is
+admitted later, it stays an optional coordinator adapter. It does not become
+the private-library pipeline, tool implementation, canonical state, or whole
+Weaver architecture. Future tools may inspect novels, update known web-backed
 information, search the web, or perform other bounded work through the same
 explicit registry pattern.
 

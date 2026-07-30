@@ -11,8 +11,8 @@ evidence, review, and human decision gates must also be complete.
 | [003 - Weaver model layer and preserved tool protocol](003-preserve-tool-protocol.md) | Accepted 2026-07-30 | Plan 002 accepted | Add a provider-independent model layer, keep complete tool calls, and refuse inactive tools |
 | [004 - Make cancellation and side effects explicit](004-cancellation-and-side-effects.md) | Accepted 2026-07-30 | Plan 003 accepted | Cancel running async tools cooperatively and block unapproved effect classes |
 | [005 - Provider-neutral tool payload contract](005-provider-tool-contract.md) | Accepted 2026-07-30 | Plan 004 accepted | Prove the neutral two-request tool round trip through the real SDK path for Flash and Pro |
-| [006 - Settle the LangGraph boundary](006-settle-langgraph-boundary.md) | Draft; learning gate pending | Plan 005 accepted | Record where LangGraph may sit without owning Weaver's tools, private library, or memory |
-| [007 - Open the first Weaver conversation](007-minimal-conversation-entrypoint.md) | Draft; learning gate pending | Plans 002-006 accepted | Wire DeepSeek, the custom runtime, and library inspection into a minimal local chat |
+| [006 - Durable conversation architecture](006-durable-conversation-architecture.md) | Learning confirmed; final owner gate pending | Plan 005 accepted | Record direct coordination, canonical conversation evidence, recovery, context, and optional adapters |
+| [007 - Restart-safe conversation proof](007-restart-safe-conversation-proof.md) | Unadmitted; learning cycle required | Plan 006 accepted | Prove exact fake conversation history survives a subprocess restart without replay or duplicates |
 | 008 - Direct-reading baseline | Deferred | Plans 002-007 accepted | Blind Flash/Pro comparison over selected chapter packets |
 | 009 - First compiled-memory experiment | Deferred | Plan 008 accepted | Compare bounded compiled Markdown memory with direct rereading |
 
@@ -26,7 +26,8 @@ five simultaneous builds.
 3. Repeat the full loop for Plans 004, 005, 006, and 007, one at a time.
 4. Before each final owner gate, deliver and inspect that plan's editable
    Draw.io architecture plus its rendered preview.
-5. Plan durable turn events and context budgeting only after Plan 007 works.
+5. Plan 007 proves the durable ledger before relationship curation, context
+   compaction, live chat, or literary memory.
 6. Begin the direct-reading baseline only after the runtime sequence is
    accepted.
 

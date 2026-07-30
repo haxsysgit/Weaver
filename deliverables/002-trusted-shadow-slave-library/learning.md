@@ -22,8 +22,9 @@ The split is:
 - the deterministic tool validates inputs, performs the exact work, protects
   private state, and returns inspectable metadata;
 - Weaver owns the tools and the system around them;
-- LangGraph may later power the conversation loop, but it is not the whole
-  system and does not own corpus rules.
+- Plan 006 uses a Weaver-owned direct conversation coordinator first.
+  LangGraph may later adapt that coordinator, but it is not the whole system
+  and does not own private-library rules.
 
 Novel inspection and updates are the first domain tools. Web search and other
 fresh-information tools can follow the same pattern in later admitted slices.
@@ -403,5 +404,6 @@ Please correct anything here before confirming:
 Owner confirmation: **CONFIRMED 2026-07-29**
 
 Owner clarification: the wider goal is an LLM-driven custom Weaver agent that
-delegates grunt work to deterministic tools. LangGraph may later provide only
-the conversation loop, not the corpus pipeline or whole-system architecture.
+delegates grunt work to deterministic tools. Plan 006 later chose a direct
+Weaver coordinator first, with LangGraph only as a possible adapter. Neither
+coordinator owns the private-library pipeline or whole-system architecture.

@@ -1,20 +1,29 @@
 # Plan 006 Deliverables
 
-This folder holds the learning gate, decision evidence, diagram, reviews, and
-owner record for Weaver's durable conversation architecture.
-
-The old folder name remains until the owner confirms the learning note. The
-roadmap-reconciliation step will then rename it without treating the hypothesis
-as an accepted decision early.
+This folder holds public evidence for Weaver's durable conversation
+architecture. Final acceptance remains an owner gate.
 
 | File | Purpose | Current state |
 | --- | --- | --- |
-| `plan.md` | Pointer to the canonical architecture plan | Draft |
-| [`../../WEAVER_CODEX_HERMES_CONVERSATION_COMPARISON.md`](../../WEAVER_CODEX_HERMES_CONVERSATION_COMPARISON.md) | Pi, Codex, Hermes, LangGraph, and Weaver source study | Complete |
-| `learning.md` | Research observations, rejected designs, architecture hypothesis, and owner gate | Pending owner |
-| `results.md` | Reconciliation and consistency observations | Not started |
-| `rubric.md` | Acceptance checklist | Draft |
-| `review-ledger.md` | Cold-read architecture reviews | Not started |
-| `decision.md` | Owner's final architecture decision | Pending |
-| `architecture.drawio` | Editable boundary diagram | Planned |
-| `architecture.png` | Visually checked render | Planned |
+| [`plan.md`](plan.md) | Pointer to the canonical Plan 006 file | Current |
+| [`learning.md`](learning.md) | Confirmed learning record and corrections | Confirmed |
+| [`../../docs/decisions/006-conversation-architecture.md`](../../docs/decisions/006-conversation-architecture.md) | Canonical architecture decision | Candidate |
+| [`results.md`](results.md) | Work, checks, failures, commits, next action | In progress |
+| [`rubric.md`](rubric.md) | Final acceptance checklist | In progress |
+| [`review-ledger.md`](review-ledger.md) | Two reviews, repair pass, and rechecks | Pending |
+| [`decision.md`](decision.md) | Owner's final decision | Pending |
+| [`architecture.drawio`](architecture.drawio) | Editable ownership diagram | Pending |
+| [`architecture.svg`](architecture.svg) | Matching preview | Pending |
+
+Research evidence:
+
+- [`context-research-prompt.md`](context-research-prompt.md)
+- [`research-pi-langgraph-hermes.md`](research-pi-langgraph-hermes.md)
+- [`research-codex-claude-honcho.md`](research-codex-claude-honcho.md)
+- [`research-synthesis.md`](research-synthesis.md)
+- [`research-karpathy-llm-wiki.md`](research-karpathy-llm-wiki.md)
+- [`../../WEAVER_CODEX_HERMES_CONVERSATION_COMPARISON.md`](../../WEAVER_CODEX_HERMES_CONVERSATION_COMPARISON.md)
+- [`../../WEAVER_PI_LANGGRAPH_COMPARISON.md`](../../WEAVER_PI_LANGGRAPH_COMPARISON.md)
+
+Do not place chats, chapter text, secrets, private receipts, generated wiki
+pages, or raw model reasoning in this folder.

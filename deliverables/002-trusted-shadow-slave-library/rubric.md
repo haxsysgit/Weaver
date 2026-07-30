@@ -10,7 +10,7 @@ not block acceptance of the deterministic library toolset.
 | --- | --- | --- |
 | Five typed async, agent-callable tools | Pass | Explicit Weaver registry and Pydantic schemas |
 | Custom Weaver owns tool behavior | Pass | Service and registry are framework-neutral |
-| LangGraph limited to a possible later conversation loop | Pass | No corpus rule depends on LangGraph |
+| Conversation coordinator does not own library rules | Pass | Direct first; optional LangGraph adapter later |
 | Fixed novel ID, URL, and filesystem derivation | Pass | One `ShadowSlaveSpec`; no arbitrary URL/path inputs |
 | Firecrawl only; no Cloudflare bypass or silent fallback | Pass | One no-retry adapter |
 | Deterministic HTML cleanup and validation | Pass | Synthetic extraction and normalization tests |

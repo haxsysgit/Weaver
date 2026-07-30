@@ -1,15 +1,21 @@
-# Acceptance Rubric: LangGraph boundary
+# Acceptance Rubric: Durable conversation architecture
 
 | Requirement | State | Evidence |
 | --- | --- | --- |
-| Owner confirmed `learning.md` | Pending | Confirmation record |
-| Plan 005 accepted | Pending | Plan 005 decision |
-| Canonical architecture decision written | Not started | Decision document |
-| Inner and outer loops defined | Not started | Decision document |
-| Plan 002 and comparison agree | Not checked | Consistency scan |
-| Weaver owns tools, library, memory, and types | Not checked | Decision document |
-| Plan 007 has no framework ambiguity | Not checked | Cold-read review |
-| No source or dependency change | Not checked | Git diff |
-| Diagram source and render agree | Not started | Visual inspection |
-| Two reviews have no blocker | Not started | Review ledger |
+| Owner confirmed `learning.md` | Pass | Confirmation record dated 2026-07-30 |
+| Three owner corrections recorded | Pass | Learning note and decision |
+| Research residue removed safely | Pass | Results scan and cleanup commit |
+| Canonical architecture decision written | Pass | `docs/decisions/006-conversation-architecture.md` |
+| Direct coordinator is first | Pass | Decision and both comparisons |
+| LangGraph remains optional | Pass | Decision and older comparison |
+| Canonical SQLite ownership is clear | Pass | Decision storage rules |
+| Retry/continue do not replay silently | Pass | Decision recovery traces |
+| Every owner message survives | Pass | Steering and FIFO traces |
+| Risk-based memory controls exist | Pass | Decision memory table |
+| Wiki is private and rebuildable | Pass | Decision projection boundary |
+| Plan 007 restart proof is clear | Pending | Plan 007 replacement |
+| No source/runtime dependency change | Pending | Final Git scope audit |
+| Diagram source and preview agree | Pending | Export and visual inspection |
+| Two reviews have no blocker | Pending | Review ledger |
+| Full verification floor passes | Pending | Results |
 | Owner records final decision | Pending | `decision.md` |
