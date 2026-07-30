@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -10,6 +11,7 @@ from .errors import ExperimentValidationError, WeaverError
 from .model_layer import (
     ModelLayer,
     ModelMessage,
+    ModelReasoning,
     ModelRequest,
     ModelResponse,
     ModelSpec,
@@ -22,6 +24,11 @@ _SYSTEM_PREFIX = (
     "This is a synthetic transport smoke test. Use no private data and make no "
     "claims about novels or literary quality."
 )
+_CONTRACT_EXPERIMENT = "provider-tool-contract"
+_CONTRACT_TOOL_NAME = "synthetic_lookup"
+_CONTRACT_ARGUMENTS = {"item": "status"}
+_CONTRACT_RESULT_JSON = '{"status":"ok"}'
+_CONTRACT_MAX_OUTPUT_TOKENS = 128
 
 
 @dataclass(frozen=True, slots=True)
@@ -29,6 +36,323 @@ class ExperimentResult:
     outcome: str
     run_dir: Path
     error_category: str | None = None
+
+
+class _ContractFailure(Exception):
+    def __init__(self, category: str) -> None:
+        super().__init__(category)
+        self.category = category
+
+
+def _sha256_text(value: str) -> str:
+    return hashlib.sha256(value.encode()).hexdigest()
+
+
+def _contract_tool() -> ModelToolSchema:
+    return ModelToolSchema(
+        name=_CONTRACT_TOOL_NAME,
+        description="Return the status of a synthetic transport marker.",
+        parameters={
+            "type": "object",
+            "properties": {
+                "item": {
+                    "type": "string",
+                    "enum": ["status"],
+                }
+            },
+            "required": ["item"],
+            "additionalProperties": False,
+        },
+    )
+
+
+def _contract_messages() -> tuple[ModelMessage, ...]:
+    return (
+        ModelMessage(
+            role="system",
+            content=(
+                "This is a synthetic provider transport check. Use no private "
+                "data and do not access external tools."
+            ),
+        ),
+        ModelMessage(
+            role="user",
+            content=(
+                "Call synthetic_lookup exactly once with item set to status. "
+                "Do not answer normally before the tool result."
+            ),
+        ),
+    )
+
+
+def _contract_first_request() -> ModelRequest:
+    tool = _contract_tool()
+    return ModelRequest(
+        messages=_contract_messages(),
+        tools=(tool,),
+        tool_choice=tool.name,
+        max_output_tokens=_CONTRACT_MAX_OUTPUT_TOKENS,
+        reasoning=ModelReasoning(enabled=False),
+    )
+
+
+def _contract_second_request(response: ModelResponse) -> ModelRequest:
+    call = response.assistant_message.tool_calls[0]
+    tool_result = ModelMessage(
+        role="tool",
+        content=_CONTRACT_RESULT_JSON,
+        tool_call_id=call.call_id,
+    )
+    return ModelRequest(
+        messages=(
+            *_contract_messages(),
+            response.assistant_message,
+            tool_result,
+        ),
+        tools=(_contract_tool(),),
+        max_output_tokens=_CONTRACT_MAX_OUTPUT_TOKENS,
+        reasoning=ModelReasoning(enabled=False),
+    )
+
+
+def _contract_record(model: ModelSpec) -> dict[str, Any]:
+    return {
+        "provider_id": model.provider_id,
+        "model_id": model.model_id,
+        "first_finish_reason": None,
+        "first_raw_finish_reason": None,
+        "second_finish_reason": None,
+        "second_raw_finish_reason": None,
+        "call_id_present": False,
+        "argument_sha256": None,
+        "argument_length": None,
+        "first_latency_ms": None,
+        "second_latency_ms": None,
+        "first_usage": None,
+        "second_usage": None,
+        "final_text_present": False,
+        "final_text_length": None,
+        "final_text_sha256": None,
+        "outcome": "failed",
+        "error_category": None,
+    }
+
+
+def _record_response(
+    record: dict[str, Any],
+    *,
+    position: str,
+    response: ModelResponse,
+    latency_ms: float,
+) -> None:
+    record[f"{position}_finish_reason"] = response.stop_reason.value
+    record[f"{position}_raw_finish_reason"] = response.raw_stop_reason
+    record[f"{position}_latency_ms"] = round(latency_ms, 3)
+    record[f"{position}_usage"] = asdict(response.usage)
+
+
+def _provider_failure(response: ModelResponse, *, position: str) -> None:
+    if response.stop_reason in {
+        ModelStopReason.ERROR,
+        ModelStopReason.ABORTED,
+    }:
+        category = response.error_category or response.stop_reason.value
+        raise _ContractFailure(f"{position}_{category}")
+
+
+def _validate_first_response(
+    response: ModelResponse,
+    record: dict[str, Any],
+) -> None:
+    _provider_failure(response, position="first")
+    if response.stop_reason != ModelStopReason.TOOL_USE:
+        raise _ContractFailure("unexpected_first_finish")
+
+    tool_calls = response.assistant_message.tool_calls
+    if len(tool_calls) != 1:
+        raise _ContractFailure("tool_call_count")
+
+    call = tool_calls[0]
+    record["call_id_present"] = bool(call.call_id)
+    record["argument_sha256"] = _sha256_text(call.arguments_json)
+    record["argument_length"] = len(call.arguments_json)
+
+    if not call.call_id:
+        raise _ContractFailure("missing_call_id")
+    if call.name != _CONTRACT_TOOL_NAME:
+        raise _ContractFailure("unexpected_tool_name")
+    try:
+        arguments = json.loads(call.arguments_json)
+    except json.JSONDecodeError as exc:
+        raise _ContractFailure("invalid_arguments") from exc
+    if not isinstance(arguments, dict):
+        raise _ContractFailure("arguments_not_object")
+    if arguments != _CONTRACT_ARGUMENTS:
+        raise _ContractFailure("unexpected_arguments")
+
+
+def _validate_second_response(
+    response: ModelResponse,
+    record: dict[str, Any],
+) -> None:
+    _provider_failure(response, position="second")
+    if response.stop_reason != ModelStopReason.STOP:
+        raise _ContractFailure("unexpected_second_finish")
+    if response.assistant_message.tool_calls:
+        raise _ContractFailure("unexpected_second_tool_call")
+
+    final_text = response.assistant_message.content
+    if final_text is None or not final_text.strip():
+        raise _ContractFailure("missing_final_text")
+
+    record["final_text_present"] = True
+    record["final_text_length"] = len(final_text)
+    record["final_text_sha256"] = _sha256_text(final_text)
+
+
+async def _run_contract_model(
+    model_layer: ModelLayer,
+    model: ModelSpec,
+) -> dict[str, Any]:
+    record = _contract_record(model)
+    try:
+        first_started = perf_counter()
+        first_response = await model_layer.complete(
+            model,
+            _contract_first_request(),
+            asyncio.Event(),
+        )
+        first_latency_ms = (perf_counter() - first_started) * 1000
+        _record_response(
+            record,
+            position="first",
+            response=first_response,
+            latency_ms=first_latency_ms,
+        )
+        _validate_first_response(first_response, record)
+
+        second_request = _contract_second_request(first_response)
+        second_started = perf_counter()
+        second_response = await model_layer.complete(
+            model,
+            second_request,
+            asyncio.Event(),
+        )
+        second_latency_ms = (perf_counter() - second_started) * 1000
+        _record_response(
+            record,
+            position="second",
+            response=second_response,
+            latency_ms=second_latency_ms,
+        )
+        _validate_second_response(second_response, record)
+    except _ContractFailure as exc:
+        record["error_category"] = exc.category
+        return record
+    except Exception:
+        record["error_category"] = "internal"
+        return record
+
+    record["outcome"] = "passed"
+    return record
+
+
+async def run_provider_tool_contract(
+    model_layer: ModelLayer,
+    models: tuple[ModelSpec, ...],
+    *,
+    mode: str,
+    receipt_root: Path,
+    secrets: tuple[str, ...] = (),
+    timeout_seconds: float | None = None,
+) -> ExperimentResult:
+    writer = ReceiptWriter.create(
+        receipt_root,
+        experiment=_CONTRACT_EXPERIMENT,
+        secrets=secrets,
+    )
+    started_at = utc_now()
+    writer.write_json(
+        "request.json",
+        {
+            "models": [asdict(model) for model in models],
+            "tool_name": _CONTRACT_TOOL_NAME,
+            "thinking_enabled": False,
+            "maximum_requests_per_model": 2,
+        },
+    )
+
+    records: list[dict[str, Any]] = []
+    for model in models:
+        writer.append_event(
+            {
+                "at": utc_now(),
+                "event": "model_started",
+                "provider_id": model.provider_id,
+                "model_id": model.model_id,
+            }
+        )
+        record = await _run_contract_model(model_layer, model)
+        records.append(record)
+        writer.append_event(
+            {
+                "at": utc_now(),
+                "event": "model_finished",
+                "provider_id": model.provider_id,
+                "model_id": model.model_id,
+                "outcome": record["outcome"],
+                "error_category": record["error_category"],
+            }
+        )
+
+    passed_models = sum(record["outcome"] == "passed" for record in records)
+    outcome = "passed" if passed_models == len(models) and models else "failed"
+    error_categories = [
+        record["error_category"]
+        for record in records
+        if record["error_category"] is not None
+    ]
+    error_category = error_categories[0] if error_categories else None
+
+    writer.write_json("response.json", records)
+    writer.write_json(
+        "manifest.json",
+        {
+            "run_id": writer.run_id,
+            "experiment": _CONTRACT_EXPERIMENT,
+            "experiment_version": EXPERIMENT_VERSION,
+            "mode": mode,
+            "started_at": started_at,
+            "finished_at": utc_now(),
+            "settings": {
+                "stream": True,
+                "thinking_enabled": False,
+                "max_retries": 0,
+                "maximum_api_requests": len(models) * 2,
+                "timeout_seconds": timeout_seconds,
+            },
+            "outcome": outcome,
+            "error_category": error_category,
+            "models": records,
+        },
+    )
+    writer.write_review(
+        "# Run Review\n\n"
+        f"- Outcome: `{outcome}`\n"
+        f"- Mode: `{mode}`\n"
+        f"- Models passed: `{passed_models}/{len(models)}`\n"
+        f"- Safe error category: `{error_category or 'none'}`\n"
+        "- Thinking enabled: `no`\n"
+        "- Library content used: `no`\n"
+        "- Web access used: `no`\n"
+        "- Final response text stored: `no`\n\n"
+        "Human inspection: pending.\n"
+    )
+    return ExperimentResult(
+        outcome=outcome,
+        run_dir=writer.run_dir,
+        error_category=error_category,
+    )
 
 
 def _requests(
