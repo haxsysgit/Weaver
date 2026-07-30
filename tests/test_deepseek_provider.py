@@ -1,6 +1,8 @@
 import asyncio
 from types import SimpleNamespace
 
+import httpx
+import openai
 import pytest
 
 from weaver import (
@@ -32,14 +34,17 @@ class StubStream:
 
 
 class StubCompletions:
-    def __init__(self, chunks) -> None:
+    def __init__(self, chunks, *, error=None) -> None:
         self.stream = StubStream(chunks)
+        self.error = error
         self.payload = None
         self.starts = 0
 
     async def create(self, **payload):
         self.starts += 1
         self.payload = payload
+        if self.error is not None:
+            raise self.error
         return self.stream
 
 
@@ -53,10 +58,11 @@ def chunk(
     tool_calls=None,
     finish_reason=None,
     usage=None,
+    reasoning_content=None,
 ):
     delta = SimpleNamespace(
         content=content,
-        reasoning_content=None,
+        reasoning_content=reasoning_content,
         tool_calls=tool_calls,
     )
     choices = []
@@ -248,3 +254,94 @@ async def test_cancellation_is_aborted_before_sdk_start() -> None:
     assert response.stop_reason == ModelStopReason.ABORTED
     assert response.raw_stop_reason == "cancelled"
     assert completions.starts == 0
+
+
+@pytest.mark.asyncio
+async def test_usage_is_normalized_and_reasoning_text_stays_ephemeral() -> None:
+    usage = SimpleNamespace(
+        prompt_tokens=30,
+        completion_tokens=12,
+        total_tokens=42,
+        prompt_cache_hit_tokens=20,
+        prompt_cache_miss_tokens=10,
+        completion_tokens_details=SimpleNamespace(reasoning_tokens=7),
+    )
+    completions = StubCompletions(
+        [
+            chunk(reasoning_content="private scratchwork"),
+            chunk(content="Safe answer."),
+            chunk(finish_reason="stop"),
+            chunk(usage=usage),
+        ]
+    )
+    provider = DeepSeekProvider(
+        "test-only-key",
+        sdk_client=sdk_with(completions),
+    )
+    layer = ModelLayer()
+    layer.register_provider(provider)
+
+    response = await layer.complete(
+        DEEPSEEK_PRO,
+        ModelRequest(
+            messages=(ModelMessage(role="user", content="synthetic"),)
+        ),
+        asyncio.Event(),
+    )
+
+    assert response.assistant_message.content == "Safe answer."
+    assert response.usage.input_tokens == 30
+    assert response.usage.output_tokens == 12
+    assert response.usage.total_tokens == 42
+    assert response.usage.reasoning_tokens == 7
+    assert response.usage.cache_hit_tokens == 20
+    assert response.usage.cache_miss_tokens == 10
+    assert "private scratchwork" not in repr(response)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("provider_error", "expected_category"),
+    [
+        (
+            openai.APITimeoutError(
+                request=httpx.Request(
+                    "POST",
+                    "https://api.deepseek.com/chat/completions",
+                )
+            ),
+            "timeout",
+        ),
+        (
+            openai.APIConnectionError(
+                request=httpx.Request(
+                    "POST",
+                    "https://api.deepseek.com/chat/completions",
+                )
+            ),
+            "connection",
+        ),
+    ],
+)
+async def test_provider_failures_are_safely_classified(
+    provider_error,
+    expected_category,
+) -> None:
+    completions = StubCompletions([], error=provider_error)
+    provider = DeepSeekProvider(
+        "test-only-key",
+        sdk_client=sdk_with(completions),
+    )
+    layer = ModelLayer()
+    layer.register_provider(provider)
+
+    response = await layer.complete(
+        DEEPSEEK_PRO,
+        ModelRequest(
+            messages=(ModelMessage(role="user", content="synthetic"),)
+        ),
+        asyncio.Event(),
+    )
+
+    assert response.stop_reason == ModelStopReason.ERROR
+    assert response.error_category == expected_category

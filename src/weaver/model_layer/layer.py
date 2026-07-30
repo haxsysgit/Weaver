@@ -92,6 +92,10 @@ class ModelLayer:
             max_output_tokens=output_tokens,
         ):
             if event.event_type == ModelStreamEventType.RESPONSE_COMPLETE:
+                if terminal_count:
+                    raise ModelProtocolError(
+                        "A provider emitted more than one final response."
+                    )
                 terminal_count += 1
                 if event.response is None:
                     raise ModelProtocolError(

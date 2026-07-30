@@ -1,4 +1,5 @@
 import asyncio
+from collections.abc import AsyncIterator
 
 import pytest
 
@@ -7,10 +8,12 @@ from weaver import (
     FakeModelProvider,
     ModelLayer,
     ModelMessage,
+    ModelProtocolError,
     ModelRequest,
     ModelResponse,
     ModelSpec,
     ModelStopReason,
+    ModelStreamEvent,
     ModelStreamEventType,
     UnknownModelError,
     UnknownProviderError,
@@ -182,3 +185,46 @@ async def test_normalized_and_raw_stop_reasons_remain_separate() -> None:
 
     assert response.stop_reason == ModelStopReason.LENGTH
     assert response.raw_stop_reason == "max_output_tokens"
+
+
+@pytest.mark.asyncio
+async def test_second_terminal_response_is_rejected_before_exposure() -> None:
+    selected = model_spec("broken", "reader-1")
+    first = response_for(selected, "first")
+    second = response_for(selected, "second")
+
+    class DuplicateTerminalProvider:
+        provider_id = "broken"
+        models = (selected,)
+
+        async def stream(
+            self,
+            model,
+            request,
+            cancel_event,
+            *,
+            max_output_tokens,
+        ) -> AsyncIterator:
+            yield ModelStreamEvent(
+                event_type=ModelStreamEventType.RESPONSE_COMPLETE,
+                response=first,
+            )
+            yield ModelStreamEvent(
+                event_type=ModelStreamEventType.RESPONSE_COMPLETE,
+                response=second,
+            )
+
+    layer = ModelLayer()
+    layer.register_provider(DuplicateTerminalProvider())
+    exposed_responses = []
+
+    with pytest.raises(ModelProtocolError):
+        async for event in layer.stream(
+            selected,
+            text_request(),
+            asyncio.Event(),
+        ):
+            if event.response is not None:
+                exposed_responses.append(event.response)
+
+    assert exposed_responses == [first]

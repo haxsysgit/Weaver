@@ -549,6 +549,62 @@ class TestUnsafeModelResponses:
         assert starts == {}
         assert result.tool_starts == 0
 
+    async def test_call_id_reused_on_later_model_step_is_rejected(
+        self,
+    ) -> None:
+        starts = {}
+        first = tool_call("same-id", "echo", '{"message":"one"}')
+        reused = tool_call("same-id", "echo", '{"message":"two"}')
+        layer, model, _ = scripted_layer(
+            tool_response(first),
+            tool_response(reused),
+        )
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(starts),
+            active_tools=("echo",),
+        )
+
+        assert result.exit_reason == TurnExitReason.MODEL_FAILED
+        assert result.safe_failure == safe_error("model_protocol")
+        assert starts == {"echo": 1}
+        call_evidence = [
+            message.call_id
+            for message in result.new_messages
+            if isinstance(message, ToolCallMessage)
+        ]
+        assert call_evidence == ["same-id"]
+
+    async def test_call_id_reused_from_history_is_rejected(self) -> None:
+        starts = {}
+        old_call = tool_call("old-id", "echo", '{"message":"old"}')
+        history = [
+            AssistantMessage(
+                message_id="assistant-old",
+                turn_id="turn-old",
+                tool_calls=(old_call,),
+            )
+        ]
+        layer, model, _ = scripted_layer(
+            tool_response(
+                tool_call("old-id", "echo", '{"message":"new"}')
+            )
+        )
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(starts),
+            active_tools=("echo",),
+            history=history,
+        )
+
+        assert result.exit_reason == TurnExitReason.MODEL_FAILED
+        assert result.tool_starts == 0
+        assert starts == {}
+
     async def test_stop_with_tool_calls_fails_safely(self) -> None:
         call = tool_call("call-1", "echo", "{}")
         response = model_response(
@@ -656,8 +712,17 @@ class TestTurnBoundaries:
         assert provider.calls == []
 
     async def test_repeated_tool_calls_reach_step_limit(self) -> None:
-        call = tool_call("call-1", "echo", '{"message":"hi"}')
-        layer, model, _ = scripted_layer(tool_response(call))
+        layer, model, _ = scripted_layer(
+            tool_response(
+                tool_call("call-1", "echo", '{"message":"hi"}')
+            ),
+            tool_response(
+                tool_call("call-2", "echo", '{"message":"hi"}')
+            ),
+            tool_response(
+                tool_call("call-3", "echo", '{"message":"hi"}')
+            ),
+        )
 
         result = await execute_turn(
             layer,

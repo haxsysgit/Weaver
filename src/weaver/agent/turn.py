@@ -100,10 +100,13 @@ def _response_matches_model(
 
 def _tool_calls_are_safe(
     tool_calls: tuple[ModelToolCall, ...],
+    known_call_ids: set[str],
 ) -> bool:
     seen_call_ids: set[str] = set()
     for tool_call in tool_calls:
         if not tool_call.call_id.strip():
+            return False
+        if tool_call.call_id in known_call_ids:
             return False
         if tool_call.call_id in seen_call_ids:
             return False
@@ -120,6 +123,21 @@ def _tool_calls_are_safe(
         if not isinstance(arguments, dict):
             return False
     return True
+
+
+def _known_call_ids(
+    history: list[ConversationMessage],
+) -> set[str]:
+    call_ids: set[str] = set()
+    for message in history:
+        if isinstance(message, AssistantMessage):
+            call_ids.update(
+                tool_call.call_id
+                for tool_call in message.tool_calls
+            )
+        elif isinstance(message, ToolCallMessage):
+            call_ids.add(message.call_id)
+    return call_ids
 
 
 def _assistant_message(
@@ -178,6 +196,7 @@ async def run_turn(
         history=history,
     )
     input_characters = _input_characters(initial_messages)
+    known_call_ids = _known_call_ids(history)
 
     while model_steps < max_steps:
         if cancel_event.is_set():
@@ -270,10 +289,17 @@ async def run_turn(
             exit_reason = TurnExitReason.MODEL_FAILED
             safe_failure = safe_error("model_protocol")
             break
-        if not tool_calls or not _tool_calls_are_safe(tool_calls):
+        if not tool_calls or not _tool_calls_are_safe(
+            tool_calls,
+            known_call_ids,
+        ):
             exit_reason = TurnExitReason.MODEL_FAILED
             safe_failure = safe_error("model_protocol")
             break
+        known_call_ids.update(
+            tool_call.call_id
+            for tool_call in tool_calls
+        )
 
         assistant = _assistant_message(
             turn_id=turn_id,
