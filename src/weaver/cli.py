@@ -58,16 +58,16 @@ def _parser() -> argparse.ArgumentParser:
     mode.add_argument("--fake", action="store_true", help="Use deterministic fake.")
     mode.add_argument("--live", action="store_true", help="Use explicit DeepSeek live.")
 
-    corpus = subcommands.add_parser(
-        "corpus",
-        help="Call the deterministic private-corpus tools.",
+    library = subcommands.add_parser(
+        "library",
+        help="Browse and manage Weaver's novel library.",
     )
-    corpus_commands = corpus.add_subparsers(dest="corpus_command", required=True)
+    library_commands = library.add_subparsers(dest="library_command", required=True)
 
-    inspect = corpus_commands.add_parser("inspect")
+    inspect = library_commands.add_parser("inspect")
     inspect.add_argument("novel_id", choices=["shadow-slave"])
 
-    fetch = corpus_commands.add_parser("fetch")
+    fetch = library_commands.add_parser("fetch")
     fetch.add_argument("novel_id", choices=["shadow-slave"])
     fetch.add_argument("start_chapter", type=int)
     fetch.add_argument("--end-chapter", type=int)
@@ -77,7 +77,7 @@ def _parser() -> argparse.ArgumentParser:
         help="Perform the fetch; the default is preview.",
     )
 
-    update = corpus_commands.add_parser("update")
+    update = library_commands.add_parser("update")
     update.add_argument("novel_id", choices=["shadow-slave"])
     update.add_argument("--through-chapter", type=int)
     update.add_argument(
@@ -86,11 +86,11 @@ def _parser() -> argparse.ArgumentParser:
         help="Perform the update; the default is preview.",
     )
 
-    packet = corpus_commands.add_parser("packet")
+    packet = library_commands.add_parser("packet")
     packet.add_argument("novel_id", choices=["shadow-slave"])
     packet.add_argument("chapters", nargs="+", type=int)
 
-    export = corpus_commands.add_parser("export")
+    export = library_commands.add_parser("export")
     export.add_argument("novel_id", choices=["shadow-slave"])
     export.add_argument("format", choices=["txt", "md", "epub"])
     export.add_argument("--through-chapter", type=int)
@@ -114,11 +114,11 @@ def run(argv: Sequence[str] | None = None) -> int:
             print(f"{marker} {check['name']}: {check['detail']}")
         return 0 if all(bool(check["ok"]) for check in checks) else 1
 
-    if args.command == "corpus":
+    if args.command == "library":
         try:
-            if args.corpus_command == "inspect":
+            if args.library_command == "inspect":
                 result = asyncio.run(inspect_novel_corpus(args.novel_id))
-            elif args.corpus_command == "fetch":
+            elif args.library_command == "fetch":
                 result = asyncio.run(
                     fetch_novel_chapters(
                         args.novel_id,
@@ -127,7 +127,7 @@ def run(argv: Sequence[str] | None = None) -> int:
                         preview=not args.apply,
                     )
                 )
-            elif args.corpus_command == "update":
+            elif args.library_command == "update":
                 result = asyncio.run(
                     update_novel_corpus(
                         args.novel_id,
@@ -135,7 +135,7 @@ def run(argv: Sequence[str] | None = None) -> int:
                         preview=not args.apply,
                     )
                 )
-            elif args.corpus_command == "packet":
+            elif args.library_command == "packet":
                 result = asyncio.run(
                     build_novel_packet(args.novel_id, args.chapters)
                 )
@@ -148,7 +148,7 @@ def run(argv: Sequence[str] | None = None) -> int:
                     )
                 )
         except ValidationError:
-            print("ERROR corpus tool arguments failed validation.")
+            print("ERROR library tool arguments failed validation.")
             return 2
         except CorpusError as exc:
             print(f"ERROR {exc.category.value}: {safe_error_message(exc.category)}")

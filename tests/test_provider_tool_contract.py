@@ -18,7 +18,15 @@ from weaver import (
     ModelToolCall,
     ModelUsage,
 )
-from weaver.experiment import run_provider_tool_contract
+from weaver.experiment import (
+    CAT_FIRST_PROVIDER,
+    CAT_FIRST_TIMEOUT,
+    CAT_INVALID_ARGS,
+    CAT_MISSING_CALL_ID,
+    CAT_UNEXPECTED_FIRST,
+    CAT_UNEXPECTED_SECOND,
+    run_provider_tool_contract,
+)
 
 RAW_ARGUMENTS = '{"item":"status"}'
 FINAL_TEXT = "Synthetic contract complete."
@@ -328,10 +336,13 @@ async def test_runner_preserves_linked_payload_and_stable_model_order(
 @pytest.mark.parametrize(
     ("bad_response", "expected_category"),
     [
-        (tool_response(DEEPSEEK_FLASH, call_id=""), "missing_call_id"),
+        (
+            tool_response(DEEPSEEK_FLASH, call_id=""),
+            CAT_MISSING_CALL_ID,
+        ),
         (
             tool_response(DEEPSEEK_FLASH, arguments='{"item":'),
-            "invalid_arguments",
+            CAT_INVALID_ARGS,
         ),
         (
             response(
@@ -346,7 +357,7 @@ async def test_runner_preserves_linked_payload_and_stable_model_order(
                     ),
                 ),
             ),
-            "unexpected_first_finish",
+            CAT_UNEXPECTED_FIRST,
         ),
         (
             response(
@@ -355,7 +366,7 @@ async def test_runner_preserves_linked_payload_and_stable_model_order(
                 raw_stop_reason="provider_error",
                 error_category="timeout",
             ),
-            "first_timeout",
+            CAT_FIRST_TIMEOUT,
         ),
     ],
 )
@@ -401,7 +412,7 @@ async def test_non_final_second_response_never_starts_a_third_request(
     )
 
     assert result.outcome == "failed"
-    assert result.error_category == "unexpected_second_finish"
+    assert result.error_category == CAT_UNEXPECTED_SECOND
     assert len(provider.calls) == 2
 
 
@@ -579,5 +590,5 @@ async def test_real_sdk_has_no_retry_or_second_request_after_provider_error(
         await sdk_client.close()
 
     assert result.outcome == "failed"
-    assert result.error_category == "first_provider"
+    assert result.error_category == CAT_FIRST_PROVIDER
     assert len(requests) == 1

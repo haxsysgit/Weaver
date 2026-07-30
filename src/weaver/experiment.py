@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import json
+import logging
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from time import perf_counter
@@ -21,6 +22,16 @@ from .model_layer import (
     ModelUsage,
 )
 from .receipts import ReceiptWriter, utc_now
+
+logger = logging.getLogger(__name__)
+
+# Contract failure categories shared with tests.
+CAT_UNEXPECTED_FIRST = "unexpected_first_finish"
+CAT_MISSING_CALL_ID = "missing_call_id"
+CAT_INVALID_ARGS = "invalid_arguments"
+CAT_UNEXPECTED_SECOND = "unexpected_second_finish"
+CAT_FIRST_TIMEOUT = "first_timeout"
+CAT_FIRST_PROVIDER = "first_provider"
 
 _SYSTEM_PREFIX = (
     "This is a synthetic transport smoke test. Use no private data and make no "
@@ -217,7 +228,7 @@ def _validate_first_response(
 ) -> None:
     _provider_failure(response, position="first")
     if response.stop_reason != ModelStopReason.TOOL_USE:
-        raise _ContractFailure("unexpected_first_finish")
+        raise _ContractFailure(CAT_UNEXPECTED_FIRST)
 
     tool_calls = response.assistant_message.tool_calls
     if len(tool_calls) != 1:
@@ -229,13 +240,13 @@ def _validate_first_response(
     record["argument_length"] = len(call.arguments_json)
 
     if not call.call_id:
-        raise _ContractFailure("missing_call_id")
+        raise _ContractFailure(CAT_MISSING_CALL_ID)
     if call.name != _CONTRACT_TOOL_NAME:
         raise _ContractFailure("unexpected_tool_name")
     try:
         arguments = json.loads(call.arguments_json)
     except json.JSONDecodeError as exc:
-        raise _ContractFailure("invalid_arguments") from exc
+        raise _ContractFailure(CAT_INVALID_ARGS) from exc
     if not isinstance(arguments, dict):
         raise _ContractFailure("arguments_not_object")
     if arguments != _CONTRACT_ARGUMENTS:
@@ -248,7 +259,7 @@ def _validate_second_response(
 ) -> None:
     _provider_failure(response, position="second")
     if response.stop_reason != ModelStopReason.STOP:
-        raise _ContractFailure("unexpected_second_finish")
+        raise _ContractFailure(CAT_UNEXPECTED_SECOND)
     if response.assistant_message.tool_calls:
         raise _ContractFailure("unexpected_second_tool_call")
 
@@ -301,6 +312,10 @@ async def _run_contract_model(
         record["error_category"] = exc.category
         return record
     except Exception:
+        logger.exception(
+            "contract model %s failed internally",
+            model.model_id,
+        )
         record["error_category"] = "internal"
         return record
 

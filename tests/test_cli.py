@@ -140,7 +140,7 @@ def test_corpus_fetch_cli_defaults_to_preview(monkeypatch, capsys) -> None:
 
     exit_code = cli.run(
         [
-            "corpus",
+            "library",
             "fetch",
             "shadow-slave",
             "3047",

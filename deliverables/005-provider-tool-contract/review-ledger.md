@@ -50,3 +50,10 @@ Rechecks:
 - evidence and privacy reviewer: pass, no remaining blocker.
 
 No code, test, receipt schema, or diagram repair was required.
+
+## Readability pass
+
+Owner-requested pass after acceptance. No behavioral changes. Three
+improvements: error-category constants shared between `experiment.py` and
+tests, internal-exception logging added to `_run_contract_model`.
+156 tests pass, lint clean, 64 packages compatible.
