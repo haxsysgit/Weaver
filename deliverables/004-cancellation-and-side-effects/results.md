@@ -3,8 +3,8 @@
 ## Status
 
 Implementation and the one admitted repair pass are complete. Both final
-reviewer rechecks passed with no open blocker. The final owner decision remains
-pending.
+reviewer rechecks passed with no open blocker. The owner accepted and closed
+Plan 004 on 2026-07-30.
 
 ## Hypothesis
 
@@ -193,3 +193,10 @@ readability audit. Five improvements landed without changing behavior:
 
 All 142 tests pass with zero source changes beyond comments, imports, and
 constant renaming.
+
+## Final owner decision
+
+The owner accepted Plan 004 on 2026-07-30 after the implementation, repair,
+architecture inspection, independent rechecks, and readability pass.
+
+Plan 005 remains at its own learning gate.

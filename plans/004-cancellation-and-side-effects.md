@@ -7,7 +7,7 @@
 
 ## Status
 
-- **State:** Implementation and review complete; owner decision pending
+- **State:** Accepted and closed on 2026-07-30
 - **Priority:** P1
 - **Effort:** M
 - **Risk:** Medium
@@ -16,8 +16,8 @@
 - **Planned at:** commit `b101737`, dirty working-tree snapshot, 2026-07-30
 - **Learning gate:** confirmed in
   `deliverables/004-cancellation-and-side-effects/learning.md`
-- **Final decision:** pending after implementation, evidence, use, inspection,
-  and independent review
+- **Final decision:** accepted on 2026-07-30 after implementation, evidence,
+  inspection, the readability pass, and both independent rechecks
 
 ## Goal
 
@@ -317,7 +317,7 @@ because permission refusal should happen before unnecessary work.
 - [x] Focused and full tests pass.
 - [x] In-scope lint passes.
 - [x] Reviews have no open blocker.
-- [ ] The owner recorded Plan 004's final decision.
+- [x] The owner recorded Plan 004's final decision.
 
 ## STOP conditions
 
