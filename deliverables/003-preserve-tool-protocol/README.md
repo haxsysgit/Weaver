@@ -1,12 +1,12 @@
 # Plan 003 Deliverables
 
-This folder holds the public, content-free evidence for preserving Weaver's
-tool-call protocol and enforcing active capabilities.
+This folder holds public, content-free evidence for Weaver's model layer,
+preserved tool protocol, and active capability boundary.
 
 | File | Purpose | Current state |
 | --- | --- | --- |
-| `plan.md` | Pointer to the canonical implementation plan | Draft |
-| `learning.md` | Plain-language understanding and owner gate | Pending owner |
+| `plan.md` | Pointer to the canonical implementation plan | Active |
+| `learning.md` | Plain-language understanding and owner gate | Confirmed 2026-07-30 |
 | `results.md` | Deterministic observations and executed commands | Not started |
 | `rubric.md` | Acceptance checklist | Draft |
 | `review-ledger.md` | Independent findings, repairs, and rechecks | Not started |

@@ -1,312 +1,329 @@
-# Plan 003: Preserve tool protocol and enforce active capabilities
+# Plan 003: Weaver model layer and preserved tool protocol
 
 > **Executor instructions:** Read this whole plan before editing. Follow each
-> step in order. Run every verification command and record the output in
-> `deliverables/003-preserve-tool-protocol/results.md`. Stop on any condition in
-> the STOP section. Do not touch private novel files.
+> step in order. Record failures as evidence. Do not touch private novel files
+> or make live model calls.
 
 ## Status
 
-- **State:** Draft; owner confirmation of `learning.md` pending
+- **State:** Active; learning gate confirmed by the owner
 - **Priority:** P1
 - **Effort:** M
 - **Risk:** Medium
-- **Depends on:** Plan 002 must have a recorded owner decision
-- **Category:** Correctness and security
-- **Planned at:** commit `96d0729`, dirty working-tree snapshot, 2026-07-30
-- **Learning gate:** `deliverables/003-preserve-tool-protocol/learning.md`
+- **Depends on:** Plan 002, accepted and closed on 2026-07-30
+- **Category:** Model boundary, correctness, and security
+- **Planned at:** commit `dbe23f8`, clean working tree, 2026-07-30
+- **Learning gate:** confirmed in
+  `deliverables/003-preserve-tool-protocol/learning.md`
+- **Final decision:** pending after implementation, evidence, and review
 
 ## Goal
 
-Make one model-to-tool-to-model exchange structurally correct and keep the
-active capability list enforceable at the final dispatch boundary.
+Replace the DeepSeek-shaped model code with a small Python version of Pi's
+model-layer pattern.
 
-After this plan, a tool call keeps its call ID, name, raw JSON arguments, and
-assistant grouping all the way into the next DeepSeek request. A registered
-tool that is not active cannot run, even if a provider returns its name.
+Weaver speaks one internal protocol. DeepSeek is one provider adapter. A
+future GPT, Claude, Grok, or local-model adapter must translate to the same
+protocol without changing the agent loop or tools.
 
-## Why this matters
+Plan 003 remains deterministic and offline. It does not add other live
+providers, LangGraph, memory, chat UI, side-effect approval, or new library
+behaviour.
 
-The current loop builds correct-looking dictionaries after a tool runs, then
-drops the tool-call fields while converting those dictionaries into
-`Message` objects. The next provider request can contain a blank assistant
-message and an unlinked tool result.
+## Confirmed baseline
 
-The registry also treats "registered" as enough permission to execute. The
-active list only controls which schemas the model sees. A bad provider response
-can still name another registered tool and reach its handler.
+- Repository: clean at `dbe23f8`
+- Recorded source hashes: all matched before implementation
+- Focused tests: 15 passed
+- Full suite: 73 passed
+- Existing scoped lint: 8 errors
+- Plan 002: accepted and closed
+- Owner confirmation: 2026-07-30
 
-These are foundation bugs. Every later Weaver tool would sit on top of them.
+## Accepted decisions
 
-## Current state
+1. Weaver owns the shared model protocol.
+2. DeepSeek-specific IDs, SDK types, and payload fields stay inside its
+   adapter or the CLI edge.
+3. `ModelRequest` describes a request. It does not choose a provider.
+4. A selected `ModelSpec` supplies the default output-token limit unless the
+   caller explicitly overrides it.
+5. Tool arguments remain JSON text until validation at dispatch.
+6. Exact provider-supplied JSON text is preserved. Structured provider
+   arguments become stable JSON text.
+7. Blank or malformed JSON is never silently repaired.
+8. One final `ModelResponse` is authoritative. Tools never dispatch from
+   partial stream events.
+9. Reasoning text stays ephemeral and out of messages, receipts, reports, and
+   logs.
+10. Other live providers are deferred.
 
-### Relevant files
+## Model-layer contract
 
-- `src/weaver/model.py`: provider-neutral request, message, tool-call, and event
-  types.
-- `src/weaver/agent/messages.py`: canonical conversation records and provider
-  projection.
-- `src/weaver/agent/turn.py`: bounded streaming model/tool loop.
-- `src/weaver/agent/tools.py`: registration, schema selection, and dispatch.
-- `src/weaver/deepseek.py`: converts `Message` objects to SDK payloads.
-- `src/weaver/fake.py`: captures `ModelRequest` objects for deterministic tests.
-- `tests/test_agent_turn.py`: current runtime and session tests.
-- `tests/test_deepseek.py`: current DeepSeek adapter tests.
+Create `src/weaver/model_layer/` with:
 
-### Confirmed bug shape
+- `ModelSpec`: provider ID, exact model ID, API family, default output-token
+  limit, and reasoning support.
+- `ModelToolCall`: call ID, tool name, and `arguments_json`.
+- `ModelMessage`: provider-independent system, user, assistant, and tool
+  messages.
+- `ModelRequest`: messages, tool schemas, response format, optional token
+  override, and reasoning settings.
+- `ModelResponse`: one authoritative assistant message plus model metadata,
+  usage, normalized stop reason, raw provider stop reason, and safe error
+  category.
+- `ModelStopReason`: `stop`, `tool_use`, `length`, `error`, or `aborted`.
+- `ModelProvider`: the Python protocol implemented by provider adapters.
+- `ModelLayer`: provider registration, exact model resolution, streaming, and
+  completion.
 
-`src/weaver/agent/turn.py:253-268` creates an assistant dictionary with
-`tool_calls`. `src/weaver/agent/turn.py:318-328` creates tool dictionaries with
-`tool_call_id`. On the next loop, `src/weaver/agent/turn.py:153-162` copies only
-`role` and `content` into `Message`.
-
-`src/weaver/model.py:18-23` has no assistant `tool_calls` field.
-`src/weaver/deepseek.py:290-300` can send `tool_call_id`, but cannot send an
-assistant tool-call array.
-
-`src/weaver/agent/tools.py:95-120` looks up any registered tool. It does not
-receive or check the active names used at
-`src/weaver/agent/turn.py:119-130`.
-
-### Dirty snapshot hashes
-
-The agent runtime is untracked at commit `96d0729`, so Git history alone cannot
-detect drift. Before execution, compare:
-
-```text
-a85bbb7f...  src/weaver/model.py
-4b7042db...  src/weaver/deepseek.py
-f05736f7...  src/weaver/agent/messages.py
-32591bc4...  src/weaver/agent/tools.py
-005148ae...  src/weaver/agent/turn.py
-da73f35b...  tests/test_agent_turn.py
-dcda0417...  tests/test_deepseek.py
-```
-
-Use `sha256sum` on the live files. A dependency-approved change is allowed only
-after the executor rereads the changed symbols and records the new hashes.
-
-## Target design
-
-### One lossless provider-neutral message type
-
-Move or define `ToolCall` before `Message` in `src/weaver/model.py`, then let
-`Message` carry:
+The shared call shape is:
 
 ```python
-role: Role
-content: str | None
-name: str | None
-tool_call_id: str | None
-tool_calls: tuple[ToolCall, ...]
+model = model_layer.get_model("deepseek", "deepseek-v4-pro")
+response_stream = model_layer.stream(model, request, cancel_event)
+response = await model_layer.complete(model, request, cancel_event)
 ```
 
-Do not store OpenAI SDK objects in Weaver types.
+`run_turn()` and `AgentSession` receive both `ModelLayer` and `ModelSpec`. They
+do not hardcode DeepSeek, `pro`, `flash`, or provider payload terms.
 
-### One assistant message per model step
+## Provider rules
 
-Add `tool_calls: tuple[ToolCall, ...]` to canonical `AssistantMessage`.
-`run_turn()` must create one assistant record containing all calls returned in
-that model step. Individual `ToolCallMessage` records may remain as inspectable
-execution records, but `project_messages()` must not turn each one into a new
-assistant message.
+Every provider adapter must:
 
-Projection must produce this exact order:
+- translate Weaver messages and tool schemas into its wire format;
+- assemble the final response after streaming;
+- return tool calls through the authoritative final response only;
+- normalize its ending into `ModelStopReason`;
+- keep the original ending in `raw_stop_reason`;
+- preserve exact tool-argument JSON when supplied as text;
+- create stable JSON text when arguments arrive as an object;
+- reject blank or malformed JSON without repair;
+- keep reasoning text ephemeral.
 
-1. assistant message with optional text plus the complete tool-call array;
-2. one tool message per call with its matching `tool_call_id`;
-3. the next assistant response.
+DeepSeek remains the only live provider. Its catalogue contains the admitted
+Flash and Pro model IDs. The fake provider stays network-free and can stand in
+for any registered provider during tests.
 
-### Dispatch checks permission twice
-
-Keep schema filtering in `active_schemas()`. Also pass the active names into
-`dispatch()` and refuse any call outside that set with:
-
-```text
-ok=false
-error_code="inactive_tool"
-```
-
-The handler must not start. Unknown and inactive tools remain separate cases.
-
-### Terminal response rules
-
-Use the provider `finish_reason` instead of assigning and ignoring it.
-
-- `stop` with no tool call may complete normally.
-- `tool_calls` must contain at least one structurally safe call.
-- `length` must never become a completed answer or execute a partial call.
-- a length-limited partial answer may be recorded with
-  `AssistantMessage.status="interrupted"`, but `TurnResult` must report a
-  non-complete exit reason and safe failure.
-
-When a tool succeeds with `{}`, serialize it as `{}`. Test `result is not None`
-instead of using dictionary truthiness.
-
-## Scope
-
-### In scope
+Delete these modules after every caller has moved:
 
 - `src/weaver/model.py`
+- `src/weaver/client.py`
 - `src/weaver/deepseek.py`
-- `src/weaver/agent/messages.py`
-- `src/weaver/agent/tools.py`
-- `src/weaver/agent/turn.py`
-- `src/weaver/agent/errors.py`, only for a safe incomplete-response message
-- `src/weaver/fake.py`, only if request capture needs a small test helper
-- `tests/test_agent_turn.py`
-- `tests/test_deepseek.py`
-- Plan 003 deliverables and `plans/README.md`
+- `src/weaver/fake.py`
 
-### Out of scope
+Do not leave compatibility wrappers. `weaver.__init__` may export selected
+types from the new model layer.
 
-- cancellation of a running handler;
-- effect approvals and retry policy;
-- LangGraph;
-- chat CLI or UI;
-- durable storage, turn events, context budgeting, or memory;
-- changes to private-library behavior;
-- any file under `novels/`;
-- live model calls.
+## Tool exchange contract
 
-## Commands
+Canonical projection returns `ModelMessage` objects.
 
-| Purpose | Command | Expected result |
-| --- | --- | --- |
-| Focused tests | `uv run pytest -q tests/test_agent_turn.py tests/test_deepseek.py` | All focused tests pass |
-| Full tests | `uv run pytest -q` | All tests pass |
-| Lint in scope | `uv run ruff check src/weaver/model.py src/weaver/deepseek.py src/weaver/agent tests/test_agent_turn.py tests/test_deepseek.py` | Exit 0 |
-| Package check | `uv pip check` | All installed packages compatible |
+`AssistantMessage` groups all `tool_calls` from one model step:
 
-The baseline on 2026-07-30 was 73 passing tests. Lint had existing unused-code
-failures in the agent slice. This plan must clean the in-scope failures it
-touches.
+```text
+assistant(content, all tool calls)
+tool result linked to call 1
+tool result linked to call 2
+next assistant response
+```
 
-## Steps
+Individual `ToolCallMessage` records remain execution evidence. Projection
+ignores them, so they never create duplicate assistant messages.
 
-### Step 1: Add regression tests before changing the types
+The loop must:
 
-Write failing tests that prove:
+1. Wait for the final model response.
+2. Require non-empty, unique call IDs.
+3. Require non-empty tool names.
+4. Preserve `arguments_json` exactly.
+5. Save the grouped assistant message before execution records.
+6. Link every result to the matching call ID.
+7. Serialize every non-`None` success, including `{}`.
+8. Reject blank, malformed, incomplete, or duplicate calls before handlers
+   start.
 
-- the second fake model request contains one assistant message with its tool
-  calls and one linked tool-result message;
-- two calls from one model step remain grouped under one assistant message;
-- replaying the saved history on the next user turn preserves the same shape;
-- an inactive but registered tool returns `inactive_tool` and its handler count
-  stays zero;
-- an unknown tool still returns `unknown_tool`;
-- a successful empty dictionary reaches the model as `{}`;
-- `finish_reason="length"` cannot return `COMPLETED` or run a partial tool call.
+Terminal rules:
 
-Use named helper functions. Keep request-shape assertions explicit.
+- `stop`: save a completed assistant response and finish.
+- `tool_use`: require at least one safe call, then dispatch.
+- `length`: save text as interrupted, run no tools, and return `INCOMPLETE`.
+- `error`: return `MODEL_FAILED`.
+- `aborted`: return `INTERRUPTED`.
+- A stop reason that disagrees with the response shape fails as a safe model
+  protocol error.
 
-**Verify:** run the focused tests and record the expected failures. Do not hide
-the red test stage.
+## Active dispatch contract
 
-### Step 2: Make message projection lossless
+Active names are a required `dispatch()` argument. Checks happen in this
+order:
 
-Update the model and canonical assistant types. Change
-`project_messages()` to return provider-neutral `Message` objects directly.
-Remove the dictionary-to-`Message` conversion from `run_turn()`.
+1. Is the tool registered?
+2. Is the registered tool active?
+3. Is the argument string valid JSON?
+4. Is the decoded value an object?
+5. Run the handler.
 
-Update `_message_payload()` to emit:
+Expected errors:
 
-- `content: null` when an assistant tool-call message has no text;
-- `tool_calls` only when present;
-- `tool_call_id` only on tool messages.
+- unknown name: `unknown_tool`;
+- registered but inactive: `inactive_tool`;
+- blank or malformed JSON: `malformed_arguments`;
+- valid non-object JSON: `invalid_arguments`.
 
-Do not add provider-specific types to `weaver.agent`.
+Inactive handlers stay at zero starts. Accepted library-tool behaviour and
+files under `novels/` do not change.
 
-**Verify:** message projection and DeepSeek adapter tests pass.
+## Implementation slices
 
-### Step 3: Enforce active names during dispatch
+### 1. Record the admitted correction
 
-Pass the active capability set into `ToolRegistry.dispatch()`. Refuse inactive
-registered tools before JSON parsing and before handler execution.
+Update this plan, the learning note, deliverables README, and plan index.
 
-Keep duplicate registration and unknown active-schema setup behavior unchanged.
+Commit: `record plan 003 model layer decisions`
 
-**Verify:** inactive, unknown, malformed-argument, and allowed-tool tests pass.
+### 2. Build the model layer test-first
 
-### Step 4: Handle terminal states and empty results
+Add failing tests for registry behaviour, exact lookup, duplicate IDs across
+providers, early unknown-model failures, default tokens, fake determinism,
+terminal responses, and normalized versus raw stop reasons.
 
-Use `finish_reason` to distinguish complete, tool, and incomplete responses.
-Reject unsafe partial calls. Serialize any non-`None` result, including `{}`.
-Delete newly unused variables and imports in the touched files.
+Build the shared types, provider protocol, registry, fake provider, and
+DeepSeek provider with its small catalogue.
 
-**Verify:** all focused tests and the in-scope lint command pass.
+DeepSeek ending map:
 
-### Step 5: Run the full floor and inspect the diff
+- `stop` to `stop`;
+- `tool_calls` or `function_call` to `tool_use`;
+- `length` to `length`;
+- cancellation to `aborted`;
+- unknown or rejected endings to `error`.
 
-Run the full test suite and package check. Inspect every changed hunk. Confirm
-that no library-management code, private state, or novel file changed.
+Commit: `add the Weaver model layer`
 
-Update the Plan 003 results, rubric, and review ledger. Do not mark the owner
-decision.
+### 3. Move the accepted foundation
 
-## Test plan
+Move model smoke, CLI, doctor checks, receipts, public exports, and tests.
 
-The focused suite must cover:
+Preserve:
 
-- single and multiple tool calls;
-- exact call IDs and raw argument strings;
-- empty assistant text with tool calls;
-- empty successful tool output;
-- unknown, inactive, malformed, and allowed tools;
-- replay across a later user turn;
-- `stop`, `tool_calls`, and `length` finish reasons;
-- persistence order and failure behavior already covered by existing tests.
+- fake mode never constructs a network provider;
+- live mode requires explicit DeepSeek credentials;
+- no provider fallback;
+- Flash JSON, repeated Flash JSON, and Pro tool-call smoke checks;
+- private receipts with no credentials or reasoning text;
+- existing historical receipts unchanged.
 
-No test may call the network or include novel prose.
+Commit: `move existing model calls onto the model layer`
+
+### 4. Preserve complete tool exchanges
+
+Move the agent runtime to the selected `ModelSpec` and final
+`ModelResponse`. Preserve grouped calls, linked results, replay, exact JSON,
+safe terminal states, and empty successful dictionaries.
+
+Commit: `preserve tool calls across model turns`
+
+### 5. Enforce active tools
+
+Make active names required at dispatch and update every accepted caller.
+
+Commit: `enforce active tools at dispatch`
+
+## Verification floor
+
+```bash
+uv run pytest -q \
+  tests/test_model_layer.py \
+  tests/test_deepseek_provider.py \
+  tests/test_agent_turn.py
+
+uv run pytest -q
+
+uv run ruff check \
+  src/weaver/model_layer \
+  src/weaver/agent \
+  src/weaver/experiment.py \
+  src/weaver/cli.py \
+  src/weaver/config.py \
+  src/weaver/doctor.py \
+  tests/test_model_layer.py \
+  tests/test_deepseek_provider.py \
+  tests/test_agent_turn.py \
+  tests/test_config_and_fake.py \
+  tests/test_receipts.py \
+  tests/test_cli.py \
+  tests/test_corpus_outputs_and_agent.py
+
+uv pip check
+git diff --check
+```
+
+Also verify:
+
+```bash
+rg -n 'DeepSeek|deepseek|model="pro"|model="flash"' \
+  src/weaver/agent \
+  src/weaver/model_layer/types.py \
+  src/weaver/model_layer/provider.py \
+  src/weaver/model_layer/layer.py
+
+rg -n 'weaver\.(model|client|deepseek|fake)' src tests
+```
+
+Both searches must return no shared-core or old-import matches.
+
+Record commands, exit codes, test counts, changed-file hashes, and failures in
+Plan 003 results. Scan the candidate diff for credentials, private prose, raw
+reasoning, and changes under `novels/`.
 
 ## Independent review
 
-Freeze the candidate after tests pass.
+Freeze the passing candidate.
 
-1. One fresh reviewer checks provider-message correctness and capability
-   enforcement.
-2. A second fresh reviewer checks tests, privacy, and scope.
-3. Record every finding in `review-ledger.md`.
-4. Allow one accepted repair pass.
-5. Both reviewers recheck the same repaired candidate.
+1. Reviewer 1 checks the model boundary, message protocol, and active dispatch.
+2. Reviewer 2 checks tests, privacy, scope, and regression evidence.
+3. Allow one accepted repair pass.
+4. Rerun the full command floor after a repair.
+5. Both reviewers check the repaired candidate.
 
-Do not store raw model reasoning in the ledger.
+The final owner decision remains a separate human gate.
 
 ## Done criteria
 
-- [ ] The owner confirmed Plan 003 `learning.md`.
-- [ ] Plan 002 has a recorded final owner decision.
-- [ ] The second provider request retains assistant tool calls and linked tool
-      results.
-- [ ] Multiple calls remain grouped under one assistant message.
+- [x] Owner confirmed Plan 003 learning and model-layer corrections.
+- [x] Plan 002 has a recorded final owner decision.
+- [ ] Model lookup uses exact provider and model IDs.
+- [ ] Agent code has no provider knowledge.
+- [ ] Final model responses are authoritative.
+- [ ] Tool calls survive the next model request and later replay.
+- [ ] Multiple calls stay grouped under one assistant message.
 - [ ] Inactive registered tools cannot execute.
 - [ ] Empty dictionaries remain successful tool results.
-- [ ] Incomplete provider responses are not marked complete.
-- [ ] Focused and full tests pass.
-- [ ] In-scope lint passes.
+- [ ] All five normalized stop reasons behave safely.
+- [ ] Focused tests, full tests, scoped lint, and package check pass.
 - [ ] No network call or novel access occurred.
 - [ ] Two independent reviews have no open blocker.
-- [ ] The owner recorded Plan 003's final decision.
+- [ ] The owner records Plan 003's final decision.
 
 ## STOP conditions
 
 Stop and report if:
 
-- Plan 002 has not been closed by an owner decision when execution starts;
-- current message or tool types differ materially from the snapshot and the
-  difference did not come from an accepted dependency;
-- the DeepSeek SDK requires provider-owned objects inside Weaver's canonical
-  message types;
-- fixing replay requires a durable storage migration;
-- the change requires library behavior, LangGraph, or a chat entry point;
+- Plan 002 is not closed by an owner decision;
+- recorded source hashes differ before runtime implementation;
+- provider SDK objects must enter Weaver's shared message types;
+- the work requires a storage migration, library behaviour change, LangGraph,
+  or a chat entry point;
 - focused verification fails twice after one clear repair attempt;
-- private prose, a credential value, or raw reasoning appears in any output.
+- private prose, a credential value, or raw reasoning enters public output.
 
-## Maintenance notes
+## Deferred work
 
-Future providers must map to the same Weaver-owned `Message` and `ToolCall`
-types. Active schema filtering is for model guidance. Dispatch enforcement is
-the security boundary.
+Pi's full provider catalogue, pricing, images, OAuth, retries, model refresh,
+compatibility rules, other live providers, cancellation, and side-effect
+approval remain outside Plan 003.
 
-Plan 004 will add cancellation and effect permissions. Do not pre-build those
-rules here.
+Existing internal `corpus` symbols remain as Weaver's private-library
+implementation until a later admitted plan safely renames them.
