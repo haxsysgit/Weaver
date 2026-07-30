@@ -1,9 +1,17 @@
 # Weaver architecture decision: Pi vs. LangGraph
 
-**Sources inspected at pinned revisions**
+**Earlier source comparison, retained as the reason LangGraph is conditional.**
 
-- Pi: `/tmp/pi-source`, `d7b02636a0c7e8e615d0cff70679d18d2ff59573`
-- LangGraph: `/tmp/langgraph-source`, `41341457342327166d72fc11952ab28fb61ec0bf`
+The original inspection used pinned source revisions:
+
+- Pi: `d7b02636a0c7e8e615d0cff70679d18d2ff59573`
+- LangGraph: `41341457342327166d72fc11952ab28fb61ec0bf`
+
+The obsolete temporary checkout paths have been removed. Plan 006's corrected
+source study is
+[`WEAVER_CODEX_HERMES_CONVERSATION_COMPARISON.md`](WEAVER_CODEX_HERMES_CONVERSATION_COMPARISON.md),
+and the accepted documentation decision is
+[`docs/decisions/006-conversation-architecture.md`](docs/decisions/006-conversation-architecture.md).
 
 This is a source comparison, not a recommendation based on product positioning. “Pi” below distinguishes the small `packages/agent` runtime from the much larger `packages/coding-agent` application layer.
 
@@ -226,15 +234,22 @@ This is stronger execution checkpointing, but checkpoint state is still not a su
 
 ## Concrete Weaver target architecture
 
-1. **`ConversationRunner`** — an imperative loop. It receives a model adapter, tool registry, context assembler, event sink, cancellation token, and steering/follow-up queues. It owns no durable semantic memory.
-2. **`EpisodeService`** — starts/settles conversational episodes and transactionally persists finalized turns and run status. It subscribes to runner events but does not render UI.
-3. **`MemoryRepository`** — typed relational/domain API for works, editions, locations/passages, entities, observations, claims, evidence edges, confidence, supersession, and provenance.
-4. **`ContextAssembler`** — reads memory and composes a model context. Context is a projection, not the store itself.
-5. **`WorkflowRunner`** — interface for durable background jobs. Begin with a small job table + imperative workers. Introduce LangGraph only when workflows require persisted multi-node state, fan-out/join, or arbitrary pause/resume.
-6. **`RunEventLog`** — append-only, sequenced operational events with resumable cursor. It is separate from both conversation transcript and semantic memory.
-7. **`ApprovalService`** — durable requests/responses for destructive imports, claim acceptance, ambiguity resolution, etc.; live conversational steering remains separate.
-8. **`ModelGateway`** — Weaver-owned provider-neutral interface. Adapters can target pi-ai, direct providers, or LangChain without leaking provider/framework types.
-9. **`TuiAdapter` / `WebAdapter`** — send commands and consume the same run/domain event protocol.
+Plan 006 records these future contracts:
+
+1. **`ConversationRepository`** stores relationships, conversations, turns,
+   and immutable items.
+2. **`RunRepository`** stores attempts, canonical phase, recovery choices,
+   approvals, and queued work.
+3. **`RelationshipMemoryRepository`** stores owner-attributed relationship
+   records under risk-based save controls.
+4. **`OpinionRepository`** stores Weaver-attributed, source-linked, revisable
+   opinions separately.
+5. **`ContextAssembler`** builds a replaceable projection from versioned
+   canonical sources.
+6. **`ConversationRunner`** keeps the existing direct model/tool loop.
+7. **`RunCoordinator`** is direct first, with LangGraph as a later adapter.
+8. **`RunEventLog`** stores sequenced lifecycle events and reconnect cursors.
+9. **`CompiledKnowledgeProjector`** may later build a private Markdown view.
 
 ## Decision framework for introducing LangGraph
 
@@ -264,4 +279,12 @@ Score a proposed Weaver workflow, not the whole product. Use LangGraph when most
 
 ## Bottom line
 
-Pi supplies the better **shape for Weaver’s interactive core**: direct control flow, provider-stream injection, lifecycle events, queues, and cancellation. LangGraph supplies stronger **execution machinery for selected durable workflows**: superstep scheduling, checkpoint backends, task streams, replay, and resumable interrupts. Neither supplies Weaver’s actual differentiator—durable, evidence-backed literary memory. Weaver should own that model and keep both agent loop and workflow runtime behind narrow interfaces.
+This comparison still explains why LangGraph is conditional. Pi supplies the
+better shape for Weaver's interactive core: direct control flow,
+provider-stream injection, lifecycle events, queues, and cancellation.
+LangGraph supplies execution machinery for selected durable workflows:
+superstep scheduling, checkpoint backends, task streams, replay, and resumable
+interrupts.
+
+Plan 006 therefore chooses a Weaver-owned direct coordinator first. LangGraph
+may later adapt `RunCoordinator` after a graph-shaped workflow proves the need.

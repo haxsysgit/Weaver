@@ -2,6 +2,7 @@
 .env
 temp.md
 .firecrawl/
+.pi-subagents/
 .vscode/
 
 # Immutable private sources
