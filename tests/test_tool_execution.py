@@ -229,3 +229,222 @@ class TestPolicyDispatch:
         assert result.error_code == "inactive_tool"
         assert not result.started
         assert starts == {}
+
+
+class TestCooperativeCancellation:
+    async def test_pre_cancelled_call_does_not_start_handler(self) -> None:
+        starts: dict[str, int] = {}
+        registry = registry_with_effects(starts)
+        context = execution_context()
+        context.cancel_event.set()
+
+        result = await registry.dispatch(
+            "read",
+            "{}",
+            active_names=("read",),
+            policy=ToolExecutionPolicy.read_only(),
+            context=context,
+        )
+
+        assert not result.ok
+        assert not result.started
+        assert result.error_code == "cancelled"
+        assert starts == {}
+
+    async def test_running_handler_cleans_up_before_dispatch_returns(
+        self,
+    ) -> None:
+        handler_started = asyncio.Event()
+        cancellation_seen = asyncio.Event()
+        allow_cleanup = asyncio.Event()
+        cleanup_finished = asyncio.Event()
+        context = execution_context()
+
+        async def handler(arguments, handler_context):
+            handler_started.set()
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                cancellation_seen.set()
+                await allow_cleanup.wait()
+                cleanup_finished.set()
+                raise
+
+        registry = ToolRegistry()
+        registry.register(
+            ToolDefinition(
+                name="waiting-read",
+                description="Wait until cancelled.",
+                parameters={"type": "object"},
+                handler=handler,
+                effect_kind=EffectKind.READ,
+            )
+        )
+        dispatch_task = asyncio.create_task(
+            registry.dispatch(
+                "waiting-read",
+                "{}",
+                active_names=("waiting-read",),
+                policy=ToolExecutionPolicy.read_only(),
+                context=context,
+            )
+        )
+
+        await handler_started.wait()
+        context.cancel_event.set()
+        await cancellation_seen.wait()
+
+        assert not dispatch_task.done()
+        assert not cleanup_finished.is_set()
+
+        allow_cleanup.set()
+        result = await dispatch_task
+
+        assert cleanup_finished.is_set()
+        assert not result.ok
+        assert result.started
+        assert result.error_code == "cancelled"
+
+    async def test_completed_handler_wins_cancellation_tie(self) -> None:
+        context = execution_context()
+
+        async def handler(arguments, handler_context):
+            handler_context.cancel_event.set()
+            return {"state": "complete"}
+
+        registry = ToolRegistry()
+        registry.register(
+            ToolDefinition(
+                name="instant-read",
+                description="Finish while requesting cancellation.",
+                parameters={"type": "object"},
+                handler=handler,
+                effect_kind=EffectKind.READ,
+            )
+        )
+
+        result = await registry.dispatch(
+            "instant-read",
+            "{}",
+            active_names=("instant-read",),
+            policy=ToolExecutionPolicy.read_only(),
+            context=context,
+        )
+
+        assert result.ok
+        assert result.started
+        assert result.result == {"state": "complete"}
+
+    async def test_swallowed_task_cancellation_still_reports_cancelled(
+        self,
+    ) -> None:
+        handler_started = asyncio.Event()
+        context = execution_context()
+
+        async def handler(arguments, handler_context):
+            handler_started.set()
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                return {"state": "returned after cancellation"}
+
+        registry = ToolRegistry()
+        registry.register(
+            ToolDefinition(
+                name="swallowing-read",
+                description="Catch task cancellation.",
+                parameters={"type": "object"},
+                handler=handler,
+                effect_kind=EffectKind.READ,
+            )
+        )
+        dispatch_task = asyncio.create_task(
+            registry.dispatch(
+                "swallowing-read",
+                "{}",
+                active_names=("swallowing-read",),
+                policy=ToolExecutionPolicy.read_only(),
+                context=context,
+            )
+        )
+
+        await handler_started.wait()
+        context.cancel_event.set()
+        result = await dispatch_task
+
+        assert not result.ok
+        assert result.started
+        assert result.error_code == "cancelled"
+        assert result.result is None
+
+    async def test_retry_safe_handler_is_never_retried(self) -> None:
+        starts = 0
+
+        async def handler(arguments, context):
+            nonlocal starts
+            starts += 1
+            raise RuntimeError("expected test failure")
+
+        registry = ToolRegistry()
+        registry.register(
+            ToolDefinition(
+                name="retry-safe-read",
+                description="Fail once.",
+                parameters={"type": "object"},
+                handler=handler,
+                effect_kind=EffectKind.READ,
+                retry_safe=True,
+            )
+        )
+
+        result = await registry.dispatch(
+            "retry-safe-read",
+            "{}",
+            active_names=("retry-safe-read",),
+            policy=ToolExecutionPolicy.read_only(),
+            context=execution_context(),
+        )
+
+        assert not result.ok
+        assert result.started
+        assert result.error_code == "tool_failed"
+        assert starts == 1
+
+    async def test_completed_dispatch_leaves_no_waiter_task(self) -> None:
+        starts: dict[str, int] = {}
+        registry = registry_with_effects(starts)
+
+        result = await dispatch(
+            registry,
+            "read",
+            policy=ToolExecutionPolicy.read_only(),
+        )
+
+        pending_weaver_tasks = [
+            task.get_name()
+            for task in asyncio.all_tasks()
+            if task.get_name().startswith("weaver-tool-")
+        ]
+        assert result.ok
+        assert pending_weaver_tasks == []
+
+    async def test_checkpoint_stops_before_simulated_commit(self) -> None:
+        checkpoint_ready = asyncio.Event()
+        continue_to_checkpoint = asyncio.Event()
+        committed = asyncio.Event()
+        context = execution_context()
+
+        async def handler() -> None:
+            checkpoint_ready.set()
+            await continue_to_checkpoint.wait()
+            context.raise_if_cancelled()
+            committed.set()
+
+        handler_task = asyncio.create_task(handler())
+        await checkpoint_ready.wait()
+        context.cancel_event.set()
+        continue_to_checkpoint.set()
+
+        with pytest.raises(asyncio.CancelledError):
+            await handler_task
+        assert not committed.is_set()

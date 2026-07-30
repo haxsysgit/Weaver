@@ -67,6 +67,15 @@ class ToolExecutionContext:
     call_id: str
     cancel_event: asyncio.Event
 
+    def raise_if_cancelled(self) -> None:
+        """Stop at a cooperative handler checkpoint.
+
+        Handlers check before expensive work, after long waits, and before
+        committing or atomically replacing Weaver-owned state.
+        """
+        if self.cancel_event.is_set():
+            raise asyncio.CancelledError
+
 
 @dataclass
 class ToolDefinition:
@@ -125,6 +134,21 @@ class ToolRegistry:
             )
         return schemas
 
+    @staticmethod
+    async def _cancel_and_settle(task: asyncio.Task[Any]) -> None:
+        if not task.done():
+            task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            logger.warning(
+                "task %r failed during cancellation cleanup",
+                task.get_name(),
+                exc_info=True,
+            )
+
     async def dispatch(
         self,
         tool_name: str,
@@ -178,16 +202,69 @@ class ToolRegistry:
                 error="Tool arguments must be a JSON object.",
             )
 
-        try:
-            result = await tool.handler(arguments, context)
-        except Exception as exc:
-            logger.warning("tool %r failed: %s", tool_name, exc, exc_info=True)
+        if context.cancel_event.is_set():
             return ToolResult(
                 ok=False,
-                error_code="tool_failed",
-                error="Tool execution failed.",
-                started=True,
+                error_code="cancelled",
+                error="Tool call was cancelled.",
             )
+
+        handler_task = asyncio.create_task(
+            tool.handler(arguments, context),
+            name=(
+                f"weaver-tool-handler:{context.turn_id}:{context.call_id}"
+            ),
+        )
+        cancellation_waiter = asyncio.create_task(
+            context.cancel_event.wait(),
+            name=(
+                f"weaver-tool-cancellation:{context.turn_id}:"
+                f"{context.call_id}"
+            ),
+        )
+
+        try:
+            completed, _ = await asyncio.wait(
+                {handler_task, cancellation_waiter},
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+
+            if handler_task in completed:
+                try:
+                    result = handler_task.result()
+                except asyncio.CancelledError:
+                    return ToolResult(
+                        ok=False,
+                        error_code="cancelled",
+                        error="Tool call was cancelled.",
+                        started=True,
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        "tool %r failed: %s",
+                        tool_name,
+                        exc,
+                        exc_info=True,
+                    )
+                    return ToolResult(
+                        ok=False,
+                        error_code="tool_failed",
+                        error="Tool execution failed.",
+                        started=True,
+                    )
+            else:
+                handler_task.cancel()
+                await self._cancel_and_settle(handler_task)
+                return ToolResult(
+                    ok=False,
+                    error_code="cancelled",
+                    error="Tool call was cancelled.",
+                    started=True,
+                )
+        finally:
+            await self._cancel_and_settle(cancellation_waiter)
+            if not handler_task.done():
+                await self._cancel_and_settle(handler_task)
 
         if tool.max_result_chars > 0:
             serialized = json.dumps(result)
