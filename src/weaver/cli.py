@@ -5,7 +5,6 @@ import os
 from pathlib import Path
 from typing import Sequence
 
-from dotenv import load_dotenv
 from pydantic import ValidationError
 
 from .config import DEFAULT_TIMEOUT_SECONDS
@@ -18,7 +17,11 @@ from .corpus.tools import (
     update_novel_corpus,
 )
 from .doctor import run_doctor
-from .experiment import run_model_smoke
+from .experiment import (
+    provider_tool_contract_fake_responses,
+    run_model_smoke,
+    run_provider_tool_contract,
+)
 from .model_layer import (
     DEEPSEEK_FLASH,
     DEEPSEEK_MODELS,
@@ -47,7 +50,10 @@ def _parser() -> argparse.ArgumentParser:
         "experiment",
         help="Run an admitted experiment.",
     )
-    experiment.add_argument("name", choices=["model-smoke"])
+    experiment.add_argument(
+        "name",
+        choices=["model-smoke", "provider-tool-contract"],
+    )
     mode = experiment.add_mutually_exclusive_group(required=True)
     mode.add_argument("--fake", action="store_true", help="Use deterministic fake.")
     mode.add_argument("--live", action="store_true", help="Use explicit DeepSeek live.")
@@ -92,7 +98,6 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def run(argv: Sequence[str] | None = None) -> int:
-    load_dotenv(dotenv_path=".env", override=False)
     parser = _parser()
     args = parser.parse_args(argv)
     state_root = _state_root()
@@ -166,9 +171,13 @@ def run(argv: Sequence[str] | None = None) -> int:
         )
 
     if args.fake:
+        responses = ()
+        if args.name == "provider-tool-contract":
+            responses = provider_tool_contract_fake_responses(DEEPSEEK_MODELS)
         provider = FakeModelProvider(
             "deepseek",
             models=DEEPSEEK_MODELS,
+            responses=responses,
         )
         mode = "fake"
         secrets: tuple[str, ...] = ()
@@ -196,18 +205,30 @@ def run(argv: Sequence[str] | None = None) -> int:
         DEEPSEEK_PRO.provider_id,
         DEEPSEEK_PRO.model_id,
     )
-    result = asyncio.run(
-        run_model_smoke(
-            model_layer,
-            flash_model=flash_model,
-            pro_model=pro_model,
-            mode=mode,
-            receipt_root=state_root,
-            secrets=secrets,
-            timeout_seconds=timeout,
+    if args.name == "provider-tool-contract":
+        result = asyncio.run(
+            run_provider_tool_contract(
+                model_layer,
+                (flash_model, pro_model),
+                mode=mode,
+                receipt_root=state_root,
+                secrets=secrets,
+                timeout_seconds=timeout,
+            )
         )
-    )
-    print(f"{result.outcome.upper()} model-smoke receipt={result.run_dir}")
+    else:
+        result = asyncio.run(
+            run_model_smoke(
+                model_layer,
+                flash_model=flash_model,
+                pro_model=pro_model,
+                mode=mode,
+                receipt_root=state_root,
+                secrets=secrets,
+                timeout_seconds=timeout,
+            )
+        )
+    print(f"{result.outcome.upper()} {args.name} receipt={result.run_dir}")
     if result.error_category:
         print(f"safe_error_category={result.error_category}")
     return 0 if result.outcome == "passed" else 1

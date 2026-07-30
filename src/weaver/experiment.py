@@ -16,7 +16,9 @@ from .model_layer import (
     ModelResponse,
     ModelSpec,
     ModelStopReason,
+    ModelToolCall,
     ModelToolSchema,
+    ModelUsage,
 )
 from .receipts import ReceiptWriter, utc_now
 
@@ -113,6 +115,55 @@ def _contract_second_request(response: ModelResponse) -> ModelRequest:
         max_output_tokens=_CONTRACT_MAX_OUTPUT_TOKENS,
         reasoning=ModelReasoning(enabled=False),
     )
+
+
+def provider_tool_contract_fake_responses(
+    models: tuple[ModelSpec, ...],
+) -> tuple[ModelResponse, ...]:
+    responses: list[ModelResponse] = []
+    usage = ModelUsage(
+        input_tokens=20,
+        output_tokens=5,
+        total_tokens=25,
+        reasoning_tokens=0,
+        cache_hit_tokens=0,
+        cache_miss_tokens=20,
+    )
+    for model in models:
+        responses.append(
+            ModelResponse(
+                assistant_message=ModelMessage(
+                    role="assistant",
+                    content=None,
+                    tool_calls=(
+                        ModelToolCall(
+                            call_id=f"fake-{model.model_id}-tool-001",
+                            name=_CONTRACT_TOOL_NAME,
+                            arguments_json='{"item":"status"}',
+                        ),
+                    ),
+                ),
+                provider_id=model.provider_id,
+                model_id=model.model_id,
+                stop_reason=ModelStopReason.TOOL_USE,
+                raw_stop_reason="tool_calls",
+                usage=usage,
+            )
+        )
+        responses.append(
+            ModelResponse(
+                assistant_message=ModelMessage(
+                    role="assistant",
+                    content="Synthetic provider contract complete.",
+                ),
+                provider_id=model.provider_id,
+                model_id=model.model_id,
+                stop_reason=ModelStopReason.STOP,
+                raw_stop_reason="stop",
+                usage=usage,
+            )
+        )
+    return tuple(responses)
 
 
 def _contract_record(model: ModelSpec) -> dict[str, Any]:

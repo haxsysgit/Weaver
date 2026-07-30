@@ -3,7 +3,11 @@ import stat
 
 import pytest
 
-from weaver.experiment import run_model_smoke
+from weaver.experiment import (
+    provider_tool_contract_fake_responses,
+    run_model_smoke,
+    run_provider_tool_contract,
+)
 from weaver import (
     DEEPSEEK_FLASH,
     DEEPSEEK_MODELS,
@@ -95,3 +99,60 @@ async def test_fake_smoke_writes_complete_safe_receipt(tmp_path) -> None:
     )
     assert "reasoning_content" not in combined
     assert "private scratchwork" not in combined
+
+
+@pytest.mark.asyncio
+async def test_provider_contract_receipt_is_private_and_metadata_only(
+    tmp_path,
+) -> None:
+    secret = "contract-secret-value"
+    model_layer = ModelLayer()
+    model_layer.register_provider(
+        FakeModelProvider(
+            "deepseek",
+            models=DEEPSEEK_MODELS,
+            responses=provider_tool_contract_fake_responses(
+                (DEEPSEEK_FLASH, DEEPSEEK_PRO)
+            ),
+        )
+    )
+
+    result = await run_provider_tool_contract(
+        model_layer,
+        (DEEPSEEK_FLASH, DEEPSEEK_PRO),
+        mode="fake",
+        receipt_root=tmp_path / "runs",
+        secrets=(secret,),
+    )
+
+    assert result.outcome == "passed"
+    assert stat.S_IMODE(result.run_dir.stat().st_mode) == 0o700
+    for path in result.run_dir.iterdir():
+        assert stat.S_IMODE(path.stat().st_mode) == 0o600
+
+    manifest = json.loads((result.run_dir / "manifest.json").read_text())
+    assert manifest["experiment"] == "provider-tool-contract"
+    assert manifest["settings"]["thinking_enabled"] is False
+    assert manifest["settings"]["max_retries"] == 0
+    assert manifest["settings"]["maximum_api_requests"] == 4
+    assert [model["model_id"] for model in manifest["models"]] == [
+        "deepseek-v4-flash",
+        "deepseek-v4-pro",
+    ]
+    for model in manifest["models"]:
+        assert model["outcome"] == "passed"
+        assert model["call_id_present"] is True
+        assert len(model["argument_sha256"]) == 64
+        assert model["argument_length"] == len('{"item":"status"}')
+        assert model["final_text_present"] is True
+        assert len(model["final_text_sha256"]) == 64
+
+    combined = "".join(
+        path.read_text()
+        for path in result.run_dir.iterdir()
+        if path.suffix in {".json", ".jsonl", ".md"}
+    )
+    assert secret not in combined
+    assert '{"item":"status"}' not in combined
+    assert "Synthetic provider contract complete." not in combined
+    assert "reasoning_content" not in combined

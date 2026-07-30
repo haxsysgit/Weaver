@@ -26,7 +26,22 @@ check passes and the owner gives explicit live permission.
 
 ## Failures
 
-None recorded.
+### Unadmitted live call during the missing-key check
+
+On 2026-07-30, the deterministic command
+`env -u DEEPSEEK_KEY uv run weaver experiment provider-tool-contract --live`
+unexpectedly made four live API requests. The CLI loaded `.env` before checking
+the process environment, which restored the key that `env -u` had removed.
+
+Both provider round trips returned successfully, but this run was not admitted
+at the live gate and is not Plan 005 acceptance evidence. The runner stored only
+its private metadata receipt. It did not store prompts, final prose, provider
+bodies, credentials, or reasoning text.
+
+The repair removes automatic `.env` loading from the CLI. Live access now
+requires `DEEPSEEK_KEY` to be present in the process environment. The
+missing-key test includes a local `.env` value to prove the CLI does not
+silently restore it.
 
 ## Private receipts
 
