@@ -7,7 +7,7 @@
 
 ## Status
 
-- **State:** Active; learning confirmed, deterministic build admitted, live gate pending
+- **State:** Deterministic floor passed; explicit live permission pending
 - **Priority:** P1
 - **Effort:** M
 - **Risk:** Low for deterministic work; medium for live-provider uncertainty

@@ -8,7 +8,7 @@ but no shared Weaver type gains a DeepSeek-only field.
 | --- | --- | --- |
 | `plan.md` | Pointer to the canonical implementation plan | Active |
 | `learning.md` | Plain-language understanding and owner gate | Confirmed |
-| `results.md` | SDK-boundary and explicit live observations | Baseline recorded |
+| `results.md` | SDK-boundary and explicit live observations | Deterministic floor passed; live pending |
 | `rubric.md` | Acceptance checklist | Active |
 | `review-ledger.md` | Independent reviews and rechecks | Not started |
 | `decision.md` | Owner's final decision | Pending |

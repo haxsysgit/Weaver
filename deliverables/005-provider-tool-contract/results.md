@@ -2,8 +2,8 @@
 
 ## Status
 
-The learning gate is confirmed and Plan 004 is accepted. The deterministic
-build is active. Live access has not been admitted.
+The learning gate is confirmed, Plan 004 is accepted, and the deterministic
+floor passes. Live access has not been admitted.
 
 ## Hypothesis
 
@@ -13,11 +13,30 @@ correct two-request tool exchange for both `deepseek-v4-flash` and
 
 ## Deterministic observations
 
-- Baseline on 2026-07-30: 142 tests passed.
-- `uv pip check` found 64 compatible packages.
+- Baseline before Plan 005: 142 tests passed.
+- Focused floor after implementation: 33 tests passed.
+- Full floor after implementation: 156 tests passed.
+- `uv run ruff check src/weaver tests`: passed.
+- `uv pip check`: all 64 packages compatible.
+- `git diff --check`: passed.
 - `openai` 2.49.0 and `httpx` 0.28.1 are installed.
-- Full lint found one existing unused `ebooklib` import. The owner approved its
-  removal as a narrow Plan 005 scope exception.
+- The owner-approved unused `ebooklib` import was removed.
+- The real SDK test passed for `deepseek-v4-flash` and `deepseek-v4-pro`.
+- Each model emitted one tool call through split SSE argument deltas, then
+  accepted the linked tool result and emitted a final stop.
+- Both HTTP request bodies keep thinking disabled. Request two keeps the tool
+  schema, removes forced choice, preserves the call ID and raw argument text,
+  and contains no reasoning replay field.
+- Missing IDs, malformed arguments, partial length responses, provider errors,
+  and non-final second responses stop without an extra request.
+- The SDK provider-error test made one HTTP attempt with no retry.
+- `weaver experiment provider-tool-contract --fake` passed the stable
+  four-request Flash/Pro sequence without credentials or network access.
+- The fake receipt directory is mode `700`; every receipt file is mode `600`.
+  It contains hashes and lengths, not raw arguments, call IDs, prompts, final
+  prose, credentials, provider bodies, or reasoning text.
+- After the repair, `env -u DEEPSEEK_KEY ... --live` exits 2 before client or
+  receipt creation. The existing fake receipt count stayed unchanged.
 
 ## Live observations
 
@@ -45,5 +64,11 @@ silently restore it.
 
 ## Private receipts
 
-Paths and safe metadata will be added after execution. Receipt contents stay
-ignored and private.
+The inspected fake receipt is:
+
+```text
+.weaver/runs/provider-tool-contract-20260730T090327-334b5d7956fe
+```
+
+It is ignored owner-only state. The accidental unadmitted live receipt also
+stays ignored and is not acceptance evidence.
