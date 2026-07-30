@@ -1,3 +1,5 @@
+import asyncio
+from collections.abc import AsyncIterator
 from typing import Any
 
 import openai
@@ -9,7 +11,14 @@ from .errors import (
     ModelProviderError,
     ModelTimeoutError,
 )
-from .model import ModelRequest, ModelResponse, ToolCall, Usage
+from .model import (
+    ModelRequest,
+    ModelResponse,
+    ModelStreamEvent,
+    ModelStreamEventType,
+    ToolCall,
+    Usage,
+)
 
 
 def _field(value: Any, name: str, default: Any = None) -> Any:
@@ -111,6 +120,171 @@ class DeepSeekClient:
             finish_reason=_field(choice, "finish_reason"),
             tool_calls=tool_calls,
             usage=self._normalize_usage(_field(response, "usage")),
+        )
+
+    async def stream(
+        self,
+        request: ModelRequest,
+        cancel_event: asyncio.Event,
+    ) -> AsyncIterator[ModelStreamEvent]:
+        """Stream model response — yields provider-neutral events."""
+        model_id = resolve_model(request.model)
+        payload: dict[str, Any] = {
+            "model": model_id,
+            "messages": [self._message_payload(m) for m in request.messages],
+            "max_tokens": request.max_tokens,
+            "stream": True,
+            "stream_options": {"include_usage": True},
+            "extra_body": {
+                "thinking": {
+                    "type": "enabled" if request.thinking else "disabled",
+                }
+            },
+        }
+        if request.reasoning_effort is not None:
+            payload["extra_body"]["reasoning_effort"] = request.reasoning_effort
+        if request.response_format == "json_object":
+            payload["response_format"] = {"type": "json_object"}
+        if request.tools:
+            payload["tools"] = [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": t.name,
+                        "description": t.description,
+                        "parameters": t.parameters,
+                        "strict": t.strict,
+                    },
+                }
+                for t in request.tools
+            ]
+
+        try:
+            stream = await self._client.chat.completions.create(**payload)
+        except openai.APITimeoutError as exc:
+            yield ModelStreamEvent(
+                event_type=ModelStreamEventType.RESPONSE_FAILED,
+                error=str(exc),
+                category="timeout",
+                model=model_id,
+            )
+            return
+        except openai.APIStatusError as exc:
+            yield ModelStreamEvent(
+                event_type=ModelStreamEventType.RESPONSE_FAILED,
+                error=str(exc),
+                category=self._status_category(exc.status_code),
+                model=model_id,
+            )
+            return
+        except Exception as exc:
+            yield ModelStreamEvent(
+                event_type=ModelStreamEventType.RESPONSE_FAILED,
+                error=str(exc),
+                category="provider_error",
+                model=model_id,
+            )
+            return
+
+        # ── Accumulate tool call deltas ──
+        tool_call_buffers: dict[int, dict[str, Any]] = {}
+        finish_reason = ""
+        usage: Usage | None = None
+
+        try:
+            async for chunk in stream:
+                if cancel_event.is_set():
+                    try:
+                        await stream.close()
+                    except (AttributeError, NotImplementedError):
+                        pass
+                    yield ModelStreamEvent(
+                        event_type=ModelStreamEventType.RESPONSE_FAILED,
+                        error="cancelled",
+                        category="cancelled",
+                        model=model_id,
+                    )
+                    return
+
+                if not chunk.choices:
+                    if chunk.usage:
+                        usage = self._normalize_usage(chunk.usage)
+                    continue
+
+                choice = chunk.choices[0]
+                delta = choice.delta
+
+                if choice.finish_reason:
+                    finish_reason = choice.finish_reason
+
+                # Text delta
+                if delta.content:
+                    yield ModelStreamEvent(
+                        event_type=ModelStreamEventType.TEXT_DELTA,
+                        delta=delta.content,
+                        model=model_id,
+                    )
+
+                # Reasoning delta (DeepSeek thinking)
+                reasoning = getattr(delta, "reasoning_content", None)
+                if reasoning:
+                    yield ModelStreamEvent(
+                        event_type=ModelStreamEventType.THINKING_DELTA,
+                        delta=reasoning,
+                        model=model_id,
+                    )
+
+                # Tool call deltas
+                if delta.tool_calls:
+                    for tc_delta in delta.tool_calls:
+                        idx = tc_delta.index
+                        if idx not in tool_call_buffers:
+                            tool_call_buffers[idx] = {
+                                "call_id": tc_delta.id or "",
+                                "name": "",
+                                "arguments": "",
+                            }
+                        buf = tool_call_buffers[idx]
+                        if tc_delta.id:
+                            buf["call_id"] = tc_delta.id
+                        if tc_delta.function:
+                            if tc_delta.function.name:
+                                buf["name"] += tc_delta.function.name
+                            if tc_delta.function.arguments:
+                                buf["arguments"] += tc_delta.function.arguments
+
+        except asyncio.CancelledError:
+            try:
+                await stream.close()
+            except (AttributeError, NotImplementedError):
+                pass
+            yield ModelStreamEvent(
+                event_type=ModelStreamEventType.RESPONSE_FAILED,
+                error="cancelled",
+                category="cancelled",
+                model=model_id,
+            )
+            return
+
+        # Emit assembled tool calls
+        for buf in tool_call_buffers.values():
+            if buf["name"]:
+                yield ModelStreamEvent(
+                    event_type=ModelStreamEventType.COMPLETE_TOOL_CALL,
+                    call_id=buf["call_id"],
+                    tool_name=buf["name"],
+                    tool_arguments=buf["arguments"],
+                    tool_calls_unsafe=(finish_reason == "length"),
+                    model=model_id,
+                )
+
+        # Emit completion
+        yield ModelStreamEvent(
+            event_type=ModelStreamEventType.RESPONSE_COMPLETED,
+            finish_reason=finish_reason or "stop",
+            usage=usage,
+            model=model_id,
+            provider="deepseek",
         )
 
     @staticmethod

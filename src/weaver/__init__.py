@@ -1,10 +1,12 @@
-"""Weaver's experimental foundation."""
+"""Weaver — a synthetic lifelong reader."""
 
-from .client import ModelClient
+from .client import ModelClient, ToolSchema
 from .model import (
     Message,
     ModelRequest,
     ModelResponse,
+    ModelStreamEvent,
+    ModelStreamEventType,
     ToolCall,
     ToolDefinition,
     Usage,
@@ -15,7 +17,10 @@ __all__ = [
     "ModelClient",
     "ModelRequest",
     "ModelResponse",
+    "ModelStreamEvent",
+    "ModelStreamEventType",
     "ToolCall",
     "ToolDefinition",
+    "ToolSchema",
     "Usage",
 ]

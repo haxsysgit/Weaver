@@ -1,12 +1,22 @@
 import argparse
 import asyncio
+import json
 import os
 from pathlib import Path
 from typing import Sequence
 
 from dotenv import load_dotenv
+from pydantic import ValidationError
 
 from .config import DEFAULT_TIMEOUT_SECONDS
+from .corpus.errors import CorpusError, safe_error_message
+from .corpus.tools import (
+    build_novel_packet,
+    export_novel,
+    fetch_novel_chapters,
+    inspect_novel_corpus,
+    update_novel_corpus,
+)
 from .deepseek import DeepSeekClient
 from .doctor import run_doctor
 from .experiment import run_model_smoke
@@ -35,6 +45,43 @@ def _parser() -> argparse.ArgumentParser:
     mode = experiment.add_mutually_exclusive_group(required=True)
     mode.add_argument("--fake", action="store_true", help="Use deterministic fake.")
     mode.add_argument("--live", action="store_true", help="Use explicit DeepSeek live.")
+
+    corpus = subcommands.add_parser(
+        "corpus",
+        help="Call the deterministic private-corpus tools.",
+    )
+    corpus_commands = corpus.add_subparsers(dest="corpus_command", required=True)
+
+    inspect = corpus_commands.add_parser("inspect")
+    inspect.add_argument("novel_id", choices=["shadow-slave"])
+
+    fetch = corpus_commands.add_parser("fetch")
+    fetch.add_argument("novel_id", choices=["shadow-slave"])
+    fetch.add_argument("start_chapter", type=int)
+    fetch.add_argument("--end-chapter", type=int)
+    fetch.add_argument(
+        "--apply",
+        action="store_true",
+        help="Perform the fetch; the default is preview.",
+    )
+
+    update = corpus_commands.add_parser("update")
+    update.add_argument("novel_id", choices=["shadow-slave"])
+    update.add_argument("--through-chapter", type=int)
+    update.add_argument(
+        "--apply",
+        action="store_true",
+        help="Perform the update; the default is preview.",
+    )
+
+    packet = corpus_commands.add_parser("packet")
+    packet.add_argument("novel_id", choices=["shadow-slave"])
+    packet.add_argument("chapters", nargs="+", type=int)
+
+    export = corpus_commands.add_parser("export")
+    export.add_argument("novel_id", choices=["shadow-slave"])
+    export.add_argument("format", choices=["txt", "md", "epub"])
+    export.add_argument("--through-chapter", type=int)
     return parser
 
 
@@ -55,6 +102,62 @@ def run(argv: Sequence[str] | None = None) -> int:
                 marker = "WARN"
             print(f"{marker} {check['name']}: {check['detail']}")
         return 0 if all(bool(check["ok"]) for check in checks) else 1
+
+    if args.command == "corpus":
+        try:
+            if args.corpus_command == "inspect":
+                result = asyncio.run(inspect_novel_corpus(args.novel_id))
+            elif args.corpus_command == "fetch":
+                result = asyncio.run(
+                    fetch_novel_chapters(
+                        args.novel_id,
+                        args.start_chapter,
+                        end_chapter=args.end_chapter,
+                        preview=not args.apply,
+                    )
+                )
+            elif args.corpus_command == "update":
+                result = asyncio.run(
+                    update_novel_corpus(
+                        args.novel_id,
+                        through_chapter=args.through_chapter,
+                        preview=not args.apply,
+                    )
+                )
+            elif args.corpus_command == "packet":
+                result = asyncio.run(
+                    build_novel_packet(args.novel_id, args.chapters)
+                )
+            else:
+                result = asyncio.run(
+                    export_novel(
+                        args.novel_id,
+                        args.format,
+                        through_chapter=args.through_chapter,
+                    )
+                )
+        except ValidationError:
+            print("ERROR corpus tool arguments failed validation.")
+            return 2
+        except CorpusError as exc:
+            print(f"ERROR {exc.category.value}: {safe_error_message(exc.category)}")
+            return 1
+        print(json.dumps(result, indent=2, sort_keys=True))
+        failed = {
+            "failed",
+            "conflict",
+        }
+        action_counts = result.get("action_counts", {})
+        statuses = {
+            action.get("status")
+            for action in result.get("actions", [])
+        }
+        return (
+            1
+            if statuses & failed
+            or any(action_counts.get(status, 0) for status in failed)
+            else 0
+        )
 
     if args.fake:
         client = FakeModelClient()

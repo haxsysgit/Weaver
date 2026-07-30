@@ -1,9 +1,18 @@
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Any, Literal
 
 Role = Literal["system", "user", "assistant", "tool"]
 ResponseFormat = Literal["text", "json_object"]
 ReasoningEffort = Literal["high", "max"]
+
+
+class ModelStreamEventType(str, Enum):
+    TEXT_DELTA = "text_delta"
+    THINKING_DELTA = "thinking_delta"
+    COMPLETE_TOOL_CALL = "complete_tool_call"
+    RESPONSE_COMPLETED = "response_completed"
+    RESPONSE_FAILED = "response_failed"
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,3 +68,20 @@ class ModelResponse:
     finish_reason: str | None
     tool_calls: tuple[ToolCall, ...] = field(default_factory=tuple)
     usage: Usage = field(default_factory=Usage)
+
+
+@dataclass(frozen=True, slots=True)
+class ModelStreamEvent:
+    """One event in a streaming model response — provider-neutral."""
+    event_type: ModelStreamEventType
+    delta: str = ""
+    call_id: str | None = None
+    tool_name: str | None = None
+    tool_arguments: str | None = None
+    tool_calls_unsafe: bool = False
+    finish_reason: str = ""
+    usage: Usage | None = None
+    model: str = ""
+    provider: str = ""
+    error: str = ""
+    category: str = ""
