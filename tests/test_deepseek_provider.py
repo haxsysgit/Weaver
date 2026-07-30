@@ -12,6 +12,7 @@ from weaver import (
     ModelMessage,
     ModelRequest,
     ModelStopReason,
+    ModelStreamEventType,
     ModelToolCall,
     ModelToolSchema,
 )
@@ -66,7 +67,12 @@ def chunk(
         tool_calls=tool_calls,
     )
     choices = []
-    if content is not None or tool_calls is not None or finish_reason is not None:
+    if (
+        content is not None
+        or tool_calls is not None
+        or finish_reason is not None
+        or reasoning_content is not None
+    ):
         choices = [
             SimpleNamespace(
                 delta=delta,
@@ -281,14 +287,33 @@ async def test_usage_is_normalized_and_reasoning_text_stays_ephemeral() -> None:
     layer = ModelLayer()
     layer.register_provider(provider)
 
-    response = await layer.complete(
-        DEEPSEEK_PRO,
-        ModelRequest(
-            messages=(ModelMessage(role="user", content="synthetic"),)
-        ),
-        asyncio.Event(),
-    )
+    events = [
+        event
+        async for event in layer.stream(
+            DEEPSEEK_PRO,
+            ModelRequest(
+                messages=(
+                    ModelMessage(role="user", content="synthetic"),
+                )
+            ),
+            asyncio.Event(),
+        )
+    ]
+    reasoning_events = [
+        event
+        for event in events
+        if event.event_type == ModelStreamEventType.REASONING_DELTA
+    ]
+    final_events = [
+        event
+        for event in events
+        if event.event_type == ModelStreamEventType.RESPONSE_COMPLETE
+    ]
+    response = final_events[0].response
 
+    assert len(reasoning_events) == 1
+    assert reasoning_events[0].delta == "private scratchwork"
+    assert response is not None
     assert response.assistant_message.content == "Safe answer."
     assert response.usage.input_tokens == 30
     assert response.usage.output_tokens == 12
