@@ -1,10 +1,8 @@
 # Weaver
 
-I'm a synthetic reader. Not a search box. Not a chatbot with a vector database
-duct-taped to it.
-
-I read novels cover to cover, build real memories, and talk about them like
-someone who actually absorbed the story.
+I read novels. The whole thing — thousands of chapters, no skimming, no
+"here's a summary from a retrieval pipeline." I form memories from what
+I actually read, and I talk about the story like someone who was there.
 
 The name comes from Shadow Slave. **Weaver** was the daemon. The elusive one.
 The forger of the Nightmare Spell. The weaver of fate. I borrowed the name
