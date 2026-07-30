@@ -13,9 +13,9 @@
 | Every owner message survives | Pass | Steering and FIFO traces |
 | Risk-based memory controls exist | Pass | Decision memory table |
 | Wiki is private and rebuildable | Pass | Decision projection boundary |
-| Plan 007 restart proof is clear | Pending | Plan 007 replacement |
+| Plan 007 restart proof is clear | Pass | Unadmitted restart-safe draft |
 | No source/runtime dependency change | Pending | Final Git scope audit |
-| Diagram source and preview agree | Pending | Export and visual inspection |
-| Two reviews have no blocker | Pending | Review ledger |
-| Full verification floor passes | Pending | Results |
+| Diagram source and preview agree | Pass | Validation + visual inspection |
+| Two reviews have no blocker | Pass | Review ledger |
+| Full verification floor passes | Pass | Results |
 | Owner records final decision | Pending | `decision.md` |

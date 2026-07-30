@@ -1,17 +1,17 @@
-# Review Ledger: Minimal conversation entry point
+# Review Ledger: Restart-safe conversation proof
 
 ## Status
 
-Not started.
+Not started. Plan 007 is unadmitted.
 
-## Review 1: Runtime, tool boundary, and privacy
+## Review 1: Storage and recovery
 
 - Reviewer: pending
 - Frozen candidate: pending
 - Findings: pending
 - Verdict: pending
 
-## Review 2: Tests, CLI behavior, and evidence
+## Review 2: Conversation behavior and privacy
 
 - Reviewer: pending
 - Frozen candidate: pending

@@ -18,12 +18,14 @@ evidence, review, and human decision gates must also be complete.
 
 ## Execution order
 
-The owner admitted Plans 003–007 for planning as one batch. That does not admit
-five simultaneous builds.
+The owner admitted the original Plans 003-007 planning batch. Plans 003-005 are
+accepted. Plan 006 has a confirmed learning gate and an open final gate. Its
+replacement Plan 007 draft is unadmitted because the earlier chat-first design
+was superseded.
 
 1. Confirm each plan's `learning.md`.
 2. Implement, test, use, inspect, review, and decide Plan 003.
-3. Repeat the full loop for Plans 004, 005, 006, and 007, one at a time.
+3. Repeat the full loop for Plans 004, 005, and 006, one at a time.
 4. Before each final owner gate, deliver and inspect that plan's editable
    Draw.io architecture plus its rendered preview.
 5. Plan 007 proves the durable ledger before relationship curation, context
@@ -32,5 +34,5 @@ five simultaneous builds.
    accepted.
 
 Only one numbered plan may be active in implementation or review at a time.
-Approval of all five learning notes admits the sequence, not parallel work and
-not automatic acceptance.
+Plan 007 begins a fresh learning cycle only after Plan 006's final owner
+decision.

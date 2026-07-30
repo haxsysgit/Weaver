@@ -300,7 +300,16 @@ Every owner message remains its own turn.
 3. Weaver appends a new version linked to the source and superseded record.
 4. Future context uses only the active corrected version.
 
-The old source item and revision trail remain inspectable.
+> The old source item and revision trail remain inspectable.
+
+### Crash during tool execution
+
+1. The tool-call item is already committed.
+2. The process crashes before the tool result settles.
+3. Startup records the run as interrupted with the committed tool call visible.
+4. Continue includes the settled tool-call item.
+5. A fresh model call decides the next step.
+6. The tool is not re-executed.
 
 ### Context replacement
 

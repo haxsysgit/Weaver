@@ -148,8 +148,8 @@ deletion safety, and diagram/preview agreement.
 - [x] Plan 006 learning confirmed with three corrections.
 - [x] Research evidence corrected and private residue removed.
 - [x] Canonical architecture decision written.
-- [ ] Plan 007 replacement proof recorded.
+- [x] Plan 007 replacement proof recorded.
 - [ ] Diagram source and preview inspected.
-- [ ] Two reviews and rechecks have no blocker.
-- [ ] Full verification floor passes.
+- [x] Two reviews and rechecks have no blocker.
+- [x] Full verification floor passes.
 - [ ] Owner records the final Plan 006 decision.
