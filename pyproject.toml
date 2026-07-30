@@ -5,6 +5,7 @@ description = "Trustworthy experiments for building Weaver, a synthetic lifelong
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "aiosqlite>=0.22.1",
     "beautifulsoup4>=4.15.0",
     "ebooklib>=0.20",
     "firecrawl-py>=4.33.1",

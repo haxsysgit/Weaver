@@ -182,7 +182,8 @@ Test assertions:
 | `UNIQUE(conversation_id, sequence)` on `turn` | Duplicate turn order |
 | `UNIQUE(turn_id, attempt)` on `run` | Duplicate run attempt number |
 | `UNIQUE(conversation_id, sequence)` on `conversation_item` | Duplicate item order |
-| `UNIQUE(id, run_id)` on `conversation_item` | Same item ID in two runs (a tool call ID reused) |
+| `id TEXT PRIMARY KEY` on `conversation_item` | Duplicate item ID |
+| Tool-call ID in body JSON | Natural: the `tool_call_id` field pairs tool_call and tool_result items; no DB-level uniqueness across items needed for this |
 | `UNIQUE(conversation_id, sequence)` on `run_event` | Duplicate event order |
 | Tool-call ID = `conversation_item.id` | Natural: you cannot insert a second row with the same PK |
 | One `tool_result` per `tool_call` | Enforced by reusing the same PK |
