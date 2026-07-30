@@ -7,9 +7,9 @@ preserved tool protocol, and active capability boundary.
 | --- | --- | --- |
 | `plan.md` | Pointer to the canonical implementation plan | Active |
 | `learning.md` | Plain-language understanding and owner gate | Confirmed 2026-07-30 |
-| `results.md` | Deterministic observations and executed commands | Recorded; recheck pending |
-| `rubric.md` | Acceptance checklist | Runtime passed; review recheck pending |
-| `review-ledger.md` | Independent findings, repairs, and rechecks | Repair recorded; recheck pending |
+| `results.md` | Deterministic observations and executed commands | Complete |
+| `rubric.md` | Acceptance checklist | Passed except owner decision |
+| `review-ledger.md` | Independent findings, repairs, and rechecks | Both rechecks passed |
 | `decision.md` | Owner's final accept or reject record | Pending |
 
 No novel prose, chats, credentials, private receipts, or raw model reasoning

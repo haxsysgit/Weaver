@@ -7,7 +7,8 @@ Implementation and the one accepted repair pass are complete.
 The repaired candidate is `16957e2` with tree
 `7d9e5951a95cd29bd233cd063896b21385de4a50`. Runtime repairs landed in
 `d8a04a2`; `16957e2` corrects the direct reasoning-path test. Both reviewer
-rechecks are pending. The owner's final decision remains pending.
+rechecks passed with no open blocker. The owner's final decision remains
+pending.
 
 ## Hypothesis
 
@@ -126,6 +127,13 @@ Commit `16957e2` completes the same repair pass:
 - proves that text is absent from the authoritative final response.
 
 No second repair pass is admitted.
+
+## Final review outcome
+
+- Protocol reviewer: pass; both runtime findings closed
+- Evidence reviewer: pass; both evidence findings closed
+- New blockers from the repair: none
+- Owner acceptance: pending
 
 ## Runtime and test hashes
 

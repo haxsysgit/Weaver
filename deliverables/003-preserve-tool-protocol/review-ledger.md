@@ -2,7 +2,8 @@
 
 ## Status
 
-The one accepted repair pass is complete. Both reviewer rechecks are pending.
+The one accepted repair pass is complete. Both final rechecks passed with no
+open blocker.
 
 ## Frozen candidates
 
@@ -25,7 +26,8 @@ The one accepted repair pass is complete. Both reviewer rechecks are pending.
   duplicate-terminal rejection
 - First recheck: passed on `d8a04a2`; both findings closed and no new
   protocol blocker
-- Final candidate acknowledgement: pending after the test-only `16957e2`
+- Final candidate acknowledgement: passed; `16957e2` changes no runtime source
+  and introduces no protocol blocker
 
 ## Review 2: Tests, privacy, and scope
 
@@ -42,7 +44,8 @@ The one accepted repair pass is complete. Both reviewer rechecks are pending.
   was dropped before the provider branch ran
 - Correction: `16957e2` makes the stub emit that chunk and asserts both the
   ephemeral delta and its absence from the final response
-- Final recheck: pending
+- Final recheck: passed; the reasoning branch emits one ephemeral delta and
+  the authoritative response excludes its text
 
 ## Repair-pass failures
 
@@ -54,5 +57,19 @@ No runtime finding was silently retried or removed from this ledger.
 
 ## Final rechecks
 
-Pending. Both reviewers must inspect `16957e2` and the recorded evidence before
-Plan 003 can return to the owner decision gate.
+### Protocol reviewer
+
+- Candidate: `16957e2`
+- Direct repair regression: 1 passed
+- Verdict: pass
+- Open blockers: none
+
+### Evidence reviewer
+
+- Candidate: `16957e2`
+- Corrected provider suite: 11 passed
+- Verdict: pass
+- Open blockers: none
+
+Plan 003 now returns to the owner decision gate. Passing code and reviews do
+not accept the experiment automatically.

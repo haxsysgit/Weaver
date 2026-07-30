@@ -6,7 +6,7 @@
 
 ## Status
 
-- **State:** Active; learning gate confirmed by the owner
+- **State:** Implementation and review complete; owner decision pending
 - **Priority:** P1
 - **Effort:** M
 - **Risk:** Medium
@@ -294,17 +294,17 @@ The final owner decision remains a separate human gate.
 
 - [x] Owner confirmed Plan 003 learning and model-layer corrections.
 - [x] Plan 002 has a recorded final owner decision.
-- [ ] Model lookup uses exact provider and model IDs.
-- [ ] Agent code has no provider knowledge.
-- [ ] Final model responses are authoritative.
-- [ ] Tool calls survive the next model request and later replay.
-- [ ] Multiple calls stay grouped under one assistant message.
-- [ ] Inactive registered tools cannot execute.
-- [ ] Empty dictionaries remain successful tool results.
-- [ ] All five normalized stop reasons behave safely.
-- [ ] Focused tests, full tests, scoped lint, and package check pass.
-- [ ] No network call or novel access occurred.
-- [ ] Two independent reviews have no open blocker.
+- [x] Model lookup uses exact provider and model IDs.
+- [x] Agent code has no provider knowledge.
+- [x] Final model responses are authoritative.
+- [x] Tool calls survive the next model request and later replay.
+- [x] Multiple calls stay grouped under one assistant message.
+- [x] Inactive registered tools cannot execute.
+- [x] Empty dictionaries remain successful tool results.
+- [x] All five normalized stop reasons behave safely.
+- [x] Focused tests, full tests, scoped lint, and package check pass.
+- [x] No network call or novel access occurred.
+- [x] Two independent reviews have no open blocker.
 - [ ] The owner records Plan 003's final decision.
 
 ## STOP conditions
