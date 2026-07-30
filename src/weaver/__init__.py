@@ -1,8 +1,16 @@
 """Weaver, a synthetic lifelong reader."""
 
 from .model_layer import (
+    DEEPSEEK_FLASH,
+    DEEPSEEK_MODELS,
+    DEEPSEEK_PRO,
+    DeepSeekProvider,
+    DuplicateProviderError,
+    FakeModelCall,
+    FakeModelProvider,
     ModelLayer,
     ModelMessage,
+    ModelProtocolError,
     ModelProvider,
     ModelReasoning,
     ModelRequest,
@@ -14,11 +22,21 @@ from .model_layer import (
     ModelToolCall,
     ModelToolSchema,
     ModelUsage,
+    UnknownModelError,
+    UnknownProviderError,
 )
 
 __all__ = [
+    "DEEPSEEK_FLASH",
+    "DEEPSEEK_MODELS",
+    "DEEPSEEK_PRO",
+    "DeepSeekProvider",
+    "DuplicateProviderError",
+    "FakeModelCall",
+    "FakeModelProvider",
     "ModelLayer",
     "ModelMessage",
+    "ModelProtocolError",
     "ModelProvider",
     "ModelReasoning",
     "ModelRequest",
@@ -30,4 +48,6 @@ __all__ = [
     "ModelToolCall",
     "ModelToolSchema",
     "ModelUsage",
+    "UnknownModelError",
+    "UnknownProviderError",
 ]

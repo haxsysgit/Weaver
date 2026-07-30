@@ -9,11 +9,11 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, Coroutine
 
-from weaver.client import ToolSchema
+from ..model_layer import ModelToolSchema
 
 logger = logging.getLogger(__name__)
 
@@ -76,18 +76,21 @@ class ToolRegistry:
             raise ValueError(f"duplicate tool name: {tool.name}")
         self._tools[tool.name] = tool
 
-    def active_schemas(self, active_names: tuple[str, ...]) -> list[ToolSchema]:
-        """Return ordered ToolSchema objects for active tools."""
-        schemas: list[ToolSchema] = []
+    def active_schemas(
+        self,
+        active_names: tuple[str, ...],
+    ) -> list[ModelToolSchema]:
+        """Return ordered schemas for active tools."""
+        schemas: list[ModelToolSchema] = []
         for name in active_names:
             if name not in self._tools:
                 raise ValueError(f"unknown active tool: {name}")
             tool = self._tools[name]
             schemas.append(
-                ToolSchema(
+                ModelToolSchema(
                     name=tool.name,
                     description=tool.description,
-                    input_schema=tool.parameters,
+                    parameters=tool.parameters,
                 )
             )
         return schemas

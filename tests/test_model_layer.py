@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from weaver.model_layer import (
+from weaver import (
     DuplicateProviderError,
     FakeModelProvider,
     ModelLayer,

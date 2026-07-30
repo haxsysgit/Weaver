@@ -1,5 +1,3 @@
-"""Tests for the Weaver agent turn runtime."""
-
 import asyncio
 
 import pytest
@@ -11,62 +9,117 @@ from weaver.agent.messages import (
     ToolResultMessage,
     UserMessage,
 )
+from weaver.agent.session import AgentSession
 from weaver.agent.tools import EffectKind, ToolDefinition, ToolRegistry
 from weaver.agent.turn import TurnExitReason, run_turn
-from weaver.fake import FakeModelClient
-from weaver.model import ModelStreamEvent, ModelStreamEventType
+from weaver import (
+    FakeModelProvider,
+    ModelLayer,
+    ModelMessage,
+    ModelResponse,
+    ModelSpec,
+    ModelStopReason,
+    ModelToolCall,
+)
 
 
-# ── Helpers ──
+def _model_spec() -> ModelSpec:
+    return ModelSpec(
+        provider_id="test-provider",
+        model_id="test-reader",
+        api_family="test",
+        default_output_tokens=777,
+        supports_reasoning=False,
+    )
 
 
-def _text_step(text: str, model: str = "test-model") -> list[ModelStreamEvent]:
-    """One model step: text delta + completion."""
-    return [
-        ModelStreamEvent(event_type=ModelStreamEventType.TEXT_DELTA, delta=text),
-        ModelStreamEvent(
-            event_type=ModelStreamEventType.RESPONSE_COMPLETED,
-            finish_reason="stop",
-            model=model,
+def model_response(
+    *,
+    stop_reason: ModelStopReason,
+    content: str | None = None,
+    tool_calls: tuple[ModelToolCall, ...] = (),
+    raw_stop_reason: str | None = None,
+    error_category: str | None = None,
+) -> ModelResponse:
+    model = _model_spec()
+    return ModelResponse(
+        assistant_message=ModelMessage(
+            role="assistant",
+            content=content,
+            tool_calls=tool_calls,
         ),
-    ]
+        provider_id=model.provider_id,
+        model_id=model.model_id,
+        stop_reason=stop_reason,
+        raw_stop_reason=raw_stop_reason or stop_reason.value,
+        error_category=error_category,
+    )
 
 
-def _tool_step(
-    tool_name: str,
-    arguments: str,
-    model: str = "test-model",
-) -> list[ModelStreamEvent]:
-    """One model step: tool call + completion."""
-    return [
-        ModelStreamEvent(
-            event_type=ModelStreamEventType.COMPLETE_TOOL_CALL,
-            call_id="call-001",
-            tool_name=tool_name,
-            tool_arguments=arguments,
-            model=model,
-        ),
-        ModelStreamEvent(
-            event_type=ModelStreamEventType.RESPONSE_COMPLETED,
-            finish_reason="tool_calls",
-            model=model,
-        ),
-    ]
+def stop_response(text: str) -> ModelResponse:
+    return model_response(
+        stop_reason=ModelStopReason.STOP,
+        content=text,
+        raw_stop_reason="stop",
+    )
 
 
-# ── Tools for testing ──
+def tool_response(
+    *tool_calls: ModelToolCall,
+    content: str | None = None,
+) -> ModelResponse:
+    return model_response(
+        stop_reason=ModelStopReason.TOOL_USE,
+        content=content,
+        tool_calls=tuple(tool_calls),
+        raw_stop_reason="tool_calls",
+    )
 
 
-async def _echo_handler(arguments: dict, ctx) -> dict:
-    return {"echo": arguments}
+def tool_call(
+    call_id: str,
+    name: str,
+    arguments_json: str,
+) -> ModelToolCall:
+    return ModelToolCall(
+        call_id=call_id,
+        name=name,
+        arguments_json=arguments_json,
+    )
 
 
-async def _weather_handler(arguments: dict, ctx) -> dict:
-    city = arguments.get("city", "unknown")
-    return {"city": city, "temp": 22, "condition": "sunny"}
+def scripted_layer(
+    *responses: ModelResponse,
+) -> tuple[ModelLayer, ModelSpec, FakeModelProvider]:
+    model = _model_spec()
+    provider = FakeModelProvider(
+        model.provider_id,
+        models=(model,),
+        responses=tuple(responses),
+    )
+    layer = ModelLayer()
+    layer.register_provider(provider)
+    return layer, model, provider
 
 
-def _make_registry() -> ToolRegistry:
+def make_registry(
+    starts: dict[str, int] | None = None,
+) -> ToolRegistry:
+    starts = starts if starts is not None else {}
+
+    async def echo_handler(arguments: dict, context) -> dict:
+        starts["echo"] = starts.get("echo", 0) + 1
+        return {"echo": arguments}
+
+    async def weather_handler(arguments: dict, context) -> dict:
+        starts["get_weather"] = starts.get("get_weather", 0) + 1
+        city = arguments.get("city", "unknown")
+        return {"city": city, "condition": "sunny", "temp": 22}
+
+    async def empty_handler(arguments: dict, context) -> dict:
+        starts["empty"] = starts.get("empty", 0) + 1
+        return {}
+
     registry = ToolRegistry()
     registry.register(
         ToolDefinition(
@@ -76,7 +129,7 @@ def _make_registry() -> ToolRegistry:
                 "type": "object",
                 "properties": {"message": {"type": "string"}},
             },
-            handler=_echo_handler,
+            handler=echo_handler,
             effect_kind=EffectKind.READ,
         )
     )
@@ -89,294 +142,471 @@ def _make_registry() -> ToolRegistry:
                 "properties": {"city": {"type": "string"}},
                 "required": ["city"],
             },
-            handler=_weather_handler,
+            handler=weather_handler,
+            effect_kind=EffectKind.READ,
+        )
+    )
+    registry.register(
+        ToolDefinition(
+            name="empty",
+            description="Return an empty result",
+            parameters={"type": "object", "properties": {}},
+            handler=empty_handler,
             effect_kind=EffectKind.READ,
         )
     )
     return registry
 
 
-# ── Tests ──
+async def execute_turn(
+    layer: ModelLayer,
+    model: ModelSpec,
+    *,
+    registry: ToolRegistry | None = None,
+    active_tools: tuple[str, ...] = (),
+    history=None,
+    cancel_event: asyncio.Event | None = None,
+    persist_message=None,
+    max_model_steps: int = 5,
+):
+    return await run_turn(
+        turn_id="turn-1",
+        model_layer=layer,
+        model=model,
+        system_prompt="You are Weaver.",
+        history=history or [],
+        tool_registry=registry or make_registry(),
+        active_tools=active_tools,
+        cancel_event=cancel_event or asyncio.Event(),
+        persist_message=persist_message,
+        max_model_steps=max_model_steps,
+    )
 
 
-class TestTurnRuntime:
-    """Deterministic turn runtime tests using FakeModelClient."""
+class TestTurnProtocol:
+    async def test_simple_text_response_completes(self) -> None:
+        layer, model, provider = scripted_layer(stop_response("Hello, reader."))
 
-    async def test_simple_text_response(self):
-        """A turn with a text-only model response returns COMPLETED."""
-        client = FakeModelClient(
-            stream_events=[_text_step("Hello, reader.")]
-        )
-        result = await run_turn(
-            turn_id="turn-1",
-            model=client,
-            system_prompt="You are Weaver.",
-            history=[],
-            tool_registry=_make_registry(),
-            active_tools=(),
-            cancel_event=asyncio.Event(),
-        )
+        result = await execute_turn(layer, model)
 
         assert result.exit_reason == TurnExitReason.COMPLETED
         assert result.final_text == "Hello, reader."
         assert result.model_steps == 1
         assert result.tool_starts == 0
+        assert provider.calls[0].max_output_tokens == 777
         assert len(result.new_messages) == 1
-        assert isinstance(result.new_messages[0], AssistantMessage)
-        assert result.new_messages[0].content == "Hello, reader."
+        assistant = result.new_messages[0]
+        assert isinstance(assistant, AssistantMessage)
+        assert assistant.content == "Hello, reader."
 
-    async def test_tool_call_and_response(self):
-        """A turn with tool call -> tool result -> text response."""
-        client = FakeModelClient(
-            stream_events=[
-                _tool_step("get_weather", '{"city": "London"}'),
-                _text_step("The weather in London is sunny, 22C."),
-            ]
+    async def test_complete_tool_exchange_reaches_second_request(self) -> None:
+        call = tool_call(
+            "call-weather",
+            "get_weather",
+            '{"city": "London"}',
         )
-        result = await run_turn(
-            turn_id="turn-2",
-            model=client,
-            system_prompt="You are Weaver.",
-            history=[],
-            tool_registry=_make_registry(),
+        layer, model, provider = scripted_layer(
+            tool_response(call),
+            stop_response("London is sunny."),
+        )
+
+        result = await execute_turn(
+            layer,
+            model,
             active_tools=("get_weather",),
-            cancel_event=asyncio.Event(),
         )
 
         assert result.exit_reason == TurnExitReason.COMPLETED
-        assert "sunny" in result.final_text
-        assert result.model_steps == 2
         assert result.tool_starts == 1
-
-        kinds = [m.kind for m in result.new_messages]
-        assert "tool_call" in kinds
-        assert "tool_result" in kinds
-        assert "assistant" in kinds
-
-    async def test_cancellation(self):
-        """Cancellation mid-stream returns INTERRUPTED."""
-        client = FakeModelClient(
-            stream_events=[
-                [
-                    ModelStreamEvent(
-                        event_type=ModelStreamEventType.TEXT_DELTA,
-                        delta="I think the answer is...",
-                    ),
-                ]
-            ]
+        second_messages = provider.calls[1].request.messages
+        assert [message.role for message in second_messages] == [
+            "system",
+            "assistant",
+            "tool",
+        ]
+        assistant = second_messages[1]
+        assert assistant.content is None
+        assert assistant.tool_calls == (call,)
+        tool_result = second_messages[2]
+        assert tool_result.tool_call_id == "call-weather"
+        assert tool_result.content == (
+            '{"city":"London","condition":"sunny","temp":22}'
         )
+
+    async def test_multiple_calls_stay_under_one_assistant_message(self) -> None:
+        first_call = tool_call("call-1", "echo", '{"message":"one"}')
+        second_call = tool_call(
+            "call-2",
+            "get_weather",
+            '{"city":"Leeds"}',
+        )
+        layer, model, provider = scripted_layer(
+            tool_response(first_call, second_call, content="Checking both."),
+            stop_response("Both checks finished."),
+        )
+
+        result = await execute_turn(
+            layer,
+            model,
+            active_tools=("echo", "get_weather"),
+        )
+
+        grouped = [
+            message
+            for message in result.new_messages
+            if isinstance(message, AssistantMessage) and message.tool_calls
+        ]
+        assert len(grouped) == 1
+        assert grouped[0].tool_calls == (first_call, second_call)
+        second_messages = provider.calls[1].request.messages
+        assert [message.role for message in second_messages] == [
+            "system",
+            "assistant",
+            "tool",
+            "tool",
+        ]
+        assert second_messages[1].tool_calls == (first_call, second_call)
+        assert second_messages[2].tool_call_id == "call-1"
+        assert second_messages[3].tool_call_id == "call-2"
+
+    async def test_empty_assistant_text_with_tool_calls_is_preserved(
+        self,
+    ) -> None:
+        call = tool_call("call-1", "echo", '{"message":"hello"}')
+        layer, model, provider = scripted_layer(
+            tool_response(call, content=None),
+            stop_response("Finished."),
+        )
+
+        await execute_turn(
+            layer,
+            model,
+            active_tools=("echo",),
+        )
+
+        assistant = provider.calls[1].request.messages[1]
+        assert assistant.role == "assistant"
+        assert assistant.content is None
+        assert assistant.tool_calls == (call,)
+
+    async def test_empty_successful_dictionary_reaches_model(self) -> None:
+        call = tool_call("call-empty", "empty", "{}")
+        layer, model, provider = scripted_layer(
+            tool_response(call),
+            stop_response("Empty result received."),
+        )
+
+        result = await execute_turn(
+            layer,
+            model,
+            active_tools=("empty",),
+        )
+
+        result_messages = [
+            message
+            for message in result.new_messages
+            if isinstance(message, ToolResultMessage)
+        ]
+        assert result_messages[0].ok
+        assert result_messages[0].result == {}
+        projected_result = provider.calls[1].request.messages[2]
+        assert projected_result.content == "{}"
+
+    async def test_grouped_assistant_is_persisted_before_call_evidence(
+        self,
+    ) -> None:
+        call = tool_call("call-1", "echo", '{"message":"hello"}')
+        layer, model, _ = scripted_layer(
+            tool_response(call),
+            stop_response("Finished."),
+        )
+        persisted = []
+
+        await execute_turn(
+            layer,
+            model,
+            active_tools=("echo",),
+            persist_message=persisted.append,
+        )
+
+        assert [message.kind for message in persisted] == [
+            "assistant",
+            "tool_call",
+            "tool_result",
+            "assistant",
+        ]
+        assert persisted[0].tool_calls == (call,)
+
+    async def test_individual_call_evidence_is_not_projected_twice(
+        self,
+    ) -> None:
+        call = tool_call("call-1", "echo", '{"message":"hello"}')
+        history = [
+            AssistantMessage(
+                message_id="assistant-1",
+                turn_id="old-turn",
+                content="",
+                tool_calls=(call,),
+            ),
+            ToolCallMessage(
+                message_id="evidence-1",
+                turn_id="old-turn",
+                call_id=call.call_id,
+                tool_name=call.name,
+                arguments_json=call.arguments_json,
+            ),
+            ToolResultMessage(
+                message_id="result-1",
+                turn_id="old-turn",
+                call_id=call.call_id,
+                tool_name=call.name,
+                ok=True,
+                result={"echo": {"message": "hello"}},
+            ),
+        ]
+        layer, model, provider = scripted_layer(stop_response("Replayed."))
+
+        await execute_turn(layer, model, history=history)
+
+        projected = provider.calls[0].request.messages
+        assistant_messages = [
+            message for message in projected if message.role == "assistant"
+        ]
+        assert len(assistant_messages) == 1
+        assert assistant_messages[0].tool_calls == (call,)
+
+    async def test_later_user_turn_replays_the_complete_exchange(
+        self,
+    ) -> None:
+        call = tool_call("call-1", "echo", '{"message":"hello"}')
+        layer, model, provider = scripted_layer(
+            tool_response(call),
+            stop_response("First answer."),
+            stop_response("Second answer."),
+        )
+        session = AgentSession(
+            session_id="session-1",
+            model_layer=layer,
+            model=model,
+            system_prompt="You are Weaver.",
+            tool_registry=make_registry(),
+            active_tools=("echo",),
+        )
+
+        first = await session.send("First question")
+        second = await session.send("Second question")
+
+        assert first.exit_reason == TurnExitReason.COMPLETED
+        assert second.exit_reason == TurnExitReason.COMPLETED
+        replay = provider.calls[2].request.messages
+        assert [message.role for message in replay] == [
+            "system",
+            "user",
+            "assistant",
+            "tool",
+            "assistant",
+            "user",
+        ]
+        assert replay[2].tool_calls == (call,)
+        assert replay[3].tool_call_id == "call-1"
+
+
+class TestUnsafeModelResponses:
+    @pytest.mark.parametrize(
+        "unsafe_call",
+        [
+            tool_call("", "echo", "{}"),
+            tool_call("  ", "echo", "{}"),
+            tool_call("call-1", "", "{}"),
+            tool_call("call-1", "  ", "{}"),
+            tool_call("call-1", "echo", ""),
+            tool_call("call-1", "echo", " "),
+            tool_call("call-1", "echo", '{"broken":}'),
+            tool_call("call-1", "echo", "[]"),
+        ],
+    )
+    async def test_incomplete_or_invalid_call_starts_no_handler(
+        self,
+        unsafe_call,
+    ) -> None:
+        starts = {}
+        layer, model, _ = scripted_layer(tool_response(unsafe_call))
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(starts),
+            active_tools=("echo",),
+        )
+
+        assert result.exit_reason == TurnExitReason.MODEL_FAILED
+        assert result.safe_failure == safe_error("model_protocol")
+        assert starts == {}
+        assert result.tool_starts == 0
+
+    async def test_duplicate_call_ids_start_no_handler(self) -> None:
+        starts = {}
+        first = tool_call("same-id", "echo", '{"message":"one"}')
+        second = tool_call("same-id", "echo", '{"message":"two"}')
+        layer, model, _ = scripted_layer(tool_response(first, second))
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(starts),
+            active_tools=("echo",),
+        )
+
+        assert result.exit_reason == TurnExitReason.MODEL_FAILED
+        assert result.safe_failure == safe_error("model_protocol")
+        assert starts == {}
+        assert result.tool_starts == 0
+
+    async def test_stop_with_tool_calls_fails_safely(self) -> None:
+        call = tool_call("call-1", "echo", "{}")
+        response = model_response(
+            stop_reason=ModelStopReason.STOP,
+            tool_calls=(call,),
+            raw_stop_reason="stop",
+        )
+        layer, model, _ = scripted_layer(response)
+
+        result = await execute_turn(
+            layer,
+            model,
+            active_tools=("echo",),
+        )
+
+        assert result.exit_reason == TurnExitReason.MODEL_FAILED
+        assert result.tool_starts == 0
+
+    async def test_tool_use_without_calls_fails_safely(self) -> None:
+        layer, model, _ = scripted_layer(
+            model_response(
+                stop_reason=ModelStopReason.TOOL_USE,
+                raw_stop_reason="tool_calls",
+            )
+        )
+
+        result = await execute_turn(layer, model)
+
+        assert result.exit_reason == TurnExitReason.MODEL_FAILED
+        assert result.tool_starts == 0
+
+    async def test_length_saves_interrupted_text_and_runs_no_tools(
+        self,
+    ) -> None:
+        starts = {}
+        call = tool_call("partial-call", "echo", '{"message":"partial"}')
+        layer, model, _ = scripted_layer(
+            model_response(
+                stop_reason=ModelStopReason.LENGTH,
+                content="A partial answer",
+                tool_calls=(call,),
+                raw_stop_reason="length",
+            )
+        )
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(starts),
+            active_tools=("echo",),
+        )
+
+        assert result.exit_reason == TurnExitReason.INCOMPLETE
+        assert result.final_text == "A partial answer"
+        assert result.tool_starts == 0
+        assert starts == {}
+        assert len(result.new_messages) == 1
+        assistant = result.new_messages[0]
+        assert isinstance(assistant, AssistantMessage)
+        assert assistant.status == "interrupted"
+        assert assistant.tool_calls == ()
+
+    async def test_error_returns_model_failed(self) -> None:
+        layer, model, _ = scripted_layer(
+            model_response(
+                stop_reason=ModelStopReason.ERROR,
+                raw_stop_reason="provider_error",
+                error_category="provider",
+            )
+        )
+
+        result = await execute_turn(layer, model)
+
+        assert result.exit_reason == TurnExitReason.MODEL_FAILED
+        assert result.safe_failure == safe_error("model")
+
+    async def test_aborted_returns_interrupted(self) -> None:
+        layer, model, _ = scripted_layer(
+            model_response(
+                stop_reason=ModelStopReason.ABORTED,
+                raw_stop_reason="cancelled",
+                error_category="cancelled",
+            )
+        )
+
+        result = await execute_turn(layer, model)
+
+        assert result.exit_reason == TurnExitReason.INTERRUPTED
+        assert result.safe_failure == safe_error("interrupted")
+
+
+class TestTurnBoundaries:
+    async def test_pre_cancelled_turn_is_interrupted(self) -> None:
+        layer, model, provider = scripted_layer(stop_response("unused"))
         cancel_event = asyncio.Event()
         cancel_event.set()
 
-        result = await run_turn(
-            turn_id="turn-3",
-            model=client,
-            system_prompt="You are Weaver.",
-            history=[],
-            tool_registry=_make_registry(),
-            active_tools=(),
+        result = await execute_turn(
+            layer,
+            model,
             cancel_event=cancel_event,
         )
 
         assert result.exit_reason == TurnExitReason.INTERRUPTED
+        assert provider.calls == []
 
-    async def test_limit_reached(self):
-        """If the model keeps calling tools, limit_reached after max steps."""
-        client = FakeModelClient(
-            stream_events=[_tool_step("echo", '{"message": "hi"}')] * 10
-        )
+    async def test_repeated_tool_calls_reach_step_limit(self) -> None:
+        call = tool_call("call-1", "echo", '{"message":"hi"}')
+        layer, model, _ = scripted_layer(tool_response(call))
 
-        result = await run_turn(
-            turn_id="turn-4",
-            model=client,
-            system_prompt="You are Weaver.",
-            history=[],
-            tool_registry=_make_registry(),
+        result = await execute_turn(
+            layer,
+            model,
             active_tools=("echo",),
-            cancel_event=asyncio.Event(),
             max_model_steps=3,
         )
 
         assert result.exit_reason == TurnExitReason.LIMIT_REACHED
         assert result.model_steps == 3
 
-    async def test_model_failure(self):
-        """A RESPONSE_FAILED event returns MODEL_FAILED."""
-        client = FakeModelClient(
-            stream_events=[
-                [
-                    ModelStreamEvent(
-                        event_type=ModelStreamEventType.RESPONSE_FAILED,
-                        error="provider error",
-                        category="provider_error",
-                    ),
-                ]
-            ]
-        )
+    async def test_model_selection_stays_outside_agent_request(self) -> None:
+        layer, model, provider = scripted_layer(stop_response("Selected."))
 
-        result = await run_turn(
-            turn_id="turn-5",
-            model=client,
-            system_prompt="You are Weaver.",
-            history=[],
-            tool_registry=_make_registry(),
-            active_tools=(),
-            cancel_event=asyncio.Event(),
-        )
+        await execute_turn(layer, model)
 
-        assert result.exit_reason == TurnExitReason.MODEL_FAILED
-        assert result.safe_failure == safe_error("model")
+        request = provider.calls[0].request
+        assert not hasattr(request, "model")
+        assert provider.calls[0].model == model
 
-    async def test_unknown_tool_returns_error(self):
-        """Dispatching an unregistered tool returns a tool result error."""
-        client = FakeModelClient(
-            stream_events=[
-                _tool_step("nonexistent_tool", "{}"),
-                _text_step("I tried but that tool does not exist."),
-            ]
-        )
-
-        result = await run_turn(
-            turn_id="turn-6",
-            model=client,
-            system_prompt="You are Weaver.",
-            history=[],
-            tool_registry=_make_registry(),
-            active_tools=("echo",),
-            cancel_event=asyncio.Event(),
-        )
-
-        tool_results = [
-            m for m in result.new_messages if isinstance(m, ToolResultMessage)
-        ]
-        assert len(tool_results) == 1
-        assert not tool_results[0].ok
-        assert tool_results[0].error_code == "unknown_tool"
-
-    async def test_persist_callback_receives_messages(self):
-        """The persist callback receives each message."""
-        persisted: list = []
-
-        client = FakeModelClient(
-            stream_events=[_text_step("Short reply.")]
-        )
-
-        result = await run_turn(
-            turn_id="turn-7",
-            model=client,
-            system_prompt="You are Weaver.",
-            history=[],
-            tool_registry=_make_registry(),
-            active_tools=(),
-            cancel_event=asyncio.Event(),
-            persist_message=persisted.append,
-        )
-
-        assert len(persisted) == 1
-        assert persisted[0].kind == "assistant"
-        assert persisted[0].content == "Short reply."
-
-    async def test_user_history_included_in_context(self):
-        """Messages in history appear in the model request."""
-        client = FakeModelClient(
-            stream_events=[_text_step("I remember that.")]
-        )
-
-        history = [
-            UserMessage(
-                message_id="u1",
-                turn_id="t0",
-                content="What is Sunny's aspect?",
-            ),
-            AssistantMessage(
-                message_id="a1",
-                turn_id="t0",
-                content="Sunny's aspect is Shadow related.",
-                status="complete",
-            ),
-        ]
-
-        await run_turn(
-            turn_id="turn-8",
-            model=client,
-            system_prompt="You are Weaver.",
-            history=history,
-            tool_registry=_make_registry(),
-            active_tools=(),
-            cancel_event=asyncio.Event(),
-        )
-
-        assert len(client.requests) == 1
-        messages = client.requests[0].messages
-        assert len(messages) >= 2
-
-
-class TestAgentSession:
-    """Integration tests through AgentSession."""
-
-    async def test_session_basic_conversation(self):
-        """A session sends a message and gets a response."""
-        from weaver.agent.session import AgentSession
-
-        client = FakeModelClient(
-            stream_events=[_text_step("Hello! What can I help with?")]
+    async def test_session_accumulates_history(self) -> None:
+        layer, model, _ = scripted_layer(
+            stop_response("First response."),
+            stop_response("Second response."),
         )
         session = AgentSession(
-            session_id="sess-1",
-            model=client,
-            system_prompt="You are Weaver, a literary reader.",
-            tool_registry=_make_registry(),
-        )
-
-        result = await session.send("Tell me about the novel.")
-
-        assert result.exit_reason == TurnExitReason.COMPLETED
-        assert len(session.history) == 2  # user + assistant
-        assert session.turn_count == 1
-
-    async def test_session_history_accumulates(self):
-        """History grows across turns."""
-        from weaver.agent.session import AgentSession
-
-        client = FakeModelClient(
-            stream_events=[
-                _text_step("First response."),
-                _text_step("Second response."),
-            ]
-        )
-        session = AgentSession(
-            session_id="sess-2",
-            model=client,
+            session_id="session-2",
+            model_layer=layer,
+            model=model,
             system_prompt="You are Weaver.",
-            tool_registry=_make_registry(),
+            tool_registry=make_registry(),
         )
 
         await session.send("Message 1")
         await session.send("Message 2")
 
         assert session.turn_count == 2
-        assert len(session.history) == 4  # 2 user + 2 assistant
-
-    async def test_session_with_tool(self):
-        """A session where the model calls a tool and responds."""
-        from weaver.agent.session import AgentSession
-
-        client = FakeModelClient(
-            stream_events=[
-                _tool_step("get_weather", '{"city": "London"}'),
-                _text_step("London: sunny, 22C."),
-            ]
-        )
-        session = AgentSession(
-            session_id="sess-3",
-            model=client,
-            system_prompt="You are Weaver.",
-            tool_registry=_make_registry(),
-            active_tools=("get_weather",),
-        )
-
-        result = await session.send("What's the weather in London?")
-
-        assert result.exit_reason == TurnExitReason.COMPLETED
-        assert "sunny" in result.final_text
-        assert result.tool_starts == 1
+        assert len(session.history) == 4
+        assert isinstance(session.history[0], UserMessage)

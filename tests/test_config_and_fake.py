@@ -4,7 +4,7 @@ import pytest
 
 from weaver.config import resolve_model
 from weaver.errors import InvalidModelAliasError, MissingCredentialError
-from weaver.model_layer import (
+from weaver import (
     DEEPSEEK_FLASH,
     DEEPSEEK_MODELS,
     DeepSeekProvider,

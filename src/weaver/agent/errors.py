@@ -10,6 +10,7 @@ _MESSAGES = {
     "history_read": "Session history read failed.",
     "tool_schema": "Active tool schema setup failed.",
     "model": "Model stream failed.",
+    "model_protocol": "The model returned an unsafe response.",
     "assistant_persistence": "Assistant message persistence failed.",
     "tool_call_persistence": "Tool call persistence failed.",
     "tool_result_persistence": "Tool result persistence failed.",
@@ -18,6 +19,7 @@ _MESSAGES = {
     "tool_failed": "The tool could not be completed.",
     "tool_invalid_output": "The tool returned an invalid result.",
     "interrupted": "The turn was interrupted.",
+    "incomplete": "The model response was incomplete.",
     "limit": "The turn reached its execution limit.",
     "turn": "The turn could not be completed.",
 }

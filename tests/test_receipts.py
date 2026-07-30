@@ -4,7 +4,7 @@ import stat
 import pytest
 
 from weaver.experiment import run_model_smoke
-from weaver.model_layer import (
+from weaver import (
     DEEPSEEK_FLASH,
     DEEPSEEK_MODELS,
     DEEPSEEK_PRO,

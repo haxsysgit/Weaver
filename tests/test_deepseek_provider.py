@@ -3,17 +3,15 @@ from types import SimpleNamespace
 
 import pytest
 
-from weaver.model_layer import (
+from weaver import (
+    DEEPSEEK_PRO,
+    DeepSeekProvider,
     ModelLayer,
     ModelMessage,
     ModelRequest,
     ModelStopReason,
     ModelToolCall,
     ModelToolSchema,
-)
-from weaver.model_layer.deepseek import (
-    DEEPSEEK_PRO,
-    DeepSeekProvider,
 )
 
 

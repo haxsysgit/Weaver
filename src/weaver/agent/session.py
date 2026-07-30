@@ -1,45 +1,37 @@
-"""Agent session — owns interaction boundaries, history, and cancellation.
-
-A thin session that orchestrates turns through the turn runtime.
-Much simpler than HaxJobs' session — Weaver is single-user, conversational.
-"""
+"""Conversation history and cancellation around Weaver turns."""
 
 from __future__ import annotations
 
 import asyncio
 import logging
 import uuid
-from typing import Callable
 
 from weaver.agent.errors import safe_error
 from weaver.agent.messages import ConversationMessage, UserMessage
 from weaver.agent.tools import ToolRegistry
 from weaver.agent.turn import TurnExitReason, TurnResult, run_turn
-from weaver.client import ModelClient
+from ..model_layer import ModelLayer, ModelSpec
 
 logger = logging.getLogger(__name__)
 
 
-def _mid() -> str:
+def _message_id() -> str:
     return uuid.uuid4().hex[:12]
 
 
 class AgentSession:
-    """Owns history, tool registry, model, and cancellation for one conversation.
-
-    One pending message slot for busy-input policy.
-    """
-
     def __init__(
         self,
         *,
         session_id: str,
-        model: ModelClient,
+        model_layer: ModelLayer,
+        model: ModelSpec,
         system_prompt: str,
         tool_registry: ToolRegistry,
         active_tools: tuple[str, ...] = (),
     ) -> None:
         self.session_id = session_id
+        self._model_layer = model_layer
         self._model = model
         self._system_prompt = system_prompt
         self._tool_registry = tool_registry
@@ -60,7 +52,6 @@ class AgentSession:
         return self._turn_count
 
     async def send(self, user_text: str) -> TurnResult:
-        """Send a user message and run one turn. Busy-input policy active."""
         if self._busy:
             if self._pending_message is not None:
                 return TurnResult(
@@ -77,19 +68,18 @@ class AgentSession:
 
         self._busy = True
         self._cancel_event = asyncio.Event()
-        turn_id = _mid()
-
-        # Persist user message
-        user_msg = UserMessage(
-            message_id=_mid(),
+        turn_id = _message_id()
+        user_message = UserMessage(
+            message_id=_message_id(),
             turn_id=turn_id,
             content=user_text,
         )
-        self._history.append(user_msg)
+        self._history.append(user_message)
 
         try:
             result = await run_turn(
                 turn_id=turn_id,
+                model_layer=self._model_layer,
                 model=self._model,
                 system_prompt=self._system_prompt,
                 history=list(self._history),
@@ -97,29 +87,30 @@ class AgentSession:
                 active_tools=self._active_tools,
                 cancel_event=self._cancel_event,
             )
-        except Exception as exc:
-            logger.warning("turn %s crashed: %s", turn_id, exc, exc_info=True)
+        except Exception as error:
+            logger.warning(
+                "turn %s crashed: %s",
+                turn_id,
+                error,
+                exc_info=True,
+            )
             result = TurnResult(
                 turn_id=turn_id,
                 exit_reason=TurnExitReason.MODEL_FAILED,
                 safe_failure=safe_error("turn"),
             )
 
-        # Persist new messages from this turn
         self._history.extend(result.new_messages)
         self._turn_count += 1
         self._busy = False
         self._cancel_event = None
 
-        # Process queued message
-        pending = self._pending_message
+        pending_message = self._pending_message
         self._pending_message = None
-        if pending is not None:
-            return await self.send(pending)
-
+        if pending_message is not None:
+            return await self.send(pending_message)
         return result
 
     def cancel(self) -> None:
-        """Request cancellation of the current turn."""
         if self._cancel_event is not None:
             self._cancel_event.set()

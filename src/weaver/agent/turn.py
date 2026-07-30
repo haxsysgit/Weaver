@@ -1,16 +1,4 @@
-"""Bounded streaming turn runtime — domain-free model and tool loop.
-
-Responsibilities:
-- Stream model responses and handle text/tool-call events
-- Dispatch tools through the ToolRegistry with cancellation safety
-- Persist canonical messages at durable boundaries
-- Return a TurnResult with safe, content-free failure text
-
-Does NOT:
-- Own session state, history, or measurement
-- Know about novels, characters, or scenes
-- Handle message projection (messages.py owns that)
-"""
+"""One bounded Weaver model and tool turn."""
 
 from __future__ import annotations
 
@@ -28,17 +16,17 @@ from weaver.agent.messages import (
     ConversationMessage,
     ToolCallMessage,
     ToolResultMessage,
-    UserMessage,
     project_messages,
 )
 from weaver.agent.tools import ToolExecutionContext, ToolRegistry
-from weaver.client import ModelClient, ToolSchema
-from weaver.model import (
-    Message,
+from ..model_layer import (
+    ModelLayer,
+    ModelMessage,
     ModelRequest,
-    ModelStreamEvent,
-    ModelStreamEventType,
-    ToolDefinition,
+    ModelResponse,
+    ModelSpec,
+    ModelStopReason,
+    ModelToolCall,
 )
 
 logger = logging.getLogger(__name__)
@@ -50,6 +38,7 @@ PersistCallback = Callable[[ConversationMessage], None]
 
 class TurnExitReason(str, Enum):
     COMPLETED = "completed"
+    INCOMPLETE = "incomplete"
     MODEL_FAILED = "model_failed"
     LIMIT_REACHED = "limit_reached"
     INTERRUPTED = "interrupted"
@@ -58,8 +47,6 @@ class TurnExitReason(str, Enum):
 
 @dataclass
 class TurnResult:
-    """Result of one conversational turn — domain-free."""
-
     turn_id: str
     exit_reason: TurnExitReason
     final_text: str = ""
@@ -72,25 +59,91 @@ class TurnResult:
     input_characters: int = 0
 
 
-def _mid() -> str:
+def _message_id() -> str:
     return uuid.uuid4().hex[:12]
 
 
-def _persist(msg: ConversationMessage, callback: PersistCallback | None) -> bool:
+def _persist(
+    message: ConversationMessage,
+    callback: PersistCallback | None,
+) -> bool:
     if callback is None:
         return True
     try:
-        callback(msg)
+        callback(message)
         return True
     except Exception:
-        logger.warning("persist failed for %s", msg.kind, exc_info=True)
+        logger.warning(
+            "persist failed for %s",
+            message.kind,
+            exc_info=True,
+        )
         return False
+
+
+def _input_characters(messages: list[ModelMessage]) -> int:
+    return sum(len(message.content or "") for message in messages)
+
+
+def _response_matches_model(
+    response: ModelResponse,
+    model: ModelSpec,
+) -> bool:
+    return (
+        response.provider_id == model.provider_id
+        and response.model_id == model.model_id
+        and response.assistant_message.role == "assistant"
+        and response.assistant_message.name is None
+        and response.assistant_message.tool_call_id is None
+    )
+
+
+def _tool_calls_are_safe(
+    tool_calls: tuple[ModelToolCall, ...],
+) -> bool:
+    seen_call_ids: set[str] = set()
+    for tool_call in tool_calls:
+        if not tool_call.call_id.strip():
+            return False
+        if tool_call.call_id in seen_call_ids:
+            return False
+        seen_call_ids.add(tool_call.call_id)
+
+        if not tool_call.name.strip():
+            return False
+        if not tool_call.arguments_json.strip():
+            return False
+        try:
+            arguments = json.loads(tool_call.arguments_json)
+        except json.JSONDecodeError:
+            return False
+        if not isinstance(arguments, dict):
+            return False
+    return True
+
+
+def _assistant_message(
+    *,
+    turn_id: str,
+    response_message: ModelMessage,
+    status: str = "complete",
+    include_tool_calls: bool = True,
+) -> AssistantMessage:
+    tool_calls = response_message.tool_calls if include_tool_calls else ()
+    return AssistantMessage(
+        message_id=_message_id(),
+        turn_id=turn_id,
+        content=response_message.content or "",
+        tool_calls=tool_calls,
+        status=status,
+    )
 
 
 async def run_turn(
     *,
     turn_id: str,
-    model: ModelClient,
+    model_layer: ModelLayer,
+    model: ModelSpec,
     system_prompt: str,
     history: list[ConversationMessage],
     tool_registry: ToolRegistry,
@@ -99,45 +152,33 @@ async def run_turn(
     persist_message: PersistCallback | None = None,
     max_model_steps: int = 5,
 ) -> TurnResult:
-    """Execute one conversational turn — streaming model and tool loop.
-
-    Returns a TurnResult regardless of outcome.
-    persist_message is called for every ToolCallMessage (before handler),
-    ToolResultMessage (after handler), and AssistantMessage.
-    """
     max_steps = min(max(max_model_steps, 1), _MAX_MODEL_STEPS)
     new_messages: list[ConversationMessage] = []
     model_steps = 0
     tool_starts = 0
-
-    exit_reason = TurnExitReason.COMPLETED
     final_text = ""
     safe_failure = ""
     model_name = ""
     provider_name = ""
+    completed_response = False
+    exit_reason = TurnExitReason.COMPLETED
 
-    # ── Build tool schemas ──
-    tool_schemas: list[ToolSchema] = []
-    if active_tools:
-        try:
-            tool_schemas = tool_registry.active_schemas(active_tools)
-        except ValueError as exc:
-            logger.warning("active tool schema setup failed: %s", exc)
-            return TurnResult(
-                turn_id=turn_id,
-                exit_reason=TurnExitReason.MODEL_FAILED,
-                safe_failure=safe_error("tool_schema"),
-            )
+    try:
+        tool_schemas = tool_registry.active_schemas(active_tools)
+    except ValueError as error:
+        logger.warning("active tool schema setup failed: %s", error)
+        return TurnResult(
+            turn_id=turn_id,
+            exit_reason=TurnExitReason.MODEL_FAILED,
+            safe_failure=safe_error("tool_schema"),
+        )
 
-    # ── Build initial provider messages ──
-    provider_messages: list[dict] = project_messages(
+    initial_messages = project_messages(
         system_prompt=system_prompt,
         history=history,
     )
-    input_characters = sum(len(m.get("content") or "") for m in provider_messages)
+    input_characters = _input_characters(initial_messages)
 
-    # ── Main loop ──
-    accumulated_text = ""
     while model_steps < max_steps:
         if cancel_event.is_set():
             exit_reason = TurnExitReason.INTERRUPTED
@@ -145,195 +186,163 @@ async def run_turn(
             break
 
         model_steps += 1
-        accumulated_text = ""
-        model_failed = False
-        tool_call_events: list[ModelStreamEvent] = []
-        finish_reason = ""
-
-        # Build model request
-        model_request = ModelRequest(
-            model="pro",
-            messages=tuple(
-                Message(
-                    role=m["role"],  # type: ignore[arg-type]
-                    content=m.get("content") or "",
-                )
-                for m in provider_messages
-            ),
-            max_tokens=4096,
-            tools=tuple(
-                ToolDefinition(
-                    name=ts.name,
-                    description=ts.description,
-                    parameters=ts.input_schema,
-                )
-                for ts in tool_schemas
-            ),
+        request_messages = project_messages(
+            system_prompt=system_prompt,
+            history=history + new_messages,
+        )
+        request = ModelRequest(
+            messages=tuple(request_messages),
+            tools=tuple(tool_schemas),
         )
 
-        # Stream from model
         try:
-            async for stream_event in model.stream(model_request, cancel_event):
-                if cancel_event.is_set():
-                    exit_reason = TurnExitReason.INTERRUPTED
-                    safe_failure = safe_error("interrupted")
-                    break
-
-                if stream_event.event_type == ModelStreamEventType.TEXT_DELTA:
-                    accumulated_text += stream_event.delta
-
-                elif stream_event.event_type == ModelStreamEventType.COMPLETE_TOOL_CALL:
-                    if stream_event.tool_calls_unsafe:
-                        logger.warning(
-                            "Rejecting unsafe tool call %s (finish_reason=length)",
-                            stream_event.tool_name,
-                        )
-                    else:
-                        tool_call_events.append(stream_event)
-
-                elif stream_event.event_type == ModelStreamEventType.RESPONSE_COMPLETED:
-                    finish_reason = stream_event.finish_reason
-                    model_name = stream_event.model
-                    provider_name = stream_event.provider
-                    break
-
-                elif stream_event.event_type == ModelStreamEventType.RESPONSE_FAILED:
-                    if stream_event.category == "cancelled":
-                        exit_reason = TurnExitReason.INTERRUPTED
-                        safe_failure = safe_error("interrupted")
-                    else:
-                        model_failed = True
-                        exit_reason = TurnExitReason.MODEL_FAILED
-                        safe_failure = safe_error("model")
-                    break
-
+            response = await model_layer.complete(
+                model,
+                request,
+                cancel_event,
+            )
         except asyncio.CancelledError:
             exit_reason = TurnExitReason.INTERRUPTED
             safe_failure = safe_error("interrupted")
             break
-        except Exception as exc:
-            logger.warning("model stream failed: %s", exc, exc_info=True)
-            model_failed = True
+        except Exception:
+            logger.warning("model request failed", exc_info=True)
             exit_reason = TurnExitReason.MODEL_FAILED
             safe_failure = safe_error("model")
-
-        if exit_reason != TurnExitReason.COMPLETED:
             break
 
-        # ── No tool calls: turn complete ──
-        if not tool_call_events:
-            assistant_msg = AssistantMessage(
-                message_id=_mid(),
+        model_name = response.model_id
+        provider_name = response.provider_id
+        if not _response_matches_model(response, model):
+            exit_reason = TurnExitReason.MODEL_FAILED
+            safe_failure = safe_error("model_protocol")
+            break
+
+        response_message = response.assistant_message
+        tool_calls = response_message.tool_calls
+
+        if response.stop_reason == ModelStopReason.ABORTED:
+            exit_reason = TurnExitReason.INTERRUPTED
+            safe_failure = safe_error("interrupted")
+            break
+
+        if response.stop_reason == ModelStopReason.ERROR:
+            exit_reason = TurnExitReason.MODEL_FAILED
+            safe_failure = safe_error("model")
+            break
+
+        if response.stop_reason == ModelStopReason.LENGTH:
+            interrupted = _assistant_message(
                 turn_id=turn_id,
-                content=accumulated_text,
-                status="complete",
+                response_message=response_message,
+                status="interrupted",
+                include_tool_calls=False,
             )
-            new_messages.append(assistant_msg)
-            if not _persist(assistant_msg, persist_message):
+            new_messages.append(interrupted)
+            if not _persist(interrupted, persist_message):
                 exit_reason = TurnExitReason.PERSISTENCE_FAILED
                 safe_failure = safe_error("assistant_persistence")
                 break
-            final_text = accumulated_text
+            exit_reason = TurnExitReason.INCOMPLETE
+            final_text = interrupted.content
+            safe_failure = safe_error("incomplete")
             break
 
-        # ── Execute tool calls ──
-        # Persist assistant message with tool calls
-        assistant_msg = AssistantMessage(
-            message_id=_mid(),
+        if response.stop_reason == ModelStopReason.STOP:
+            if tool_calls:
+                exit_reason = TurnExitReason.MODEL_FAILED
+                safe_failure = safe_error("model_protocol")
+                break
+            assistant = _assistant_message(
+                turn_id=turn_id,
+                response_message=response_message,
+            )
+            new_messages.append(assistant)
+            if not _persist(assistant, persist_message):
+                exit_reason = TurnExitReason.PERSISTENCE_FAILED
+                safe_failure = safe_error("assistant_persistence")
+                break
+            final_text = assistant.content
+            completed_response = True
+            break
+
+        if response.stop_reason != ModelStopReason.TOOL_USE:
+            exit_reason = TurnExitReason.MODEL_FAILED
+            safe_failure = safe_error("model_protocol")
+            break
+        if not tool_calls or not _tool_calls_are_safe(tool_calls):
+            exit_reason = TurnExitReason.MODEL_FAILED
+            safe_failure = safe_error("model_protocol")
+            break
+
+        assistant = _assistant_message(
             turn_id=turn_id,
-            content=accumulated_text,
-            status="complete",
+            response_message=response_message,
         )
-        new_messages.append(assistant_msg)
-        if not _persist(assistant_msg, persist_message):
+        new_messages.append(assistant)
+        if not _persist(assistant, persist_message):
             exit_reason = TurnExitReason.PERSISTENCE_FAILED
             safe_failure = safe_error("assistant_persistence")
             break
 
-        # Append tool results to provider messages for the next model step
-        provider_messages.append({
-            "role": "assistant",
-            "content": accumulated_text or None,
-            "tool_calls": [
-                {
-                    "id": ev.call_id,
-                    "type": "function",
-                    "function": {
-                        "name": ev.tool_name,
-                        "arguments": ev.tool_arguments or "{}",
-                    },
-                }
-                for ev in tool_call_events
-            ],
-        })
-
-        tool_results: list[dict] = []
-        for ev in tool_call_events:
-            tool_starts += 1
-
-            # Persist tool call before handler
-            tc_msg = ToolCallMessage(
-                message_id=_mid(),
+        for tool_call in tool_calls:
+            call_evidence = ToolCallMessage(
+                message_id=_message_id(),
                 turn_id=turn_id,
-                call_id=ev.call_id or "",
-                tool_name=ev.tool_name or "",
-                arguments=ev.tool_arguments or "{}",
+                call_id=tool_call.call_id,
+                tool_name=tool_call.name,
+                arguments_json=tool_call.arguments_json,
             )
-            new_messages.append(tc_msg)
-            if not _persist(tc_msg, persist_message):
+            new_messages.append(call_evidence)
+            if not _persist(call_evidence, persist_message):
                 exit_reason = TurnExitReason.PERSISTENCE_FAILED
                 safe_failure = safe_error("tool_call_persistence")
                 break
 
-            # Dispatch tool
             context = ToolExecutionContext(
                 session_id="",
                 turn_id=turn_id,
-                call_id=ev.call_id or "",
+                call_id=tool_call.call_id,
                 cancel_event=cancel_event,
             )
-            result = await tool_registry.dispatch(
-                ev.tool_name or "",
-                ev.tool_arguments or "{}",
+            tool_starts += 1
+            tool_result = await tool_registry.dispatch(
+                tool_call.name,
+                tool_call.arguments_json,
                 context,
             )
 
-            # Persist tool result
-            tr_msg = ToolResultMessage(
-                message_id=_mid(),
+            result_evidence = ToolResultMessage(
+                message_id=_message_id(),
                 turn_id=turn_id,
-                call_id=ev.call_id or "",
-                tool_name=ev.tool_name or "",
-                ok=result.ok,
-                result=result.result,
-                error_code=result.error_code,
-                error=result.error,
+                call_id=tool_call.call_id,
+                tool_name=tool_call.name,
+                ok=tool_result.ok,
+                result=tool_result.result,
+                error_code=tool_result.error_code,
+                error=(
+                    None
+                    if tool_result.ok
+                    else tool_result.error
+                    or safe_tool_error(
+                        tool_result.error_code or "tool_failed"
+                    )
+                ),
             )
-            new_messages.append(tr_msg)
-            if not _persist(tr_msg, persist_message):
+            new_messages.append(result_evidence)
+            if not _persist(result_evidence, persist_message):
                 exit_reason = TurnExitReason.PERSISTENCE_FAILED
                 safe_failure = safe_error("tool_result_persistence")
                 break
 
-            # Append to provider messages
-            content = (
-                json.dumps(result.result)
-                if result.ok and result.result
-                else result.error or safe_tool_error(result.error_code or "tool_failed")
-            )
-            tool_results.append({
-                "role": "tool",
-                "tool_call_id": ev.call_id,
-                "content": content,
-            })
-
         if exit_reason != TurnExitReason.COMPLETED:
             break
 
-        provider_messages.extend(tool_results)
-
-    # ── Build result ──
-    if model_steps >= max_steps and exit_reason == TurnExitReason.COMPLETED:
+    if (
+        model_steps >= max_steps
+        and exit_reason == TurnExitReason.COMPLETED
+        and not completed_response
+    ):
         exit_reason = TurnExitReason.LIMIT_REACHED
         safe_failure = safe_error("limit")
 
