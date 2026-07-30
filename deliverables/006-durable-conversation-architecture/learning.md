@@ -12,6 +12,14 @@ until this note is confirmed.
 The full source study is
 [`WEAVER_CODEX_HERMES_CONVERSATION_COMPARISON.md`](../../WEAVER_CODEX_HERMES_CONVERSATION_COMPARISON.md).
 
+Context assembly research (6 systems + Karpathy LLM Wiki):
+
+- [`context-research-prompt.md`](context-research-prompt.md): research prompt dispatched to 3 subagents
+- [`research-pi-langgraph-hermes.md`](research-pi-langgraph-hermes.md): Pi, LangGraph, Hermes analysis
+- [`research-codex-claude-honcho.md`](research-codex-claude-honcho.md): Codex, Claude Code, Honcho analysis
+- [`research-synthesis.md`](research-synthesis.md): 5 hybrid approaches for Weaver-specific context assembly
+- [`research-karpathy-llm-wiki.md`](research-karpathy-llm-wiki.md): Karpathy LLM Wiki pattern compared to synthesis recommendations
+
 ## Tiny model
 
 Weaver needs four separate things:
