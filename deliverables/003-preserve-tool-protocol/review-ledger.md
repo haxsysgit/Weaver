@@ -7,9 +7,10 @@ The one accepted repair pass is complete. Both reviewer rechecks are pending.
 ## Frozen candidates
 
 - Initial implementation: `9a4065c`
-- Repaired runtime: `d8a04a2`
-- Repaired tree:
-  `5d5944b6afa196d2cbe9a8d4c0a118f0ee25c0f5`
+- Repaired runtime source: `d8a04a2`
+- Repaired candidate with corrected reasoning test: `16957e2`
+- Repaired candidate tree:
+  `7d9e5951a95cd29bd233cd063896b21385de4a50`
 - Repaired verification: 58 focused tests, 116 full tests, clean scoped lint,
   compatible packages, and clean diff
 
@@ -22,7 +23,9 @@ The one accepted repair pass is complete. Both reviewer rechecks are pending.
   raised a protocol error
 - Accepted repairs: global saved-conversation call-ID check and pre-yield
   duplicate-terminal rejection
-- Recheck: pending
+- First recheck: passed on `d8a04a2`; both findings closed and no new
+  protocol blocker
+- Final candidate acknowledgement: pending after the test-only `16957e2`
 
 ## Review 2: Tests, privacy, and scope
 
@@ -35,7 +38,11 @@ The one accepted repair pass is complete. Both reviewer rechecks are pending.
 - Initial independent checks: 52 focused tests, 110 full tests, clean lint,
   compatible packages, clean diff, no old imports, no library changes, and no
   credential or private-source leak
-- Recheck: pending
+- First recheck: changes still required because the reasoning-only stub chunk
+  was dropped before the provider branch ran
+- Correction: `16957e2` makes the stub emit that chunk and asserts both the
+  ephemeral delta and its absence from the final response
+- Final recheck: pending
 
 ## Repair-pass failures
 
@@ -47,5 +54,5 @@ No runtime finding was silently retried or removed from this ledger.
 
 ## Final rechecks
 
-Pending. Both reviewers must inspect `d8a04a2` and the recorded evidence before
+Pending. Both reviewers must inspect `16957e2` and the recorded evidence before
 Plan 003 can return to the owner decision gate.

@@ -4,9 +4,10 @@
 
 Implementation and the one accepted repair pass are complete.
 
-The repaired runtime candidate is `d8a04a2` with tree
-`5d5944b6afa196d2cbe9a8d4c0a118f0ee25c0f5`. Both reviewer rechecks are
-pending. The owner's final decision remains pending.
+The repaired candidate is `16957e2` with tree
+`7d9e5951a95cd29bd233cd063896b21385de4a50`. Runtime repairs landed in
+`d8a04a2`; `16957e2` corrects the direct reasoning-path test. Both reviewer
+rechecks are pending. The owner's final decision remains pending.
 
 ## Hypothesis
 
@@ -104,6 +105,10 @@ Reviewer 2 found two evidence gaps:
 2. provider timeout, connection, usage, and ephemeral-reasoning branches had
    lost direct regression tests.
 
+The first evidence recheck found that the reasoning-only stub chunk was being
+dropped by its test helper. The test passed without exercising the intended
+branch, so its claim was not accepted.
+
 ## Accepted repair pass
 
 Commit `d8a04a2`:
@@ -113,6 +118,12 @@ Commit `d8a04a2`:
 - adds direct tests for both protocol findings;
 - restores timeout, connection, usage, and ephemeral-reasoning tests;
 - raises the focused count from 52 to 58 and the full count from 110 to 116.
+
+Commit `16957e2` completes the same repair pass:
+
+- lets the stub emit a reasoning-only chunk;
+- proves one reasoning delta exists in the ephemeral stream;
+- proves that text is absent from the authoritative final response.
 
 No second repair pass is admitted.
 
@@ -138,7 +149,7 @@ a014bb5b7a5e44e6015a418be819c82e3c0a86aff20daad8d910fe129eddbf43  src/weaver/mod
 8f27e6f8308d39c095a8c496f8e61e9b780f35d02e911d5d12dd6f9c4deb3f43  tests/test_cli.py
 5455c1573692fa1a6d060bfc95ec3eb3ccf53bba05f9abb849f25bd6094b1b76  tests/test_config_and_fake.py
 c1a906e44ea9e9eee492581bd10ebdf2f0cea635342c3b324d465b96c8148565  tests/test_corpus_outputs_and_agent.py
-5916b93ca2dbc7570acb19d49bd26315b29321b9ad20e2e19e2f9ee03435f6f0  tests/test_deepseek_provider.py
+dedccce0b97d387092237bd037d8589441160bb6b309b1b8c1aee4d729263964  tests/test_deepseek_provider.py
 93c94f72a6e08ce7240864f0964c665479bd16e1b2de01940544a7ec91078588  tests/test_model_layer.py
 31057311c23cb09cdb7ca6a1eb5575497b9c30517ed83a089edee406673cef8a  tests/test_receipts.py
 ```
