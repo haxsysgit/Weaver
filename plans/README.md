@@ -24,8 +24,10 @@ five simultaneous builds.
 1. Confirm each plan's `learning.md`.
 2. Implement, test, use, inspect, review, and decide Plan 003.
 3. Repeat the full loop for Plans 004, 005, 006, and 007, one at a time.
-4. Plan durable turn events and context budgeting only after Plan 007 works.
-5. Begin the direct-reading baseline only after the runtime sequence is
+4. Before each final owner gate, deliver and inspect that plan's editable
+   Draw.io architecture plus its rendered preview.
+5. Plan durable turn events and context budgeting only after Plan 007 works.
+6. Begin the direct-reading baseline only after the runtime sequence is
    accepted.
 
 Only one numbered plan may be active in implementation or review at a time.

@@ -135,6 +135,46 @@ No second repair pass is admitted.
 - New blockers from the repair: none
 - Owner acceptance: pending
 
+## Architecture evidence
+
+The originally closed deliverable set was missing its architecture diagram.
+That was a completion error.
+
+The correction adds:
+
+- `architecture.drawio`: editable Draw.io source;
+- `architecture.svg`: rendered preview linked from the deliverables README;
+- a repository rule requiring both files before every future plan's owner gate.
+
+The diagram records four boundaries:
+
+1. Agent runtime: session, canonical projection, durable messages, and turn
+   outcomes.
+2. Weaver model layer: exact `ModelSpec`, provider-independent
+   `ModelRequest`, provider registry, and authoritative `ModelResponse`.
+3. Provider adapters: deterministic fake, admitted DeepSeek adapter, and
+   deferred future adapters.
+4. Tool boundary: active schemas, whole-batch validation, grouped assistant
+   persistence, ordered dispatch checks, and linked results.
+
+Diagram checks:
+
+| Command or inspection | Exit | Result |
+| --- | ---: | --- |
+| `drawio --version` | 127 | Native exporter is not installed |
+| Draw.io structural validator | 0 | 0 errors; 20 expected lane-container overlap warnings |
+| SVG conversion with ImageMagick | 0 | 2250 by 1250 preview rendered |
+| First visual inspection | N/A | Found paths and labels crossing nodes |
+| Second visual inspection | N/A | Corrected routes; labels and nodes readable |
+
+No network install was attempted. The editable source and matching SVG use the
+documented CLI-missing fallback.
+
+```text
+45b99a1226d09fa4dc2ca5070ae63451f487c6920e50f1dcd1bd95d082d52841  architecture.drawio
+c8f13d687c73261eb4b4dc519ba849e220804c100508a94686869bf81da0ee96  architecture.svg
+```
+
 ## Runtime and test hashes
 
 ```text

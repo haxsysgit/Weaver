@@ -54,6 +54,11 @@
 ## Completion
 
 - Verify the admitted slice with its documented command floor.
+- Every numbered plan must include an editable Draw.io architecture diagram
+  and a rendered SVG or PNG preview in its deliverables before the final owner
+  gate. Link both from the deliverables README, validate the source, and inspect
+  the render. If the draw.io CLI is unavailable, keep the editable `.drawio`
+  source, add a matching SVG preview, and record the missing exporter.
 - Audit staged files for credentials and private source text before any commit.
 - A passing implementation is not an accepted experiment until the owner
   records the decision.

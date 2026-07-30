@@ -73,3 +73,13 @@ No runtime finding was silently retried or removed from this ledger.
 
 Plan 003 now returns to the owner decision gate. Passing code and reviews do
 not accept the experiment automatically.
+
+## Post-review deliverable correction
+
+The missing architecture deliverable was added after the runtime reviews.
+This correction changes the editable diagram, rendered preview, plan records,
+and repository completion rule only. Runtime source and tests are unchanged.
+
+- Draw.io structural validation: 0 errors
+- SVG visual inspection: two rounds, final render readable
+- Native draw.io exporter: unavailable and recorded

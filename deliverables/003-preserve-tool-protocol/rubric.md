@@ -20,6 +20,8 @@
 | All five stop reasons are safe | Passed | Provider and turn tests |
 | Fake mode avoids live construction | Passed | CLI regression test |
 | Receipts stay private and safe | Passed | Receipt regression tests |
+| Editable architecture and rendered preview exist | Passed | `architecture.drawio` and `architecture.svg` |
+| Architecture source validates and render is inspected | Passed | Diagram validation and visual check |
 | Full deterministic floor passes | Passed | 116 tests and clean lint |
 | No private content or credentials leak | Passed | Candidate scans |
 | Two reviews have no blocker | Passed | Both final rechecks passed |

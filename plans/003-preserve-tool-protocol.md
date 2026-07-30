@@ -305,6 +305,7 @@ The final owner decision remains a separate human gate.
 - [x] Focused tests, full tests, scoped lint, and package check pass.
 - [x] No network call or novel access occurred.
 - [x] Two independent reviews have no open blocker.
+- [x] Editable architecture and rendered preview are delivered and inspected.
 - [ ] The owner records Plan 003's final decision.
 
 ## STOP conditions
