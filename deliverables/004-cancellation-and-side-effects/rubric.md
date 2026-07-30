@@ -2,8 +2,8 @@
 
 | Requirement | State | Evidence |
 | --- | --- | --- |
-| Owner confirmed `learning.md` | Pending | Confirmation record |
-| Plan 003 accepted | Pending | Plan 003 decision |
+| Owner confirmed `learning.md` | Passed | Confirmed 2026-07-30 |
+| Plan 003 accepted | Passed | Plan 003 decision |
 | Read is the default allowed effect | Not tested | Policy tests |
 | Internal and external effects default to blocked | Not tested | Policy tests |
 | Blocked handlers never start | Not tested | Start-count tests |

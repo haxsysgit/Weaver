@@ -8,8 +8,8 @@ evidence, review, and human decision gates must also be complete.
 | --- | --- | --- | --- |
 | [001 - Experimental foundation](001-experimental-foundation.md) | Accepted 2026-07-29 | None | Safe repository boundary, thin DeepSeek client, private receipts, deterministic tests, synthetic live smoke |
 | [002 - Trusted Shadow Slave library](002-trusted-shadow-slave-library.md) | Accepted 2026-07-30 | Plan 001 accepted | Maintain the private Shadow Slave library through deterministic agent tools without interpreting it |
-| [003 - Weaver model layer and preserved tool protocol](003-preserve-tool-protocol.md) | Implementation and review complete; owner decision pending | Plan 002 accepted | Add a provider-independent model layer, keep complete tool calls, and refuse inactive tools |
-| [004 - Make cancellation and side effects explicit](004-cancellation-and-side-effects.md) | Draft; learning gate pending | Plan 003 accepted | Cancel running async tools cooperatively and block unapproved effect classes |
+| [003 - Weaver model layer and preserved tool protocol](003-preserve-tool-protocol.md) | Accepted 2026-07-30 | Plan 002 accepted | Add a provider-independent model layer, keep complete tool calls, and refuse inactive tools |
+| [004 - Make cancellation and side effects explicit](004-cancellation-and-side-effects.md) | Learning confirmed; implementation admitted | Plan 003 accepted | Cancel running async tools cooperatively and block unapproved effect classes |
 | [005 - Prove the DeepSeek tool payload contract](005-provider-tool-contract.md) | Draft; learning gate pending | Plan 004 accepted | Test the real SDK payload shape and run one explicit synthetic live contract smoke |
 | [006 - Settle the LangGraph boundary](006-settle-langgraph-boundary.md) | Draft; learning gate pending | Plan 005 accepted | Record where LangGraph may sit without owning Weaver's tools, private library, or memory |
 | [007 - Open the first Weaver conversation](007-minimal-conversation-entrypoint.md) | Draft; learning gate pending | Plans 002-006 accepted | Wire DeepSeek, the custom runtime, and library inspection into a minimal local chat |

@@ -6,7 +6,7 @@
 
 ## Status
 
-- **State:** Implementation and review complete; owner decision pending
+- **State:** Accepted and closed on 2026-07-30
 - **Priority:** P1
 - **Effort:** M
 - **Risk:** Medium
@@ -15,7 +15,8 @@
 - **Planned at:** commit `dbe23f8`, clean working tree, 2026-07-30
 - **Learning gate:** confirmed in
   `deliverables/003-preserve-tool-protocol/learning.md`
-- **Final decision:** pending after implementation, evidence, and review
+- **Final decision:** accepted on 2026-07-30 after implementation, evidence,
+  independent review, and the architecture correction
 
 ## Goal
 

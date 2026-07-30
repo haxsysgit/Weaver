@@ -16,14 +16,14 @@ tool checks.
 
 | File | Purpose | Current state |
 | --- | --- | --- |
-| `plan.md` | Pointer to the canonical implementation plan | Owner decision pending |
+| `plan.md` | Pointer to the canonical implementation plan | Accepted 2026-07-30 |
 | `learning.md` | Plain-language understanding and owner gate | Confirmed 2026-07-30 |
 | `architecture.drawio` | Editable model and tool architecture | Complete |
 | `architecture.svg` | Rendered architecture preview | Complete |
 | `results.md` | Deterministic observations and executed commands | Complete |
-| `rubric.md` | Acceptance checklist | Passed except owner decision |
+| `rubric.md` | Acceptance checklist | Passed |
 | `review-ledger.md` | Independent findings, repairs, and rechecks | Both rechecks passed |
-| `decision.md` | Owner's final accept or reject record | Pending |
+| `decision.md` | Owner's final accept or reject record | Accepted 2026-07-30 |
 
 No novel prose, chats, credentials, private receipts, or raw model reasoning
 belong here.

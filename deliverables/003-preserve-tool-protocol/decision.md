@@ -2,11 +2,14 @@
 
 ## Status
 
-**Pending owner decision.**
+**Accepted and closed on 2026-07-30.**
 
-The owner decides only after implementation, deterministic tests, use,
-inspection, independent review, and any admitted repair pass.
+- Owner choice: accept Plan 003
+- Date: 2026-07-30
+- Reason: the repaired candidate passed 58 focused tests and 116 full tests,
+  scoped lint passed, 64 packages were compatible, both independent rechecks
+  passed, and the missing architecture source and preview were added,
+  validated, and inspected
 
-- Owner choice: pending
-- Date: pending
-- Reason: pending
+This accepts the model-layer and preserved-tool-protocol experiment. It does
+not admit later plan implementation without its own learning gate.

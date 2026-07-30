@@ -2,9 +2,10 @@
 
 ## Gate status
 
-**Pending owner confirmation.**
+**Confirmed by the owner on 2026-07-30.**
 
-Plan 004 starts only after Plan 003 is accepted.
+Plan 003 is accepted. This confirmation admits Plan 004 implementation. It
+does not accept the future implementation.
 
 ## Tiny model
 
@@ -33,25 +34,34 @@ The default conversation gets `READ` only.
 1. Plan 004 does not add an approval UI. It creates the policy boundary an
    approval UI can use later.
 2. Active capability and allowed effect are separate decisions. Both must pass.
-3. Internal writes and external effects are blocked by default.
-4. A blocked tool returns a stable safe error and never starts its handler.
-5. The registry will run an async handler as a named task and wait for either
+3. Normal sessions allow `READ` only. Maintenance sessions allow `READ` and
+   `INTERNAL_WRITE` for the whole session.
+4. `EXTERNAL_EFFECT` is blocked under both policies. Plan 004 rejects any
+   policy that tries to admit it.
+5. A blocked tool returns a stable safe error before argument parsing and
+   never starts its handler.
+6. The registry will run an async handler as a named task and wait for either
    completion or cancellation.
-6. When cancellation wins, Weaver cancels the handler task and waits for it to
+7. When cancellation wins, Weaver cancels the handler task and waits for it to
    settle. It does not leave an untracked background task running.
-7. Tool handlers receive a helper to check cancellation before expensive work,
+8. Tool handlers receive a helper to check cancellation before expensive work,
    after long waits, and before committing a change.
-8. Python cancellation is cooperative. CPU-blocking code, swallowed
+9. If completion and cancellation appear together, the completed handler wins.
+10. If cancellation wins and the handler catches cancellation and returns, the
+    tool result still says `cancelled`.
+11. Python cancellation is cooperative. CPU-blocking code, swallowed
    `CancelledError`, or an already committed outside action cannot be safely
    undone by this layer.
-9. No silent retry is added. `retry_safe` remains metadata until a later plan
+12. No silent retry is added. `retry_safe` remains metadata until a later plan
    defines attempts, receipts, and idempotency.
-10. Tests use `asyncio.Event` coordination, not timing guesses and sleeps.
-11. Plan 004 does not rewrite the Plan 002 library algorithms. A later plan must
+13. Tests use `asyncio.Event` coordination, not timing guesses and sleeps.
+14. Plan 004 does not rewrite the Plan 002 library algorithms. A later plan must
     audit cancellation checkpoints before enabling mutating library tools in
     conversation.
-12. Plan 007 exposes only library inspection, so the first chat stays inside the
+15. Plan 007 exposes only library inspection, so the first chat stays inside the
     default read policy.
+16. After cancellation, later calls in the same grouped batch receive linked
+    cancelled results without starting, and no later model request runs.
 
 ## Cancellation sequence
 
@@ -91,8 +101,8 @@ work it has no permission to perform.
 ## What this plan will prove
 
 - read tools work under the default policy;
-- write and outside-effect tools are blocked by default;
-- explicitly admitted internal writes can run;
+- maintenance sessions can run Weaver-owned writes;
+- outside-effect tools stay blocked under both policies;
 - cancellation reaches a cooperative running handler;
 - cleanup settles before the turn returns;
 - no retry occurs;
@@ -108,9 +118,11 @@ work it has no permission to perform.
 
 ## Confirmation record
 
-- Owner choice: pending
-- Date: pending
-- Corrections or added constraints: pending
+- Owner choice: confirm Plan 004 with the locked execution boundary
+- Date: 2026-07-30
+- Corrections or added constraints: completed handler wins a tie, cancellation
+  waits for cleanup, cancellation never claims rollback, and remaining calls
+  in a cancelled batch must receive linked cancelled results
 
 Confirming approves this interpretation and test boundary. It does not accept
 the future code.

@@ -7,14 +7,17 @@
 
 ## Status
 
-- **State:** Draft; owner confirmation of `learning.md` pending
+- **State:** Learning confirmed; implementation admitted
 - **Priority:** P1
 - **Effort:** M
 - **Risk:** Medium
 - **Depends on:** Plan 003 accepted
 - **Category:** Correctness and safety
-- **Planned at:** commit `96d0729`, dirty working-tree snapshot, 2026-07-30
-- **Learning gate:** `deliverables/004-cancellation-and-side-effects/learning.md`
+- **Planned at:** commit `b101737`, dirty working-tree snapshot, 2026-07-30
+- **Learning gate:** confirmed in
+  `deliverables/004-cancellation-and-side-effects/learning.md`
+- **Final decision:** pending after implementation, evidence, use, inspection,
+  and independent review
 
 ## Goal
 
@@ -25,9 +28,10 @@ After this plan:
 
 - cancellation can reach a running cooperative handler;
 - a cancelled handler settles before the turn returns;
-- read tools are allowed by default;
-- internal writes and external effects are blocked unless the caller explicitly
-  admits them;
+- normal sessions allow read tools only;
+- maintenance sessions allow reads and Weaver-owned writes for the whole
+  session;
+- outside effects stay blocked in every Plan 004 policy;
 - no automatic retry is added;
 - receipts distinguish cancelled, blocked, failed, and completed calls.
 
@@ -69,7 +73,7 @@ An allowed effect answers: "May this turn start this class of side effect?"
 
 Both checks must pass.
 
-Add an immutable policy value, for example:
+Add an immutable policy value:
 
 ```python
 @dataclass(frozen=True, slots=True)
@@ -77,7 +81,9 @@ class ToolExecutionPolicy:
     allowed_effects: frozenset[EffectKind]
 ```
 
-The safe default is `frozenset({EffectKind.READ})`.
+`ToolExecutionPolicy.read_only()` admits `READ`.
+`ToolExecutionPolicy.maintenance()` admits `READ` and `INTERNAL_WRITE`.
+Construction rejects any policy containing `EXTERNAL_EFFECT`.
 
 `AgentSession` and `run_turn()` receive the policy explicitly. Do not read a
 global permission flag from the environment.
@@ -91,8 +97,12 @@ global permission flag from the environment.
 - `EXTERNAL_EFFECT`: changes another system or communicates outside Weaver,
   such as sending a message or submitting a form.
 
-An unapproved effect returns `effect_not_allowed`. Its handler does not start.
-This plan does not build a human approval UI.
+An unapproved effect returns `effect_not_allowed`. Its arguments are not
+parsed and its handler does not start. This plan does not build a human
+approval UI.
+
+Every `ToolDefinition` must state its `EffectKind` explicitly. New tools do not
+inherit an effect default.
 
 ### Cancellation contract
 
@@ -117,6 +127,25 @@ If cancellation wins:
 
 Do not detach a tool task and claim cancellation succeeded.
 
+If handler completion and cancellation become observable together, the
+completed handler result wins. Once cancellation wins, a handler that catches
+`CancelledError` and returns still settles as cancelled.
+
+The exact dispatch order is:
+
+```text
+registered
+  -> active
+  -> effect allowed
+  -> valid JSON
+  -> JSON object
+  -> cancellation check
+  -> handler starts
+```
+
+`ToolResult.started` records whether the handler actually began. Turn
+statistics use that field instead of counting dispatch attempts.
+
 ### Honest limit
 
 Async cancellation is cooperative. A handler that blocks the event loop,
@@ -129,6 +158,14 @@ process-killing, or rollback claims in this slice.
 `retry_safe` remains descriptive metadata. There are no silent retries. A later
 plan may consume this field only after defining visible attempt records and
 idempotency keys.
+
+### Cancelled batches
+
+After cancellation wins, the turn starts no later handler and makes no later
+model request. It records a linked `cancelled` result for every remaining call
+in the grouped assistant batch so future conversation replay stays valid.
+
+Handlers receive the real `session_id`, `turn_id`, and `call_id`.
 
 ## Scope
 
@@ -164,6 +201,23 @@ idempotency keys.
 | Lint in scope | `uv run ruff check src/weaver/agent tests/test_agent_turn.py` | Exit 0 |
 | Package check | `uv pip check` | All installed packages compatible |
 
+Confirmed execution baseline:
+
+- 38 agent tests passed;
+- 116 full tests passed;
+- scoped lint passed;
+- 64 installed packages were compatible.
+
+Pre-existing owner-owned worktree changes:
+
+- modified `README.md`, SHA-256
+  `d4eb6ff102c62c3f1676f7ea40ccd02247a66bc46e8fabf182f988b9efdd8ff4`;
+- untracked `tempplan.md`, SHA-256
+  `df6d3f91d4cb39b9439c680dacda1356f7e3fec1b3165e60711ef71b74279740`;
+- `README.md:27` has a pre-existing trailing-space failure.
+
+Both paths stay untouched and outside every Plan 004 commit.
+
 ## Steps
 
 ### Step 1: Write policy and cancellation regression tests
@@ -172,7 +226,8 @@ Add deterministic handlers controlled by `asyncio.Event` objects. Cover:
 
 - read handler allowed by the default policy;
 - internal-write and external-effect handlers blocked by default;
-- explicitly admitted internal write runs;
+- maintenance policy admits internal writes;
+- external effects remain blocked under both policy constructors;
 - cancellation before dispatch means handler start count stays zero;
 - cancellation while a handler waits delivers `CancelledError`;
 - dispatch waits for handler cleanup before returning;
@@ -205,10 +260,8 @@ task leaks remain.
 If handler cancellation wins, preserve Python cancellation semantics inside the
 handler, settle it, and return the safe cancelled result.
 
-If handler completion wins at the same time as cancellation, use one
-documented deterministic rule. Recommended rule: a completed result wins only
-if the task is already done before dispatch observes cancellation. Test that
-race.
+If handler completion wins at the same time as cancellation, keep the
+completed result. Test that race.
 
 **Verify:** cancellation tests pass with no pending-task warnings.
 
@@ -253,8 +306,8 @@ because permission refusal should happen before unnecessary work.
 
 ## Done criteria
 
-- [ ] The owner confirmed Plan 004 `learning.md`.
-- [ ] Plan 003 is accepted.
+- [x] The owner confirmed Plan 004 `learning.md`.
+- [x] Plan 003 is accepted.
 - [ ] Default turns can run only `READ` effects.
 - [ ] Blocked effects never start their handlers.
 - [ ] A running cooperative async handler receives cancellation.

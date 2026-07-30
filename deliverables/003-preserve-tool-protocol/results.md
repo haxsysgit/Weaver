@@ -2,13 +2,13 @@
 
 ## Status
 
-Implementation and the one accepted repair pass are complete.
+Implementation and the one accepted repair pass are complete. The owner
+accepted and closed Plan 003 on 2026-07-30.
 
 The repaired candidate is `16957e2` with tree
 `7d9e5951a95cd29bd233cd063896b21385de4a50`. Runtime repairs landed in
 `d8a04a2`; `16957e2` corrects the direct reasoning-path test. Both reviewer
-rechecks passed with no open blocker. The owner's final decision remains
-pending.
+rechecks passed with no open blocker.
 
 ## Hypothesis
 
@@ -133,7 +133,7 @@ No second repair pass is admitted.
 - Protocol reviewer: pass; both runtime findings closed
 - Evidence reviewer: pass; both evidence findings closed
 - New blockers from the repair: none
-- Owner acceptance: pending
+- Owner acceptance: accepted 2026-07-30
 
 ## Architecture evidence
 

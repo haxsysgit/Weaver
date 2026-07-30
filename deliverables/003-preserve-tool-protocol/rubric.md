@@ -25,4 +25,4 @@
 | Full deterministic floor passes | Passed | 116 tests and clean lint |
 | No private content or credentials leak | Passed | Candidate scans |
 | Two reviews have no blocker | Passed | Both final rechecks passed |
-| Owner records final decision | Pending | `decision.md` |
+| Owner records final decision | Passed | Accepted 2026-07-30 in `decision.md` |
