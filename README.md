@@ -122,18 +122,13 @@ Same job, different material. I weave scenes, facts, timelines, characters,
 themes, interpretations, and conversations into something that actually holds
 together across thousands of chapters.
 
-| 📖 First book | 🔄 Will read more | 🔧 Architecture |
-|:---:|:---:|:---:|
-| Shadow Slave | Add a spec + chapters | Novel doesn't matter |
-
 ---
 
 ## 🔌 Under the hood
 
 *For the technically curious. Everyone else, skip this part.*
 
-I'm built as a series of experiments. Every experiment proves exactly one thing
-before the next one starts. No "build everything at once and hope."
+I'm built as a series of experiments.
 
 | Layer | What it does |
 |---|---|
@@ -145,6 +140,8 @@ before the next one starts. No "build everything at once and hope."
 Full plans, diagrams, and decisions live in [`plans/`](plans/) and
 [`docs/decisions/`](docs/decisions/). If you just want to talk about books,
 that stuff is under the hood where it belongs.
+
+Full details about weaver in [Weaver's Vision](vision.md)
 
 ---
 
