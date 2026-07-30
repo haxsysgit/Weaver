@@ -1,5 +1,6 @@
 """Weaver conversation: durable storage, coordination, and restart safety."""
 
+from .common import now, uid
 from .coordinator import RunCoordinator
 from .repository import (
     ConversationRepository,
@@ -16,4 +17,6 @@ __all__ = [
     "RunCoordinator",
     "RunRecord",
     "SessionWeave",
+    "now",
+    "uid",
 ]

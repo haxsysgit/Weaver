@@ -1,16 +1,23 @@
 # Plan 007: Prove a restart-safe Weaver conversation
 
-> **Executor instructions:** This plan is unadmitted. Complete its own learning
-> cycle and owner gate before adding code. Plan 006 must be finally accepted
-> first.
+> **Executor instructions:** Plan 007 is admitted and implemented.
+> See `deliverables/007-restart-safe-conversation-proof/` for full evidence.
+> Plan 007.5 (`plans/007.5-audit-repair.md`) applies post-audit corrections.
 
 ## Status
 
-- **State:** Learning answered; owner confirmation pending
-- **Depends on:** Plan 006 finally accepted
+- **State:** Implemented (commit `96e4faf`), repair pass applied (`54091b9`),
+  audit repair in progress (`007.5`)
+- **Depends on:** Plan 006 accepted
 - **Category:** Deterministic storage and recovery proof
-- **Previous draft:** Superseded temporary CLI and live metadata-chat design
 - **Learning gate:** `deliverables/007-restart-safe-conversation-proof/learning.md`
+  (all 10 questions answered, reconciled with implementation)
+
+## Implementation
+
+`src/weaver/conversation/` — 6 files: `schema.py`, `repository.py`,
+`coordinator.py`, `session.py`, `_runner.py`, `__init__.py` (plus `common.py`
+in 007.5).  `tests/test_conversation.py` — 4 tests (growing to 10 in 007.5).
 
 ## First proof
 

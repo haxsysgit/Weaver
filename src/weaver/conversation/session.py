@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import logging
 import os
-import uuid
-from datetime import datetime, timezone
 from pathlib import Path
 
 import aiosqlite
@@ -16,16 +14,9 @@ from .repository import ConversationRepository
 logger = logging.getLogger(__name__)
 
 
-def _uid() -> str:
-    return uuid.uuid4().hex
-
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
 class SessionWeave:
-    """Wires repository and coordinator. Only public surface for subprocess tests."""
+    """Wires repository and coordinator.
+    Only public surface for subprocess tests."""
 
     def __init__(self, state_dir: Path) -> None:
         self._state_dir = state_dir
@@ -63,28 +54,38 @@ class SessionWeave:
             self._coordinator = None
 
     async def start_conversation(self, owner_text: str) -> str:
-        """Create relationship + conversation + first turn. Returns conversation_id."""
-        assert self._repo is not None and self._coordinator is not None
-        rel_id = _uid()
-        conv_id = _uid()
-        now = _now()
-
-        db = self._repo._db
-        async with db.execute("BEGIN"):
-            await self._repo._insert_relationship(rel_id, now)
-            await self._repo._insert_conversation(conv_id, rel_id, now)
-            await db.commit()
-
-        await self._coordinator.start_turn(conv_id, owner_text, turn_sequence=1)
+        """Create relationship + conversation + first turn in one transaction.
+        Returns conversation_id."""
+        assert self._coordinator is not None
+        conv_id, _, _ = await self._coordinator.start_conversation_and_turn(
+            owner_text
+        )
         return conv_id
 
-    async def continue_interrupted(self, conversation_id: str) -> str | None:
-        """If an interrupted run exists, continue it. Returns new run_id or None."""
+    async def continue_interrupted(
+        self, conversation_id: str
+    ) -> str | None:
+        """If an interrupted run exists, continue it.
+        Returns new run_id or None."""
         assert self._repo is not None and self._coordinator is not None
         interrupted = await self._repo.find_interrupted_run(conversation_id)
         if interrupted is None:
             return None
         new_run_id, _, _ = await self._coordinator.continue_interrupted(
+            conversation_id, interrupted
+        )
+        return new_run_id
+
+    async def retry_interrupted(
+        self, conversation_id: str
+    ) -> str | None:
+        """If an interrupted run exists, retry it (omit interrupted items).
+        Returns new run_id or None."""
+        assert self._repo is not None and self._coordinator is not None
+        interrupted = await self._repo.find_interrupted_run(conversation_id)
+        if interrupted is None:
+            return None
+        new_run_id, _ = await self._coordinator.retry_interrupted(
             conversation_id, interrupted
         )
         return new_run_id

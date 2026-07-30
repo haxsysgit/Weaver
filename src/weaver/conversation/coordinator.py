@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import json
-import uuid
-from datetime import datetime, timezone
+import logging
 
+from .common import now, uid
 from .repository import (
     ConversationRepository,
     EventRecord,
@@ -13,13 +13,7 @@ from .repository import (
     RunRecord,
 )
 
-
-def _uid() -> str:
-    return uuid.uuid4().hex
-
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+logger = logging.getLogger(__name__)
 
 
 class RunCoordinator:
@@ -28,6 +22,53 @@ class RunCoordinator:
 
     # -- public API called by SessionWeave --
 
+    async def start_conversation_and_turn(
+        self, owner_text: str
+    ) -> tuple[str, str, str]:
+        """Create relationship + conversation + first turn + first run in one
+        transaction.  Returns (conversation_id, turn_id, run_id)."""
+        rel_id = uid()
+        conv_id = uid()
+        turn_id = uid()
+        run_id = uid()
+        ts = now()
+
+        db = self._repo._db
+        async with db.execute("BEGIN"):
+            await self._repo._insert_relationship(rel_id, ts)
+            await self._repo._insert_conversation(conv_id, rel_id, ts)
+            await self._repo._insert_turn(turn_id, conv_id, sequence=1, created_at=ts)
+            await self._repo._insert_run(
+                run_id, turn_id, attempt=1, phase="queued", created_at=ts
+            )
+            seq = await self._repo._next_sequence(conv_id)
+            await self._repo._insert_item(
+                ItemRecord(
+                    id=uid(),
+                    conversation_id=conv_id,
+                    sequence=seq,
+                    turn_id=turn_id,
+                    run_id=run_id,
+                    kind="owner",
+                    body=json.dumps({"content": owner_text}),
+                    created_at=ts,
+                )
+            )
+            eseq = await self._repo._next_event_sequence(conv_id)
+            await self._repo._insert_event(
+                EventRecord(
+                    id=uid(),
+                    conversation_id=conv_id,
+                    sequence=eseq,
+                    run_id=run_id,
+                    kind="run_queued",
+                    body="{}",
+                    created_at=ts,
+                )
+            )
+            await db.commit()
+        return conv_id, turn_id, run_id
+
     async def start_turn(
         self,
         conversation_id: str,
@@ -35,42 +76,43 @@ class RunCoordinator:
         *,
         turn_sequence: int,
     ) -> tuple[str, str]:
-        """Create a new turn and run with the owner's input. Returns (turn_id, run_id)."""
-        turn_id = _uid()
-        run_id = _uid()
-        now = _now()
+        """Create a new turn and run with the owner's input.
+        Returns (turn_id, run_id)."""
+        turn_id = uid()
+        run_id = uid()
+        ts = now()
 
         db = self._repo._db
         async with db.execute("BEGIN"):
             await self._repo._insert_turn(
-                turn_id, conversation_id, turn_sequence, now
+                turn_id, conversation_id, turn_sequence, ts
             )
             await self._repo._insert_run(
-                run_id, turn_id, attempt=1, phase="queued", created_at=now
+                run_id, turn_id, attempt=1, phase="queued", created_at=ts
             )
             seq = await self._repo._next_sequence(conversation_id)
             await self._repo._insert_item(
                 ItemRecord(
-                    id=_uid(),
+                    id=uid(),
                     conversation_id=conversation_id,
                     sequence=seq,
                     turn_id=turn_id,
                     run_id=run_id,
                     kind="owner",
                     body=json.dumps({"content": owner_text}),
-                    created_at=now,
+                    created_at=ts,
                 )
             )
             eseq = await self._repo._next_event_sequence(conversation_id)
             await self._repo._insert_event(
                 EventRecord(
-                    id=_uid(),
+                    id=uid(),
                     conversation_id=conversation_id,
                     sequence=eseq,
                     run_id=run_id,
                     kind="run_queued",
                     body="{}",
-                    created_at=now,
+                    created_at=ts,
                 )
             )
             await db.commit()
@@ -85,8 +127,8 @@ class RunCoordinator:
         tool_calls: list[dict] | None = None,
     ) -> list[str]:
         """Insert an assistant item. Returns the tool-call IDs if any."""
-        item_id = _uid()
-        now = _now()
+        item_id = uid()
+        ts = now()
         body: dict = {"content": content}
         if tool_calls:
             body["tool_calls"] = [
@@ -106,7 +148,7 @@ class RunCoordinator:
                     run_id=run_id,
                     kind="assistant",
                     body=json.dumps(body),
-                    created_at=now,
+                    created_at=ts,
                 )
             )
             await self._repo._update_run_phase(run_id, "model_call_pending")
@@ -127,40 +169,57 @@ class RunCoordinator:
         result: str,
     ) -> None:
         """Commit tool-call and tool-result items atomically."""
-        now = _now()
+        ts = now()
 
         db = self._repo._db
         async with db.execute("BEGIN"):
+            # Enforce one result per tool call
+            existing = await self._repo._find_tool_result_for_call(
+                tool_call_id
+            )
+            if existing is not None:
+                raise ValueError(
+                    f"tool_call_id {tool_call_id} already has a result"
+                )
+
             # tool-call item
             seq_call = await self._repo._next_sequence(conversation_id)
             await self._repo._insert_item(
                 ItemRecord(
-                    id=_uid(),
+                    id=uid(),
                     conversation_id=conversation_id,
                     sequence=seq_call,
                     turn_id=turn_id,
                     run_id=run_id,
                     kind="tool_call",
                     body=json.dumps(
-                        {"tool_call_id": tool_call_id, "name": name, "arguments": arguments}
+                        {
+                            "tool_call_id": tool_call_id,
+                            "name": name,
+                            "arguments": arguments,
+                        }
                     ),
-                    created_at=now,
+                    created_at=ts,
                 )
             )
             # tool-result item
             seq_result = await self._repo._next_sequence(conversation_id)
             await self._repo._insert_item(
                 ItemRecord(
-                    id=_uid(),
+                    id=uid(),
                     conversation_id=conversation_id,
                     sequence=seq_result,
                     turn_id=turn_id,
                     run_id=run_id,
                     kind="tool_result",
                     body=json.dumps(
-                        {"tool_call_id": tool_call_id, "name": name, "result": result}
+                        {
+                            "tool_call_id": tool_call_id,
+                            "name": name,
+                            "result": result,
+                        }
                     ),
-                    created_at=now,
+                    created_at=ts,
                 )
             )
             await self._repo._update_run_phase(run_id, "settling")
@@ -174,33 +233,33 @@ class RunCoordinator:
         final_text: str,
     ) -> None:
         """Mark run and turn completed with final assistant item."""
-        now = _now()
+        ts = now()
 
         db = self._repo._db
         async with db.execute("BEGIN"):
             seq = await self._repo._next_sequence(conversation_id)
             await self._repo._insert_item(
                 ItemRecord(
-                    id=_uid(),
+                    id=uid(),
                     conversation_id=conversation_id,
                     sequence=seq,
                     turn_id=turn_id,
                     run_id=run_id,
                     kind="assistant",
                     body=json.dumps({"content": final_text}),
-                    created_at=now,
+                    created_at=ts,
                 )
             )
             eseq = await self._repo._next_event_sequence(conversation_id)
             await self._repo._insert_event(
                 EventRecord(
-                    id=_uid(),
+                    id=uid(),
                     conversation_id=conversation_id,
                     sequence=eseq,
                     run_id=run_id,
                     kind="run_completed",
                     body="{}",
-                    created_at=now,
+                    created_at=ts,
                 )
             )
             await self._repo._update_run_phase(run_id, "completed")
@@ -218,11 +277,11 @@ class RunCoordinator:
         conversation_id: str,
         interrupted_run: RunRecord,
     ) -> tuple[str, str, list[ItemRecord]]:
-        """Create a new linked run including settled items from the interrupted run.
-        Returns (new_run_id, turn_id, settled_items)."""
+        """Create a new linked run including settled items from the
+        interrupted run.  Returns (new_run_id, turn_id, settled_items)."""
         turn_id = interrupted_run.turn_id
-        new_run_id = _uid()
-        now = _now()
+        new_run_id = uid()
+        ts = now()
 
         db = self._repo._db
         async with db.execute("BEGIN"):
@@ -231,19 +290,19 @@ class RunCoordinator:
                 turn_id,
                 attempt=interrupted_run.attempt + 1,
                 phase="queued",
-                created_at=now,
+                created_at=ts,
                 interrupted_run_id=interrupted_run.id,
             )
             eseq = await self._repo._next_event_sequence(conversation_id)
             await self._repo._insert_event(
                 EventRecord(
-                    id=_uid(),
+                    id=uid(),
                     conversation_id=conversation_id,
                     sequence=eseq,
                     run_id=new_run_id,
                     kind="run_queued",
                     body="{}",
-                    created_at=now,
+                    created_at=ts,
                 )
             )
             await db.commit()
@@ -252,3 +311,40 @@ class RunCoordinator:
             conversation_id, for_run_id=interrupted_run.id
         )
         return new_run_id, turn_id, settled
+
+    async def retry_interrupted(
+        self,
+        conversation_id: str,
+        interrupted_run: RunRecord,
+    ) -> tuple[str, str]:
+        """Create a new run that omits ALL items from the interrupted run.
+        Returns (new_run_id, turn_id)."""
+        turn_id = interrupted_run.turn_id
+        new_run_id = uid()
+        ts = now()
+
+        db = self._repo._db
+        async with db.execute("BEGIN"):
+            await self._repo._insert_run(
+                new_run_id,
+                turn_id,
+                attempt=interrupted_run.attempt + 1,
+                phase="queued",
+                created_at=ts,
+                interrupted_run_id=interrupted_run.id,
+            )
+            eseq = await self._repo._next_event_sequence(conversation_id)
+            await self._repo._insert_event(
+                EventRecord(
+                    id=uid(),
+                    conversation_id=conversation_id,
+                    sequence=eseq,
+                    run_id=new_run_id,
+                    kind="run_queued",
+                    body="{}",
+                    created_at=ts,
+                )
+            )
+            await db.commit()
+
+        return new_run_id, turn_id

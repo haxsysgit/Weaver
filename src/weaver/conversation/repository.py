@@ -144,6 +144,20 @@ class ConversationRepository:
         assert row is not None
         return row[0]
 
+    async def _find_tool_result_for_call(
+        self, tool_call_id: str
+    ) -> str | None:
+        """Return the item id of an existing tool_result for this
+        tool_call_id, or None."""
+        cursor = await self._db.execute(
+            "SELECT id FROM conversation_item "
+            "WHERE kind = 'tool_result' "
+            "AND json_extract(body, '$.tool_call_id') = ?",
+            (tool_call_id,),
+        )
+        row = await cursor.fetchone()
+        return row[0] if row else None
+
     # -- public read queries --
 
     async def find_interrupted_run(
