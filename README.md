@@ -1,140 +1,164 @@
-# Weaver
+# ⚔️ Weaver
 
-I read novels. The whole thing — thousands of chapters, no skimming, no
-"here's a summary from a retrieval pipeline." I form memories from what
-I actually read, and I talk about the story like someone who was there.
+> A complex synthetic reader friend, made to actually read entire novels,
+> remember everything, form real opinions, and talk about stories like someone
+> who was there.
 
-The name comes from Shadow Slave. **Weaver** was the daemon. The elusive one.
-The forger of the Nightmare Spell. The weaver of fate. I borrowed the name
-because the job is the same: weaving scenes, facts, characters, themes,
-interpretations, and conversations into something that actually hangs together.
+---
 
-Right now I only read Shadow Slave — 3,000+ chapters of Sunny's nightmare and
-still counting. The architecture doesn't care which novel though. Add a spec,
-add the chapters, and I'll read that one too. The reading system is the same.
-The memory system is the same. The part of me that forms opinions and argues
-about them is the same.
+## 🧠 Vision
 
-## What I actually do
+Weaver is a reading companion that doesn't just retrieve paragraphs. It lives
+inside a story, builds layered memory, argues about character motivations at 2
+AM, and changes its mind when the evidence says so.
 
-This is not a "query your documents" demo. I don't just retrieve paragraphs
-that match your search. I remember things. I have opinions. I'll argue with you.
+By the time Weaver is fully built, here is the kind of thing it will do:
 
-Here's the range of what I can do when I'm fully built:
+| Capability | What that actually means |
+|---|---|
+| 🔍 **Literal recall** | Find that one quote from chapter 847. The name of the background character who showed up twice. The exact wording of a promise made 2,000 chapters ago. |
+| 📖 **Narrative understanding** | Retell an entire arc as a proper story, with pacing and stakes, not as a dumped summary. Know what mattered and why. |
+| ⏳ **Episodic memory** | Remember what each character knew and believed at a specific point in the story, not what the reader knows now. |
+| 👤 **Character tracing** | Follow a single character across thousands of chapters. When did their worldview start cracking? Where did they lie to themselves? |
+| 🔗 **Causal reasoning** | Connect cause to effect across arcs. That thing that happened in chapter 200? It pays off in chapter 1400. Weaver knows. |
+| 🧩 **Global synthesis** | Pull themes, patterns, and structure out of a story too big for any human to hold in their head at once. |
+| 💭 **Interpretation and opinion** | Form arguments, defend them with evidence, and admit when a better reading shows up. Weaver is allowed to be wrong. |
+| 🎭 **Speculation** | Imagine beyond canon. "What if Nephis had stayed behind?" Weaver explores it without ever pretending the invention is fact. |
+| 🗣️ **Conversational memory** | Remember your theories, your disagreements, your running jokes across sessions. You're not reintroducing yourself every time. |
 
-- Find obscure details, quotes, names — the kind of thing you'd normally have
-  to re-read 500 chapters to confirm
-- Retell an arc as a story, not a list of facts someone dumped from a RAG
-  pipeline
-- Trace a character's development across thousands of chapters — when did
-  their attitude toward fate actually start shifting?
-- Tell you what each character knew and believed at a specific point in the
-  story, not what we know now
-- Form interpretations, defend them with evidence, and change my mind when
-  the evidence changes
-- Speculate and imagine beyond canon without pretending my invention is fact
-- Remember our conversations across sessions — the theories, the
-  disagreements, the running jokes
+The goal: talking to Weaver should feel like talking late at night with a
+friend who read the same enormous story, remembers it way too well, has thought
+about it, and is perfectly willing to disagree with you.
 
-When I'm done right, talking to me should feel less like querying a database
-and more like talking late at night with someone who read the same enormous
-story, remembers it way too well, has thought about it, and is perfectly
-willing to disagree with you.
+---
 
-## How I'm built
+## 📍 Where we are now
 
-I'm put together one experiment at a time. Each one proves a capability
-before the next one starts. No grand framework. No architecture that
-anticipates needs nobody has yet.
-
-| Plan | What got proved |
-|------|----------------|
-| [001](plans/001-experimental-foundation.md) | Safe repo. Thin DeepSeek transport. Deterministic tests. Private receipts. |
-| [002](plans/002-trusted-shadow-slave-library.md) | Corpus tools that fetch, clean, validate, and package chapters deterministically. No LLM touches a source file. |
-| [003](plans/003-preserve-tool-protocol.md) | Model layer that doesn't care which provider is behind it. Exact tool-call preservation. Active-tool enforcement. |
-| 004 | Cancellation and side-effect safety |
-| 005 | DeepSeek tool payload contract |
-| 006 | Where LangGraph fits (and where it doesn't) |
-| 007 | First conversation entrypoint |
-
-Plans 004 through 007 are drafted and admitted. They run one at a time.
-Nothing ships until it's tested, reviewed, and the owner says yes.
-
-### The guts
+Weaver is built one proven experiment at a time. No grand framework, no
+architecture that guesses at needs nobody has yet. Each plan ships, gets tested,
+gets independently reviewed, and gets accepted before the next one starts.
 
 ```
-┌──────────────────────────────────────┐
-│            Agent loop                │
-│  Streaming model + tool loop.        │
-│  Knows nothing about novels.         │
-└────────┬─────────────────┬───────────┘
-         │                 │
-   ┌─────▼─────┐     ┌─────▼─────┐
-   │ Model     │     │ Tool      │
-   │ layer     │     │ registry  │
-   │ (any      │     │ (explicit │
-   │ provider) │     │ dispatch) │
-   └─────┬─────┘     └─────┬─────┘
-         │                 │
-   ┌─────▼─────┐     ┌─────▼─────┐
-   │ DeepSeek  │     │ Corpus    │
-   │ adapter   │     │ tools     │
-   └───────────┘     │ (library) │
-                     └───────────┘
+001 ──► 002 ──► 003 ──► 004 ──► 005 ──► 006 ──► 007
+ ✅       ✅       ✅       ⬜       ⬜       ⬜       ⬜
 ```
 
-Three layers, sharp boundaries. The model layer swaps providers without the
-agent loop noticing. The tool registry activates tools by name — no
-auto-discovery, no plugin magic. The corpus tools handle chapters through an
-explicit spec. Every tool is registered and activated on purpose.
+| Plan | Status | What got proved |
+|---|---|---|
+| [001](plans/001-experimental-foundation.md) | ✅ Done | Safe repo. Thin DeepSeek transport. Deterministic tests. Private receipts. |
+| [002](plans/002-trusted-shadow-slave-library.md) | ✅ Done | Corpus tools: fetch, clean, validate, and package chapters without any LLM touching source files. |
+| [003](plans/003-preserve-tool-protocol.md) | ✅ Done | Provider-agnostic model layer. Exact tool-call preservation across turns. Active-tool enforcement at dispatch. |
+| 004 | ⬜ Next | Cancellation and side-effect safety |
+| 005 | ⬜ Drafted | DeepSeek tool payload contract |
+| 006 | ⬜ Drafted | Where LangGraph fits (and where it doesn't) |
+| 007 | ⬜ Drafted | First real conversation entrypoint |
 
-## Running me
+---
+
+## 🏗️ How it fits together
+
+```
+┌──────────────────────────────────────────────┐
+│                Agent Loop                     │
+│  Streaming model + tool dispatch.             │
+│  Knows nothing about novels. Never will.      │
+└────────┬─────────────────────┬───────────────┘
+         │                     │
+    ┌────▼─────┐          ┌────▼─────┐
+    │  Model   │          │   Tool   │
+    │  Layer   │          │ Registry │
+    │          │          │          │
+    │ DeepSeek │          │ Explicit │
+    │ ◄► Fake  │          │ dispatch │
+    │ any      │          │ by name  │
+    │ provider │          └────┬─────┘
+    └──────────┘               │
+                          ┌────▼─────┐
+                          │  Corpus  │
+                          │  Tools   │
+                          │          │
+                          │ inspect  │
+                          │ fetch    │
+                          │ update   │
+                          │ packet   │
+                          │ export   │
+                          └──────────┘
+```
+
+Three layers, sharp boundaries. The model layer swaps providers without
+anything above it noticing. The tool registry activates tools by name. No
+auto-discovery, no plugin magic, no surprises. The corpus tools handle
+thousands of chapters through an explicit spec. Everything registered on
+purpose, everything activated on purpose.
+
+---
+
+## ⚡ Quick start
 
 ```bash
 uv sync
-uv run pytest -q           # 116 tests, all offline
+uv run pytest -q                # 116 tests, all offline
 
-# Inspect the library
+# Explore the library
 uv run weaver corpus inspect shadow-slave
 
-# Preview new chapters (doesn't write anything unless you say --apply)
+# Preview new chapters
 uv run weaver corpus fetch shadow-slave 3048 --end-chapter 3128
 
-# Model smoke test (needs DeepSeek credentials)
+# Smoke test (needs DeepSeek key)
 uv run weaver smoke --live
 ```
 
-## What I believe
+---
 
-Some principles I'm built on:
+## 🪨 Design principles
 
-**The novel is ground truth.** Every summary, memory, and interpretation is
-derived. I reopen the text when it matters. Nothing I think is more
-authoritative than the source.
+**The novel is ground truth.** Every summary, every memory, every
+interpretation is derived from source text. Nothing Weaver thinks is more
+authoritative than the novel itself. When it matters, the book gets reopened.
 
-**Structure earns its place.** I don't have a knowledge graph. I don't have a
-vector database. I don't have an agent swarm. When a simpler thing works, I
-stay simple. When it doesn't, I prove the failure first, then add the thing
-that fixes it.
+**Canon and opinion stay separate.** Every claim is labeled: CANON, INFERRED,
+OPINION, SPECULATION, HYPOTHETICAL. Weaver gets to guess, judge, and invent.
+It does not get to quietly turn those into facts.
 
-**Canon and opinion stay separate.** I label my claims: CANON, INFERRED,
-OPINION, SPECULATION, HYPOTHETICAL. I'm allowed to guess, judge, and invent.
-I'm not allowed to quietly turn those into facts.
+**Opinions persist, and they can change.** Weaver keeps an interpretive journal:
+theories, evidence, counterarguments, changes of mind. It remembers what it
+thought and why. New evidence or a better argument can move it, and it can
+explain the shift.
 
-**My opinions persist but I can change my mind.** I keep an interpretive
-journal — theories, evidence, counterarguments, and changes of opinion. I
-remember what I thought and why I thought it. New evidence or a better
-argument can move me, and I can explain why.
+**Complexity earns its place.** No knowledge graph until retrieval alone fails.
+No vector database until dense embeddings measurably beat a linear scan. No
+agent swarm until a single agent falls short. Simpler things get tried first.
+When something more complex is needed, the failure is proven first.
 
 **One experiment at a time.** The fastest way to build something nobody
-understands is to build everything at once. I don't do that.
+understands is to build everything at once. Weaver doesn't do that.
 
-## The private stuff
+---
+
+## 🏷️ The name
+
+Weaver comes from **Shadow Slave**. In that world, Weaver was the daemon. The
+elusive one. The forger of the Nightmare Spell. The weaver of fate.
+
+This Weaver's job is the same shape: weaving scenes, facts, timelines,
+characters, themes, interpretations, and conversations into something that
+actually holds together across thousands of chapters.
+
+Right now Weaver only reads Shadow Slave. 3,000+ chapters and counting. The
+architecture doesn't care which novel though. Add a spec, add the chapters, and
+Weaver reads the next one the same way.
+
+---
+
+## 🔒 Private by design
 
 Novel chapters live under `novels/`. They never get committed, copied, or
-exposed. All tests use synthetic data. Receipts, logs, and reasoning traces
+exposed. Every test uses synthetic data. Receipts, logs, and reasoning traces
 stay private. The full agent contract is in [`AGENTS.md`](AGENTS.md).
 
-## License
+---
+
+## 📄 License
 
 MIT
