@@ -14,6 +14,7 @@ from weaver.agent.tools import (
     EffectKind,
     ToolDefinition,
     ToolExecutionContext,
+    ToolExecutionPolicy,
     ToolRegistry,
 )
 from weaver.agent.turn import TurnExitReason, run_turn
@@ -173,6 +174,7 @@ async def execute_turn(
     cancel_event: asyncio.Event | None = None,
     persist_message=None,
     max_model_steps: int = 5,
+    execution_policy: ToolExecutionPolicy | None = None,
 ):
     return await run_turn(
         turn_id="turn-1",
@@ -182,6 +184,7 @@ async def execute_turn(
         history=history or [],
         tool_registry=registry or make_registry(),
         active_tools=active_tools,
+        execution_policy=execution_policy or ToolExecutionPolicy.read_only(),
         cancel_event=cancel_event or asyncio.Event(),
         persist_message=persist_message,
         max_model_steps=max_model_steps,
@@ -203,6 +206,7 @@ class TestActiveDispatch:
             "missing",
             "",
             active_names=(),
+            policy=ToolExecutionPolicy.read_only(),
             context=tool_context(),
         )
 
@@ -215,6 +219,7 @@ class TestActiveDispatch:
             "echo",
             "",
             active_names=(),
+            policy=ToolExecutionPolicy.read_only(),
             context=tool_context(),
         )
 
@@ -232,6 +237,7 @@ class TestActiveDispatch:
             "echo",
             arguments_json,
             active_names=("echo",),
+            policy=ToolExecutionPolicy.read_only(),
             context=tool_context(),
         )
 
@@ -249,6 +255,7 @@ class TestActiveDispatch:
             "echo",
             arguments_json,
             active_names=("echo",),
+            policy=ToolExecutionPolicy.read_only(),
             context=tool_context(),
         )
 
@@ -262,6 +269,7 @@ class TestActiveDispatch:
             "echo",
             '{"message":"hello"}',
             active_names=("echo",),
+            policy=ToolExecutionPolicy.read_only(),
             context=tool_context(),
         )
 
@@ -477,6 +485,7 @@ class TestTurnProtocol:
             model=model,
             system_prompt="You are Weaver.",
             tool_registry=make_registry(),
+            execution_policy=ToolExecutionPolicy.read_only(),
             active_tools=("echo",),
         )
 
@@ -754,6 +763,7 @@ class TestTurnBoundaries:
             model=model,
             system_prompt="You are Weaver.",
             tool_registry=make_registry(),
+            execution_policy=ToolExecutionPolicy.read_only(),
         )
 
         await session.send("Message 1")

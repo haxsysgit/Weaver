@@ -8,7 +8,7 @@ import uuid
 
 from weaver.agent.errors import safe_error
 from weaver.agent.messages import ConversationMessage, UserMessage
-from weaver.agent.tools import ToolRegistry
+from weaver.agent.tools import ToolExecutionPolicy, ToolRegistry
 from weaver.agent.turn import TurnExitReason, TurnResult, run_turn
 from ..model_layer import ModelLayer, ModelSpec
 
@@ -28,6 +28,7 @@ class AgentSession:
         model: ModelSpec,
         system_prompt: str,
         tool_registry: ToolRegistry,
+        execution_policy: ToolExecutionPolicy,
         active_tools: tuple[str, ...] = (),
     ) -> None:
         self.session_id = session_id
@@ -35,6 +36,7 @@ class AgentSession:
         self._model = model
         self._system_prompt = system_prompt
         self._tool_registry = tool_registry
+        self._execution_policy = execution_policy
         self._active_tools = active_tools
 
         self._history: list[ConversationMessage] = []
@@ -85,6 +87,7 @@ class AgentSession:
                 history=list(self._history),
                 tool_registry=self._tool_registry,
                 active_tools=self._active_tools,
+                execution_policy=self._execution_policy,
                 cancel_event=self._cancel_event,
             )
         except Exception as error:

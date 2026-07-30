@@ -9,7 +9,13 @@ from .messages import (
     UserMessage,
 )
 from .session import AgentSession
-from .tools import EffectKind, ToolDefinition, ToolExecutionContext, ToolRegistry
+from .tools import (
+    EffectKind,
+    ToolDefinition,
+    ToolExecutionContext,
+    ToolExecutionPolicy,
+    ToolRegistry,
+)
 from .turn import TurnExitReason, TurnResult, run_turn
 
 __all__ = [
@@ -20,6 +26,7 @@ __all__ = [
     "ToolCallMessage",
     "ToolDefinition",
     "ToolExecutionContext",
+    "ToolExecutionPolicy",
     "ToolRegistry",
     "ToolResultMessage",
     "TurnExitReason",

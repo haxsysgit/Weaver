@@ -10,7 +10,11 @@ import pytest
 from ebooklib import epub
 
 from tests.corpus_support import make_project, write_chapter
-from weaver.agent.tools import ToolExecutionContext, ToolRegistry
+from weaver.agent.tools import (
+    ToolExecutionContext,
+    ToolExecutionPolicy,
+    ToolRegistry,
+)
 from weaver.corpus.errors import CorpusError
 from weaver.corpus.models import (
     BuildNovelPacketInput,
@@ -159,6 +163,7 @@ async def test_agent_registry_exposes_five_typed_metadata_only_tools(
         "inspect_novel_corpus",
         '{"novel_id":"shadow-slave"}',
         active_names=names,
+        policy=ToolExecutionPolicy.maintenance(),
         context=context,
     )
     assert dispatched.ok
@@ -172,6 +177,7 @@ async def test_agent_registry_exposes_five_typed_metadata_only_tools(
         "fetch_novel_chapters",
         '{"novel_id":"shadow-slave","start_chapter":0}',
         active_names=names,
+        policy=ToolExecutionPolicy.maintenance(),
         context=context,
     )
     assert invalid.ok
@@ -202,6 +208,7 @@ async def test_large_preview_stays_within_agent_result_limit(tmp_path) -> None:
             ).model_dump(mode="json")
         ),
         active_names=("fetch_novel_chapters",),
+        policy=ToolExecutionPolicy.maintenance(),
         context=context,
     )
 

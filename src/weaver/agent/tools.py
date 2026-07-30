@@ -29,6 +29,35 @@ class EffectKind(str, Enum):
     EXTERNAL_EFFECT = "external_effect"
 
 
+@dataclass(frozen=True, slots=True)
+class ToolExecutionPolicy:
+    """Effect classes one Weaver session may start."""
+
+    allowed_effects: frozenset[EffectKind]
+
+    def __post_init__(self) -> None:
+        if EffectKind.EXTERNAL_EFFECT in self.allowed_effects:
+            raise ValueError("external effects cannot be admitted in Plan 004")
+
+    @classmethod
+    def read_only(cls) -> ToolExecutionPolicy:
+        return cls(allowed_effects=frozenset({EffectKind.READ}))
+
+    @classmethod
+    def maintenance(cls) -> ToolExecutionPolicy:
+        return cls(
+            allowed_effects=frozenset(
+                {
+                    EffectKind.READ,
+                    EffectKind.INTERNAL_WRITE,
+                }
+            )
+        )
+
+    def allows(self, effect_kind: EffectKind) -> bool:
+        return effect_kind in self.allowed_effects
+
+
 @dataclass
 class ToolExecutionContext:
     """Domain-free context passed to every tool handler."""
@@ -47,8 +76,8 @@ class ToolDefinition:
     description: str
     parameters: dict[str, Any]  # JSON Schema for the tool's input
     handler: HandlerFunc
+    effect_kind: EffectKind
     max_result_chars: int = 12_000
-    effect_kind: EffectKind = EffectKind.READ
     retry_safe: bool = False
 
 
@@ -60,6 +89,7 @@ class ToolResult:
     result: dict[str, Any] | None = None
     error_code: str | None = None
     error: str | None = None
+    started: bool = False
 
 
 class ToolRegistry:
@@ -101,9 +131,10 @@ class ToolRegistry:
         raw_arguments: str,
         *,
         active_names: tuple[str, ...],
+        policy: ToolExecutionPolicy,
         context: ToolExecutionContext,
     ) -> ToolResult:
-        """Check registration and activity before parsing and execution."""
+        """Apply dispatch gates before parsing and execution."""
         tool = self._tools.get(tool_name)
         if tool is None:
             return ToolResult(
@@ -117,6 +148,13 @@ class ToolRegistry:
                 ok=False,
                 error_code="inactive_tool",
                 error=f"Tool {tool_name!r} is not active.",
+            )
+
+        if not policy.allows(tool.effect_kind):
+            return ToolResult(
+                ok=False,
+                error_code="effect_not_allowed",
+                error="Tool effect is not allowed in this session.",
             )
 
         if not raw_arguments.strip():
@@ -148,6 +186,7 @@ class ToolRegistry:
                 ok=False,
                 error_code="tool_failed",
                 error="Tool execution failed.",
+                started=True,
             )
 
         if tool.max_result_chars > 0:
@@ -157,6 +196,7 @@ class ToolRegistry:
                     ok=False,
                     error_code="tool_invalid_output",
                     error="Tool result exceeds maximum size.",
+                    started=True,
                 )
 
-        return ToolResult(ok=True, result=result)
+        return ToolResult(ok=True, result=result, started=True)

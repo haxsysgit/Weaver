@@ -18,7 +18,11 @@ from weaver.agent.messages import (
     ToolResultMessage,
     project_messages,
 )
-from weaver.agent.tools import ToolExecutionContext, ToolRegistry
+from weaver.agent.tools import (
+    ToolExecutionContext,
+    ToolExecutionPolicy,
+    ToolRegistry,
+)
 from ..model_layer import (
     ModelLayer,
     ModelMessage,
@@ -166,6 +170,7 @@ async def run_turn(
     history: list[ConversationMessage],
     tool_registry: ToolRegistry,
     active_tools: tuple[str, ...],
+    execution_policy: ToolExecutionPolicy,
     cancel_event: asyncio.Event,
     persist_message: PersistCallback | None = None,
     max_model_steps: int = 5,
@@ -331,13 +336,15 @@ async def run_turn(
                 call_id=tool_call.call_id,
                 cancel_event=cancel_event,
             )
-            tool_starts += 1
             tool_result = await tool_registry.dispatch(
                 tool_call.name,
                 tool_call.arguments_json,
                 active_names=active_tools,
+                policy=execution_policy,
                 context=context,
             )
+            if tool_result.started:
+                tool_starts += 1
 
             result_evidence = ToolResultMessage(
                 message_id=_message_id(),

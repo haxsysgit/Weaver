@@ -15,9 +15,11 @@ _MESSAGES = {
     "tool_call_persistence": "Tool call persistence failed.",
     "tool_result_persistence": "Tool result persistence failed.",
     "tool_unavailable": "The requested tool is unavailable.",
+    "tool_effect_not_allowed": "The tool effect is not allowed in this session.",
     "tool_invalid_arguments": "The tool request was invalid.",
     "tool_failed": "The tool could not be completed.",
     "tool_invalid_output": "The tool returned an invalid result.",
+    "tool_cancelled": "The tool call was cancelled.",
     "interrupted": "The turn was interrupted.",
     "incomplete": "The model response was incomplete.",
     "limit": "The turn reached its execution limit.",
@@ -34,8 +36,12 @@ def safe_tool_error(code: str) -> str:
     """Map a tool result code to text safe for events and provider projection."""
     if code in {"unknown_tool", "inactive_tool", "tool_unavailable"}:
         return safe_error("tool_unavailable")
+    if code == "effect_not_allowed":
+        return safe_error("tool_effect_not_allowed")
     if code in {"malformed_arguments", "invalid_arguments"}:
         return safe_error("tool_invalid_arguments")
+    if code == "cancelled":
+        return safe_error("tool_cancelled")
     if code == "invalid_output":
         return safe_error("tool_invalid_output")
     return safe_error("tool_failed")
