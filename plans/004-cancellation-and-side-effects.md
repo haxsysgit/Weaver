@@ -7,7 +7,7 @@
 
 ## Status
 
-- **State:** Learning confirmed; implementation admitted
+- **State:** Implementation and review complete; owner decision pending
 - **Priority:** P1
 - **Effort:** M
 - **Risk:** Medium
@@ -308,15 +308,15 @@ because permission refusal should happen before unnecessary work.
 
 - [x] The owner confirmed Plan 004 `learning.md`.
 - [x] Plan 003 is accepted.
-- [ ] Default turns can run only `READ` effects.
-- [ ] Blocked effects never start their handlers.
-- [ ] A running cooperative async handler receives cancellation.
-- [ ] Dispatch settles handler cleanup before returning.
-- [ ] Cancelled calls are recorded as cancelled, not failed or completed.
-- [ ] No retry occurs.
-- [ ] Focused and full tests pass.
-- [ ] In-scope lint passes.
-- [ ] Reviews have no open blocker.
+- [x] Default turns can run only `READ` effects.
+- [x] Blocked effects never start their handlers.
+- [x] A running cooperative async handler receives cancellation.
+- [x] Dispatch settles handler cleanup before returning.
+- [x] Cancelled calls are recorded as cancelled, not failed or completed.
+- [x] No retry occurs.
+- [x] Focused and full tests pass.
+- [x] In-scope lint passes.
+- [x] Reviews have no open blocker.
 - [ ] The owner recorded Plan 004's final decision.
 
 ## STOP conditions

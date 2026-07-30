@@ -36,8 +36,15 @@ class ToolExecutionPolicy:
     allowed_effects: frozenset[EffectKind]
 
     def __post_init__(self) -> None:
-        if EffectKind.EXTERNAL_EFFECT in self.allowed_effects:
+        normalized_effects = frozenset(self.allowed_effects)
+        if any(
+            not isinstance(effect_kind, EffectKind)
+            for effect_kind in normalized_effects
+        ):
+            raise ValueError("allowed effects must be EffectKind values")
+        if EffectKind.EXTERNAL_EFFECT in normalized_effects:
             raise ValueError("external effects cannot be admitted in Plan 004")
+        object.__setattr__(self, "allowed_effects", normalized_effects)
 
     @classmethod
     def read_only(cls) -> ToolExecutionPolicy:
@@ -224,12 +231,12 @@ class ToolRegistry:
         )
 
         try:
-            completed, _ = await asyncio.wait(
+            await asyncio.wait(
                 {handler_task, cancellation_waiter},
                 return_when=asyncio.FIRST_COMPLETED,
             )
 
-            if handler_task in completed:
+            if handler_task.done():
                 try:
                     result = handler_task.result()
                 except asyncio.CancelledError:

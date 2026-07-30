@@ -964,8 +964,17 @@ class TestToolExecutionEvidence:
         )
         registry.register(
             ToolDefinition(
-                name="later",
-                description="Must stay stopped.",
+                name="blocked",
+                description="Blocked by effect policy.",
+                parameters={"type": "object"},
+                handler=later_handler,
+                effect_kind=EffectKind.INTERNAL_WRITE,
+            )
+        )
+        registry.register(
+            ToolDefinition(
+                name="inactive",
+                description="Registered but inactive.",
                 parameters={"type": "object"},
                 handler=later_handler,
                 effect_kind=EffectKind.READ,
@@ -973,8 +982,9 @@ class TestToolExecutionEvidence:
         )
         calls = (
             tool_call("call-first", "first", "{}"),
-            tool_call("call-second", "later", "{}"),
-            tool_call("call-third", "later", "{}"),
+            tool_call("call-blocked", "blocked", "{}"),
+            tool_call("call-inactive", "inactive", "{}"),
+            tool_call("call-unknown", "missing", "{}"),
         )
         layer, model, provider = scripted_layer(tool_response(*calls))
         turn_task = asyncio.create_task(
@@ -982,7 +992,7 @@ class TestToolExecutionEvidence:
                 layer,
                 model,
                 registry=registry,
-                active_tools=("first", "later"),
+                active_tools=("first", "blocked"),
                 cancel_event=cancel_event,
             )
         )
@@ -1008,14 +1018,16 @@ class TestToolExecutionEvidence:
         assert len(provider.calls) == 1
         assert [message.call_id for message in call_messages] == [
             "call-first",
-            "call-second",
-            "call-third",
+            "call-blocked",
+            "call-inactive",
+            "call-unknown",
         ]
         assert [
             (message.call_id, message.error_code)
             for message in result_messages
         ] == [
             ("call-first", "cancelled"),
-            ("call-second", "cancelled"),
-            ("call-third", "cancelled"),
+            ("call-blocked", "cancelled"),
+            ("call-inactive", "cancelled"),
+            ("call-unknown", "cancelled"),
         ]

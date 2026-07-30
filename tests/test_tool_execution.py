@@ -113,6 +113,19 @@ class TestToolExecutionPolicy:
                 allowed_effects=frozenset({EffectKind.EXTERNAL_EFFECT})
             )
 
+    def test_policy_copies_mutable_effect_input(self) -> None:
+        mutable_effects = {EffectKind.READ}
+        policy = ToolExecutionPolicy(allowed_effects=mutable_effects)
+
+        mutable_effects.add(EffectKind.EXTERNAL_EFFECT)
+
+        assert policy.allowed_effects == frozenset({EffectKind.READ})
+        assert not policy.allows(EffectKind.EXTERNAL_EFFECT)
+
+    def test_policy_rejects_values_outside_effect_enum(self) -> None:
+        with pytest.raises(ValueError, match="EffectKind"):
+            ToolExecutionPolicy(allowed_effects=frozenset({"read"}))
+
     def test_tool_definition_requires_an_explicit_effect(self) -> None:
         async def handler(arguments, context):
             return {}

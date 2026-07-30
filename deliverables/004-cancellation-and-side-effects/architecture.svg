@@ -1,0 +1,169 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="960" viewBox="0 0 1800 960" role="img" aria-labelledby="title description">
+  <title id="title">Plan 004 Weaver cancellation and tool effect architecture</title>
+  <desc id="description">Session policies feed ordered dispatch gates. Admitted handlers race a cancellation waiter. Results count actual starts and settle every remaining call after cancellation.</desc>
+  <defs>
+    <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#4F81BD" />
+    </marker>
+    <marker id="arrow-yellow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#D6B656" />
+    </marker>
+    <marker id="arrow-purple" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#9673A6" />
+    </marker>
+    <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#82B366" />
+    </marker>
+    <marker id="arrow-red" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#C94F45" />
+    </marker>
+    <style>
+      text { font-family: Inter, "DejaVu Sans", Arial, sans-serif; fill: #172033; }
+      .lane-title { font-size: 16px; font-weight: 700; }
+      .node-title { font-size: 14px; font-weight: 700; text-anchor: middle; }
+      .node-copy { font-size: 12px; text-anchor: middle; fill: #394554; }
+      .edge { fill: none; stroke-width: 2.2; }
+      .edge-label { font-size: 11px; font-weight: 700; }
+    </style>
+  </defs>
+
+  <rect width="1800" height="960" fill="#FFFFFF" />
+  <text x="40" y="48" font-size="26" font-weight="700">Plan 004: session policy, clean cancellation, complete tool evidence</text>
+  <text x="40" y="78" font-size="15" fill="#52606D">Reads stay normal. Weaver-owned writes need maintenance. Outside actions never start.</text>
+
+  <g>
+    <rect x="40" y="110" width="290" height="780" rx="14" fill="#F8FBFE" stroke="#4F81BD" stroke-width="2" />
+    <rect x="40" y="110" width="290" height="38" rx="14" fill="#E8F3FC" />
+    <path d="M40 148 H330" stroke="#4F81BD" stroke-width="2" />
+    <text x="60" y="135" class="lane-title" fill="#24476B">Session policy</text>
+  </g>
+  <g>
+    <rect x="360" y="110" width="370" height="780" rx="14" fill="#FFFDF6" stroke="#D6B656" stroke-width="2" />
+    <rect x="360" y="110" width="370" height="38" rx="14" fill="#FFF2CC" />
+    <path d="M360 148 H730" stroke="#D6B656" stroke-width="2" />
+    <text x="380" y="135" class="lane-title" fill="#5D4A00">Dispatch gates</text>
+  </g>
+  <g>
+    <rect x="760" y="110" width="490" height="780" rx="14" fill="#FCF9FF" stroke="#9673A6" stroke-width="2" />
+    <rect x="760" y="110" width="490" height="38" rx="14" fill="#E1D5E7" />
+    <path d="M760 148 H1250" stroke="#9673A6" stroke-width="2" />
+    <text x="780" y="135" class="lane-title" fill="#4C3868">Handler and cancellation race</text>
+  </g>
+  <g>
+    <rect x="1280" y="110" width="480" height="780" rx="14" fill="#FAFDFA" stroke="#82B366" stroke-width="2" />
+    <rect x="1280" y="110" width="480" height="38" rx="14" fill="#D5E8D4" />
+    <path d="M1280 148 H1760" stroke="#82B366" stroke-width="2" />
+    <text x="1300" y="135" class="lane-title" fill="#285A31">Turn settlement</text>
+  </g>
+
+  <g>
+    <rect x="75" y="190" width="220" height="72" rx="12" fill="#D9EAF7" stroke="#4F81BD" stroke-width="2" />
+    <text x="185" y="218" class="node-title">Normal session</text>
+    <text x="185" y="241" class="node-copy">READ</text>
+  </g>
+  <g>
+    <rect x="75" y="310" width="220" height="78" rx="12" fill="#D9EAF7" stroke="#4F81BD" stroke-width="2" />
+    <text x="185" y="338" class="node-title">Maintenance session</text>
+    <text x="185" y="362" class="node-copy">READ + INTERNAL_WRITE</text>
+  </g>
+  <g>
+    <rect x="75" y="465" width="220" height="105" rx="12" fill="#EAF2F8" stroke="#4F81BD" stroke-width="3" />
+    <text x="185" y="492" class="node-title">AgentSession</text>
+    <text x="185" y="516" class="node-copy">immutable policy for the session</text>
+    <text x="185" y="538" class="node-copy">real session, turn, and call IDs</text>
+  </g>
+  <g>
+    <rect x="75" y="680" width="220" height="84" rx="12" fill="#FCE8E6" stroke="#C94F45" stroke-width="2" stroke-dasharray="7 5" />
+    <text x="185" y="709" class="node-title" fill="#7A241E">EXTERNAL_EFFECT</text>
+    <text x="185" y="734" class="node-copy">policy construction rejects it</text>
+  </g>
+
+  <g>
+    <rect x="400" y="205" width="290" height="110" rx="12" fill="#FFF7D6" stroke="#D6B656" stroke-width="2" />
+    <text x="545" y="232" class="node-title">First gates</text>
+    <text x="545" y="257" class="node-copy">1 registered   2 active</text>
+    <text x="545" y="280" class="node-copy">3 effect allowed</text>
+  </g>
+  <g>
+    <rect x="400" y="400" width="290" height="92" rx="12" fill="#FFF7D6" stroke="#D6B656" stroke-width="2" />
+    <text x="545" y="429" class="node-title">Argument gates</text>
+    <text x="545" y="454" class="node-copy">4 valid JSON   5 JSON object</text>
+  </g>
+  <g>
+    <rect x="400" y="590" width="290" height="115" rx="12" fill="#FFE9B8" stroke="#D6B656" stroke-width="3" />
+    <text x="545" y="618" class="node-title">Start boundary</text>
+    <text x="545" y="643" class="node-copy">6 cancellation check</text>
+    <text x="545" y="666" class="node-copy">7 handler starts</text>
+    <text x="545" y="688" class="node-copy">blocked calls stay unstarted</text>
+  </g>
+
+  <g>
+    <rect x="835" y="200" width="340" height="100" rx="12" fill="#F3E8F7" stroke="#9673A6" stroke-width="3" />
+    <text x="1005" y="229" class="node-title">Named tasks</text>
+    <text x="1005" y="254" class="node-copy">handler task + cancellation waiter</text>
+    <text x="1005" y="277" class="node-copy">wait for first completion</text>
+  </g>
+  <g>
+    <polygon points="1005,365 1110,425 1005,485 900,425" fill="#FFF2CC" stroke="#D6B656" stroke-width="2" />
+    <text x="1005" y="421" class="node-title">What is observable?</text>
+    <text x="1005" y="444" class="node-copy">completion wins a tie</text>
+  </g>
+  <g>
+    <rect x="795" y="590" width="205" height="112" rx="12" fill="#DCEFE0" stroke="#4D8C57" stroke-width="2" />
+    <text x="897" y="618" class="node-title">Handler complete</text>
+    <text x="897" y="643" class="node-copy">keep completed result</text>
+    <text x="897" y="666" class="node-copy">settle unused waiter</text>
+  </g>
+  <g>
+    <rect x="1030" y="580" width="190" height="132" rx="12" fill="#FCE8E6" stroke="#C94F45" stroke-width="2" />
+    <text x="1125" y="608" class="node-title" fill="#7A241E">Cancellation wins</text>
+    <text x="1125" y="633" class="node-copy">cancel handler</text>
+    <text x="1125" y="656" class="node-copy">await cleanup</text>
+    <text x="1125" y="679" class="node-copy">return cancelled even if caught</text>
+  </g>
+
+  <g>
+    <rect x="1330" y="190" width="380" height="84" rx="12" fill="#DCEFE0" stroke="#4D8C57" stroke-width="2" />
+    <text x="1520" y="219" class="node-title">ToolResult.started</text>
+    <text x="1520" y="244" class="node-copy">count only handlers that began</text>
+  </g>
+  <g>
+    <rect x="1330" y="355" width="380" height="108" rx="12" fill="#FCE8E6" stroke="#C94F45" stroke-width="2" />
+    <text x="1520" y="384" class="node-title" fill="#7A241E">Cancelled grouped batch</text>
+    <text x="1520" y="409" class="node-copy">start no later handler</text>
+    <text x="1520" y="432" class="node-copy">make no later model request</text>
+  </g>
+  <g>
+    <rect x="1330" y="545" width="380" height="96" rx="12" fill="#DCEFE0" stroke="#4D8C57" stroke-width="3" />
+    <text x="1520" y="575" class="node-title">Settle every remaining call</text>
+    <text x="1520" y="601" class="node-copy">linked cancelled result, same call ID</text>
+  </g>
+  <g>
+    <rect x="1330" y="720" width="380" height="112" rx="12" fill="#E8F5E9" stroke="#82B366" stroke-width="2" />
+    <text x="1520" y="749" class="node-title">Replay stays valid</text>
+    <text x="1520" y="774" class="node-copy">cancelled, blocked, failed, completed stay distinct</text>
+    <text x="1520" y="798" class="node-copy">cancellation makes no rollback claim</text>
+  </g>
+
+  <path d="M185 262 V465" class="edge" stroke="#4F81BD" marker-end="url(#arrow-blue)" />
+  <path d="M295 349 H320 V518 H295" class="edge" stroke="#4F81BD" marker-end="url(#arrow-blue)" />
+  <path d="M295 518 H400 V260" class="edge" stroke="#D6B656" marker-end="url(#arrow-yellow)" />
+  <text x="310" y="505" class="edge-label" fill="#5D4A00">policy + IDs</text>
+  <path d="M295 722 H340 V285 H400" class="edge" stroke="#C94F45" stroke-dasharray="7 5" marker-end="url(#arrow-red)" />
+  <text x="304" y="700" class="edge-label" fill="#7A241E">always refuse</text>
+  <path d="M545 315 V400" class="edge" stroke="#D6B656" marker-end="url(#arrow-yellow)" />
+  <path d="M545 492 V590" class="edge" stroke="#D6B656" marker-end="url(#arrow-yellow)" />
+  <path d="M690 647 H750 V250 H835" class="edge" stroke="#9673A6" marker-end="url(#arrow-purple)" />
+  <text x="713" y="634" class="edge-label" fill="#4C3868">admitted</text>
+  <path d="M1005 300 V365" class="edge" stroke="#9673A6" marker-end="url(#arrow-purple)" />
+  <path d="M950 470 V530 H897 V590" class="edge" stroke="#4D8C57" marker-end="url(#arrow-green)" />
+  <text x="820" y="522" class="edge-label" fill="#1F4B27">complete or tie</text>
+  <path d="M1060 470 V530 H1125 V580" class="edge" stroke="#C94F45" marker-end="url(#arrow-red)" />
+  <text x="1080" y="522" class="edge-label" fill="#7A241E">cancel first</text>
+  <path d="M897 702 V745 H1260 V232 H1330" class="edge" stroke="#82B366" marker-end="url(#arrow-green)" />
+  <text x="1230" y="218" class="edge-label" fill="#285A31">result</text>
+  <path d="M1220 646 H1270 V409 H1330" class="edge" stroke="#C94F45" marker-end="url(#arrow-red)" />
+  <path d="M1520 274 V355" class="edge" stroke="#82B366" marker-end="url(#arrow-green)" />
+  <path d="M1520 463 V545" class="edge" stroke="#82B366" marker-end="url(#arrow-green)" />
+  <path d="M1520 641 V720" class="edge" stroke="#82B366" marker-end="url(#arrow-green)" />
+</svg>

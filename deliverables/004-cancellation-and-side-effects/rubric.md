@@ -4,13 +4,24 @@
 | --- | --- | --- |
 | Owner confirmed `learning.md` | Passed | Confirmed 2026-07-30 |
 | Plan 003 accepted | Passed | Plan 003 decision |
-| Read is the default allowed effect | Not tested | Policy tests |
-| Internal and external effects default to blocked | Not tested | Policy tests |
-| Blocked handlers never start | Not tested | Start-count tests |
-| Running cooperative handler receives cancellation | Not tested | Event-driven test |
-| Handler cleanup settles before turn return | Not tested | Ordering test |
-| Cancelled, failed, and complete remain distinct | Not tested | Result tests |
-| No silent retry | Not tested | Attempt-count test |
-| Full deterministic floor passes | Not run | Results |
-| Two reviews have no blocker | Not started | Review ledger |
+| Read is the normal-session effect | Passed | Policy tests |
+| Maintenance admits reads and Weaver-owned writes | Passed | Policy tests |
+| Outside effects stay blocked | Passed | Constructor and dispatch tests |
+| Every tool states its effect | Passed | Required constructor field |
+| Ordered dispatch gates stay exact | Passed | Priority and malformed-argument tests |
+| Blocked handlers never start | Passed | `ToolResult.started` and start-count tests |
+| Running cooperative handler receives cancellation | Passed | Event-driven registry and session tests |
+| Handler cleanup settles before turn return | Passed | Cleanup ordering test |
+| Completed handler wins a cancellation tie | Passed | Same-race completion test |
+| Swallowed cancellation still settles as cancelled | Passed | Cancellation result test |
+| Remaining batch calls receive linked results | Passed | Four-call cancellation test |
+| No later handler or model request after cancellation | Passed | Four-call cancellation test |
+| Real session, turn, and call IDs reach handlers | Passed | Session execution-context test |
+| Cancelled, blocked, failed, and completed remain distinct | Passed | Turn result-evidence tests |
+| No silent retry | Passed | Attempt-count test |
+| Editable architecture and rendered preview exist | Passed | Diagram deliverables |
+| Architecture validates and render is inspected | Passed | Diagram checks |
+| Full deterministic floor passes | Passed | 142 tests and clean scoped lint |
+| No private content or credentials leak | Passed | Candidate scans |
+| Two reviews have no blocker | Passed | Both final rechecks passed |
 | Owner records final decision | Pending | `decision.md` |

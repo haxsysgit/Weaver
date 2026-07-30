@@ -22,6 +22,7 @@ from weaver.agent.tools import (
     ToolExecutionContext,
     ToolExecutionPolicy,
     ToolRegistry,
+    ToolResult,
 )
 from ..model_layer import (
     ModelLayer,
@@ -317,6 +318,7 @@ async def run_turn(
             safe_failure = safe_error("assistant_persistence")
             break
 
+        batch_cancelled = cancel_event.is_set()
         for tool_call in tool_calls:
             call_evidence = ToolCallMessage(
                 message_id=_message_id(),
@@ -331,21 +333,33 @@ async def run_turn(
                 safe_failure = safe_error("tool_call_persistence")
                 break
 
-            context = ToolExecutionContext(
-                session_id=session_id,
-                turn_id=turn_id,
-                call_id=tool_call.call_id,
-                cancel_event=cancel_event,
-            )
-            tool_result = await tool_registry.dispatch(
-                tool_call.name,
-                tool_call.arguments_json,
-                active_names=active_tools,
-                policy=execution_policy,
-                context=context,
-            )
+            if batch_cancelled or cancel_event.is_set():
+                tool_result = ToolResult(
+                    ok=False,
+                    error_code="cancelled",
+                    error="Tool call was cancelled.",
+                )
+            else:
+                context = ToolExecutionContext(
+                    session_id=session_id,
+                    turn_id=turn_id,
+                    call_id=tool_call.call_id,
+                    cancel_event=cancel_event,
+                )
+                tool_result = await tool_registry.dispatch(
+                    tool_call.name,
+                    tool_call.arguments_json,
+                    active_names=active_tools,
+                    policy=execution_policy,
+                    context=context,
+                )
             if tool_result.started:
                 tool_starts += 1
+            if (
+                tool_result.error_code == "cancelled"
+                or cancel_event.is_set()
+            ):
+                batch_cancelled = True
 
             result_evidence = ToolResultMessage(
                 message_id=_message_id(),
@@ -371,6 +385,10 @@ async def run_turn(
                 break
 
         if exit_reason != TurnExitReason.COMPLETED:
+            break
+        if batch_cancelled:
+            exit_reason = TurnExitReason.INTERRUPTED
+            safe_failure = safe_error("interrupted")
             break
 
     if (
