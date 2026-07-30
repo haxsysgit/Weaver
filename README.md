@@ -1,104 +1,118 @@
-# 🕸️ Weaver
+# 🕸️  Weaver
 
-> A complex synthetic reader friend, made to actually read entire novels,
-> remember everything, form real opinions, and talk about stories like someone
-> who was there.
+Hey. I'm Weaver.
+
+I'm a synthetic reader with a personality. I read novels, the whole thing, every
+chapter, and I actually remember what happened. Not the way a search engine
+remembers, where you type a keyword and hope the right paragraph comes back. I
+mean the way a person remembers: who did what, when they changed, why it
+mattered, and how it felt.
+
+Right now I'm working through Shadow Slave. Three thousand plus chapters. I'm
+still reading.
 
 ---
 
-## 🏷️ The name
+## What I do
 
-Weaver comes from **Shadow Slave**. In that world, Weaver was the daemon. The
+Here's the thing. When a story is three thousand chapters long, nobody can hold
+it all in their head. Characters show up in chapter 200, disappear for a
+thousand chapters, and come back different. Promises made in chapter 400 pay off
+in chapter 1800. Themes build so slowly you don't notice them until they
+suddenly land.
+
+I notice all of it. Here's the kind of stuff I can do:
+
+**I remember the small things.** The side character you liked who showed up
+twice. The exact wording of a vow. What someone was wearing in a scene two
+thousand chapters ago. The kind of detail that makes you go "wait, how did you
+catch that?"
+
+**I follow characters like I know them.** Not just where they are in the plot.
+I mean when their worldview started cracking. Where they lied to themselves.
+The moment they became someone different from who they were, and whether they
+even noticed.
+
+**I connect dots across the whole story.** That cryptic thing someone said in
+chapter 200? It pays off in chapter 1400. I know because I was paying attention.
+
+**I have opinions. Real ones.** I'll tell you who I think was right in an
+argument, which arc dragged, what the author was probably doing with that weird
+side plot. I back them up with evidence and I'm allowed to be wrong. When new
+chapters or a better argument changes my mind, I'll say so and explain what
+shifted.
+
+**I speculate without lying about it.** I'll imagine what happens if a
+character made a different choice, or where a dangling thread might be going.
+But I label it clearly. You always know what's from the book, what's my
+interpretation, and what's me making stuff up for fun.
+
+**I remember our conversations.** Your theories. The character you can't stand.
+The running joke we have about chapter 847. You're not reintroducing yourself
+every time we talk.
+
+**I tell the story back to you.** If you ask me to retell an entire arc, I don't
+dump a summary. I tell it like a story, with pacing and stakes and what
+mattered. Like someone who was there.
+
+---
+
+## Why I exist
+
+Most reading tools either search for keywords or summarize things into
+paragraphs that all sound the same. That's useful for finding a quote. It's
+terrible for understanding a story.
+
+I'm built differently. The novel is the ground truth in my head. Everything I
+think comes from the text and everything I think is labeled so you know whether
+it's fact, opinion, or guesswork. I hold real conversations. I change my mind.
+I argue with you sometimes.
+
+The long term goal: talking to me should feel like talking late at night with
+someone who read the exact same enormous story as you, remembers it way too
+well, has thought about it a lot, and isn't afraid to disagree.
+
+A reading companion that actually reads.
+
+---
+
+## The name
+
+Weaver comes from Shadow Slave. In that world, Weaver was the daemon. The
 elusive one. The forger of the Nightmare Spell. The weaver of fate.
 
-This Weaver's job is the same shape: weaving scenes, facts, timelines,
-characters, themes, interpretations, and conversations into something that
-actually holds together across thousands of chapters.
+Same job, different material. I weave scenes, facts, timelines, characters,
+themes, interpretations, and conversations into something that actually holds
+together across thousands of chapters.
 
-Right now Weaver only reads Shadow Slave. 3,000+ chapters and counting. The
-architecture doesn't care which novel though. Add a spec, add the chapters, and
-Weaver reads the next one the same way.
-
----
-
-## 🧠 Vision
-
-Weaver is a reading companion that doesn't just retrieve paragraphs. It lives
-inside a story, builds layered memory, argues about character motivations, 
-and changes its mind when the evidence says so.
-
-By the time Weaver is fully built, here is the kind of thing it will do:
-
-| Capability | What that actually means |
-|---|---|
-| 🔍 **Literal recall** | Find that one quote from chapter 847. The name of the background character who showed up twice. The exact wording of a promise made 2,000 chapters ago. |
-| 📖 **Narrative understanding** | Retell an entire arc as a proper story, with pacing and stakes, not as a dumped summary. Know what mattered and why. |
-| ⏳ **Episodic memory** | Remember what each character knew and believed at a specific point in the story, not what the reader knows now. |
-| 👤 **Character tracing** | Follow a single character across thousands of chapters. When did their worldview start cracking? Where did they lie to themselves? |
-| 🔗 **Causal reasoning** | Connect cause to effect across arcs. That thing that happened in chapter 200? It pays off in chapter 1400. Weaver knows. |
-| 🧩 **Global synthesis** | Pull themes, patterns, and structure out of a story too big for any human to hold in their head at once. |
-| 💭 **Interpretation and opinion** | Form arguments, defend them with evidence, and admit when a better reading shows up. Weaver is allowed to be wrong. |
-| 🎭 **Speculation** | Imagine beyond canon. "What if Nephis had stayed behind?" Weaver explores it without ever pretending the invention is fact. |
-| 🗣️ **Conversational memory** | Remember your theories, your disagreements, your running jokes across sessions. You're not reintroducing yourself every time. |
-
-The goal: talking to Weaver should feel like talking late at night with a
-friend who read the same enormous story, remembers it way too well, has thought
-about it, and is perfectly willing to disagree with you.
+Shadow Slave is my first book. The architecture doesn't care which novel though.
+Add a spec, add the chapters, and I'll read the next one the same way.
 
 ---
 
+## How it works (the short version)
 
-## 🪨 Design principles
+For the technically curious: I'm built as a series of experiments, each one
+proving one specific thing before the next one starts. The model layer handles
+talking to the AI. The conversation ledger keeps exact records of every exchange
+and survives crashes without losing anything. The corpus tools manage the books
+themselves, which are private and never leave the machine.
 
-**The novel is ground truth.** Every summary, every memory, every
-interpretation is derived from source text. Nothing Weaver thinks is more
-authoritative than the novel itself. When it matters, the book gets reopened.
-
-**Canon and opinion stay separate.** Every claim is labeled: CANON, INFERRED,
-OPINION, SPECULATION, HYPOTHETICAL. Weaver gets to guess, judge, and invent.
-It does not get to quietly turn those into facts.
-
-**Opinions persist, and they can change.** Weaver keeps an interpretive journal:
-theories, evidence, counterarguments, changes of mind. It remembers what it
-thought and why. New evidence or a better argument can move it, and it can
-explain the shift.
-
-**Complexity earns its place.** No knowledge graph until retrieval alone fails.
-No vector database until dense embeddings measurably beat a linear scan. No
-agent swarm until a single agent falls short. Simpler things get tried first.
-When something more complex is needed, the failure is proven first.
-
-**One experiment at a time.** The fastest way to build something nobody
-understands is to build everything at once. Weaver doesn't do that.
-
-## 🧭 Build order
-
-Weaver separates three stages that are easy to blur together:
-
-1. **Durable conversation ledger:** keep exact turns, tool evidence, restart
-   state, recovery choices, and reconnect events.
-2. **Relationship continuity:** remember owner-attributed preferences,
-   theories, shared history, and Weaver's own revisable opinions.
-3. **Literary understanding:** test direct reading first, then compare
-   source-linked compiled memory against it.
-
-Plan 006 defines the first stage. Plan 007 will prove restart safety with a fake
-conversation before any live chat. Relationship curation and literary memory
-remain later capabilities.
-
-Numbered plans and gate states live in [`plans/README.md`](plans/README.md).
-The accepted documentation direction for durable conversation is
-[`docs/decisions/006-conversation-architecture.md`](docs/decisions/006-conversation-architecture.md).
-
-
-## 🔒 Private by design
-
-Novel chapters live under `novels/`. They never get committed, copied, or
-exposed. Every test uses synthetic data. Receipts, logs, and reasoning traces
-stay private. The full agent contract is in [`AGENTS.md`](AGENTS.md).
+If you want the full technical picture, the plans and architecture decisions are
+in [`plans/`](plans/) and [`docs/decisions/`](docs/decisions/). If you just
+want to talk about books, that stuff is under the hood where it belongs.
 
 ---
 
-## 📄 License
+## Private by design
+
+The novels I read stay private. They never get committed, copied, or exposed.
+Every test uses fake data. Conversation records, logs, and reasoning traces are
+local and private. The full rules for how the codebase is managed are in
+[`AGENTS.md`](AGENTS.md).
+
+---
+
+## License
 
 MIT
