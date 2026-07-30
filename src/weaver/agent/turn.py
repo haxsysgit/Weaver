@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Callable
 
-from weaver.agent.errors import safe_error, safe_tool_error
+from weaver.agent.errors import CANCELLED, safe_error, safe_tool_error
 from weaver.agent.messages import (
     AssistantMessage,
     ConversationMessage,
@@ -336,7 +336,7 @@ async def run_turn(
             if batch_cancelled or cancel_event.is_set():
                 tool_result = ToolResult(
                     ok=False,
-                    error_code="cancelled",
+                    error_code=CANCELLED,
                     error="Tool call was cancelled.",
                 )
             else:
@@ -356,7 +356,7 @@ async def run_turn(
             if tool_result.started:
                 tool_starts += 1
             if (
-                tool_result.error_code == "cancelled"
+                tool_result.error_code == CANCELLED
                 or cancel_event.is_set()
             ):
                 batch_cancelled = True

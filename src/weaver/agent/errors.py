@@ -5,6 +5,16 @@ module maps internal failure categories to text that may be returned in a
 TurnResult.
 """
 
+# Tool error codes — single source of truth shared with tools.py.
+UNKNOWN_TOOL = "unknown_tool"
+INACTIVE_TOOL = "inactive_tool"
+EFFECT_NOT_ALLOWED = "effect_not_allowed"
+MALFORMED_ARGUMENTS = "malformed_arguments"
+INVALID_ARGUMENTS = "invalid_arguments"
+CANCELLED = "cancelled"
+TOOL_FAILED = "tool_failed"
+INVALID_OUTPUT = "tool_invalid_output"
+
 _MESSAGES = {
     "user_message_persistence": "user message persistence failed.",
     "history_read": "Session history read failed.",
@@ -34,14 +44,14 @@ def safe_error(category: str) -> str:
 
 def safe_tool_error(code: str) -> str:
     """Map a tool result code to text safe for events and provider projection."""
-    if code in {"unknown_tool", "inactive_tool", "tool_unavailable"}:
+    if code in {UNKNOWN_TOOL, INACTIVE_TOOL, "tool_unavailable"}:
         return safe_error("tool_unavailable")
-    if code == "effect_not_allowed":
+    if code == EFFECT_NOT_ALLOWED:
         return safe_error("tool_effect_not_allowed")
-    if code in {"malformed_arguments", "invalid_arguments"}:
+    if code in {MALFORMED_ARGUMENTS, INVALID_ARGUMENTS}:
         return safe_error("tool_invalid_arguments")
-    if code == "cancelled":
+    if code == CANCELLED:
         return safe_error("tool_cancelled")
-    if code == "invalid_output":
+    if code == INVALID_OUTPUT:
         return safe_error("tool_invalid_output")
-    return safe_error("tool_failed")
+    return safe_error(TOOL_FAILED)

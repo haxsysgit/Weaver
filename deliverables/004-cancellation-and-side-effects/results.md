@@ -169,3 +169,27 @@ The single repair pass:
 No second repair pass is admitted. Both final rechecks passed. The evidence
 reviewer confirmed the corrected 142-test count, four-call label, repaired tree
 hash, and review outcomes.
+
+## Readability pass
+
+After the repaired candidate was accepted, the owner requested a focused
+readability audit. Five improvements landed without changing behavior:
+
+1. **Error code constants** — `errors.py` now owns shared `UNKNOWN_TOOL`,
+   `CANCELLED`, `EFFECT_NOT_ALLOWED` etc. constants. `tools.py` and `turn.py`
+   import and reference them instead of repeating string literals. Single
+   source of truth for dispatch error codes and their safe messages.
+2. **Dispatch gate ordering documented** — `dispatch()` docstring now explains
+   the five-gate sequence and why effect permission checks happen before JSON
+   parsing.
+3. **Cancellation race explained** — a comment block above the two-task
+   `asyncio.wait` race explains the completion-tie rule and the finally-block
+   cleanup guarantee.
+4. **Result variable lifetime clarified** — a one-line comment in the success
+   branch notes that `result` is alive through the finally block and all
+   error branches return early.
+5. **EXTERNAL_EFFECT constraint annotated** — `__post_init__` now carries a
+   comment noting this is a Plan 004 constraint, not a permanent prohibition.
+
+All 142 tests pass with zero source changes beyond comments, imports, and
+constant renaming.

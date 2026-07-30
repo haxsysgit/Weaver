@@ -13,6 +13,17 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, Coroutine
 
+from weaver.agent.errors import (
+    CANCELLED,
+    EFFECT_NOT_ALLOWED,
+    INACTIVE_TOOL,
+    INVALID_ARGUMENTS,
+    INVALID_OUTPUT,
+    MALFORMED_ARGUMENTS,
+    TOOL_FAILED,
+    UNKNOWN_TOOL,
+)
+
 from ..model_layer import ModelToolSchema
 
 logger = logging.getLogger(__name__)
@@ -42,6 +53,8 @@ class ToolExecutionPolicy:
             for effect_kind in normalized_effects
         ):
             raise ValueError("allowed effects must be EffectKind values")
+        # Plan 004 constraint: external effects remain blocked until a
+        # later plan builds the approval and undo surface.
         if EffectKind.EXTERNAL_EFFECT in normalized_effects:
             raise ValueError("external effects cannot be admitted in Plan 004")
         object.__setattr__(self, "allowed_effects", normalized_effects)
@@ -165,33 +178,41 @@ class ToolRegistry:
         policy: ToolExecutionPolicy,
         context: ToolExecutionContext,
     ) -> ToolResult:
-        """Apply dispatch gates before parsing and execution."""
+        """Apply dispatch gates in order: cheap checks before expensive ones.
+
+        Ordering rationale:
+        1. Registration/activity — no work if the tool can never run.
+        2. Effect permission — security boundary before parsing attacker input.
+        3. JSON syntax and shape — parse only after the tool is allowed.
+        4. Pre-cancel — skip handler creation when the turn is already done.
+        5. Handler race — run handler against cancellation, settle before return.
+        """
         tool = self._tools.get(tool_name)
         if tool is None:
             return ToolResult(
                 ok=False,
-                error_code="unknown_tool",
+                error_code=UNKNOWN_TOOL,
                 error=f"Tool {tool_name!r} is not registered.",
             )
 
         if tool_name not in active_names:
             return ToolResult(
                 ok=False,
-                error_code="inactive_tool",
+                error_code=INACTIVE_TOOL,
                 error=f"Tool {tool_name!r} is not active.",
             )
 
         if not policy.allows(tool.effect_kind):
             return ToolResult(
                 ok=False,
-                error_code="effect_not_allowed",
+                error_code=EFFECT_NOT_ALLOWED,
                 error="Tool effect is not allowed in this session.",
             )
 
         if not raw_arguments.strip():
             return ToolResult(
                 ok=False,
-                error_code="malformed_arguments",
+                error_code=MALFORMED_ARGUMENTS,
                 error="Tool arguments are not valid JSON.",
             )
         try:
@@ -199,22 +220,35 @@ class ToolRegistry:
         except json.JSONDecodeError:
             return ToolResult(
                 ok=False,
-                error_code="malformed_arguments",
+                error_code=MALFORMED_ARGUMENTS,
                 error="Tool arguments are not valid JSON.",
             )
         if not isinstance(arguments, dict):
             return ToolResult(
                 ok=False,
-                error_code="invalid_arguments",
+                error_code=INVALID_ARGUMENTS,
                 error="Tool arguments must be a JSON object.",
             )
 
         if context.cancel_event.is_set():
             return ToolResult(
                 ok=False,
-                error_code="cancelled",
+                error_code=CANCELLED,
                 error="Tool call was cancelled.",
             )
+
+        # ── Handler race ──────────────────────────────────────────
+        # Two tasks compete: the handler doing real work, and a waiter
+        # watching for cancellation.  asyncio.wait(FIRST_COMPLETED)
+        # returns when either finishes.
+        #
+        # Completion-tie rule: if handler_task.done() is True at
+        # observation time, the completed result wins even when the
+        # cancel event was set during execution.  This avoids
+        # discarding work that finished just before cancellation.
+        #
+        # The finally block always settles both tasks so no
+        # weaver-tool-* task leaks.
 
         handler_task = asyncio.create_task(
             tool.handler(arguments, context),
@@ -237,12 +271,15 @@ class ToolRegistry:
             )
 
             if handler_task.done():
+                # Success path: handler finished first.
+                # result is defined here and alive through the finally
+                # block — all error branches below return early.
                 try:
                     result = handler_task.result()
                 except asyncio.CancelledError:
                     return ToolResult(
                         ok=False,
-                        error_code="cancelled",
+                        error_code=CANCELLED,
                         error="Tool call was cancelled.",
                         started=True,
                     )
@@ -255,16 +292,17 @@ class ToolRegistry:
                     )
                     return ToolResult(
                         ok=False,
-                        error_code="tool_failed",
+                        error_code=TOOL_FAILED,
                         error="Tool execution failed.",
                         started=True,
                     )
             else:
+                # Cancellation won the race.
                 handler_task.cancel()
                 await self._cancel_and_settle(handler_task)
                 return ToolResult(
                     ok=False,
-                    error_code="cancelled",
+                    error_code=CANCELLED,
                     error="Tool call was cancelled.",
                     started=True,
                 )
@@ -278,7 +316,7 @@ class ToolRegistry:
             if len(serialized) > tool.max_result_chars:
                 return ToolResult(
                     ok=False,
-                    error_code="tool_invalid_output",
+                    error_code=INVALID_OUTPUT,
                     error="Tool result exceeds maximum size.",
                     started=True,
                 )

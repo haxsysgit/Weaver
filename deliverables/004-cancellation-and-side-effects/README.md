@@ -19,7 +19,7 @@ every remaining call in a cancelled batch.
 | `learning.md` | Plain-language understanding and owner gate | Confirmed 2026-07-30 |
 | `architecture.drawio` | Editable cancellation and policy architecture | Complete |
 | `architecture.svg` | Rendered architecture preview | Complete |
-| `results.md` | Deterministic observations | Complete through verification |
+| `results.md` | Deterministic observations | Complete through readability pass |
 | `rubric.md` | Acceptance checklist | Passed except owner decision |
 | `review-ledger.md` | Independent reviews and rechecks | Both final rechecks passed |
 | `decision.md` | Owner's final decision | Pending |

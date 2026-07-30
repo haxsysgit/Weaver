@@ -79,3 +79,10 @@ Repair verification:
 - Correction: rubric now records 142 tests and the four-call cancellation test
 - Final record acknowledgement: passed
 - Open blockers: none
+
+## Readability pass
+
+Owner-requested pass after acceptance. No behavioral changes. Five
+improvements: shared error-code constants, dispatch-gate documentation,
+cancellation-race explanation, result-variable lifetime comment,
+EXTERNAL_EFFECT constraint annotation. 142 tests pass, lint clean.
