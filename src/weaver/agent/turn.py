@@ -6,6 +6,7 @@ import asyncio
 import json
 import logging
 import uuid
+from collections.abc import Awaitable
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Callable
@@ -38,7 +39,10 @@ logger = logging.getLogger(__name__)
 
 _MAX_MODEL_STEPS = 8
 
-PersistCallback = Callable[[ConversationMessage], None]
+# Plan 008 carve-out (contract §2): the persist seam is async end-to-end.
+# A sync callback that returns a coroutine would be treated as success by
+# _persist and every message would silently never persist.
+PersistCallback = Callable[[ConversationMessage], Awaitable[None]]
 
 
 class TurnExitReason(str, Enum):
@@ -68,14 +72,14 @@ def _message_id() -> str:
     return uuid.uuid4().hex[:12]
 
 
-def _persist(
+async def _persist(
     message: ConversationMessage,
     callback: PersistCallback | None,
 ) -> bool:
     if callback is None:
         return True
     try:
-        callback(message)
+        await callback(message)
         return True
     except Exception:
         logger.warning(
@@ -265,7 +269,7 @@ async def run_turn(
                 include_tool_calls=False,
             )
             new_messages.append(interrupted)
-            if not _persist(interrupted, persist_message):
+            if not await _persist(interrupted, persist_message):
                 exit_reason = TurnExitReason.PERSISTENCE_FAILED
                 safe_failure = safe_error("assistant_persistence")
                 break
@@ -284,7 +288,7 @@ async def run_turn(
                 response_message=response_message,
             )
             new_messages.append(assistant)
-            if not _persist(assistant, persist_message):
+            if not await _persist(assistant, persist_message):
                 exit_reason = TurnExitReason.PERSISTENCE_FAILED
                 safe_failure = safe_error("assistant_persistence")
                 break
@@ -313,7 +317,7 @@ async def run_turn(
             response_message=response_message,
         )
         new_messages.append(assistant)
-        if not _persist(assistant, persist_message):
+        if not await _persist(assistant, persist_message):
             exit_reason = TurnExitReason.PERSISTENCE_FAILED
             safe_failure = safe_error("assistant_persistence")
             break
@@ -328,7 +332,7 @@ async def run_turn(
                 arguments_json=tool_call.arguments_json,
             )
             new_messages.append(call_evidence)
-            if not _persist(call_evidence, persist_message):
+            if not await _persist(call_evidence, persist_message):
                 exit_reason = TurnExitReason.PERSISTENCE_FAILED
                 safe_failure = safe_error("tool_call_persistence")
                 break
@@ -379,7 +383,7 @@ async def run_turn(
                 ),
             )
             new_messages.append(result_evidence)
-            if not _persist(result_evidence, persist_message):
+            if not await _persist(result_evidence, persist_message):
                 exit_reason = TurnExitReason.PERSISTENCE_FAILED
                 safe_failure = safe_error("tool_result_persistence")
                 break

@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="850" height="700" viewBox="0 0 850 700" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#444"/>
+    </marker>
+  </defs>
+  <rect width="850" height="700" fill="#ffffff"/>
+
+  <!-- Owner input -->
+  <rect x="40" y="40" width="180" height="40" rx="6" fill="#dae8fc" stroke="#6c8ebf"/>
+  <text x="130" y="64" text-anchor="middle" font-size="12">Owner input (user_text)</text>
+
+  <!-- SessionWeave.send() -->
+  <rect x="330" y="40" width="180" height="40" rx="6" fill="#dae8fc" stroke="#6c8ebf"/>
+  <text x="420" y="64" text-anchor="middle" font-size="12">SessionWeave.send()</text>
+
+  <!-- RunCoordinator.start_turn -->
+  <rect x="610" y="40" width="200" height="60" rx="6" fill="#d5e8d4" stroke="#82b366"/>
+  <text x="710" y="64" text-anchor="middle" font-size="12">RunCoordinator.start_turn</text>
+  <text x="710" y="80" text-anchor="middle" font-size="11">owner item in one tx (turn_id, run_id)</text>
+
+  <!-- ConversationRunner.run_turn_in_run -->
+  <rect x="330" y="170" width="200" height="60" rx="6" fill="#fff2cc" stroke="#d6b656"/>
+  <text x="430" y="194" text-anchor="middle" font-size="12">ConversationRunner.run_turn_in_run</text>
+  <text x="430" y="210" text-anchor="middle" font-size="11">(conversation_id, run_id, turn_id, cancel_event)</text>
+
+  <!-- load items + adapter -->
+  <rect x="610" y="170" width="200" height="60" rx="6" fill="#f8cecc" stroke="#b85450"/>
+  <text x="710" y="194" text-anchor="middle" font-size="12">load all items</text>
+  <text x="710" y="210" text-anchor="middle" font-size="11">_items_to_messages (pinned mapping table)</text>
+
+  <!-- run_turn (agent) -->
+  <rect x="330" y="310" width="200" height="70" rx="6" fill="#fff2cc" stroke="#d6b656"/>
+  <text x="430" y="334" text-anchor="middle" font-size="12">run_turn (agent)</text>
+  <text x="430" y="350" text-anchor="middle" font-size="11">model stream + ToolRegistry.dispatch</text>
+  <text x="430" y="366" text-anchor="middle" font-size="11">cancel_event (cooperative only)</text>
+
+  <!-- persist callback seam -->
+  <rect x="610" y="300" width="200" height="70" rx="6" fill="#e1d5e7" stroke="#9673a6"/>
+  <text x="710" y="324" text-anchor="middle" font-size="12">persist callback seam (async)</text>
+  <text x="710" y="340" text-anchor="middle" font-size="11">_message_to_item -&gt; _tx -&gt; ItemRecord</text>
+  <text x="710" y="356" text-anchor="middle" font-size="11">one message per transaction</text>
+
+  <!-- finalization -->
+  <rect x="330" y="460" width="200" height="50" rx="6" fill="#fff2cc" stroke="#d6b656"/>
+  <text x="430" y="482" text-anchor="middle" font-size="12">COMPLETED -&gt; complete_run(flag=True)</text>
+  <text x="430" y="498" text-anchor="middle" font-size="11">else -&gt; mark_interrupted</text>
+
+  <!-- TurnResult -->
+  <rect x="330" y="580" width="200" height="40" rx="6" fill="#dae8fc" stroke="#6c8ebf"/>
+  <text x="430" y="604" text-anchor="middle" font-size="12">TurnResult to owner</text>
+
+  <!-- arrows -->
+  <line x1="220" y1="60" x2="326" y2="60" stroke="#444" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="510" y1="60" x2="606" y2="60" stroke="#444" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="558" y="52" text-anchor="middle" font-size="10">start_turn</text>
+  <line x1="710" y1="100" x2="710" y2="166" stroke="#444" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="722" y="140" font-size="10">turn_id, run_id</text>
+  <line x1="530" y1="200" x2="606" y2="200" stroke="#444" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="568" y="192" text-anchor="middle" font-size="10">load all items</text>
+  <line x1="610" y1="220" x2="534" y2="220" stroke="#444" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+  <text x="572" y="242" text-anchor="middle" font-size="10">history</text>
+  <line x1="430" y1="230" x2="430" y2="306" stroke="#444" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="442" y="274" font-size="10">run_turn(history, persist_message=...)</text>
+  <line x1="530" y1="340" x2="606" y2="330" stroke="#444" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+  <text x="568" y="320" text-anchor="middle" font-size="10">assistant / tool_call / tool_result</text>
+  <line x1="610" y1="350" x2="534" y2="360" stroke="#444" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+  <text x="572" y="376" text-anchor="middle" font-size="10">persisted (one tx each)</text>
+  <line x1="430" y1="380" x2="430" y2="456" stroke="#444" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arrow)"/>
+  <text x="442" y="424" font-size="10">TurnResult</text>
+  <line x1="430" y1="510" x2="430" y2="576" stroke="#444" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="220" y1="600" x2="326" y2="600" stroke="#444" stroke-width="1.5" marker-end="url(#arrow)"/>
+</svg>

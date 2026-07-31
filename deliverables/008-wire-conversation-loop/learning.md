@@ -2,11 +2,11 @@
 
 ## Gate status
 
-**Unadmitted. Owner confirmation required before implementation.**
-
-Plan 007 is implemented. This confirmation admits Plan 008 implementation.
-It does not accept the future implementation. The final owner decision remains
-pending after tests, inspection, and independent review.
+**Admitted 2026-07-31.** Owner admitted Plan 008 (post-rewrite) and instructed
+implementation. Answers below were re-verified line-by-line against the
+tree on 2026-07-31; stale draft claims corrected. Final owner decision on
+the implementation remains pending after tests, inspection, and independent
+review.
 
 ## Tiny model
 
@@ -36,9 +36,10 @@ into the database inside a coordinator-managed transaction.
 - `run_turn()` (`agent/turn.py:149-280`): streams model responses, dispatches
   tools, calls `persist_message` after every message, returns `TurnResult`.
   The `persist_message` parameter (line 38 type alias, line 161 default
-  `None`) is a `Callable[[ConversationMessage], None]` — sync, one message at
-  a time.
-- `SessionWeave` (`conversation/session.py:30-126`): wires
+  `None`) is `Callable[[ConversationMessage], None]` — sync, one message at
+  a time. **Plan 008 converts it to an async callback (named carve-out,
+  contract §2: `turn.py:38,71-84` + call site only).**
+- `SessionWeave` (`conversation/session.py:17-126`): wires
   `ConversationRepository` and `RunCoordinator`. Has `start_conversation`,
   `continue_interrupted`, `retry_interrupted`, `find_interrupted_runs`. No
   `send()` method. No reference to `agent/`.
@@ -48,9 +49,9 @@ into the database inside a coordinator-managed transaction.
 - `ItemRecord` (`conversation/repository.py:14-22`): dataclass with `id`,
   `conversation_id`, `sequence`, `turn_id`, `run_id`, `kind` ("owner",
   "assistant", "tool_call", "tool_result"), `body` (JSON string), `created_at`.
-- `ConversationMessage` (`agent/messages.py:14-104`): union of `UserMessage`,
+- `ConversationMessage` (`agent/messages.py:14-68`): union of `UserMessage`,
   `AssistantMessage`, `ToolCallMessage`, `ToolResultMessage`.
-- `FakeModelProvider` (`model_layer/fake.py:30-56`): pre-programmed with a
+- `FakeModelProvider` (`model_layer/fake.py:26-56`): pre-programmed with a
   tuple of `ModelResponse` objects. Tests use `scripted_layer(*responses)`
   from `tests/test_agent_turn.py:97-108`.
 - `ToolRegistry` (`agent/tools.py`): dispatches tools with cancellation and
@@ -75,15 +76,19 @@ into the database inside a coordinator-managed transaction.
    The `kind` field is set from the message type, the `body` is the JSON
    serialization of the message's fields.
 5. The persist callback is a closure that captures `conversation_id`,
-   `run_id`, and `turn_id` from the outer `run_turn_in_run` scope. It calls
-   `_message_to_item` and then `_repo._insert_item` inside a transaction.
-   Because `_insert_item` is underscore-prefixed (private), the persist
-   callback is an intentional internal coupling — the callback is owned by
-   the coordinator's phase lifecycle.
+   `run_id`, and `turn_id` from the outer `run_turn_in_run` scope. It
+   converts each message via `_message_to_item` and inserts the `ItemRecord`
+   inside a single transaction **through the coordinator's rollback-safe
+   `_tx` helper** (Slice 0; an exception rolls back and leaves the session
+   usable). Because `_insert_item` is underscore-prefixed (private), the
+   persist callback is an intentional internal coupling — the callback is
+   owned by the conversation module. The callback is `async` (carve-out,
+   contract §2): the sync `_persist` at `turn.py:71-84` awaits it.
 6. After `run_turn()` returns, `run_turn_in_run` advances the run phase to
    `completed` or `interrupted` based on `TurnResult.exit_reason`. The
-   mapping: `COMPLETED` → `completed`, `INTERRUPTED` → `interrupted`,
-   `MODEL_FAILED` → `interrupted`, `INCOMPLETE` → `interrupted`.
+   pinned mapping (contract §9): `COMPLETED` → `completed`; `INTERRUPTED`,
+   `MODEL_FAILED`, `INCOMPLETE`, `LIMIT_REACHED`, `PERSISTENCE_FAILED` →
+   `interrupted`.
 7. `SessionWeave.__init__` accepts `model_layer`, `model`, `system_prompt`,
    `tool_registry`, `active_tools`, and `execution_policy` as optional
    keyword arguments. When all are provided, `open()` creates a
@@ -99,9 +104,11 @@ into the database inside a coordinator-managed transaction.
    008. It is superseded by `SessionWeave` but both coexist until the TUI
    and CLI are wired in Plan 010. Deleting it prematurely would break
    existing tests that import it.
-10. No changes to `agent/turn.py`, `agent/tools.py`, `agent/messages.py`,
-    or `model_layer/`. The conversation module becomes the first consumer
-    of the agent module but the agent module is unchanged.
+10. The only `agent/` change in Plan 008 is the named carve-out: the persist
+    seam in `agent/turn.py` (line 38 type alias, `_persist` at lines 71-84,
+    and the call sites) becomes async, plus the adjusted callback tests in
+    `tests/test_agent_turn.py`. No other `agent/` files change, and
+    `agent/tools.py`, `agent/messages.py`, `model_layer/` are untouched.
 11. The run phase lifecycle for a send() call is:
     `queued` (created by `start_turn`) → items settle one at a time via
     persist callback → `completed` or `interrupted` (set after `run_turn()`
@@ -166,9 +173,13 @@ runner.run_turn_in_run(conv_id, run_id, turn_id, cancel_event)
 
 ## Confirmation record
 
-- Owner choice: pending
-- Date: pending
-- Corrections or added constraints: pending
-
-Confirming approves this interpretation and the adapter design. It does not
-accept the future code.
+- Owner choice: **Admitted 2026-07-31** — "i have accepted plan 008, start implementing".
+  This confirms the interpretation and adapter design above; it does not
+  accept the future code.
+- Corrections at admission: gate status updated; item 5 (async seam + `_tx`),
+  item 6 (full exit mapping), item 10 (carve-out) corrected to match the
+  rewritten plan contract; line refs for `session.py:17`, `fake.py:26`,
+  `messages.py:14-68/70-136` re-verified.
+- The remaining gate: the owner confirms Slice 1 answers above before
+  Slice 2 builds `ConversationRunner` and applies the `agent/turn.py`
+  carve-out.

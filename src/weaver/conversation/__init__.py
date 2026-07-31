@@ -8,10 +8,12 @@ from .repository import (
     ItemRecord,
     RunRecord,
 )
+from .runner import ConversationRunner
 from .session import SessionWeave
 
 __all__ = [
     "ConversationRepository",
+    "ConversationRunner",
     "EventRecord",
     "ItemRecord",
     "RunCoordinator",

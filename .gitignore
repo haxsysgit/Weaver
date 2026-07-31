@@ -4,6 +4,7 @@ temp.md
 .firecrawl/
 .pi-subagents/
 .vscode/
+node_modules/
 
 # Immutable private sources
 novels/
@@ -17,6 +18,7 @@ wiki/
 vault/
 generated-wiki/
 generated-vault/
+/weaver/
 
 # Python-generated files
 __pycache__/

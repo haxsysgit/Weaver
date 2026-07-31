@@ -4,6 +4,10 @@ from __future__ import annotations
 
 import json
 import logging
+from contextlib import asynccontextmanager
+from collections.abc import AsyncIterator
+
+import aiosqlite
 
 from .common import now, uid
 from .repository import (
@@ -14,6 +18,30 @@ from .repository import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def _tx(
+    db: aiosqlite.Connection,
+) -> AsyncIterator[None]:
+    """Run a write in one transaction; roll back on any exception.
+
+    Every coordinator write must go through this helper: an exception
+    (ValueError, UNIQUE violation, cancellation) without a rollback leaves
+    a dangling open transaction and bricks every later operation on the
+    connection ("cannot start a transaction within a transaction").
+    Uses BEGIN IMMEDIATE (Hermes write-contention pattern) so the write
+    lock is taken at transaction start and contention surfaces early
+    instead of mid-transaction.
+    """
+    async with db.execute("BEGIN IMMEDIATE"):
+        try:
+            yield
+        except BaseException:
+            await db.rollback()
+            raise
+        else:
+            await db.commit()
 
 
 class RunCoordinator:
@@ -34,7 +62,7 @@ class RunCoordinator:
         ts = now()
 
         db = self._repo._db
-        async with db.execute("BEGIN"):
+        async with _tx(db):
             await self._repo._insert_relationship(rel_id, ts)
             await self._repo._insert_conversation(conv_id, rel_id, ts)
             await self._repo._insert_turn(turn_id, conv_id, sequence=1, created_at=ts)
@@ -66,7 +94,6 @@ class RunCoordinator:
                     created_at=ts,
                 )
             )
-            await db.commit()
         return conv_id, turn_id, run_id
 
     async def start_turn(
@@ -83,7 +110,7 @@ class RunCoordinator:
         ts = now()
 
         db = self._repo._db
-        async with db.execute("BEGIN"):
+        async with _tx(db):
             await self._repo._insert_turn(
                 turn_id, conversation_id, turn_sequence, ts
             )
@@ -115,7 +142,6 @@ class RunCoordinator:
                     created_at=ts,
                 )
             )
-            await db.commit()
         return turn_id, run_id
 
     async def insert_assistant_item(
@@ -137,7 +163,7 @@ class RunCoordinator:
             ]
 
         db = self._repo._db
-        async with db.execute("BEGIN"):
+        async with _tx(db):
             seq = await self._repo._next_sequence(conversation_id)
             await self._repo._insert_item(
                 ItemRecord(
@@ -152,7 +178,6 @@ class RunCoordinator:
                 )
             )
             await self._repo._update_run_phase(run_id, "model_call_pending")
-            await db.commit()
 
         if tool_calls:
             return [tc["id"] for tc in tool_calls]
@@ -172,7 +197,7 @@ class RunCoordinator:
         ts = now()
 
         db = self._repo._db
-        async with db.execute("BEGIN"):
+        async with _tx(db):
             # Enforce one result per tool call
             existing = await self._repo._find_tool_result_for_call(
                 tool_call_id
@@ -223,7 +248,6 @@ class RunCoordinator:
                 )
             )
             await self._repo._update_run_phase(run_id, "settling")
-            await db.commit()
 
     async def complete_run(
         self,
@@ -231,25 +255,35 @@ class RunCoordinator:
         run_id: str,
         turn_id: str,
         final_text: str,
+        *,
+        final_item_already_persisted: bool = False,
     ) -> None:
-        """Mark run and turn completed with final assistant item."""
+        """Mark run and turn completed with the final assistant item.
+
+        With ``final_item_already_persisted=True`` (used by the
+        ConversationRunner, plan 008 contract §3) the final assistant item
+        was already persisted by the persist callback and only the
+        run_completed event + phase transition are recorded — otherwise a
+        second, semantically identical assistant item is inserted.
+        """
         ts = now()
 
         db = self._repo._db
-        async with db.execute("BEGIN"):
-            seq = await self._repo._next_sequence(conversation_id)
-            await self._repo._insert_item(
-                ItemRecord(
-                    id=uid(),
-                    conversation_id=conversation_id,
-                    sequence=seq,
-                    turn_id=turn_id,
-                    run_id=run_id,
-                    kind="assistant",
-                    body=json.dumps({"content": final_text}),
-                    created_at=ts,
+        async with _tx(db):
+            if not final_item_already_persisted:
+                seq = await self._repo._next_sequence(conversation_id)
+                await self._repo._insert_item(
+                    ItemRecord(
+                        id=uid(),
+                        conversation_id=conversation_id,
+                        sequence=seq,
+                        turn_id=turn_id,
+                        run_id=run_id,
+                        kind="assistant",
+                        body=json.dumps({"content": final_text}),
+                        created_at=ts,
+                    )
                 )
-            )
             eseq = await self._repo._next_event_sequence(conversation_id)
             await self._repo._insert_event(
                 EventRecord(
@@ -263,14 +297,12 @@ class RunCoordinator:
                 )
             )
             await self._repo._update_run_phase(run_id, "completed")
-            await db.commit()
 
     async def mark_interrupted(self, run_id: str) -> None:
         """Mark a run as interrupted (crash before completion)."""
         db = self._repo._db
-        async with db.execute("BEGIN"):
+        async with _tx(db):
             await self._repo._update_run_phase(run_id, "interrupted")
-            await db.commit()
 
     async def continue_interrupted(
         self,
@@ -284,7 +316,7 @@ class RunCoordinator:
         ts = now()
 
         db = self._repo._db
-        async with db.execute("BEGIN"):
+        async with _tx(db):
             await self._repo._insert_run(
                 new_run_id,
                 turn_id,
@@ -305,7 +337,6 @@ class RunCoordinator:
                     created_at=ts,
                 )
             )
-            await db.commit()
 
         settled = await self._repo.load_items(
             conversation_id, for_run_id=interrupted_run.id
@@ -324,7 +355,7 @@ class RunCoordinator:
         ts = now()
 
         db = self._repo._db
-        async with db.execute("BEGIN"):
+        async with _tx(db):
             await self._repo._insert_run(
                 new_run_id,
                 turn_id,
@@ -345,6 +376,5 @@ class RunCoordinator:
                     created_at=ts,
                 )
             )
-            await db.commit()
 
         return new_run_id, turn_id

@@ -164,6 +164,15 @@ def make_registry(
     return registry
 
 
+def _async_append(target: list):
+    """Async persist callback collecting messages (async seam, plan 008)."""
+
+    async def append(message) -> None:
+        target.append(message)
+
+    return append
+
+
 async def execute_turn(
     layer: ModelLayer,
     model: ModelSpec,
@@ -424,7 +433,7 @@ class TestTurnProtocol:
             layer,
             model,
             active_tools=("echo",),
-            persist_message=persisted.append,
+            persist_message=_async_append(persisted),
         )
 
         assert [message.kind for message in persisted] == [

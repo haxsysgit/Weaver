@@ -67,6 +67,7 @@ CREATE TABLE run_event (
 PRAGMAS = [
     "PRAGMA journal_mode=WAL",
     "PRAGMA foreign_keys=ON",
+    "PRAGMA busy_timeout=5000",
 ]
 
 

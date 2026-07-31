@@ -135,6 +135,15 @@ class ConversationRepository:
         assert row is not None
         return row[0]
 
+    async def _next_turn_sequence(self, conversation_id: str) -> int:
+        cursor = await self._db.execute(
+            "SELECT COALESCE(MAX(sequence), 0) + 1 FROM turn WHERE conversation_id = ?",
+            (conversation_id,),
+        )
+        row = await cursor.fetchone()
+        assert row is not None
+        return row[0]
+
     async def _next_event_sequence(self, conversation_id: str) -> int:
         cursor = await self._db.execute(
             "SELECT COALESCE(MAX(sequence), 0) + 1 FROM run_event WHERE conversation_id = ?",

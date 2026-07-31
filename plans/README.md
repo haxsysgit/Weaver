@@ -35,5 +35,7 @@ Plans 012-013 are the original deferred literary experiments, renumbered.
 They wait until the conversation infrastructure (008-011) is complete.
 
 Only one numbered plan may be active in implementation or review at a time.
-Plan 008 begins a fresh learning cycle only after Plan 007's final owner
-decision (applied but pending recorded acceptance in `decision.md`).
+Plan 007's final owner decision is recorded as **Accepted** in
+`deliverables/007-restart-safe-conversation-proof/decision.md` (2026-07-30).
+Plan 008's final owner decision is recorded as **Accepted** in
+`deliverables/008-wire-conversation-loop/decision.md` (2026-07-31).
