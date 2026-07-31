@@ -257,6 +257,9 @@ async def _run_chat(state_dir: Path, *, live: bool) -> int:
         await app.run_async()
     finally:
         await sw.close()
+    # pi prints its resume line at exit; resume lands in Phase C, so the
+    # line names the notebook path the conversation lives in today.
+    print(f"session saved: {conv_id} -> {state_dir / 'weaver.sqlite3'}")
     return 0
 
 

@@ -111,6 +111,36 @@ config file loaded at startup.
   saw WEAVER_CHAT_MODEL=deepseek-v4-pro and reported model_failed). Fixed
   with direct `os.environ.pop` in teardown; documented in test_config.py.
 
+## Phase A: pi-shaped screen (2026-07-31)
+
+Owner directed: stay in plan 10 for a while, study pi's TUI, mirror its
+look little by little, separate concerns. TUI stays; web UI deferred with
+explicit triggers recorded in the plan.
+
+Shipped (new files src/weaver/tui/widgets.py, tests/test_tui_widgets.py;
+app.py and cli.py edits):
+
+- No Header (pi has no top chrome); one-line StatusBar under the input:
+  spinner or dot + mode + `^c cancel · ^q quit`.
+- Welcome line, pi-minimal, cleared by the first submit.
+- Busy spinner (braille frames, 10fps) while a turn runs.
+- Ctrl+C is now a priority binding: it beats the focused Input's copy
+  binding (verified from source: Input binds ctrl+c -> copy). With a turn
+  in flight it cancels; idle it clears the input (pi's app.clear). Copy
+  stays available via the terminal's own ctrl+shift+c.
+- Exit prints `session saved: <id> -> <state dir>/weaver.sqlite3` (resume flag is Phase C).
+- Pi chat-screen anatomy and the mappings recorded in pi-tui-deep-dive.md.
+
+Recorded failures (test authoring): pilot.press() waits for screen idle,
+so gated sends must be driven via Input.action_submit() + sleeps; Textual
+pumps messages sequentially, so the still-thinking guard can't be hit via
+queued submits and is tested by driving the handler directly; Static
+content lives in `status.content`, not `renderable`; Input.action_submit
+is async and must be awaited.
+
+9 new tests (3 pure, 6 pilot with a stub session, no DB/model layer);
+full suite 203 passed; ruff clean.
+
 ## Repair pass (commit 2c0792b)
 
 Both reviewers passed with no blockers; one repair pass applied:

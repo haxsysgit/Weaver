@@ -1,8 +1,13 @@
 """Weaver chat TUI.
 
-Plan 010: one file, one App class, three widgets, no streaming, no
-markdown. The TUI is the attachment point for later plans (Plan 011,
-memory plans) — keep it thin: send + render.
+Plan 010: one App class, thin widgets, no streaming, no markdown. The TUI
+is the attachment point for later plans (Plan 011, memory plans) — keep it
+thin: send + render.
+
+Phase A (pi-shaped screen): no Header chrome (pi has none); the mode/model
+live in a one-line StatusBar under the input with a spinner while a turn
+runs; a single welcome line appears at start and is cleared by the first
+submit; the CLI prints a session line at exit.
 
 Cancellation contract (Plan 010 §4): Ctrl+C sets the in-flight turn's
 cancel event, never task.cancel(). The turn settles through the runner's
@@ -17,22 +22,25 @@ import logging
 from rich.markup import escape
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.widgets import Footer, Header, Input, RichLog
+from textual.widgets import Input, RichLog
 
 from weaver.agent.turn import TurnResult
 from weaver.conversation.session import SessionWeave
+from weaver.tui.widgets import StatusBar, welcome_line
 
 logger = logging.getLogger(__name__)
 
 
 class WeaverChat(App[None]):
-    """Minimal chat window: Header, RichLog history, Input, Footer."""
+    """Pi-shaped chat window: RichLog history, Input, one-line StatusBar."""
 
     BINDINGS = [
         # Plan 010 §4: Ctrl+C cancels the in-flight turn instead of quitting.
+        # priority=True so it beats the focused Input's ctrl+c copy binding
+        # (copy stays available via the terminal's own ctrl+shift+c).
         # Overrides Textual's base ctrl+c -> help_quit; ctrl+q stays as the
         # priority quit binding from the App base class.
-        Binding("ctrl+c", "cancel_turn", "Cancel", show=False),
+        Binding("ctrl+c", "cancel_turn", "Cancel", show=False, priority=True),
     ]
 
     def __init__(
@@ -47,22 +55,30 @@ class WeaverChat(App[None]):
         self._mode_label = mode_label
         self._cancel_event: asyncio.Event | None = None
         self._send_in_flight = False
+        self._welcome_shown = False
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=True)
         yield RichLog(id="chat-log", highlight=True, markup=True, wrap=True)
         yield Input(id="input", placeholder="Type a message...")
-        yield Footer()
+        yield StatusBar(self._mode_label)
 
     def on_mount(self) -> None:
-        self.sub_title = f"Weaver — {self._mode_label}"
+        self._log(welcome_line(self._mode_label))
+        self._welcome_shown = True
         self.query_one("#input", Input).focus()
 
     def action_cancel_turn(self) -> None:
-        """Ctrl+C: set the cancel event; the turn settles cooperatively."""
+        """Ctrl+C: cancel the in-flight turn, or clear the input when idle.
+
+        pi-style: with nothing running, ctrl+c clears the editor (pi's
+        app.clear); with a turn in flight it sets the cancel event and the
+        turn settles cooperatively.
+        """
         if self._cancel_event is not None and not self._cancel_event.is_set():
             self._cancel_event.set()
             self._log("(cancelling…)")
+            return
+        self.query_one("#input", Input).value = ""
 
     async def on_input_submitted(self, event: Input.Submitted) -> None:
         text = event.value.strip()
@@ -74,10 +90,15 @@ class WeaverChat(App[None]):
             self._log("(still thinking…)")
             return
         event.input.clear()
+        if self._welcome_shown:
+            # pi-style: the startup line disappears with the first submit.
+            self.query_one("#chat-log", RichLog).clear()
+            self._welcome_shown = False
 
         self._log(f"[bold]You:[/bold] {escape(text)}")
         self._send_in_flight = True
         self._cancel_event = asyncio.Event()
+        self.query_one(StatusBar).set_busy(True)
         try:
             result = await self._sw.send(
                 self._conv_id,
@@ -88,6 +109,7 @@ class WeaverChat(App[None]):
         finally:
             self._send_in_flight = False
             self._cancel_event = None
+            self.query_one(StatusBar).set_busy(False)
             self.query_one("#input", Input).focus()
 
     def _show_result(self, result: TurnResult) -> None:

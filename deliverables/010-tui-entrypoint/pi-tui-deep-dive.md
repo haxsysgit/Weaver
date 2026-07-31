@@ -193,3 +193,31 @@ The things to deliberately copy from pi in plan 010:
   `components/editor.js`, `components/input.js`, `utils.js`,
   `kill-ring.js`, `undo-stack.js`.
 - pi's `docs/tui.md` and `docs/keybindings.md` (installed package).
+
+## Pi chat-screen anatomy (what Phase A mirrors)
+
+From the 0.83.0 live capture plus docs/tui.md, pi's chat screen has:
+
+1. **No top chrome.** No header bar, no title row. Content (messages,
+   tool output) scrolls in the terminal scrollback.
+2. **Editor at the bottom** with a border; prompt appears when typing.
+3. **One-line footer below the editor** with dot-separated sections:
+   model, context %, usage counters, cwd, key hints. This is the
+   `setFooter` surface.
+4. **Working indicator**: a spinner in the status area while the model
+   thinks (`setWorkingIndicator`).
+5. **Minimal startup**: a single line ("Ponytail loaded: full"), not a
+   banner or card.
+6. **Exit prints the resume line**: `pi --session <id>`.
+
+Phase A mappings in Weaver's Textual chat:
+
+- Header widget removed; mode/model live in a custom one-line `StatusBar`
+  under the input (spinner + mode + `^c cancel · ^q quit`).
+- Welcome: one dim line in the log, cleared by the first submit.
+- Busy: braille spinner at 10fps in the StatusBar while a turn runs.
+- Exit: the CLI prints `session saved: <id> -> <state dir>/weaver.sqlite3`; the resume
+  flag itself lands in Phase C.
+- Ctrl+C: priority binding, cancels the in-flight turn; with no turn it
+  clears the input (pi's app.clear behavior). Copy via the terminal's own
+  ctrl+shift+c.

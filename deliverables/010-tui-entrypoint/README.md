@@ -20,7 +20,7 @@ selection based on `DEEPSEEK_KEY`, and the tool registration boundary.
 | `learning.md` | Plain-language understanding and owner gate | Confirmed 2026-07-31 |
 | `architecture.drawio` | Editable TUI architecture | Built 2026-07-31 |
 | `architecture.svg` | Rendered architecture preview | Built 2026-07-31 |
-| `results.md` | Deterministic observations and executed commands | Implemented 2026-07-31 (3 correction rounds) |
+| `results.md` | Deterministic observations and executed commands | Implemented 2026-07-31 (3 correction rounds + Phase A) |
 | `rubric.md` | Acceptance checklist | Implemented 2026-07-31 |
 | `review-ledger.md` | Independent findings, repairs, and rechecks | Both reviews + rechecks clean |
 | `decision.md` | Owner's final accept or reject record | Pending owner decision |
