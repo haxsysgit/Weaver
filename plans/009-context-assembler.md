@@ -188,6 +188,8 @@ projection boundary to avoid double-counting drift).
 - `src/weaver/conversation/items.py` (new — extracted adapter)
 - `src/weaver/conversation/runner.py` (import the shared adapter; call the
   assembler before `run_turn()`)
+- `src/weaver/conversation/session.py` (optional `token_budget` kwarg
+  forwarded to the runner; slice 3 sanctions this executor choice)
 - `src/weaver/conversation/__init__.py` (export `ContextAssembler`)
 - `tests/test_conversation.py`
 - Plan 009 deliverables and `plans/README.md`

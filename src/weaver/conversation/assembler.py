@@ -46,6 +46,11 @@ def _count_messages(
     an empty system prompt. Tool schemas are never part of this count: they
     live in the request, not in project_messages output.
     """
+    # ponytail: cl100k_base is an approximation of DeepSeek's real
+    # tokenizer, and content+arguments under-counts role markers and tool
+    # names. Fine until a real tokenizer binding exists (plan maintenance
+    # note); determinism tests guard the formula, not cross-tokenizer
+    # equality.
     total = 0
     for model_message in project_messages(system_prompt="", history=messages):
         total += len(encoding.encode(model_message.content or ""))
@@ -64,6 +69,10 @@ def _group_blocks(items: list[ItemRecord]) -> list[list[ItemRecord]]:
     """
     blocks: list[list[ItemRecord]] = []
     for item in items:
+        # ponytail: corrupt data with no owner anywhere leaves pin_index 0,
+        # so the overflow branch could return a lone tool block (orphaned
+        # tool role). Unreachable per the pinned mapping table (tools always
+        # follow their assistant); guard comment only, no extra code.
         if item.kind in ("owner", "assistant") or not blocks:
             blocks.append([item])
         else:
@@ -123,6 +132,8 @@ class ContextAssembler:
         # Blocks older than the pin are droppable; the pin and everything
         # newer than it are not.
         keep_from = 0
+        # ponytail: O(n²) recount via sum(block_counts[keep_from:]); fine at
+        # realistic conversation sizes, prefix sums if it ever matters.
         while keep_from < pin_index:
             total_kept = system_tokens + sum(block_counts[keep_from:])
             if total_kept <= self._token_budget:
