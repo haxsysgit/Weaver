@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import asyncio
 
-from textual.widgets import Input, RichLog
+from textual.widgets import Input, RichLog, Static
 
 from weaver.agent.turn import TurnExitReason, TurnResult
 from weaver.tui.app import WeaverChat
@@ -41,22 +41,30 @@ def test_welcome_line_mentions_mode_and_hints():
 
 
 class _StubSession:
-    """Duck-typed SessionWeave: records the send, returns scripted results."""
+    """Duck-typed SessionWeave: records sends, streams scripted chunks."""
 
     def __init__(self) -> None:
         self.sent: list[tuple[str, str]] = []
         self.cancel_events: list[asyncio.Event] = []
         self.gate: asyncio.Event | None = None
+        self.stream_chunks: list[str] = []
+        self.streamed: list[str] = []
         self.scripted = TurnResult(
             turn_id="t-1",
             exit_reason=TurnExitReason.COMPLETED,
             final_text="hello back",
         )
 
-    async def send(self, conv_id, text, cancel_event=None):
+    async def send(self, conv_id, text, cancel_event=None, on_delta=None):
         self.sent.append((conv_id, text))
         self.cancel_events.append(cancel_event)
-        if self.gate is not None:
+        if on_delta is not None:
+            for chunk in self.stream_chunks:
+                self.streamed.append(chunk)
+                await on_delta(chunk)
+                if self.gate is not None and not self.gate.is_set():
+                    await self.gate.wait()
+        if self.gate is not None and not self.gate.is_set():
             await self.gate.wait()
         return self.scripted
 
@@ -144,6 +152,30 @@ async def test_pilot_ctrl_c_idle_clears_the_input():
         input_widget.value = "half typed"
         app.action_cancel_turn()
         assert input_widget.value == ""
+
+
+async def test_pilot_stream_deltas_render_live_then_final_in_log():
+    """Phase B: chunks appear in the stream area mid-turn, the final
+    message lands in the log, and the stream area hides afterwards."""
+    stub = _StubSession()
+    stub.stream_chunks = ["hello ", "back"]
+    stub.gate = asyncio.Event()
+    async for app, pilot in _open_chat(stub):
+        await _submit(app, "hi")
+        await asyncio.sleep(0.1)  # first chunk delivered, then gated
+
+        stream = app.query_one("#stream", Static)
+        assert stream.display is True
+        assert "hello " in str(stream.content)  # markup source, text is plain
+        assert stub.streamed == ["hello "]  # mid-turn: send not done
+
+        stub.gate.set()
+        await pilot.pause()
+
+        log = _log_text(app)
+        assert "You: hi" in log
+        assert "Weaver: hello back" in log
+        assert stream.display is False
 
 
 async def test_pilot_empty_submit_ignored_and_log_stays():

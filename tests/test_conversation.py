@@ -807,3 +807,117 @@ async def test_runner_unbounded_default_preserves_plan008():
             assert "third hello" in contents
         finally:
             await sw.close()
+
+
+# ---------------------------------------------------------------------------
+# Plan 010 Phase B: live text deltas through send(on_delta=...).
+# Deltas are a preview; the final assistant message is what persists.
+# ---------------------------------------------------------------------------
+
+
+class _ChunkedFake(FakeModelProvider):
+    """Yields the scripted response as multiple TEXT_DELTA chunks, with an
+    optional gate after the first chunk so tests can observe mid-turn
+    streaming deterministically."""
+
+    def __init__(self, model, response, *, chunk_size: int, gate=None):
+        super().__init__(model.provider_id, models=(model,), responses=(response,))
+        self._chunk_size = chunk_size
+        self._gate = gate
+
+    async def stream(self, model, request, cancel_event, *, max_output_tokens):
+        from weaver.model_layer.types import (
+            ModelStreamEvent,
+            ModelStreamEventType,
+        )
+
+        if cancel_event.is_set():
+            response = self._aborted_response(model)
+        elif self._responses:
+            response = self._responses[0]
+        else:
+            response = self._default_response(model, request)
+        content = response.assistant_message.content or ""
+        first = True
+        for i in range(0, len(content), self._chunk_size):
+            if not first and self._gate is not None:
+                await self._gate.wait()
+            first = False
+            yield ModelStreamEvent(
+                event_type=ModelStreamEventType.TEXT_DELTA,
+                delta=content[i : i + self._chunk_size],
+            )
+        yield ModelStreamEvent(
+            event_type=ModelStreamEventType.RESPONSE_COMPLETE,
+            response=response,
+        )
+
+
+def _chunked_layer(response, *, chunk_size: int, gate=None):
+    model = ModelSpec(
+        provider_id="test-provider",
+        model_id="test-reader",
+        api_family="test",
+        default_output_tokens=777,
+        supports_reasoning=False,
+    )
+    provider = _ChunkedFake(model, response, chunk_size=chunk_size, gate=gate)
+    layer = ModelLayer()
+    layer.register_provider(provider)
+    return layer, model, provider
+
+
+@pytest.mark.asyncio
+async def test_send_on_delta_streams_chunks_before_completion(tmp_path):
+    """Deltas arrive chunk by chunk while the send is still running."""
+    import asyncio
+
+    received: list[str] = []
+
+    async def collect(delta: str) -> None:
+        received.append(delta)
+
+    gate = asyncio.Event()
+    layer, model, provider = _chunked_layer(
+        _stop_response("Hello World."),
+        chunk_size=6,
+        gate=gate,
+    )
+    sw = _open_woven(Path(tmp_path), layer, model, _echo_registry())
+    await sw.open()
+    try:
+        conv_id = await sw.start_conversation("hi")
+        task = asyncio.create_task(
+            sw.send(conv_id, "hello", on_delta=collect)
+        )
+        await asyncio.sleep(0.05)  # let the turn reach the mid-stream gate
+
+        # Mid-turn: the first chunk is already rendered, the send is not
+        # done yet.
+        assert received == ["Hello "]
+        assert not task.done()
+
+        gate.set()
+        result = await task
+        assert received == ["Hello ", "World."]
+        assert result.exit_reason == "completed"
+        assert result.final_text == "Hello World."
+    finally:
+        await sw.close()
+
+
+@pytest.mark.asyncio
+async def test_send_on_delta_none_still_buffers(tmp_path):
+    """Default send() drains the stream with no delta callbacks."""
+    received: list[str] = []
+    layer, model, provider = _fake_layer(_stop_response("Done."))
+    sw = _open_woven(Path(tmp_path), layer, model, _echo_registry())
+    await sw.open()
+    try:
+        conv_id = await sw.start_conversation("hi")
+        result = await sw.send(conv_id, "hello")
+        assert result.exit_reason == "completed"
+        assert result.final_text == "Done."
+        assert received == []
+    finally:
+        await sw.close()

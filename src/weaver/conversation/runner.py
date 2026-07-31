@@ -14,6 +14,7 @@ import uuid
 
 from weaver.agent.messages import ConversationMessage
 from weaver.agent.turn import (
+    DeltaCallback,
     PersistCallback,
     TurnExitReason,
     TurnResult,
@@ -105,6 +106,7 @@ class ConversationRunner:
         run_id: str,
         turn_id: str,
         cancel_event: asyncio.Event,
+        on_delta: DeltaCallback | None = None,
     ) -> TurnResult:
         """Run one bounded model/tool turn inside an existing run.
 
@@ -140,6 +142,7 @@ class ConversationRunner:
                 run_id,
                 turn_id,
             ),
+            on_delta=on_delta,
         )
 
         # Contract §3: single finalization. The final STOP assistant was

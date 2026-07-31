@@ -32,8 +32,10 @@ from ..model_layer import (
     ModelResponse,
     ModelSpec,
     ModelStopReason,
+    ModelStreamEventType,
     ModelToolCall,
 )
+from ..model_layer.layer import ModelProtocolError
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +45,40 @@ _MAX_MODEL_STEPS = 8
 # A sync callback that returns a coroutine would be treated as success by
 # _persist and every message would silently never persist.
 PersistCallback = Callable[[ConversationMessage], Awaitable[None]]
+
+# Plan 010 Phase B seam: the turn loop can forward live text deltas to an
+# async callback while still persisting only the final assistant message.
+# Deltas are best-effort preview: a callback failure is logged and
+# swallowed so a UI hiccup can never fail a turn.
+DeltaCallback = Callable[[str], Awaitable[None]]
+
+
+async def _complete_streaming(
+    model_layer: ModelLayer,
+    model: ModelSpec,
+    request: ModelRequest,
+    cancel_event: asyncio.Event,
+    on_delta: DeltaCallback,
+) -> ModelResponse:
+    """Drain the model stream, forwarding TEXT_DELTA events to on_delta.
+
+    Mirrors ModelLayer.complete (same terminal-response validation) but
+    delivers each text chunk as it arrives.
+    """
+    final_response: ModelResponse | None = None
+    async for event in model_layer.stream(model, request, cancel_event):
+        if event.event_type == ModelStreamEventType.TEXT_DELTA and event.delta:
+            try:
+                await on_delta(event.delta)
+            except Exception:
+                logger.warning("delta callback failed", exc_info=True)
+        elif event.event_type == ModelStreamEventType.RESPONSE_COMPLETE:
+            final_response = event.response
+    if final_response is None:
+        raise ModelProtocolError(
+            "A model stream completed without a final response."
+        )
+    return final_response
 
 
 class TurnExitReason(str, Enum):
@@ -179,6 +215,7 @@ async def run_turn(
     execution_policy: ToolExecutionPolicy,
     cancel_event: asyncio.Event,
     persist_message: PersistCallback | None = None,
+    on_delta: DeltaCallback | None = None,
     max_model_steps: int = 5,
 ) -> TurnResult:
     max_steps = min(max(max_model_steps, 1), _MAX_MODEL_STEPS)
@@ -226,11 +263,23 @@ async def run_turn(
         )
 
         try:
-            response = await model_layer.complete(
-                model,
-                request,
-                cancel_event,
-            )
+            if on_delta is None:
+                # Plan 008 behavior: drain the stream, no live preview.
+                response = await model_layer.complete(
+                    model,
+                    request,
+                    cancel_event,
+                )
+            else:
+                # Phase B: forward deltas as they arrive; the final
+                # response still comes back whole for persistence.
+                response = await _complete_streaming(
+                    model_layer,
+                    model,
+                    request,
+                    cancel_event,
+                    on_delta,
+                )
         except asyncio.CancelledError:
             exit_reason = TurnExitReason.INTERRUPTED
             safe_failure = safe_error("interrupted")

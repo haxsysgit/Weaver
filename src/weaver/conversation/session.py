@@ -10,7 +10,7 @@ from pathlib import Path
 import aiosqlite
 
 from weaver.agent.tools import ToolExecutionPolicy, ToolRegistry
-from weaver.agent.turn import TurnExitReason, TurnResult
+from weaver.agent.turn import DeltaCallback, TurnExitReason, TurnResult
 from weaver.model_layer import ModelLayer, ModelSpec
 
 from .coordinator import RunCoordinator
@@ -114,6 +114,7 @@ class SessionWeave:
         conversation_id: str,
         user_text: str,
         cancel_event: asyncio.Event | None = None,
+        on_delta: DeltaCallback | None = None,
     ) -> TurnResult:
         """Run one full turn with the owner's input and return the result.
 
@@ -124,6 +125,11 @@ class SessionWeave:
 
         Plan 010 seam: the caller may pass its own cancel event (the TUI
         sets it on Ctrl+C). None keeps the Plan 008/009 internal event.
+
+        Plan 010 Phase B seam: an async on_delta callback receives live
+        text chunks as the model streams them; deltas are a preview only,
+        the final assistant message is what persists. None keeps the
+        buffered behavior.
         """
         assert self._repo is not None and self._coordinator is not None
         assert self._runner is not None, (
@@ -151,6 +157,7 @@ class SessionWeave:
             run_id,
             turn_id,
             cancel_event,
+            on_delta=on_delta,
         )
 
     async def start_conversation(self, owner_text: str) -> str:

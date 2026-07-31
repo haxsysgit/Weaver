@@ -22,7 +22,7 @@ import logging
 from rich.markup import escape
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.widgets import Input, RichLog
+from textual.widgets import Input, RichLog, Static
 
 from weaver.agent.turn import TurnResult
 from weaver.conversation.session import SessionWeave
@@ -59,6 +59,12 @@ class WeaverChat(App[None]):
 
     def compose(self) -> ComposeResult:
         yield RichLog(id="chat-log", highlight=True, markup=True, wrap=True)
+        # Phase B: live text deltas render here while the model streams;
+        # on completion the final message lands in the log and this area
+        # hides again (it never holds persisted state).
+        stream = Static(id="stream", markup=True)
+        stream.display = False
+        yield stream
         yield Input(id="input", placeholder="Type a message...")
         yield StatusBar(self._mode_label)
 
@@ -98,19 +104,37 @@ class WeaverChat(App[None]):
         self._log(f"[bold]You:[/bold] {escape(text)}")
         self._send_in_flight = True
         self._cancel_event = asyncio.Event()
+        self._stream_text = ""
+        self._stream_widget().display = False
         self.query_one(StatusBar).set_busy(True)
         try:
             result = await self._sw.send(
                 self._conv_id,
                 text,
                 cancel_event=self._cancel_event,
+                on_delta=self._on_delta,
             )
             self._show_result(result)
         finally:
             self._send_in_flight = False
             self._cancel_event = None
             self.query_one(StatusBar).set_busy(False)
+            self._stream_text = ""
+            self._stream_widget().display = False
             self.query_one("#input", Input).focus()
+
+    async def _on_delta(self, delta: str) -> None:
+        """Append a live chunk to the stream area (preview only)."""
+        self._stream_text += delta
+        # ponytail: re-escaping the whole buffer per chunk is O(n²) in
+        # reply length; fine at chat scale, switch to a text object with
+        # append if long replies ever show up.
+        widget = self._stream_widget()
+        widget.display = True
+        widget.update(f"[bold]Weaver:[/bold] {escape(self._stream_text)}")
+
+    def _stream_widget(self) -> Static:
+        return self.query_one("#stream", Static)
 
     def _show_result(self, result: TurnResult) -> None:
         if result.final_text:
