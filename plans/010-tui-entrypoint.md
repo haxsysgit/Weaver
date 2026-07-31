@@ -34,10 +34,10 @@ Give the owner a working chat window to talk to Weaver during development.
 
 After this plan, `weaver chat` opens a Textual TUI. The owner types a
 message, presses Enter, and sees Weaver's response appear in a scrollable
-conversation pane. Fake-model mode works without credentials and is the
-default. Fake mode requires an explicit `--fake` flag (owner-directed
-correction, 2026-07-31: live is the default; fake is opt-in).
-Ctrl+C sets the turn's cancel event instead of killing the app.
+conversation pane. Live DeepSeek mode is the default (owner-directed
+correction, 2026-07-31: live is the default; fake is opt-in via `--fake`).
+Fake-model mode works without credentials. Ctrl+C sets the turn's cancel
+event instead of killing the app.
 
 ## Why this matters
 
@@ -126,8 +126,9 @@ never writes library files.
 
 ### 3. Mode selection (no silent fallback)
 
-- Default: **fake mode** — `FakeModelProvider` with a scripted response set
-  that produces a friendly non-streamed reply. Fake mode must never construct
+- Default: **live mode** — `DeepSeekProvider` + `deepseek-v4-flash`. `--fake`
+  opts into `FakeModelProvider` with a scripted response set that produces a
+  friendly non-streamed reply; fake mode must never construct
   `DeepSeekProvider` (reuse the `NetworkMustNotBeConstructed` test pattern).
 - `weaver chat` (default, live): requires `DEEPSEEK_KEY`; absent → exit 2
   before any

@@ -47,7 +47,7 @@ clean reviews (both rechecks PASS). Awaiting owner decision.
   INTERNAL_WRITE effect kinds; fetch/update are never registered.
 - `tests/test_tui.py` (7 tests): import check; fake session never
   constructs `DeepSeekProvider`; registry set assertion (fetch/update
-  absent); `chat --help` exit 0 without `corpus`; `chat --live` without key
+  absent); `chat --help` exit 0 without `corpus`; default chat without key
   exits 2 and creates no state dir; full send turn (3 items persisted:
   start owner, "Hello" owner, assistant final); deterministic mid-turn
   cancel (gated fake provider, `cancel_event` set while blocked, settles
@@ -71,7 +71,7 @@ clean reviews (both rechecks PASS). Awaiting owner decision.
 
 Owner asked why chat is fake by default, directed live-first, and asked to
 verify the model id against the DeepSeek API docs. Changes in commit
-`9f1a3f5` (pending):
+`d5fd8b7`:
 
 - `weaver chat` now runs **live DeepSeek by default**; fake is opt-in via
   `--fake` (flag inverted from `--live`).

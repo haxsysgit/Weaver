@@ -17,11 +17,12 @@ Weaver. A TUI is the cheapest conversation surface: same process, same event
 loop, direct `await session.send()`, no HTTP bridge, no serialization.
 
 `weaver chat` opens a Textual window. The owner types a message, presses
-Enter, and sees Weaver's response appear. Fake-model mode works without
-credentials and is the default. Fake mode requires `--fake` (owner
-   correction 2026-07-31: live is the default; fake is opt-in) and a
-`DEEPSEEK_KEY`. Ctrl+C sets the turn's cancel event instead of killing the
-app. The TUI is the attachment point for every downstream experiment.
+Enter, and sees Weaver's response appear. Live DeepSeek mode is the
+default (owner-directed correction 2026-07-31: live is the default; fake is
+opt-in via `--fake`) and requires a `DEEPSEEK_KEY`. Fake mode works without
+credentials and never constructs a live client. Ctrl+C sets the turn's
+cancel event instead of killing the app. The TUI is the attachment point
+for every downstream experiment.
 
 ## The pieces (re-verified 2026-07-31, post-Plan 009)
 
@@ -116,9 +117,9 @@ app. The TUI is the attachment point for every downstream experiment.
    Policy is `maintenance()`; `active_tools` names exactly the registered
    set. The TUI itself never imports `novels/` and never writes library
    files; it only registers tools that may touch them.
-7. Mode selection: `weaver chat` defaults to live. `weaver chat --fake`
-   requires `DEEPSEEK_KEY`; absent → exit 2 before any call or receipt (no
-   state dir created). Fake mode constructs `FakeModelProvider("deepseek",
+7. Mode selection: `weaver chat` defaults to live; without `DEEPSEEK_KEY`
+   it exits 2 before any call or receipt (no state dir created), suggesting
+   `--fake`. Fake mode constructs `FakeModelProvider("deepseek",
    models=DEEPSEEK_MODELS, responses=CHAT_FAKE_RESPONSES)` with a scripted
    friendly STOP response; live constructs `DeepSeekProvider(api_key,
    timeout_seconds=DEFAULT_TIMEOUT_SECONDS)`. The mode label ("fake" or
@@ -132,7 +133,7 @@ app. The TUI is the attachment point for every downstream experiment.
    import check, `sw.send` with fake model + chat registry (completed turn,
    items in DB, non-empty final_text), fake-never-constructs-DeepSeek
    (`NetworkMustNotBeConstructed` pattern), registry excludes fetch/update,
-   `chat --help` exit 0 with no "corpus" wording, `chat --live` without key
+   `chat --help` exit 0 with no "corpus" wording, default chat without key
    exits 2 without creating state, and a deterministic cancel test (gated
    fake provider; setting the event mid-turn settles INTERRUPTED, no
    sleeps). Full headless Textual pilot tests are deferred.
@@ -142,12 +143,12 @@ app. The TUI is the attachment point for every downstream experiment.
 ## TUI flow
 
 ```text
-weaver chat
+weaver chat (live by default) / weaver chat --fake
     |
-    +--> chat --live?
-    |       yes → DEEPSEEK_KEY present? no → exit 2 (no call, no receipt)
+    +--> live? (no --fake flag)
+    |       DEEPSEEK_KEY present? no → exit 2 (no call, no receipt)
     |       yes → DeepSeekProvider + "live deepseek-v4-flash"
-    |       no  → FakeModelProvider + scripted responses + "fake"
+    |       --fake → FakeModelProvider + scripted responses + "fake"
     |
     +--> asyncio.run(_run_chat)
             |   SessionWeave(state_dir, model_layer, model,
@@ -186,7 +187,7 @@ weaver chat
 - `weaver chat` opens a working Textual TUI.
 - `SessionWeave.send()` is called from the TUI's async event loop.
 - Fake mode works without credentials and never constructs a live client.
-- Live mode is explicit (`--live` + key) and fails fast without the key.
+- Live mode is the default; fake is opt-in via `--fake`; no key fails fast.
 - Ctrl+C cancels cooperatively via the cancel event; no `task.cancel()`.
 - Chat tool set is exactly echo + inspect/build/export; fetch/update absent.
 - `test_tui_send` proves the integration path without a terminal.
