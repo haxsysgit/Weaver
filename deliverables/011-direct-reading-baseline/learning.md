@@ -22,8 +22,8 @@ measured.
 ## The pieces
 
 - `build_novel_packet` (`corpus/tools.py`, Plan 002): assembles chapters into
-  a `NovelPacket` with metadata. Takes `start_chapter` and `end_chapter`
-  range. This is the reading material.
+  a `NovelPacket` with metadata. Takes `novel_id` and an explicit
+  `chapters: list[int]` (sorted, deduped, validated). This is the reading material.
 - `ModelLayer.complete()` (`model_layer/layer.py`, Plan 003): sends a
   `ModelRequest` to a specific model and returns a `ModelResponse`. The
   experiment calls this once per model — no conversation, no turns, no
@@ -96,7 +96,7 @@ measured.
 ```text
 weaver experiment direct-reading [--fake]
     |
-    +--> corpus.build_novel_packet(start_ch, end_ch) → packet
+    +--> corpus.build_novel_packet(novel_id, chapters=[...]) → packet
     +--> construct system prompt + chapters + questions
     |
     +--> Flash call:

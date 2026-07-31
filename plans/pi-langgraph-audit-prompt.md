@@ -22,13 +22,13 @@ LANGGRAPH SOURCE: /tmp/langgraph-source
   Tag: 1.2.10 (confirmed — git describe --tags --exact-match returns 1.2.10)
   License: Apache 2.0 (libs/langgraph/LICENSE)
 
-WEAVER SOURCE: /home/hax/novelfriend
-  Product requirements: /home/hax/novelfriend/weaver.md (read the whole file)
-  Current runtime: /home/hax/novelfriend/src/weaver/agent/turn.py (351 lines)
-  Current session: /home/hax/novelfriend/src/weaver/agent/session.py (125 lines)
-  Current messages: /home/hax/novelfriend/src/weaver/agent/messages.py (109 lines)
-  Current model types: /home/hax/novelfriend/src/weaver/model.py (87 lines)
-  Architecture decisions: /home/hax/novelfriend/deliverables/001-experimental-foundation/decision.md
+WEAVER SOURCE: /home/hax/weaver
+  Product requirements: /home/hax/weaver/weaver.md (read the whole file)
+  Current runtime: /home/hax/weaver/src/weaver/agent/turn.py (351 lines)
+  Current session: /home/hax/weaver/src/weaver/agent/session.py (125 lines)
+  Current messages: /home/hax/weaver/src/weaver/agent/messages.py (109 lines)
+  Current model types: /home/hax/weaver/src/weaver/model.py (87 lines)
+  Architecture decisions: /home/hax/weaver/deliverables/001-experimental-foundation/decision.md
   Tests: uv run pytest (target: 72+ passing)
 
 STEP 0.1 — VERSION VERIFICATION (do this first)
@@ -340,13 +340,13 @@ PART 3 — WEAVER CONTEXT
 
 Read these Weaver files completely:
 
-  /home/hax/novelfriend/weaver.md                         — product vision (703 lines)
-  /home/hax/novelfriend/src/weaver/agent/turn.py          — current turn runtime (351 lines)
-  /home/hax/novelfriend/src/weaver/agent/session.py       — current session (125 lines)
-  /home/hax/novelfriend/src/weaver/agent/messages.py      — canonical messages (109 lines)
-  /home/hax/novelfriend/src/weaver/model.py               — model types (87 lines)
-  /home/hax/novelfriend/src/weaver/client.py              — ModelClient protocol
-  /home/hax/novelfriend/deliverables/001-experimental-foundation/decision.md
+  /home/hax/weaver/weaver.md                         — product vision (703 lines)
+  /home/hax/weaver/src/weaver/agent/turn.py          — current turn runtime (351 lines)
+  /home/hax/weaver/src/weaver/agent/session.py       — current session (125 lines)
+  /home/hax/weaver/src/weaver/agent/messages.py      — canonical messages (109 lines)
+  /home/hax/weaver/src/weaver/model.py               — model types (87 lines)
+  /home/hax/weaver/src/weaver/client.py              — ModelClient protocol
+  /home/hax/weaver/deliverables/001-experimental-foundation/decision.md
 
 Understand:
   - Weaver is a lifelong novel-reading companion, not a coding agent
@@ -358,7 +358,7 @@ Understand:
   - It needs conversational memory, interpretive journal, counterfactual reasoning
 
 Run Weaver's suite:
-  cd /home/hax/novelfriend
+  cd /home/hax/weaver
   uv run pytest -q
 Report pass/fail count.
 
@@ -419,7 +419,7 @@ c) What is the SINGLE most important rule to prevent them from becoming
 
 ### 4.5 — READ WEAVER'S CURRENT CODE AND MAKE IT CONCRETE
 
-Look at /home/hax/novelfriend/src/weaver/agent/turn.py.
+Look at /home/hax/weaver/src/weaver/agent/turn.py.
 
 a) Does this code need to be rewritten to work with LangGraph, or can it be
    wrapped as a graph node? Explain.

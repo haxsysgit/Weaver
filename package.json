@@ -1,0 +1,5 @@
+{
+  "devDependencies": {
+    "@ivy-apps/deslop": "^0.8.1"
+  }
+}

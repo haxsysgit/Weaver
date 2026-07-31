@@ -9,10 +9,13 @@
 - **State:** Planned; learning gate required
 - **Priority:** P2
 - **Effort:** M
-- **Risk:** Medium (new dependency, first UI surface)
+- **Risk:** Medium (new dependency, first UI surface, cooperative-only cancellation)
 - **Depends on:** Plan 009 accepted
 - **Category:** DX and entrypoint
 - **Planned at:** commit `e523383`, 2026-07-30
+- **Audited at:** 2026-07-31 — current-state claims corrected (argparse CLI,
+  no `fire`, real tool signatures); cancellation contract pinned as
+  cooperative-only after a live repro of sticky task cancellation
 - **Learning gate:** `deliverables/010-tui-entrypoint/learning.md`
 - **Final decision:** pending
 
@@ -21,9 +24,10 @@
 Give the owner a working chat window to talk to Weaver during development.
 
 After this plan, `weaver chat` opens a Textual TUI. The owner types a
-message, presses Enter, and sees Weaver's streaming response appear in a
-scrollable conversation pane. Fake-model mode works without credentials.
-Cancellation via Ctrl+C sets the turn's cancel event.
+message, presses Enter, and sees Weaver's response appear in a scrollable
+conversation pane. Fake-model mode works without credentials and is the
+default. Live mode requires an explicit `--live` flag and a `DEEPSEEK_KEY`.
+Ctrl+C sets the turn's cancel event instead of killing the app.
 
 ## Why this matters
 
@@ -38,74 +42,183 @@ Plan 007 is complete. The TUI attachment point exists.
 
 ## Current state
 
-### `src/weaver/cli.py:1-30` — Weaver CLI
+### `src/weaver/cli.py:17-118` — Weaver CLI (corrected)
 
-Existing CLI uses `fire` (already in dependencies). Has `corpus`/`library`
-subcommands and `experiment` commands. No `chat` subcommand.
+Argparse-based CLI (no `fire`; `fire` is **not** in `pyproject.toml` — the
+earlier plan text was wrong). Subcommands: `doctor`, `experiment
+<name> --fake|--live`, and `library` with `inspect|fetch|update|packet|export`.
+No `chat` subcommand. The fake/live split is the canonical pattern
+(`cli.py:146-165`): mutually exclusive required flags, missing key in live
+mode exits 2 before any call or receipt, fake mode never constructs
+`DeepSeekProvider` (asserted via `tests/test_cli.py:8-24`).
 
 ### `src/weaver/conversation/session.py` — SessionWeave (post-Plan 008)
 
-Has `send(conversation_id, user_text) -> TurnResult`. Plan 008 adds this.
+Has `send(conversation_id, user_text) -> TurnResult`, optional model/tool
+kwargs, `interrupted_run_exists` error for interrupted runs. State lives in
+`state_dir/weaver.sqlite3` (0700 dir, 0600 db).
 
 ### `pyproject.toml:8-20` — dependencies
 
-```
-dependencies = [
-    "beautifulsoup4>=4.15.0",
-    "ebooklib>=0.20",
-    "firecrawl-py>=4.33.1",
-    "langchain>=1.3.14",
-    "langchain-text-splitters>=1.1.2",
-    "lxml>=6.1.1",
-    "openai>=2.11.0",
-    "pydantic>=2.13.4",
-    "python-dotenv>=1.1.1",
-    "tiktoken>=0.13.0",
-]
-```
-
-Textual is NOT in dependencies. It must be added.
+Includes `aiosqlite>=0.22.1`, `tiktoken`, `openai`, `pydantic`, etc.
+Textual is **not** present — it must be added (`uv add textual`,
+network operation, updates `uv.lock`).
 
 ### `src/weaver/config.py:1-20` — config
 
-Reads `DEEPSEEK_KEY` from process environment. Does not auto-load `.env`
-(after Plan 005 repair). Fake mode works with no key.
+Reads `DEEPSEEK_KEY` from process environment only. Does **not** auto-load
+`.env` (Plan 005 repair; tests assert a `.env` in cwd is ignored). Fake mode
+works with no key.
 
-### `src/weaver/model_layer/fake.py` — FakeModelProvider
+### `src/weaver/model_layer/deepseek.py` — DeepSeek provider
 
-Used in tests and experiments. The TUI's default mode uses fake responses
-when no live key is present.
+Cancellation is cooperative via `cancel_event` (`deepseek.py:60-66,128-135`).
+True task cancellation (`task.cancel()`, `asyncio.wait_for` timeouts) hits a
+sticky-cancellation path where the ABORTED terminal and stream cleanup are
+skipped (`deepseek.py:151-157`) — reproduced live. **The TUI must never rely
+on task cancellation** (see Contract §4).
 
-## Implementation slices
+### `src/weaver/corpus/tools.py:149-201` — library tools
 
-### 1. Confirm the learning gate
+Five tools registered: `inspect_novel_corpus`, `fetch_novel_chapters`,
+`update_novel_corpus`, `build_novel_packet`, `export_novel`. All five are
+registered `INTERNAL_WRITE` (audit finding B2): fetch/update are
+**network-backed** (Firecrawl) but classified internal. The chat tool set
+must not expose them (Contract §2).
+
+### Verified baseline (2026-07-31)
+
+- `uv run pytest -q` → 166 passed; `uv run ruff check src/weaver tests` → clean.
+- Textual: not installed. `uv add textual` is required before the TUI can import.
+
+## Contract to prove
+
+### 1. Weaver language
+
+User-facing chat copy and tool names use Weaver words: `library`, `chapters`,
+`reading packet`, `edition`, `inspect`, `add`, `refresh`. No `corpus` appears
+in the TUI, the `chat` help text, or the system prompt. Internal
+`_novel_corpus` tool names, where shown at all, are described as "Weaver's
+private library".
+
+### 2. Tool set for chat
+
+The TUI registers only: the echo/dev tool used in tests and the library
+**inspection** tools (`inspect_novel_corpus`, `build_novel_packet`,
+`export_novel` — read or packet-building only). **`fetch_novel_chapters` and
+`update_novel_corpus` are NOT registered** in the chat session: they are
+network-backed and currently classified `INTERNAL_WRITE` without an
+external-effect gate (audit finding B2). A future plan may re-classify them
+as `EXTERNAL_EFFECT` and add an approval path before exposing them to chat.
+
+The TUI itself never imports `novels/`, never calls `_require_novel`, and
+never writes library files.
+
+### 3. Mode selection (no silent fallback)
+
+- Default: **fake mode** — `FakeModelProvider` with a scripted response set
+  that produces a friendly non-streamed reply. Fake mode must never construct
+  `DeepSeekProvider` (reuse the `NetworkMustNotBeConstructed` test pattern).
+- `weaver chat --live`: requires `DEEPSEEK_KEY`; absent → exit 2 before any
+  call or receipt (same as the experiment commands).
+- The active mode is displayed in the TUI header (e.g. `Weaver — fake` /
+  `Weaver — live deepseek-v4-flash`) so the owner is never unsure which mode
+  is running.
+
+### 4. Cancellation contract (cooperative-only)
+
+- Ctrl+C is rebound from Textual's default (quit) to setting the turn's
+  `cancel_event`.
+- `cancel_event` is the **only** cancellation lever. The TUI must never
+  `task.cancel()` the `send()` task: sticky asyncio cancellation can skip the
+  ABORTED terminal and SDK stream cleanup (`deepseek.py:151-157`, reproduced),
+  and Plan 008's runner treats a cancelled turn as interrupted, not
+  completed.
+- `run_turn()`'s cooperative checkpoints
+  (`tools.py` `raise_if_cancelled`, `deepseek.py:128-135`) are what stop the
+  work; the TUI may show "cancelling…" until the turn settles.
+
+### 5. Blocking model call
+
+`run_turn()` returns the full response; there is no streaming API on
+`SessionWeave`. The TUI blocks during `send()` (5-30s live). Acceptable for
+this slice; the input stays enabled so typing is not lost, and the model
+reply is written when the turn returns.
+
+### 6. Event loop
+
+Textual's `app.run_async()` shares the process event loop with
+`SessionWeave`; `on_input_submitted` awaits `sw.send(...)` directly. No
+threads, no `asyncio.run()` inside the app, no background tasks beyond
+Textual's own.
+
+### 7. State path
+
+The conversation state dir defaults to `$WEAVER_STATE_DIR` (the existing
+env convention used by corpus tools and receipts) with a `.weaver/state`
+fallback; it is never hardcoded into the TUI module.
+
+## Scope
+
+### In scope
+
+- `pyproject.toml` + `uv.lock` (add `textual>=2.0.0`)
+- `src/weaver/tui/` (new: `__init__.py`, `app.py`)
+- `src/weaver/cli.py` (`chat` subcommand, argparse style)
+- `src/weaver/config.py` only if the mode-selection helper needs a tiny
+  shared function (prefer reusing existing `resolve_model`/env checks)
+- `tests/` (TUI code-path test; CLI test for `chat --help` and mode flags)
+- Plan 010 deliverables and `plans/README.md`
+
+### Out of scope
+
+- `agent/`, `conversation/` internals, `model_layer/`
+- streaming text display, markdown rendering, scroll-to-bottom
+- multi-conversation TUI, message editing, history browsing
+- exposing fetch/update corpus tools to chat (see Contract §2)
+- live-provider changes, `.env` loading
+
+## Commands
+
+| Purpose | Command | Expected result |
+| --- | --- | --- |
+| Add dependency | `uv add textual` | `textual>=2.0.0` in pyproject + uv.lock |
+| Import check | `uv run python -c "from weaver.tui import WeaverChat; print('import ok')"` | `import ok` |
+| CLI check | `uv run weaver chat --help` | Help text shows `chat`; no `corpus` wording |
+| Focused tests | `uv run pytest -q tests/test_conversation.py -k "tui or send"` (plus new test file if created) | All pass |
+| Full tests | `uv run pytest -q` | All pass (166 baseline; expect 172+) |
+| Lint in scope | `uv run ruff check src/weaver/tui src/weaver/cli.py tests` | Exit 0 |
+| Package check | `uv pip check` | Compatible |
+
+## Steps
+
+### Slice 1: Confirm the learning gate
 
 Answer three questions in `deliverables/010-tui-entrypoint/learning.md`:
 
 1. Textual integration: how does an async Textual app share the event loop
-   with SessionWeave, and where does cancellation (Ctrl+C) set the cancel
-   event?
-2. Streaming: does `run_turn()` stream text deltas that can appear in the
-   TUI character by character, or does it return the full response at once?
-   If the latter, how should the TUI handle 5--30 second model waits?
-3. Mode selection: how does the CLI decide between fake, live-DeepSeek, and
-   live-other-provider modes based on available credentials?
+   with SessionWeave, and where does Ctrl+C set the cancel event (Contract
+   §4, §6)?
+2. Streaming: `run_turn()` returns the full response at once — how should the
+   TUI handle 5-30 second model waits (Contract §5)?
+3. Mode selection: how does the CLI decide between fake and live modes based
+   on credentials, and how is the active mode shown (Contract §3)?
+
+The drafted answers (2026-07-30) contain stale claims (`fire`-based CLI) —
+**re-verify every cited line** against the current argparse CLI at admission.
 
 Commit: `plan 010: learning gate answers`
 
-### 2. Add Textual dependency
+### Slice 2: Add Textual dependency
 
-Add `textual>=2.0.0` to `pyproject.toml` dependencies. Run `uv lock`.
+`uv add textual`, verify the lockfile change and that Textual imports on
+Python 3.11.
 
-```bash
-uv add textual
-```
+**Verify:** `uv run python -c "import textual; print(textual.__version__)"`.
 
-Commit: `plan 010: add textual dependency`
+### Slice 3: Build the TUI
 
-### 3. Build the TUI
-
-Create `src/weaver/tui/` with `__init__.py` and `app.py`.
+Create `src/weaver/tui/__init__.py` and `app.py`:
 
 ```python
 # src/weaver/tui/app.py
@@ -113,16 +226,20 @@ from textual.app import App, ComposeResult
 from textual.widgets import Header, Footer, Input, RichLog
 
 class WeaverChat(App):
-    def __init__(self, session_weave, conversation_id, **kwargs):
+    def __init__(self, session_weave, conversation_id, mode_label="fake", **kwargs):
         super().__init__(**kwargs)
         self._sw = session_weave
         self._conv_id = conversation_id
+        self._mode_label = mode_label
 
     def compose(self) -> ComposeResult:
-        yield Header()
+        yield Header(show_clock=True)
         yield RichLog(id="chat-log", highlight=True, markup=True)
         yield Input(id="input", placeholder="Type a message...")
         yield Footer()
+
+    def on_mount(self) -> None:
+        self.sub_title = f"Weaver — {self._mode_label}"
 
     async def on_input_submitted(self, event: Input.Submitted) -> None:
         text = event.value.strip()
@@ -134,91 +251,84 @@ class WeaverChat(App):
         if result.final_text:
             log.write(f"[bold]Weaver:[/bold] {result.final_text}")
         event.input.clear()
+
+    def on_key(self, event) -> None:
+        if event.key == "ctrl+c":
+            # cooperative cancel: set the turn's cancel_event, never task.cancel()
+            ...
 ```
 
-Keep it minimal: no streaming (TUI blocks during model call), no markdown
-rendering, no message editing, no scroll-to-bottom. One file, one class,
-three widgets.
+Keep it minimal: one file, one class, three widgets, no streaming, no
+markdown. The Ctrl+C binding must follow Contract §4 (set the event; the
+turn settles through the runner's interrupt path).
 
 Commit: `plan 010: build minimal Textual TUI`
 
-### 4. Add `weaver chat` CLI
+### Slice 4: Add `weaver chat` CLI
 
-Add a `chat` subcommand to `src/weaver/cli.py`:
+Add a `chat` subcommand to `src/weaver/cli.py` in argparse style, mirroring
+the existing `--fake|--live` pattern:
 
-```python
-def chat():
-    """Open the Weaver conversation TUI."""
-    import asyncio
-    from weaver.conversation import SessionWeave
-    from weaver.model_layer import FakeModelProvider, ModelLayer, ModelSpec
-    from weaver.agent.tools import ToolExecutionPolicy, ToolRegistry
-    from weaver.tui.app import WeaverChat
-
-    state_dir = Path(".weaver/state")
-    sw = SessionWeave(
-        state_dir,
-        model_layer=..., model=..., system_prompt=...,
-        tool_registry=ToolRegistry(),
-        execution_policy=ToolExecutionPolicy.read_only(),
-    )
-
-    async def run():
-        await sw.open()
-        conv_id = await sw.start_conversation("")
-        app = WeaverChat(sw, conv_id)
-        await app.run_async()
-
-    asyncio.run(run())
-```
-
-Fake mode when `DEEPSEEK_KEY` is absent. Live DeepSeek when the key is
-present (using the existing `config.py` check). Register the echo tool and
-corpus inspection tools when the corpus directory exists.
+- default fake; `--live` requires `DEEPSEEK_KEY` (exit 2 if absent);
+- state dir from `WEAVER_STATE_DIR` (fallback `.weaver/state`);
+- register echo + library inspection tools only (Contract §2);
+- `ToolExecutionPolicy.read_only()` for fake mode; live mode also read-only
+  in this slice (no mutation tools exist in chat);
+- mode label passed to the app (Contract §3).
 
 Commit: `plan 010: add weaver chat CLI`
 
-### 5. Deterministic TUI test
+### Slice 5: Deterministic TUI test
 
-Add `test_tui_send` to `tests/test_conversation.py` (or a new test file):
+Add `test_tui_send` to `tests/test_conversation.py` (or a new
+`tests/test_tui.py`):
 
-- Create a `SessionWeave` with fake model, echo tool, and maintenance policy.
+- Create a `SessionWeave` with fake model, echo tool, and read-only policy.
 - Call `sw.send(conv_id, "Hello")`.
-- Assert the result is a completed turn with a non-empty `final_text`.
-- Assert items appear in the database.
+- Assert completed turn with non-empty `final_text`; assert items in the DB.
+- Assert fake mode never constructs `DeepSeekProvider`
+  (`NetworkMustNotBeConstructed` pattern).
+- Assert the chat tool registry does not contain fetch/update tools.
+- Assert `weaver chat --help` exits 0 and contains no `corpus` wording.
 
 This tests the same code path the TUI uses without requiring a terminal.
 
 Commit: `plan 010: TUI code-path test`
 
-## Verification floor
+## Test plan
 
-```bash
-uv run pytest -q
-uv run ruff check src/weaver/tui src/weaver/cli.py tests
-uv run python -c "from weaver.tui import WeaverChat; print('import ok')"
-uv run weaver chat --help  # confirms CLI registers
-```
-
-Expected: full suite passes, lint clean, imports work, CLI help shows `chat`.
+1. Import check (no terminal): `from weaver.tui import WeaverChat` succeeds
+   after `uv add textual`.
+2. Code-path send: fake-mode turn completes; items persisted; exit_reason
+   completed.
+3. No-live-client-in-fake assertion (pattern from `tests/test_cli.py:8-24`).
+4. Tool set: fetch/update absent from the chat registry.
+5. CLI: `chat --help` exit 0, no `corpus` wording; `chat --live` without
+   `DEEPSEEK_KEY` exits 2 before any call.
+6. Ctrl+C binding unit: setting the cancel event while a scripted slow fake
+   turn runs settles the turn as interrupted (deterministic via events, no
+   sleeps — reuse the Plan 004 test style).
 
 ## Independent review
 
-1. Reviewer 1 checks TUI event-loop integration, cancellation plumbing, and
-   that the TUI doesn't leak tasks or connections.
-2. Reviewer 2 checks CLI mode selection, credential handling, and scope
-   (no novel access, no corpus mutation via TUI).
-3. One repair pass allowed.
+1. Reviewer 1 (event loop/cancellation): Ctrl+C → cancel_event only; no
+   task.cancel of the model call; no task or connection leaks; blocking
+   send() does not lose input.
+2. Reviewer 2 (mode/scope/credentials): fake/live selection, key handling
+   (exit 2, no receipt), tool set excludes fetch/update, scope fence, no
+   `corpus` wording.
+3. One repair pass is allowed.
 4. Both reviewers recheck the repaired candidate.
 
 ## Done criteria
 
-- [ ] Owner confirmed Plan 010 learning gate.
+- [ ] Owner confirmed Plan 010 learning gate (stale `fire` claims removed).
 - [ ] Plan 009 is accepted.
-- [ ] `textual` added to dependencies, `uv.lock` updated.
-- [ ] `src/weaver/tui/app.py` exists with `WeaverChat` class.
-- [ ] `weaver chat` CLI command exists.
-- [ ] Fake mode works without `DEEPSEEK_KEY`.
+- [ ] `textual>=2.0.0` added; `uv.lock` updated; import verified on Python 3.11.
+- [ ] `src/weaver/tui/app.py` exists with `WeaverChat`.
+- [ ] `weaver chat` CLI exists; fake is default; `--live` requires the key.
+- [ ] Ctrl+C sets cancel_event; no task.cancel of model calls.
+- [ ] Chat tool set excludes fetch/update; TUI never touches `novels/`.
 - [ ] Full tests and lint pass.
 - [ ] No changes to `agent/`, `conversation/` internals, or `model_layer/`.
 - [ ] Two independent reviews have no open blocker.
@@ -226,11 +336,30 @@ Expected: full suite passes, lint clean, imports work, CLI help shows `chat`.
 
 ## STOP conditions
 
-- Textual >= 2.0.0 is not installable on Python 3.11.
+Stop and report if:
+
+- Textual >= 2.0.0 is not installable on Python 3.11;
 - `run_turn()` does not return within 30 seconds for a 2-step fake turn
-  (the TUI blocks the event loop during `send()`).
-- `DEEPSEEK_KEY` is accidentally sent to a non-DeepSeek provider.
-- The TUI imports `novels/` or corpus mutation tools.
+  (the TUI blocks the event loop during `send()`);
+- cancellation requires `task.cancel()` on the model call to work — the
+  cooperative contract (Contract §4) is a hard requirement;
+- `DEEPSEEK_KEY` is sent to a non-DeepSeek provider;
+- the TUI imports `novels/` or registers corpus mutation tools;
+- fake mode constructs a live client, or live mode proceeds without a key;
+- private prose, credentials, or raw reasoning enter evidence.
+
+## Maintenance notes
+
+- Streaming (text deltas into the TUI) requires a streaming seam in
+  `SessionWeave`/`run_turn` first — a future plan, not a TUI workaround.
+- Exposing `fetch`/`update` to chat later requires re-classifying them as
+  `EXTERNAL_EFFECT` with an approval path (audit finding B2) — do not
+  shortcut this by registering them in a maintenance policy.
+- The TUI is the integration surface for Plan 011 and the memory plans; keep
+  `WeaverChat` thin (send + render) so those plans can attach views without
+  rewriting it.
+- Textual versions move fast; the import check in the verification floor is
+  the guard, and `uv.lock` pins the tested version.
 
 ## Deferred work
 
@@ -239,3 +368,5 @@ Expected: full suite passes, lint clean, imports work, CLI help shows `chat`.
 - Multi-conversation TUI (tabs, conversation list).
 - Direct-reading baseline (Plan 011) and compiled memory experiments use
   this TUI as their interface.
+- Exposing network-backed library tools to chat (with an external-effect
+  gate).

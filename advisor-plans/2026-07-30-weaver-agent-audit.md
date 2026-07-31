@@ -1,7 +1,7 @@
 # Weaver Agent Audit
 
 **Audit date:** 2026-07-30  
-**Repository:** `/home/hax/novelfriend`  
+**Repository:** `/home/hax/weaver`  
 **Git snapshot:** `96d0729` (`Accept Plan 001 foundation`)  
 **Audit type:** Current-state architecture and agent-runtime audit
 

@@ -623,7 +623,7 @@ The key insight: `run_turn` only needs `model`, `history`, and `tool_registry` â
 
 **b) SMALLEST change to unlock durable multi-stage workflows:**
 
-Add one file: `/home/hax/novelfriend/src/weaver/workflows/reading.py`
+Add one file: `/home/hax/weaver/src/weaver/workflows/reading.py`
 
 ```python
 """Multi-stage novel reading workflow as a LangGraph StateGraph."""

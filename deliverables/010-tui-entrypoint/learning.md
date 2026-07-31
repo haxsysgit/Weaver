@@ -27,8 +27,8 @@ credentials. The TUI is the attachment point for every downstream experiment.
   responses. TUI default mode when `DEEPSEEK_KEY` is absent.
 - `config.py` (`src/weaver/config.py:1-20`): reads `DEEPSEEK_KEY` from the
   process environment. Does NOT auto-load `.env` (fixed in Plan 005 repair).
-- `cli.py` (`src/weaver/cli.py`): existing `fire`-based CLI with `library`
-  and `experiment` subcommands. Plan 010 adds `chat`.
+- `cli.py` (`src/weaver/cli.py`): argparse-based CLI (not `fire`) with
+  `library` and `experiment` subcommands. Plan 010 adds `chat`.
 - `ToolRegistry` (`agent/tools.py`): must have at least the echo tool
   registered for fake-mode chat. Corpus inspection tools registered when
   the `novels/` directory exists.
@@ -82,8 +82,9 @@ credentials. The TUI is the attachment point for every downstream experiment.
    tool. It does NOT test Textual widgets — it proves the integration
    between `SessionWeave.send()` and `run_turn()` works. A full TUI
    integration test (headless Textual, `pilot`) is deferred.
-9. The CLI registers `chat` as a `fire` command. `weaver chat --help` shows
-   the command exists. `weaver chat` opens the TUI.
+9. The CLI registers `chat` as an argparse subcommand (mirroring the
+   existing `experiment` pattern). `weaver chat --help` shows the command
+   exists. `weaver chat` opens the TUI.
 10. Textual is added to `pyproject.toml` via `uv add textual`. No other new
     dependencies.
 
