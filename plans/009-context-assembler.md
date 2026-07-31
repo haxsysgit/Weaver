@@ -6,7 +6,7 @@
 
 ## Status
 
-- **State:** Admitted 2026-07-31 (learning gate confirmed by owner); implemented, two independent reviews clean (one repair pass applied, both recheck), awaiting owner decision
+- **State:** Accepted by owner 2026-07-31 (decision recorded in `deliverables/009-context-assembler/decision.md`)
 - **Priority:** P2
 - **Effort:** S
 - **Risk:** Low
@@ -18,7 +18,7 @@
   hazards apply to replay correctness)
 - **Learning gate:** confirmed by owner 2026-07-31; answers re-verified in
   `deliverables/009-context-assembler/learning.md`
-- **Final decision:** pending (owner)
+- **Final decision:** accepted 2026-07-31 (owner)
 
 ## Goal
 
