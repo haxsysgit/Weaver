@@ -76,10 +76,13 @@ def test_provider_contract_live_cli_checks_key_before_client_or_receipt(
     monkeypatch,
     capsys,
 ) -> None:
+    """No key anywhere: exit 2 before any client, receipt, or state dir.
+
+    .env loading is now honored (owner-directed 2026-07-31), so the test
+    runs in a clean cwd with no .env; key-source precedence is covered in
+    tests/test_config.py.
+    """
     monkeypatch.chdir(tmp_path)
-    (tmp_path / ".env").write_text(
-        "DEEPSEEK_KEY=must-not-be-loaded-automatically\n"
-    )
     monkeypatch.delenv("DEEPSEEK_KEY", raising=False)
     state_path = tmp_path / "private-runs"
     monkeypatch.setenv("WEAVER_STATE_DIR", str(state_path))

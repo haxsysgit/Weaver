@@ -7,7 +7,7 @@ from typing import Sequence
 
 from pydantic import ValidationError
 
-from .config import DEFAULT_TIMEOUT_SECONDS
+from .config import DEFAULT_TIMEOUT_SECONDS, load_startup_config
 from .corpus.errors import CorpusError, safe_error_message
 from .corpus.tools import (
     build_novel_packet,
@@ -198,20 +198,22 @@ async def _build_chat_session(
             api_key,
             timeout_seconds=DEFAULT_TIMEOUT_SECONDS,
         )
-        mode_label = f"live {DEEPSEEK_FLASH.model_id}"
     else:
         provider = FakeModelProvider(
             "deepseek",
             models=DEEPSEEK_MODELS,
             responses=CHAT_FAKE_RESPONSES,
         )
-        mode_label = "fake"
+
+    # Config [chat] model (alias or id) picks the model; flash is the default.
+    model_id = os.environ.get("WEAVER_CHAT_MODEL") or DEEPSEEK_FLASH.model_id
+    mode_label = f"live {model_id}" if live else "fake"
 
     model_layer = ModelLayer()
     model_layer.register_provider(provider)
     model = model_layer.get_model(
         DEEPSEEK_FLASH.provider_id,
-        DEEPSEEK_FLASH.model_id,
+        model_id,
     )
     registry = _chat_tool_registry()
     sw = SessionWeave(
@@ -241,8 +243,9 @@ async def _run_chat(state_dir: Path, *, live: bool) -> int:
     """Open the session and run the TUI on the same event loop."""
     if live and not os.environ.get("DEEPSEEK_KEY"):
         print(
-            "ERROR live chat requires DEEPSEEK_KEY; set DEEPSEEK_KEY or "
-            "pass --fake for a scripted session. No call was made."
+            "ERROR live chat requires DEEPSEEK_KEY; set it, add it to "
+            ".weaver/config.toml ([api] key), or pass --fake for a scripted "
+            "session. No call was made."
         )
         return 2
     sw, conv_id, mode_label = await _build_chat_session(
@@ -260,6 +263,8 @@ async def _run_chat(state_dir: Path, *, live: bool) -> int:
 def run(argv: Sequence[str] | None = None) -> int:
     parser = _parser()
     args = parser.parse_args(argv)
+    # .env and .weaver/config.toml feed os.environ (owner-directed 2026-07-31).
+    load_startup_config()
     state_root = _state_root()
 
     if args.command == "chat":

@@ -75,6 +75,7 @@ def test_chat_live_without_key_exits_2_without_state(
     capsys,
 ) -> None:
     """Default (live) chat without DEEPSEEK_KEY exits 2 before any call."""
+    monkeypatch.chdir(tmp_path)  # clean cwd: no repo .env to load
     monkeypatch.delenv("DEEPSEEK_KEY", raising=False)
     state_path = tmp_path / "state"
     monkeypatch.setenv("WEAVER_STATE_DIR", str(state_path))
