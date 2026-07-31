@@ -6,7 +6,17 @@
 
 ## Status
 
-- **State:** Accepted by owner 2026-07-31; decision recorded in deliverables/010-tui-entrypoint/decision.md
+- **State:** Accepted 2026-07-31; **reopened by owner 2026-07-31 for UI
+  sharpening** (stay-open directive: "keep it open, i'll probably be in plan
+  10 for a while"). Original acceptance stands for the chat core; new UI
+  phases amend this plan and get their own review before the owner gate.
+- **UI sharpening phases (owner discussion 2026-07-31):** A quick wins
+  (footer status bar, startup card, resume line, reply styling); B streaming
+  deltas (model-layer seam, review like the persist carve-out); C capability
+  (multi-line input, markdown replies, conversation resume, live context
+  meter); D observability (token/context per turn, run history, receipts
+  peek). TUI stays; web UI deferred with explicit triggers (remote access,
+  dashboards, non-dev users, HaxJobs product stage).
 - **Priority:** P2
 - **Effort:** M
 - **Risk:** Medium (new dependency, first UI surface, cooperative-only cancellation)
