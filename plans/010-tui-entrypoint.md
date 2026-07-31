@@ -20,8 +20,20 @@
 - **Phase A status:** Accepted by owner 2026-07-31 (decision.md addendum);
   pushed. 9 new tests (pure helpers + Textual pilot with a stub session),
   203 green, ruff clean, two independent PASS reviews.
-- **Phase B (next):** streaming deltas (model-layer seam, review like the
-  persist carve-out). Not started; awaits the owner's word.
+- **Phase B status:** Implemented (commit d135ac6): live text deltas flow
+  from the provider stream through run_turn(on_delta=...) and
+  SessionWeave.send(on_delta=...) into a hidden stream area that appears
+  while the model works; deltas are preview only, the final message
+  persists as before; callback failures are logged and swallowed. The
+  agent/turn.py change is a documented seam like the persist carve-out.
+- **Phase D status:** Implemented (commit 0ec98fb): context meter on the
+  footer (count-only assembler mode, snapshot numbers surfaced on
+  TurnResult, 'ctx 1.2k' / 'ctx 40%') and a run-history screen (^h) fed
+  by SessionWeave.list_recent_turns(). Debugged root cause: StatusBar
+  `_context` attribute shadowed MessagePump._context() and crashed the
+  pump; renamed to `_meter`.
+- **Phase C (next):** multi-line input, markdown replies, conversation
+  resume, live meter wiring. Awaits the owner's word after B+D acceptance.
 - **Priority:** P2
 - **Effort:** M
 - **Risk:** Medium (new dependency, first UI surface, cooperative-only cancellation)

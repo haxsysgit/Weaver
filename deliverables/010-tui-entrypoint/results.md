@@ -141,6 +141,43 @@ is async and must be awaited.
 9 new tests (3 pure, 6 pilot with a stub session, no DB/model layer);
 full suite 203 passed; ruff clean.
 
+## Phase B: streaming deltas (2026-07-31, commit d135ac6)
+
+- The provider and ModelLayer already streamed TEXT_DELTA events; the
+  turn loop was buffering them. Seam: run_turn gains on_delta (async
+  callback), threaded through SessionWeave.send. Deltas are preview only;
+  the final assistant message persists exactly as before. A failing delta
+  callback is logged and swallowed so a UI hiccup can't fail a turn.
+- TUI: a hidden Static stream area appears while the model streams and
+  hides when the final message lands in the log.
+- 3 new tests: a chunked gated provider proves deltas arrive mid-turn
+  before completion; the default send still buffers; a pilot test proves
+  live rendering then final-in-log. Suite 206 green.
+
+## Phase D: observability (2026-07-31, commit 0ec98fb)
+
+- Context meter: ContextAssembler gains count-only mode (token_budget
+  None = no truncation, still counts); the runner always assembles and
+  surfaces snapshot numbers on TurnResult (token_count/token_budget, 0
+  defaults preserve all existing behavior); the footer shows `ctx 1.2k`
+  or `ctx 40%` after each turn.
+- Run history: SessionWeave.list_recent_turns() returns recent runs
+  (time, status, owner text) through the session seam; ^h pushes a
+  RunHistoryScreen, escape/q closes.
+- Recorded failure (real root cause found by bisection): the meter
+  attribute was named `_context`, which shadows Textual's
+  MessagePump._context() method; the pump crashed with
+  "str object is not callable", the screen never went idle, and
+  pilot.pause() timed out at 30s. Renamed to `_meter`; noted in the
+  widget docstring so it cannot regress silently.
+- Recorded failure: the stub session's gate reverted to the pre-fix form
+  during a git stash/pop cycle, making the gated pilot tests pass without
+  gating; re-fixed and the committed version is now the reference.
+- Receipts peek deliberately skipped: chat turns persist to the SQLite
+  notebook, not to .weaver/runs receipts (those cover experiments); a
+  dashboard plan can read both later.
+- 8 new tests; suite 214 green; ruff clean.
+
 ## Repair pass (commit 2c0792b)
 
 Both reviewers passed with no blockers; one repair pass applied:
