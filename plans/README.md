@@ -14,8 +14,8 @@ evidence, review, and human decision gates must also be complete.
 | [006 - Durable conversation architecture](006-durable-conversation-architecture.md) | Accepted | Plan 005 accepted | Record direct coordination, canonical conversation evidence, recovery, context, and optional adapters |
 | [007 - Restart-safe conversation proof](007-restart-safe-conversation-proof.md) | Implemented; repair applied | Plan 006 accepted | Prove exact fake conversation history survives a subprocess restart without replay or duplicates |
 | [007.5 - Audit repair](007.5-audit-repair.md) | Implemented | Plan 007 complete | Retry method, tool-call uniqueness constraint, single-tx start, dedup, repo tests, stale docs |
-| [008 - Wire the conversation loop](008-wire-conversation-loop.md) | Planned; learning gate required | Plan 007 accepted | Zip conversation/ and agent/ into one working conversation: SessionWeave.send() calls run_turn() |
-| [009 - Context assembler](009-context-assembler.md) | Planned; learning gate required | Plan 008 accepted | Give run_turn() a context window it can't exceed: token budget, truncation, pinned owner message |
+| [008 - Wire the conversation loop](008-wire-conversation-loop.md) | Accepted 2026-07-31 | Plan 007 accepted | Zip conversation/ and agent/ into one working conversation: SessionWeave.send() calls run_turn() |
+| [009 - Context assembler](009-context-assembler.md) | Admitted; in implementation | Plan 008 accepted | Give run_turn() a context window it can't exceed: token budget, truncation, pinned owner message |
 | [010 - TUI entrypoint](010-tui-entrypoint.md) | Planned; learning gate required | Plan 009 accepted | Owner chat window: weaver chat opens Textual TUI with direct await session.send() |
 | [011 - Direct-reading baseline](011-direct-reading-baseline.md) | Planned; learning gate required | Plan 010 accepted | Compare Flash and Pro reading the same novel packet blind: the first time Weaver reads a novel |
 | 012 - Direct-reading baseline (original) | Deferred (renumbered from 008) | Plans 002-011 accepted | Blind Flash/Pro comparison over selected chapter packets |
@@ -35,7 +35,6 @@ Plans 012-013 are the original deferred literary experiments, renumbered.
 They wait until the conversation infrastructure (008-011) is complete.
 
 Only one numbered plan may be active in implementation or review at a time.
-Plan 007's final owner decision is recorded as **Accepted** in
-`deliverables/007-restart-safe-conversation-proof/decision.md` (2026-07-30).
 Plan 008's final owner decision is recorded as **Accepted** in
 `deliverables/008-wire-conversation-loop/decision.md` (2026-07-31).
+Plan 009 is **Admitted** (2026-07-31) and in implementation.

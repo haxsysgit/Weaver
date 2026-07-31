@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="850" height="480" viewBox="0 0 850 480" font-family="Arial, Helvetica, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#333333"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="850" height="480" fill="#ffffff"/>
+  <text x="20" y="24" font-size="16" font-weight="bold" fill="#1a1a1a">Plan 009: Context assembler</text>
+
+  <!-- runner -->
+  <rect x="330" y="40" width="200" height="40" rx="6" fill="#fff2cc" stroke="#d6b656"/>
+  <text x="430" y="64" font-size="12" text-anchor="middle" fill="#1a1a1a">ConversationRunner.run_turn_in_run()</text>
+
+  <!-- load items -->
+  <rect x="40" y="40" width="200" height="50" rx="6" fill="#dae8fc" stroke="#6c8ebf"/>
+  <text x="140" y="60" font-size="12" text-anchor="middle" fill="#1a1a1a">load all items</text>
+  <text x="140" y="78" font-size="11" text-anchor="middle" fill="#333333">(ConversationRepository.load_items)</text>
+
+  <!-- assembler -->
+  <rect x="330" y="150" width="200" height="60" rx="6" fill="#d5e8d4" stroke="#82b366"/>
+  <text x="430" y="174" font-size="12" text-anchor="middle" fill="#1a1a1a">ContextAssembler.assemble(items)</text>
+  <text x="430" y="192" font-size="11" text-anchor="middle" fill="#333333">(token_budget configured only)</text>
+
+  <!-- block grouping -->
+  <rect x="40" y="150" width="200" height="50" rx="6" fill="#f8cecc" stroke="#b85450"/>
+  <text x="140" y="170" font-size="12" text-anchor="middle" fill="#1a1a1a">group items into</text>
+  <text x="140" y="188" font-size="12" text-anchor="middle" fill="#1a1a1a">atomic exchange blocks</text>
+
+  <!-- counting -->
+  <rect x="40" y="250" width="200" height="50" rx="6" fill="#f8cecc" stroke="#b85450"/>
+  <text x="140" y="270" font-size="12" text-anchor="middle" fill="#1a1a1a">count tokens per block</text>
+  <text x="140" y="288" font-size="11" text-anchor="middle" fill="#333333">(tiktoken cl100k_base, projection boundary)</text>
+
+  <!-- drop -->
+  <rect x="40" y="350" width="200" height="50" rx="6" fill="#f8cecc" stroke="#b85450"/>
+  <text x="140" y="368" font-size="12" text-anchor="middle" fill="#1a1a1a">drop oldest blocks until budget holds;</text>
+  <text x="140" y="386" font-size="12" text-anchor="middle" fill="#1a1a1a">never drop the pinned owner message</text>
+
+  <!-- result -->
+  <rect x="330" y="260" width="200" height="60" rx="6" fill="#d5e8d4" stroke="#82b366"/>
+  <text x="430" y="282" font-size="12" text-anchor="middle" fill="#1a1a1a">(filtered_items, ContextSnapshot)</text>
+  <text x="430" y="300" font-size="11" text-anchor="middle" fill="#333333">first_item_id / last_item_id / token_count</text>
+
+  <!-- run_turn -->
+  <rect x="330" y="380" width="200" height="60" rx="6" fill="#fff2cc" stroke="#d6b656"/>
+  <text x="430" y="402" font-size="12" text-anchor="middle" fill="#1a1a1a">items_to_messages(filtered)</text>
+  <text x="430" y="420" font-size="12" text-anchor="middle" fill="#1a1a1a">+ run_turn(history=...)</text>
+
+  <!-- notebook -->
+  <rect x="610" y="150" width="200" height="50" rx="6" fill="#e1d5e7" stroke="#9673a6"/>
+  <text x="710" y="170" font-size="12" text-anchor="middle" fill="#1a1a1a">notebook (exact history)</text>
+  <text x="710" y="188" font-size="11" text-anchor="middle" fill="#333333">stays untouched in the DB</text>
+
+  <!-- edges -->
+  <line x1="240" y1="65" x2="330" y2="65" stroke="#333333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="430" y1="100" x2="430" y2="150" stroke="#333333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="240" y1="175" x2="330" y2="175" stroke="#333333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="140" y1="200" x2="140" y2="250" stroke="#333333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="140" y1="300" x2="140" y2="350" stroke="#333333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="240" y1="375" x2="330" y2="375" stroke="#333333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="430" y1="320" x2="430" y2="380" stroke="#333333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="530" y1="175" x2="610" y2="175" stroke="#333333" stroke-width="1.5" marker-end="url(#arrow)"/>
+</svg>

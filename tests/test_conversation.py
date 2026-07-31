@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 import tempfile
@@ -574,5 +575,235 @@ async def test_send_interrupted_run_no_auto_continue():
             # start_conversation run + the completed send run).
             runs = await sw.repo.load_runs(conv_id)
             assert len(runs) == 2
+        finally:
+            await sw.close()
+
+
+# -- Plan 009: context assembler tests --
+
+
+def _assemble_item(kind: str, sequence: int, body: dict):
+    from weaver.conversation.repository import ItemRecord
+
+    return ItemRecord(
+        id=f"item-{sequence:04d}",
+        conversation_id="conv-1",
+        sequence=sequence,
+        turn_id=f"turn-{sequence}",
+        run_id="run-1",
+        kind=kind,
+        body=json.dumps(body),
+        created_at="2026-07-31T00:00:00",
+    )
+
+
+def _chat_items(pairs: int, word: str = "apple") -> list:
+    """pairs owner+assistant item pairs, oldest first."""
+    items = []
+    for i in range(pairs):
+        items.append(_assemble_item("owner", len(items) + 1, {"content": f"{word} {i}?"}))
+        items.append(_assemble_item("assistant", len(items) + 1, {"content": f"{word} {i}!"}))
+    return items
+
+
+@pytest.mark.asyncio
+async def test_context_assembler_all_fit():
+    """All items fit: first_item_id None, item_count equals input length."""
+    from weaver.conversation import ContextAssembler
+
+    items = _chat_items(3)
+    assembler = ContextAssembler("You are Weaver.", 100_000)
+    kept, snapshot = await assembler.assemble(items)
+
+    assert kept == items
+    assert snapshot.first_item_id is None
+    assert snapshot.last_item_id == items[-1].id
+    assert snapshot.item_count == 6
+    assert snapshot.token_count <= snapshot.token_budget
+
+
+@pytest.mark.asyncio
+async def test_context_assembler_budget_drops_oldest_keeps_pin():
+    """Tight budget: strict subset, oldest dropped first, newest owner kept."""
+    from weaver.conversation import ContextAssembler
+
+    items = _chat_items(20)
+    assembler = ContextAssembler("You are Weaver.", 50)
+    kept, snapshot = await assembler.assemble(items)
+
+    assert len(kept) < len(items)  # strict subset
+    assert snapshot.first_item_id == kept[0].id
+    assert snapshot.last_item_id == items[-1].id
+    assert snapshot.item_count == len(kept)
+    assert snapshot.token_count <= snapshot.token_budget
+    # newest owner message survives
+    newest_owner = next(
+        item for item in reversed(items) if item.kind == "owner"
+    )
+    assert newest_owner.id in {item.id for item in kept}
+    # oldest item dropped first (the kept list starts somewhere later)
+    assert kept[0].id != items[0].id
+
+
+@pytest.mark.asyncio
+async def test_context_assembler_pin_alone_exceeds_budget():
+    """Pin alone over budget: returns it alone, token_count > budget, no raise."""
+    from weaver.conversation import ContextAssembler
+
+    items = _chat_items(2)
+    assembler = ContextAssembler("You are Weaver.", 5)
+    kept, snapshot = await assembler.assemble(items)
+
+    assert kept == [items[-2]]  # pinned owner alone, no assistant reply
+    assert snapshot.item_count == 1
+    assert snapshot.token_count > snapshot.token_budget
+    assert snapshot.first_item_id == items[-2].id
+
+
+@pytest.mark.asyncio
+async def test_context_assembler_exchange_atomicity():
+    """A budget that would split assistant(tool_calls)+tool_call+tool_result
+    instead drops the whole exchange: no orphaned tool role, no unpaired
+    call_id in the surviving projection."""
+    import tiktoken
+
+    from weaver.agent.messages import project_messages
+    from weaver.conversation import ContextAssembler
+    from weaver.conversation.items import items_to_messages
+
+    items = [
+        _assemble_item("owner", 1, {"content": "oldest question"}),
+        _assemble_item(
+            "assistant",
+            2,
+            {
+                "content": "",
+                "tool_calls": [
+                    {"id": "call-1", "name": "echo", "arguments": '{"message":"hi"}'}
+                ],
+            },
+        ),
+        _assemble_item(
+            "tool_call",
+            3,
+            {"tool_call_id": "call-1", "name": "echo", "arguments": '{"message":"hi"}'},
+        ),
+        _assemble_item(
+            "tool_result",
+            4,
+            {"tool_call_id": "call-1", "name": "echo", "result": {"echo": "hi"}},
+        ),
+        _assemble_item("assistant", 5, {"content": "final answer"}),
+        _assemble_item("owner", 6, {"content": "newest question"}),
+    ]
+
+    # Budget that fits the final owner + its reply but not the tool exchange
+    # group: the boundary would land inside the exchange if blocks were
+    # split. The assembler must drop the whole exchange instead.
+    encoding = tiktoken.get_encoding("cl100k_base")
+    system_tokens = len(encoding.encode("You are Weaver."))
+    last_owner_tokens = len(encoding.encode("newest question"))
+    last_reply_tokens = len(encoding.encode("final answer"))
+    budget = system_tokens + last_owner_tokens + last_reply_tokens + 1
+
+    assembler = ContextAssembler("You are Weaver.", budget)
+    kept, snapshot = await assembler.assemble(items)
+
+    kept_kinds = [item.kind for item in kept]
+    # The tool exchange (block 0-1) is dropped whole; the newest assistant
+    # reply and the pinned owner fit and survive.
+    assert kept_kinds == ["assistant", "owner"]
+    assert all(item.id != "item-0002" for item in kept)  # exchange group gone
+    assert snapshot.token_count <= snapshot.token_budget
+
+    # Projection invariants: exactly the pinned owner + reply, one tool role
+    # would exist if the exchange were split — it must be absent, and no
+    # assistant carries tool_calls without its tool results.
+    messages = items_to_messages(kept)
+    projected = project_messages(system_prompt="", history=messages)
+    tool_roles = [m for m in projected if m.role == "tool"]
+    assert tool_roles == []
+    for message in projected:
+        assert not message.tool_calls  # no orphaned tool call either
+
+
+@pytest.mark.asyncio
+async def test_context_assembler_deterministic():
+    """Same items + same budget -> same selection and token_count."""
+    from weaver.conversation import ContextAssembler
+
+    items = _chat_items(20)
+    a1 = ContextAssembler("You are Weaver.", 50)
+    a2 = ContextAssembler("You are Weaver.", 50)
+    kept1, snap1 = await a1.assemble(items)
+    kept2, snap2 = await a2.assemble(items)
+
+    assert [i.id for i in kept1] == [i.id for i in kept2]
+    assert snap1.token_count == snap2.token_count
+    assert snap1.first_item_id == snap2.first_item_id
+    assert snap1.last_item_id == snap2.last_item_id
+
+
+@pytest.mark.asyncio
+async def test_send_with_token_budget_drops_oldest_keeps_pin():
+    """Runner integration: a bounded-budget send drops older items while
+    the pinned owner message (the current user text) survives."""
+    from weaver.agent.tools import ToolExecutionPolicy
+
+    with tempfile.TemporaryDirectory() as tmp:
+        layer, model, provider = _fake_layer(
+            _stop_response("One."),
+            _stop_response("Two."),
+        )
+        registry = _echo_registry()
+        sw = SessionWeave(
+            Path(tmp) / ".weaver" / "state",
+            model_layer=layer,
+            model=model,
+            system_prompt="You are Weaver.",
+            tool_registry=registry,
+            active_tools=("echo",),
+            execution_policy=ToolExecutionPolicy.read_only(),
+            token_budget=8,
+        )
+        await sw.open()
+        try:
+            conv_id = await sw.start_conversation("first hello")
+            r1 = await sw.send(conv_id, "second hello")
+            assert r1.exit_reason == "completed"
+
+            # The next send sees only items that fit the tiny budget:
+            # the newest owner message must be there, the oldest dropped.
+            r2 = await sw.send(conv_id, "third hello")
+            assert r2.exit_reason == "completed"
+
+            last_request = provider.calls[-1].request
+            contents = [m.content or "" for m in last_request.messages]
+            assert "third hello" in contents  # pinned owner
+            assert "first hello" not in contents  # oldest dropped
+        finally:
+            await sw.close()
+
+
+@pytest.mark.asyncio
+async def test_runner_unbounded_default_preserves_plan008():
+    """No token_budget -> assembler absent, full history reaches the model."""
+    with tempfile.TemporaryDirectory() as tmp:
+        layer, model, provider = _fake_layer(
+            _stop_response("One."),
+            _stop_response("Two."),
+        )
+        sw = _open_woven(Path(tmp), layer, model, _echo_registry())
+        await sw.open()
+        try:
+            conv_id = await sw.start_conversation("first hello")
+            await sw.send(conv_id, "second hello")
+            await sw.send(conv_id, "third hello")
+
+            last_request = provider.calls[-1].request
+            contents = [m.content or "" for m in last_request.messages]
+            assert "first hello" in contents
+            assert "second hello" in contents
+            assert "third hello" in contents
         finally:
             await sw.close()
