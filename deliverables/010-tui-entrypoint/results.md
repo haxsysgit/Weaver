@@ -2,8 +2,8 @@
 
 ## Status
 
-Implemented 2026-07-31 (Slices 1-4). Pending independent review and owner
-decision.
+Implemented 2026-07-31 (Slices 1-4); one repair pass applied after two
+clean reviews (both rechecks PASS). Awaiting owner decision.
 
 ## Executed commands
 
@@ -66,6 +66,18 @@ decision.
 3. `register_chat_tools` lives in `corpus/tools.py` (one home for tool
    registration) and uses Weaver-language descriptions (no "corpus" word,
    Contract §1).
+
+## Repair pass (commit 2c0792b)
+
+Both reviewers passed with no blockers; one repair pass applied:
+
+- MINOR-1: `_build_chat_session` now closes the session if
+  `start_conversation` raises after `open()` (no lingering aiosqlite worker
+  on the failure path).
+- NIT-1: `_show_result` `(cancelled)` branch was dead — interrupted turns
+  always carry `safe_failure`. Now a real cancel (`turn_id` set) shows
+  `(cancelled)`; a refused send (empty `turn_id`) shows the refusal message.
+- Both rechecks: PASS, no blockers. 185 tests still green, ruff clean.
 
 ## Verification floor
 

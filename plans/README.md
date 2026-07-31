@@ -16,7 +16,7 @@ evidence, review, and human decision gates must also be complete.
 | [007.5 - Audit repair](007.5-audit-repair.md) | Implemented | Plan 007 complete | Retry method, tool-call uniqueness constraint, single-tx start, dedup, repo tests, stale docs |
 | [008 - Wire the conversation loop](008-wire-conversation-loop.md) | Accepted 2026-07-31 | Plan 007 accepted | Zip conversation/ and agent/ into one working conversation: SessionWeave.send() calls run_turn() |
 | [009 - Context assembler](009-context-assembler.md) | Accepted 2026-07-31 | Plan 008 accepted | Give run_turn() a context window it can't exceed: token budget, truncation, pinned owner message |
-| [010 - TUI entrypoint](010-tui-entrypoint.md) | Implemented; awaiting review and owner decision | Plan 009 accepted | Owner chat window: weaver chat opens Textual TUI with direct await session.send() |
+| [010 - TUI entrypoint](010-tui-entrypoint.md) | Implemented; two reviews clean, awaiting owner decision | Plan 009 accepted | Owner chat window: weaver chat opens Textual TUI with direct await session.send() |
 | [011 - Direct-reading baseline](011-direct-reading-baseline.md) | Planned; learning gate required | Plan 010 accepted | Compare Flash and Pro reading the same novel packet blind: the first time Weaver reads a novel |
 | 012 - Direct-reading baseline (original) | Deferred (renumbered from 008) | Plans 002-011 accepted | Blind Flash/Pro comparison over selected chapter packets |
 | 013 - First compiled-memory experiment (original) | Deferred (renumbered from 009) | Plan 012 accepted | Compare bounded compiled Markdown memory with direct rereading |

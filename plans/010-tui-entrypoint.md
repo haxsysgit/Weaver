@@ -6,7 +6,7 @@
 
 ## Status
 
-- **State:** Admitted 2026-07-31 (learning gate confirmed by owner); implemented, awaiting independent review and owner decision
+- **State:** implemented, two independent reviews clean (one repair pass applied, both recheck clean), awaiting owner decision
 - **Priority:** P2
 - **Effort:** M
 - **Risk:** Medium (new dependency, first UI surface, cooperative-only cancellation)
