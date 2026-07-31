@@ -17,13 +17,11 @@
   meter); D observability (token/context per turn, run history, receipts
   peek). TUI stays; web UI deferred with explicit triggers (remote access,
   dashboards, non-dev users, HaxJobs product stage).
-- **Phase A status:** Implemented and committed (pi-shaped screen: no
-  header, one-line StatusBar with busy spinner, welcome line cleared by
-  first submit, ctrl+c priority binding that cancels or clears the input,
-  session line at exit). Owner direction: study pi's TUI closely, mirror
-  its look little by little; pi chat-screen anatomy recorded in
-  pi-tui-deep-dive.md. 9 new tests (pure helpers + Textual pilot with a
-  stub session), 203 green, ruff clean. Awaiting review and owner gate.
+- **Phase A status:** Accepted by owner 2026-07-31 (decision.md addendum);
+  pushed. 9 new tests (pure helpers + Textual pilot with a stub session),
+  203 green, ruff clean, two independent PASS reviews.
+- **Phase B (next):** streaming deltas (model-layer seam, review like the
+  persist carve-out). Not started; awaits the owner's word.
 - **Priority:** P2
 - **Effort:** M
 - **Risk:** Medium (new dependency, first UI surface, cooperative-only cancellation)

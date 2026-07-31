@@ -18,3 +18,10 @@ in plan 10 for a while"). The acceptance above stands for the shipped chat
 core; new UI phases (A-D roadmap) amend the plan and require their own
 review and a fresh owner decision per phase. TUI stays the surface; web UI
 is deferred with explicit triggers recorded in the plan.
+
+## Phase A acceptance addendum (2026-07-31)
+
+Owner accepted Phase A (pi-shaped screen) on 2026-07-31: "okay i accept
+it". Commits 6892a90 (code + docs) and a0d5cf7 (review ledger). Decision
+recorded after two independent PASS reviews. Phase B (streaming deltas)
+starts on the owner's word.
