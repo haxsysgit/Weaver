@@ -93,7 +93,9 @@ class WeaverChat(App[None]):
     def _show_result(self, result: TurnResult) -> None:
         if result.final_text:
             self._log(f"[bold]Weaver:[/bold] {escape(result.final_text)}")
-        elif result.exit_reason == "interrupted" and not result.safe_failure:
+        elif result.exit_reason == "interrupted" and result.turn_id:
+            # Real cancel: turn_id is set. A refused send (interrupted run
+            # exists) carries an empty turn_id and must show its message.
             self._log("(cancelled)")
         elif result.safe_failure:
             self._log(f"({result.exit_reason}: {escape(result.safe_failure)})")

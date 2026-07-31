@@ -229,8 +229,12 @@ async def _build_chat_session(
         execution_policy=ToolExecutionPolicy.maintenance(),
     )
     await sw.open()
-    conv_id = await sw.start_conversation("")
-    return sw, conv_id, mode_label
+    try:
+        conv_id = await sw.start_conversation("")
+        return sw, conv_id, mode_label
+    except Exception:
+        await sw.close()
+        raise
 
 
 async def _run_chat(state_dir: Path, *, live: bool) -> int:
