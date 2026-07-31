@@ -79,6 +79,30 @@ None:` guard (removed in 067722a), ctx_text can render >100% on
 pin-only overflow (informative by design), history shows empty owner
 text for continued runs (display corner, not in the send path).
 
+## Phase C review (multi-line input, markdown, resume, commit 2a8be00)
+
+Review 1 (input/regressions): PASS, no blockers. Enter-vs-shift+enter
+resolution verified against Textual 8.2.8 source: ChatInput
+prevent_default() suppresses TextArea's newline handler in the MRO
+dispatch, the non-priority app binding fires on bubble, and the picker's
+ListView enter binding wins focused-first; pilot.press tests exercise the
+real dispatch. No new persistence writes; deltas still preview-only;
+cancellation contract intact; ruff clean; credential grep 0. NITs: JSON
+body decode could raise AttributeError on non-object JSON (theoretical,
+every writer emits {"content": ...}), and ^n leaves a queued opener run
+shown as '—' in history (anticipated).
+
+Review 2 (UX/scope): PASS, no blockers. Focus management correct (mount,
+post-turn refocus, picker on_mount focus); busy guard preserves typed
+text; no ^r/^n/^h collisions with TextArea bindings; empty submits and
+welcome-clear correct; multi-line submit strips trailing newlines; no
+'corpus' wording. 1 MINOR (fixed in 3aa695f): architecture.drawio/svg
+still showed the pre-Phase-A Header/Input/Footer design and
+on_input_submitted; redrawn for the current screen (no Header, StatusBar,
+stream area, ChatInput, markdown replies, ^r/^n/^h, ctx meter). NITs:
+no test for focus-return after picker close, no test pressing enter on
+the history screen (guard verified by inspection).
+
 ## Phase A reviews (pi-shaped screen, commit 6892a90)
 
 Review 1 (bindings/spinner/scope): PASS, no blockers. Priority binding
