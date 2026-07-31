@@ -1,87 +1,112 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="900" height="640" viewBox="0 0 900 640" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12">
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="1080" viewBox="0 0 980 1080" font-family="Menlo, Consolas, monospace" font-size="11">
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M 0 1 L 9 5 L 0 9 z" fill="#666"/>
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#666" />
     </marker>
   </defs>
-  <rect x="0" y="0" width="900" height="640" fill="#ffffff"/>
 
-  <!-- cli -->
-  <rect x="40" y="40" width="200" height="50" rx="6" fill="#fff2cc" stroke="#d6b656" stroke-width="1.5"/>
-  <text x="140" y="60" text-anchor="middle" font-weight="bold">weaver chat [--fake]</text>
-  <text x="140" y="76" text-anchor="middle">(argparse subcommand)</text>
+  <!-- edges -->
+  <g stroke="#666" stroke-width="1.5" fill="none" marker-end="url(#arrow)">
+    <path d="M 140 90 L 140 150" />
+    <path d="M 140 240 L 140 300" />
+    <path d="M 140 380 L 140 440" />
+    <path d="M 240 475 L 330 500" />
+    <path d="M 440 350 L 440 500" />
+    <path d="M 550 545 L 640 545" />
+    <path d="M 550 560 L 640 680" />
+    <path d="M 440 640 L 440 640" />
+    <path d="M 440 730 L 440 780" />
+    <path d="M 550 820 L 640 545" />
+    <path d="M 440 440 L 440 500" />
+  </g>
+
+  <!-- CLI -->
+  <rect x="40" y="40" width="200" height="50" rx="8" fill="#fff2cc" stroke="#d6b656" />
+  <text x="140" y="62" text-anchor="middle" fill="#333">weaver chat [--fake]</text>
+  <text x="140" y="78" text-anchor="middle" fill="#333">(argparse subcommand, live is default)</text>
 
   <!-- mode -->
-  <rect x="40" y="150" width="200" height="70" rx="6" fill="#f8cecc" stroke="#b85450" stroke-width="1.5"/>
-  <text x="140" y="170" text-anchor="middle" font-weight="bold">mode selection</text>
-  <text x="140" y="186" text-anchor="middle">default: live (DEEPSEEK_KEY required,</text>
-  <text x="140" y="202" text-anchor="middle">else exit 2)</text>
-  <text x="140" y="216" text-anchor="middle">--fake: scripted, never live</text>
+  <rect x="40" y="150" width="200" height="90" rx="8" fill="#f8cecc" stroke="#b85450" />
+  <text x="140" y="172" text-anchor="middle" fill="#333">startup config + mode</text>
+  <text x="140" y="188" text-anchor="middle" fill="#333">load_startup_config(): env &gt; .env</text>
+  <text x="140" y="204" text-anchor="middle" fill="#333">&gt; .weaver/config.toml</text>
+  <text x="140" y="220" text-anchor="middle" fill="#333">live default (no key: exit 2)</text>
+  <text x="140" y="236" text-anchor="middle" fill="#333">--fake: never builds DeepSeekProvider</text>
 
   <!-- build -->
-  <rect x="40" y="280" width="200" height="70" rx="6" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
-  <text x="140" y="300" text-anchor="middle" font-weight="bold">SessionWeave(state_dir, model,</text>
-  <text x="140" y="316" text-anchor="middle">chat registry, maintenance policy)</text>
-  <text x="140" y="332" text-anchor="middle">.open() -&gt; start_conversation("")</text>
+  <rect x="40" y="300" width="200" height="80" rx="8" fill="#dae8fc" stroke="#6c8ebf" />
+  <text x="140" y="322" text-anchor="middle" fill="#333">SessionWeave(state_dir, model,</text>
+  <text x="140" y="338" text-anchor="middle" fill="#333">chat registry, maintenance policy)</text>
+  <text x="140" y="354" text-anchor="middle" fill="#333">.open() -&gt; start_conversation("")</text>
+  <text x="140" y="370" text-anchor="middle" fill="#333">(^n later creates more conversations)</text>
 
   <!-- app -->
-  <rect x="40" y="410" width="200" height="60" rx="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.5"/>
-  <text x="140" y="432" text-anchor="middle" font-weight="bold">WeaverChat(sw, conv_id, mode)</text>
-  <text x="140" y="448" text-anchor="middle">await app.run_async()</text>
-  <text x="140" y="462" text-anchor="middle">(same event loop as DB)</text>
+  <rect x="40" y="440" width="200" height="70" rx="8" fill="#d5e8d4" stroke="#82b366" />
+  <text x="140" y="462" text-anchor="middle" fill="#333">WeaverChat(sw, conv_id, mode_label)</text>
+  <text x="140" y="478" text-anchor="middle" fill="#333">await app.run_async() (same loop)</text>
+  <text x="140" y="494" text-anchor="middle" fill="#333">exit prints the session line</text>
 
-  <!-- header -->
-  <rect x="330" y="40" width="220" height="60" rx="6" fill="#e1d5e7" stroke="#9673a6" stroke-width="1.5"/>
-  <text x="440" y="62" text-anchor="middle" font-weight="bold">Header</text>
-  <text x="440" y="78" text-anchor="middle">"Weaver — fake"</text>
-  <text x="440" y="93" text-anchor="middle">"Weaver — live deepseek-v4-flash"</text>
+  <!-- welcome -->
+  <rect x="330" y="40" width="220" height="50" rx="8" fill="#e1d5e7" stroke="#9673a6" />
+  <text x="440" y="62" text-anchor="middle" fill="#333">welcome line in log</text>
+  <text x="440" y="78" text-anchor="middle" fill="#333">cleared by first submit (pi-style)</text>
 
   <!-- log -->
-  <rect x="330" y="130" width="220" height="50" rx="6" fill="#e1d5e7" stroke="#9673a6" stroke-width="1.5"/>
-  <text x="440" y="152" text-anchor="middle" font-weight="bold">RichLog #chat-log</text>
-  <text x="440" y="168" text-anchor="middle">markup, wrap, escaped text</text>
+  <rect x="330" y="120" width="220" height="50" rx="8" fill="#e1d5e7" stroke="#9673a6" />
+  <text x="440" y="142" text-anchor="middle" fill="#333">RichLog #chat-log</text>
+  <text x="440" y="158" text-anchor="middle" fill="#333">escaped user lines · markdown replies</text>
+
+  <!-- stream -->
+  <rect x="330" y="200" width="220" height="60" rx="8" fill="#e1d5e7" stroke="#9673a6" />
+  <text x="440" y="222" text-anchor="middle" fill="#333">Static #stream (hidden)</text>
+  <text x="440" y="238" text-anchor="middle" fill="#333">live text deltas while model streams</text>
+  <text x="440" y="254" text-anchor="middle" fill="#333">cleared and hidden after the turn</text>
 
   <!-- input -->
-  <rect x="330" y="210" width="220" height="50" rx="6" fill="#e1d5e7" stroke="#9673a6" stroke-width="1.5"/>
-  <text x="440" y="232" text-anchor="middle" font-weight="bold">Input #input</text>
-  <text x="440" y="248" text-anchor="middle">enter submits · typing stays enabled</text>
+  <rect x="330" y="290" width="220" height="60" rx="8" fill="#e1d5e7" stroke="#9673a6" />
+  <text x="440" y="312" text-anchor="middle" fill="#333">ChatInput #input (TextArea)</text>
+  <text x="440" y="328" text-anchor="middle" fill="#333">enter submits (bubbles to app binding)</text>
+  <text x="440" y="344" text-anchor="middle" fill="#333">shift+enter inserts a newline</text>
 
-  <!-- footer -->
-  <rect x="330" y="290" width="220" height="50" rx="6" fill="#e1d5e7" stroke="#9673a6" stroke-width="1.5"/>
-  <text x="440" y="312" text-anchor="middle" font-weight="bold">Footer</text>
-  <text x="440" y="328" text-anchor="middle">ctrl+c cancel · ctrl+q quit</text>
+  <!-- status -->
+  <rect x="330" y="380" width="220" height="60" rx="8" fill="#e1d5e7" stroke="#9673a6" />
+  <text x="440" y="402" text-anchor="middle" fill="#333">StatusBar (one line)</text>
+  <text x="440" y="418" text-anchor="middle" fill="#333">spinner while busy · mode · ctx meter</text>
+  <text x="440" y="434" text-anchor="middle" fill="#333">hints: ^c cancel · ^h history · ^q quit</text>
 
   <!-- send -->
-  <rect x="330" y="400" width="220" height="70" rx="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.5"/>
-  <text x="440" y="420" text-anchor="middle" font-weight="bold">on_input_submitted</text>
-  <text x="440" y="436" text-anchor="middle">cancel_event = asyncio.Event()</text>
-  <text x="440" y="452" text-anchor="middle">result = await sw.send(conv_id,</text>
-  <text x="440" y="468" text-anchor="middle">text, cancel_event)</text>
+  <rect x="330" y="500" width="220" height="90" rx="8" fill="#d5e8d4" stroke="#82b366" />
+  <text x="440" y="522" text-anchor="middle" fill="#333">action_submit_turn</text>
+  <text x="440" y="538" text-anchor="middle" fill="#333">cancel_event = asyncio.Event()</text>
+  <text x="440" y="554" text-anchor="middle" fill="#333">await sw.send(conv_id, text,</text>
+  <text x="440" y="570" text-anchor="middle" fill="#333">cancel_event, on_delta)</text>
+  <text x="440" y="586" text-anchor="middle" fill="#333">footer: set_context(tokens, budget)</text>
 
-  <!-- cancel -->
-  <rect x="330" y="520" width="220" height="50" rx="6" fill="#f8cecc" stroke="#b85450" stroke-width="1.5"/>
-  <text x="440" y="542" text-anchor="middle" font-weight="bold">action_cancel_turn (ctrl+c)</text>
-  <text x="440" y="558" text-anchor="middle">cancel_event.set() — never task.cancel()</text>
+  <!-- actions -->
+  <rect x="330" y="640" width="220" height="90" rx="8" fill="#fff2cc" stroke="#d6b656" />
+  <text x="440" y="662" text-anchor="middle" fill="#333">actions</text>
+  <text x="440" y="678" text-anchor="middle" fill="#333">^c cancel_turn (priority, never task.cancel)</text>
+  <text x="440" y="694" text-anchor="middle" fill="#333">^h show_history</text>
+  <text x="440" y="710" text-anchor="middle" fill="#333">^r resume (picker) · ^n new conversation</text>
+  <text x="440" y="726" text-anchor="middle" fill="#333">^q quit (base priority)</text>
+
+  <!-- pickers -->
+  <rect x="330" y="780" width="220" height="80" rx="8" fill="#e1d5e7" stroke="#9673a6" />
+  <text x="440" y="802" text-anchor="middle" fill="#333">screens (dumb views)</text>
+  <text x="440" y="818" text-anchor="middle" fill="#333">RunHistoryScreen (^h): recent runs, esc/q</text>
+  <text x="440" y="834" text-anchor="middle" fill="#333">ConversationPickerScreen (^r): recent</text>
+  <text x="440" y="850" text-anchor="middle" fill="#333">conversations, enter picks, esc/q</text>
 
   <!-- db -->
-  <rect x="620" y="400" width="200" height="60" rx="6" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
-  <text x="720" y="422" text-anchor="middle" font-weight="bold">weaver.sqlite3 (state dir)</text>
-  <text x="720" y="438" text-anchor="middle">runs, items, receipts persist</text>
+  <rect x="640" y="500" width="220" height="70" rx="8" fill="#dae8fc" stroke="#6c8ebf" />
+  <text x="750" y="522" text-anchor="middle" fill="#333">weaver.sqlite3 (state dir)</text>
+  <text x="750" y="538" text-anchor="middle" fill="#333">conversations, runs, items persist</text>
+  <text x="750" y="554" text-anchor="middle" fill="#333">list_conversations / list_recent_turns</text>
 
   <!-- tools -->
-  <rect x="620" y="520" width="200" height="80" rx="6" fill="#f8cecc" stroke="#b85450" stroke-width="1.5"/>
-  <text x="720" y="542" text-anchor="middle" font-weight="bold">chat registry (maintenance)</text>
-  <text x="720" y="558" text-anchor="middle">echo · inspect_novel_corpus</text>
-  <text x="720" y="574" text-anchor="middle">build_novel_packet · export_novel</text>
-  <text x="720" y="590" text-anchor="middle">fetch/update NEVER registered</text>
-
-  <!-- arrows -->
-  <path d="M 140 90 L 140 148" stroke="#666" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <path d="M 140 220 L 140 278" stroke="#666" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <path d="M 140 350 L 140 408" stroke="#666" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <path d="M 240 440 L 328 440" stroke="#666" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <path d="M 440 260 L 440 398" stroke="#666" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <path d="M 552 440 L 618 432" stroke="#666" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <path d="M 552 452 L 618 552" stroke="#666" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <path d="M 440 570 L 440 472" stroke="#666" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="640" y="640" width="220" height="80" rx="8" fill="#f8cecc" stroke="#b85450" />
+  <text x="750" y="662" text-anchor="middle" fill="#333">chat registry (maintenance policy)</text>
+  <text x="750" y="678" text-anchor="middle" fill="#333">echo · inspect_novel_corpus</text>
+  <text x="750" y="694" text-anchor="middle" fill="#333">build_novel_packet · export_novel</text>
+  <text x="750" y="710" text-anchor="middle" fill="#333">fetch/update NEVER registered</text>
 </svg>
