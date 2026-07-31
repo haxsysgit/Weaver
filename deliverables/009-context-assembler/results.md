@@ -2,8 +2,9 @@
 
 ## Status
 
-Implemented 2026-07-31 (Slices 1-4). Pending independent review and owner
-decision.
+Implemented 2026-07-31 (Slices 1-4); one review repair pass applied
+(comments + plan scope fix, commit `3af68c3`); both independent reviews
+rechecked clean. Awaiting owner decision.
 
 ## Implementation observations
 
@@ -68,3 +69,13 @@ decision.
 - `uv run pytest -q` — 178 passed (171 baseline + 7 new)
 - `uv run ruff check src/weaver tests` — clean
 - `uv pip check` — compatible
+
+## Repair pass (post-review, commit `3af68c3`)
+
+Both reviewers passed with no blockers. Reviewer 2 raised one minor: the
+plan's in-scope list omitted `session.py` (Slice 3 sanctions the kwarg
+forwarding; the change itself was correct). Two nits: missing ponytail
+markers for the tokenizer approximation, the O(n²) recount, and the
+corrupt-data edge. Repair added the scope line and three comments only;
+zero executable lines changed. Both rechecks pass (178 green, ruff
+clean).

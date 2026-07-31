@@ -6,7 +6,7 @@
 
 ## Status
 
-- **State:** Admitted 2026-07-31 (learning gate confirmed by owner); implemented, awaiting independent review and owner decision
+- **State:** Admitted 2026-07-31 (learning gate confirmed by owner); implemented, two independent reviews clean (one repair pass applied, both recheck), awaiting owner decision
 - **Priority:** P2
 - **Effort:** S
 - **Risk:** Low
