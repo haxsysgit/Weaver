@@ -41,7 +41,17 @@ logger = logging.getLogger(__name__)
 
 
 class WeaverChat(App[None]):
-    """Pi-shaped chat window: RichLog history, TextArea, one-line StatusBar."""
+    """Pi-shaped chat window: RichLog history, TextArea, one-line StatusBar.
+
+    No speaker labels (pi-style): user lines render dim italic, replies
+    render as markdown, status lines stay dim.
+    """
+
+    CSS = """
+    #input {
+        border: tall $surface-lighten-1;
+    }
+    """
 
     BINDINGS = [
         # Plan 010 §4: Ctrl+C cancels the in-flight turn instead of quitting.
@@ -137,7 +147,10 @@ class WeaverChat(App[None]):
             self.query_one("#chat-log", RichLog).clear()
             self._welcome_shown = False
 
-        self._log(f"[bold]You:[/bold] {escape(text)}")
+        # pi-style: no speaker labels; the user line is dim
+        # italic so it reads as "the thing I typed" next to the
+        # model reply rendered as plain markdown.
+        self._log(f"[dim italic]{escape(text)}[/dim italic]")
         self._send_in_flight = True
         self._cancel_event = asyncio.Event()
         self._stream_text = ""
@@ -203,7 +216,7 @@ class WeaverChat(App[None]):
         # append if long replies ever show up.
         widget = self._stream_widget()
         widget.display = True
-        widget.update(f"[bold]Weaver:[/bold] {escape(self._stream_text)}")
+        widget.update(escape(self._stream_text))
 
     def _stream_widget(self) -> Static:
         return self.query_one("#stream", Static)

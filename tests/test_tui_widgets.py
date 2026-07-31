@@ -117,7 +117,7 @@ async def test_pilot_welcome_line_shown_then_cleared_by_first_submit():
         assert stub.sent == [("conv-1", "hi")]
         log = _log_text(app)
         assert "Weaver chat" not in log  # welcome cleared on first submit
-        assert "You: hi" in log
+        assert "hi" in log  # no speaker labels: the user line is plain text
         assert "hello back" in log  # reply renders as (plain) markdown
 
 
@@ -191,7 +191,7 @@ async def test_pilot_stream_deltas_render_live_then_final_in_log():
         await pilot.pause()
 
         log = _log_text(app)
-        assert "You: hi" in log
+        assert "hi" in log  # user line has no label
         assert "hello back" in log
         assert stream.display is False
 
