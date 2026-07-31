@@ -25,3 +25,15 @@ Owner accepted Phase A (pi-shaped screen) on 2026-07-31: "okay i accept
 it". Commits 6892a90 (code + docs) and a0d5cf7 (review ledger). Decision
 recorded after two independent PASS reviews. Phase B (streaming deltas)
 starts on the owner's word.
+
+## Phase B + D acceptance addendum (2026-07-31)
+
+Owner directed: "start and when you're done continue to phase D, but make
+sure you do it properly 1 by 1, then at the end i accept them all."
+
+Phase B (streaming deltas, d135ac6) and Phase D (observability,
+0ec98fb, 067722a) were implemented one at a time, each with its own
+independent review (both PASS, no blockers), and are accepted per the
+owner's advance instruction. Commits pushed as 18e6d3e. Suite 215 green,
+ruff clean. Phase C (multi-line input, markdown replies, conversation
+resume) awaits the owner's word.
