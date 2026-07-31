@@ -6,7 +6,7 @@
 
 ## Status
 
-- **State:** Planned; learning gate required
+- **State:** Admitted 2026-07-31 (learning gate confirmed by owner); in implementation
 - **Priority:** P2
 - **Effort:** M
 - **Risk:** Medium (new dependency, first UI surface, cooperative-only cancellation)
@@ -18,6 +18,15 @@
   cooperative-only after a live repro of sticky task cancellation
 - **Learning gate:** `deliverables/010-tui-entrypoint/learning.md`
 - **Final decision:** pending
+- **Executor corrections (owner-authorized, 2026-07-31):** `SessionWeave.send()`
+  gains an optional `cancel_event` kwarg (Contract §4 needs the TUI to set it;
+  `None` preserves Plan 008/009 behavior); chat sessions use
+  `ToolExecutionPolicy.maintenance()` because Contract §2's own tool list
+  (inspect/build/export) is classified `INTERNAL_WRITE` in
+  `corpus/tools.py:194-201` and `read_only()` would register tools that can
+  never execute — fetch/update stay out of the registry entirely (stronger
+  than policy-blocking); a new `register_chat_tools` in `corpus/tools.py`
+  registers only the three safe tools with Weaver-language descriptions.
 
 ## Goal
 
@@ -272,8 +281,10 @@ the existing `--fake|--live` pattern:
 - default fake; `--live` requires `DEEPSEEK_KEY` (exit 2 if absent);
 - state dir from `WEAVER_STATE_DIR` (fallback `.weaver/state`);
 - register echo + library inspection tools only (Contract §2);
-- `ToolExecutionPolicy.read_only()` for fake mode; live mode also read-only
-  in this slice (no mutation tools exist in chat);
+- `ToolExecutionPolicy.maintenance()` (READ + INTERNAL_WRITE) for both modes
+  — corrected from `read_only()`: the registered library tools are
+  classified INTERNAL_WRITE and must be executable; fetch/update are simply
+  not registered, which is the actual safety boundary;
 - mode label passed to the app (Contract §3).
 
 Commit: `plan 010: add weaver chat CLI`
