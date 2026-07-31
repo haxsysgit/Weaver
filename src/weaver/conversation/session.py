@@ -113,6 +113,7 @@ class SessionWeave:
         self,
         conversation_id: str,
         user_text: str,
+        cancel_event: asyncio.Event | None = None,
     ) -> TurnResult:
         """Run one full turn with the owner's input and return the result.
 
@@ -120,6 +121,9 @@ class SessionWeave:
         interrupted run exists, returns a safe error instead of
         auto-continuing; continue_interrupted/retry_interrupted remain the
         explicit recovery methods.
+
+        Plan 010 seam: the caller may pass its own cancel event (the TUI
+        sets it on Ctrl+C). None keeps the Plan 008/009 internal event.
         """
         assert self._repo is not None and self._coordinator is not None
         assert self._runner is not None, (
@@ -140,7 +144,8 @@ class SessionWeave:
             user_text,
             turn_sequence=turn_sequence,
         )
-        cancel_event = asyncio.Event()
+        if cancel_event is None:
+            cancel_event = asyncio.Event()
         return await self._runner.run_turn_in_run(
             conversation_id,
             run_id,

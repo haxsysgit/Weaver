@@ -14,6 +14,8 @@ from .corpus.tools import (
     export_novel,
     fetch_novel_chapters,
     inspect_novel_corpus,
+    register_chat_tools,
+    service_from_environment,
     update_novel_corpus,
 )
 from .doctor import run_doctor
@@ -29,11 +31,54 @@ from .model_layer import (
     DeepSeekProvider,
     FakeModelProvider,
     ModelLayer,
+    ModelMessage,
+    ModelResponse,
+    ModelStopReason,
+)
+from .agent.tools import (
+    EffectKind,
+    ToolDefinition,
+    ToolExecutionPolicy,
+    ToolRegistry,
+)
+from .conversation.session import SessionWeave
+from .tui import WeaverChat
+
+# Chat session system prompt: Weaver words only, never the word "corpus"
+# (Plan 010 Contract §1).
+CHAT_SYSTEM_PROMPT = (
+    "You are Weaver, a lifelong reader with a private library of novels. "
+    "Keep replies plain and honest. You can inspect the library, build "
+    "reading packets, and export editions. You cannot fetch or update the "
+    "library from chat."
+)
+
+# Scripted fake-mode reply: friendly, non-streamed, honest about being fake.
+CHAT_FAKE_RESPONSES = (
+    ModelResponse(
+        assistant_message=ModelMessage(
+            role="assistant",
+            content=(
+                "I read you. This is a fake-mode reply — no real model is "
+                "running. Set DEEPSEEK_KEY and use `weaver chat --live` to "
+                "talk to the real Weaver."
+            ),
+        ),
+        provider_id="deepseek",
+        model_id=DEEPSEEK_FLASH.model_id,
+        stop_reason=ModelStopReason.STOP,
+        raw_stop_reason="stop",
+    ),
 )
 
 
 def _state_root() -> Path:
     return Path(os.environ.get("WEAVER_STATE_DIR", ".weaver/runs"))
+
+
+def _chat_state_dir() -> Path:
+    """Conversation state dir: WEAVER_STATE_DIR or .weaver/state (Plan 010 §7)."""
+    return Path(os.environ.get("WEAVER_STATE_DIR", ".weaver/state"))
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -61,6 +106,16 @@ def _parser() -> argparse.ArgumentParser:
     library = subcommands.add_parser(
         "library",
         help="Browse and manage Weaver's novel library.",
+    )
+
+    chat = subcommands.add_parser(
+        "chat",
+        help="Open the Weaver chat window.",
+    )
+    chat.add_argument(
+        "--live",
+        action="store_true",
+        help="Use live DeepSeek mode; requires DEEPSEEK_KEY.",
     )
     library_commands = library.add_subparsers(dest="library_command", required=True)
 
@@ -97,10 +152,111 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _chat_tool_registry() -> ToolRegistry:
+    """Echo + library inspection tools only (Plan 010 Contract §2).
+
+    fetch/update are never registered, so the chat session cannot invoke
+    network-backed tools at all.
+    """
+    registry = ToolRegistry()
+
+    async def echo_handler(arguments: dict, context) -> dict:
+        return {"echo": arguments}
+
+    registry.register(
+        ToolDefinition(
+            name="echo",
+            description="Echo back arguments (development tool).",
+            parameters={
+                "type": "object",
+                "properties": {"message": {"type": "string"}},
+            },
+            handler=echo_handler,
+            effect_kind=EffectKind.READ,
+        )
+    )
+    register_chat_tools(registry, service_from_environment(live_source=False))
+    return registry
+
+
+async def _build_chat_session(
+    state_dir: Path,
+    *,
+    live: bool,
+) -> tuple[SessionWeave, str, str]:
+    """Build the exact chat session the TUI runs (test seam).
+
+    Returns (sw, conversation_id, mode_label) with the session open and a
+    fresh conversation started. _run_chat runs the app on top; tests use
+    this builder to exercise the same code path without a terminal.
+    """
+    if live:
+        api_key = os.environ.get("DEEPSEEK_KEY")
+        if not api_key:
+            raise ValueError("live chat requires DEEPSEEK_KEY")
+        provider = DeepSeekProvider(
+            api_key,
+            timeout_seconds=DEFAULT_TIMEOUT_SECONDS,
+        )
+        mode_label = f"live {DEEPSEEK_FLASH.model_id}"
+    else:
+        provider = FakeModelProvider(
+            "deepseek",
+            models=DEEPSEEK_MODELS,
+            responses=CHAT_FAKE_RESPONSES,
+        )
+        mode_label = "fake"
+
+    model_layer = ModelLayer()
+    model_layer.register_provider(provider)
+    model = model_layer.get_model(
+        DEEPSEEK_FLASH.provider_id,
+        DEEPSEEK_FLASH.model_id,
+    )
+    registry = _chat_tool_registry()
+    sw = SessionWeave(
+        state_dir,
+        model_layer=model_layer,
+        model=model,
+        system_prompt=CHAT_SYSTEM_PROMPT,
+        tool_registry=registry,
+        active_tools=(
+            "echo",
+            "inspect_novel_corpus",
+            "build_novel_packet",
+            "export_novel",
+        ),
+        execution_policy=ToolExecutionPolicy.maintenance(),
+    )
+    await sw.open()
+    conv_id = await sw.start_conversation("")
+    return sw, conv_id, mode_label
+
+
+async def _run_chat(state_dir: Path, *, live: bool) -> int:
+    """Open the session and run the TUI on the same event loop."""
+    if live and not os.environ.get("DEEPSEEK_KEY"):
+        print("ERROR live chat requires DEEPSEEK_KEY; no call was made.")
+        return 2
+    sw, conv_id, mode_label = await _build_chat_session(
+        state_dir,
+        live=live,
+    )
+    app = WeaverChat(sw, conv_id, mode_label=mode_label)
+    try:
+        await app.run_async()
+    finally:
+        await sw.close()
+    return 0
+
+
 def run(argv: Sequence[str] | None = None) -> int:
     parser = _parser()
     args = parser.parse_args(argv)
     state_root = _state_root()
+
+    if args.command == "chat":
+        return asyncio.run(_run_chat(_chat_state_dir(), live=args.live))
 
     if args.command == "doctor":
         checks = run_doctor(

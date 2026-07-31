@@ -146,6 +146,62 @@ def _handler(
     return handle
 
 
+def register_chat_tools(
+    registry: ToolRegistry,
+    service: CorpusService,
+) -> None:
+    """Register the chat-safe library tools only (Plan 010 Contract §2).
+
+    fetch_novel_chapters and update_novel_corpus are NOT registered: they are
+    network-backed and classified INTERNAL_WRITE without an external-effect
+    gate (audit finding B2). Not registering them is stronger than a policy
+    block — they cannot be invoked at all. Descriptions use Weaver words and
+    never the word "corpus" (Contract §1). Effect kinds stay truthful
+    (INTERNAL_WRITE): inspect writes an inventory manifest, packet and export
+    write files into the private state dir.
+    """
+    definitions: tuple[
+        tuple[
+            str,
+            str,
+            type[StrictModel],
+            Callable[[Any], Awaitable[Any]],
+        ],
+        ...,
+    ] = (
+        (
+            "inspect_novel_corpus",
+            "Inspect Weaver's private library and return metadata only.",
+            InspectNovelCorpusInput,
+            service.inspect_novel_corpus,
+        ),
+        (
+            "build_novel_packet",
+            "Build a private ordered Markdown reading packet from valid chapters.",
+            BuildNovelPacketInput,
+            service.build_novel_packet,
+        ),
+        (
+            "export_novel",
+            "Build a private TXT, Markdown, or EPUB edition in chapter order.",
+            ExportNovelInput,
+            service.export_novel,
+        ),
+    )
+    for name, description, input_model, operation in definitions:
+        registry.register(
+            ToolDefinition(
+                name=name,
+                description=description,
+                parameters=input_model.model_json_schema(),
+                handler=_handler(input_model, operation),
+                max_result_chars=12_000,
+                effect_kind=EffectKind.INTERNAL_WRITE,
+                retry_safe=True,
+            )
+        )
+
+
 def register_corpus_tools(
     registry: ToolRegistry,
     service: CorpusService,
