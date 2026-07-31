@@ -37,8 +37,7 @@ def _run(mode: str, state_dir: Path) -> None:
         cwd=Path(__file__).resolve().parents[2],
     )
     assert result.returncode == 0, (
-        f"Process {mode} failed:\n"
-        f"STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
+        f"Process {mode} failed:\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}"
     )
 
 
@@ -264,9 +263,7 @@ async def test_repo_load_items_for_run_id():
             conv_id = await sw.start_conversation("hello")
             runs = await sw.repo.load_runs(conv_id)
             run = runs[0]
-            for_run = await sw.repo.load_items(
-                conv_id, for_run_id=run.id
-            )
+            for_run = await sw.repo.load_items(conv_id, for_run_id=run.id)
 
             assert len(for_run) >= 1
             assert all(i.run_id == run.id for i in for_run)
@@ -288,9 +285,7 @@ async def test_repo_load_items_before_sequence():
             all_items = await sw.repo.load_items(conv_id)
             assert len(all_items) >= 1
             first_seq = all_items[0].sequence
-            before = await sw.repo.load_items(
-                conv_id, before_sequence=first_seq
-            )
+            before = await sw.repo.load_items(conv_id, before_sequence=first_seq)
             # Nothing before the first item
             assert len(before) == 0
         finally:
@@ -409,7 +404,6 @@ def _open_woven(tmp: Path, layer, model, registry) -> SessionWeave:
 
 
 @pytest.mark.asyncio
-
 def test_items_to_messages_assistant_tool_calls_guard():
     """Contract §4: corrupted assistant tool_calls entries raise ValueError
     with the item id instead of a bare KeyError/TypeError."""
@@ -429,7 +423,9 @@ def test_items_to_messages_assistant_tool_calls_guard():
         )
 
     with pytest.raises(ValueError, match="itm12345678ab"):
-        _items_to_messages([item({"tool_calls": [{"id": "c1"}]})])  # missing name/arguments
+        _items_to_messages(
+            [item({"tool_calls": [{"id": "c1"}]})]
+        )  # missing name/arguments
     with pytest.raises(ValueError, match="itm12345678ab"):
         _items_to_messages([item({"tool_calls": ["nope"]})])  # non-dict entry
     with pytest.raises(ValueError, match="itm12345678ab"):
@@ -601,8 +597,12 @@ def _chat_items(pairs: int, word: str = "apple") -> list:
     """pairs owner+assistant item pairs, oldest first."""
     items = []
     for i in range(pairs):
-        items.append(_assemble_item("owner", len(items) + 1, {"content": f"{word} {i}?"}))
-        items.append(_assemble_item("assistant", len(items) + 1, {"content": f"{word} {i}!"}))
+        items.append(
+            _assemble_item("owner", len(items) + 1, {"content": f"{word} {i}?"})
+        )
+        items.append(
+            _assemble_item("assistant", len(items) + 1, {"content": f"{word} {i}!"})
+        )
     return items
 
 
@@ -637,9 +637,7 @@ async def test_context_assembler_budget_drops_oldest_keeps_pin():
     assert snapshot.item_count == len(kept)
     assert snapshot.token_count <= snapshot.token_budget
     # newest owner message survives
-    newest_owner = next(
-        item for item in reversed(items) if item.kind == "owner"
-    )
+    newest_owner = next(item for item in reversed(items) if item.kind == "owner")
     assert newest_owner.id in {item.id for item in kept}
     # oldest item dropped first (the kept list starts somewhere later)
     assert kept[0].id != items[0].id
@@ -887,9 +885,7 @@ async def test_send_on_delta_streams_chunks_before_completion(tmp_path):
     await sw.open()
     try:
         conv_id = await sw.start_conversation("hi")
-        task = asyncio.create_task(
-            sw.send(conv_id, "hello", on_delta=collect)
-        )
+        task = asyncio.create_task(sw.send(conv_id, "hello", on_delta=collect))
         await asyncio.sleep(0.05)  # let the turn reach the mid-stream gate
 
         # Mid-turn: the first chunk is already rendered, the send is not
@@ -1007,5 +1003,24 @@ async def test_list_recent_turns_returns_runs_newest_first(tmp_path):
 
         entries = await sw.list_recent_turns(conv_id, limit=1)
         assert [e["owner_text"] for e in entries] == ["second hello"]
+    finally:
+        await sw.close()
+
+
+@pytest.mark.asyncio
+async def test_send_on_delta_raising_callback_does_not_fail_turn(tmp_path):
+    """A broken preview callback is logged and swallowed; the turn lives."""
+
+    async def explode(delta: str) -> None:
+        raise RuntimeError("preview widget exploded")
+
+    layer, model, provider = _fake_layer(_stop_response("Done."))
+    sw = _open_woven(Path(tmp_path), layer, model, _echo_registry())
+    await sw.open()
+    try:
+        conv_id = await sw.start_conversation("hi")
+        result = await sw.send(conv_id, "hello", on_delta=explode)
+        assert result.exit_reason == "completed"
+        assert result.final_text == "Done."
     finally:
         await sw.close()

@@ -23,7 +23,7 @@ from weaver.agent.turn import (
 from weaver.agent.tools import ToolExecutionPolicy, ToolRegistry
 from weaver.model_layer import ModelLayer, ModelSpec
 
-from .assembler import ContextAssembler, ContextSnapshot
+from .assembler import ContextAssembler
 from .common import now
 from .coordinator import RunCoordinator, _tx
 from .items import (
@@ -38,8 +38,7 @@ logger = logging.getLogger(__name__)
 # (contract §5: no auto-continue). Kept in the conversation module so the
 # agent carve-out (agent/turn.py only) stays untouched.
 INTERRUPTED_RUN_EXISTS = (
-    "This conversation has an interrupted run. "
-    "Continue or retry it first."
+    "This conversation has an interrupted run. Continue or retry it first."
 )
 
 
@@ -114,15 +113,15 @@ class ConversationRunner:
         run_turn tracks them in its own new_messages.
         """
         items = await self._repo.load_items(conversation_id)
-        snapshot: ContextSnapshot | None = None
-        if self._assembler is not None:
-            items, snapshot = await self._assembler.assemble(items)
-            logger.info(
-                "context snapshot: %d items, %d/%d tokens",
-                snapshot.item_count,
-                snapshot.token_count,
-                snapshot.token_budget,
-            )
+        # The assembler always runs (Phase D count-only mode when no budget
+        # is configured), so the snapshot is always available.
+        items, snapshot = await self._assembler.assemble(items)
+        logger.info(
+            "context snapshot: %d items, %d/%d tokens",
+            snapshot.item_count,
+            snapshot.token_count,
+            snapshot.token_budget,
+        )
         history = _items_to_messages(items)
 
         result = await run_turn(
@@ -146,9 +145,8 @@ class ConversationRunner:
 
         # Plan 010 Phase D: surface the context meter on the result so the
         # TUI footer can show tokens used (and % when a budget is set).
-        if snapshot is not None:
-            result.token_count = snapshot.token_count
-            result.token_budget = snapshot.token_budget or 0
+        result.token_count = snapshot.token_count
+        result.token_budget = snapshot.token_budget or 0
 
         # Contract §3: single finalization. The final STOP assistant was
         # already persisted through the callback; complete_run records only
