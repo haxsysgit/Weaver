@@ -54,6 +54,21 @@ candidate: PASS, no blockers; 4 MINOR doc-accuracy items (stale pre-flip
 prose in results.md and learning.md, missing ledger entries) fixed in the
 closing commit.
 
+## Phase A reviews (pi-shaped screen, commit 6892a90)
+
+Review 1 (bindings/spinner/scope): PASS, no blockers. Priority binding
+verified against installed Textual 8.2.8 (Input binds ctrl+c -> copy,
+non-priority, so the app's priority cancel wins); cooperative cancel
+never task.cancel; spinner interval started/stopped without leaks; diff
+scoped to tui/, cli.py, tests.
+
+Review 2 (separation/pi-mirror): PASS, 1 MINOR + 2 NITs. MINOR: the
+first commit shipped docs only, leaving the Phase A code uncommitted in
+the working tree; fixed by re-committing code + docs together as
+6892a90. NIT (fixed): docs said "state dir" where the code prints the
+sqlite path. NIT (kept): the spinner test probes private `status._busy`
+as a secondary assert behind the observable `status.content` check.
+
 ## Repair and recheck
 
 - Repair commit `2c0792b` (one repair pass, allowed by the plan): MINOR-1
