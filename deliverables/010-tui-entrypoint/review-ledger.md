@@ -54,6 +54,31 @@ candidate: PASS, no blockers; 4 MINOR doc-accuracy items (stale pre-flip
 prose in results.md and learning.md, missing ledger entries) fixed in the
 closing commit.
 
+## Phase B review (streaming deltas, commits d135ac6 + 067722a)
+
+Review 1 (seam/cancellation/persistence): PASS, no blockers. The seam is
+minimal (3 source files, agent/session.py untouched); _complete_streaming
+mirrors ModelLayer.complete validation exactly; on_delta=None preserves
+buffered behavior (214-suite proof); zero new persistence writes; no
+task.cancel; stream area hidden Static with finally-block cleanup. NITs:
+deep-module ModelProtocolError import (cosmetic), 50ms settle sleep in
+the chunk test, and no test for the swallowed failing callback.
+
+Follow-ups in 067722a: added test_send_on_delta_raising_callback_does_not_fail_turn.
+
+## Phase D review (observability, commits 0ec98fb + 067722a)
+
+Review 2 (assembler/TurnResult/history/TUI/secrets): PASS, no blockers.
+Count-only mode truncates nothing and budgeted chats unchanged (Plan 009
+tests green); TurnResult 0-defaults break nothing; list_recent_turns
+status mapping covers all five coordinator phases; ctrl+h is non-priority
+so typing is safe; RunHistoryScreen is a dumb view; the meter attribute
+is _meter, not _context (root-cause claim verified against installed
+Textual source); secrets clean. Notes: dead `if self._assembler is not
+None:` guard (removed in 067722a), ctx_text can render >100% on
+pin-only overflow (informative by design), history shows empty owner
+text for continued runs (display corner, not in the send path).
+
 ## Phase A reviews (pi-shaped screen, commit 6892a90)
 
 Review 1 (bindings/spinner/scope): PASS, no blockers. Priority binding
