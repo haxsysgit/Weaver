@@ -102,6 +102,10 @@ class TurnResult:
     model_name: str = ""
     provider_name: str = ""
     input_characters: int = 0
+    # Plan 010 Phase D: context meter surfaced from the assembler snapshot
+    # (0 = no snapshot; token_budget 0 = unbounded).
+    token_count: int = 0
+    token_budget: int = 0
 
 
 def _message_id() -> str:

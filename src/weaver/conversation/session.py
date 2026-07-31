@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import json
 import os
 from pathlib import Path
 
@@ -168,6 +169,50 @@ class SessionWeave:
             owner_text
         )
         return conv_id
+
+    async def list_recent_turns(
+        self, conversation_id: str, limit: int = 12
+    ) -> list[dict]:
+        """Recent runs of a conversation for the TUI's history screen.
+
+        Each entry: run_id, created_at, status (completed/interrupted/
+        running), owner_text (the user message that started the run).
+        Plan 010 Phase D: observability without touching the send path.
+        """
+        assert self._repo is not None
+        runs = await self._repo.load_runs(conversation_id)
+        items = await self._repo.load_items(conversation_id)
+        owner_by_run: dict[str, str] = {}
+        for item in items:
+            if item.kind == "owner" and item.run_id not in owner_by_run:
+                # Item bodies are JSON (see items.py); owner items carry
+                # the message text under 'content'.
+                try:
+                    body = json.loads(item.body)
+                except ValueError:
+                    body = {}
+                owner_by_run[item.run_id] = str(body.get("content", ""))
+        entries = []
+        for run in runs[-limit:][::-1]:
+            # queued = the conversation opener (owner message, no model
+            # call yet), so it carries no outcome.
+            if run.phase == "completed":
+                status = "completed"
+            elif run.phase == "interrupted":
+                status = "interrupted"
+            elif run.phase == "queued":
+                status = "—"
+            else:
+                status = "running"
+            entries.append(
+                {
+                    "run_id": run.id,
+                    "created_at": run.created_at,
+                    "status": status,
+                    "owner_text": owner_by_run.get(run.id, ""),
+                }
+            )
+        return entries
 
     async def continue_interrupted(
         self, conversation_id: str

@@ -49,6 +49,7 @@ class _StubSession:
         self.gate: asyncio.Event | None = None
         self.stream_chunks: list[str] = []
         self.streamed: list[str] = []
+        self.recent_turns: list[dict] = []
         self.scripted = TurnResult(
             turn_id="t-1",
             exit_reason=TurnExitReason.COMPLETED,
@@ -68,10 +69,13 @@ class _StubSession:
             await self.gate.wait()
         return self.scripted
 
+    async def list_recent_turns(self, conversation_id, limit=12):
+        return list(self.recent_turns)
 
-def _log_text(app) -> str:
-    """Plain text of everything currently in the chat log."""
-    log = app.query_one("#chat-log", RichLog)
+
+def _log_text(node) -> str:
+    """Plain text of everything currently in the node's RichLog."""
+    log = node.query_one(RichLog)
     return " ".join(str(strip.text) for strip in log.lines)
 
 
@@ -212,3 +216,78 @@ async def test_pilot_second_submit_while_busy_shows_still_thinking():
         stub.gate.set()
         await first
         await pilot.pause()
+
+
+# ---------------------------------------------------------------------------
+# Plan 010 Phase D: context meter + run history screen.
+# ---------------------------------------------------------------------------
+
+
+def test_ctx_text_formats():
+    from weaver.tui.widgets import ctx_text
+
+    assert ctx_text(0, 0) == ""
+    assert ctx_text(900, 0) == "900"
+    assert ctx_text(1234, 0) == "1.2k"
+    assert ctx_text(4000, 10000) == "40%"
+    assert ctx_text(9999, 10000) == "99%"
+
+
+def test_status_text_includes_context_and_history_hint():
+    from weaver.tui.widgets import status_text
+
+    text = status_text("live deepseek-v4-flash", busy=False, context="40%")
+    assert "ctx 40%" in text
+    assert "^h history" in text
+
+
+async def test_pilot_footer_shows_context_after_send():
+    stub = _StubSession()
+    stub.scripted = TurnResult(
+        turn_id="t-1",
+        exit_reason=TurnExitReason.COMPLETED,
+        final_text="hello back",
+        token_count=1234,
+        token_budget=0,
+    )
+    async for app, pilot in _open_chat(stub):
+        await _submit(app, "hi")
+        await pilot.pause()
+        status = app.query_one(StatusBar)
+        assert "ctx 1.2k" in str(status.content)
+
+
+async def test_pilot_ctrl_h_opens_history_screen_and_esc_closes():
+    from weaver.tui.screens import RunHistoryScreen
+
+    stub = _StubSession()
+    stub.recent_turns = [
+        {
+            "run_id": "r-2",
+            "created_at": "2026-07-31T16:05:00",
+            "status": "completed",
+            "owner_text": "second hello",
+        },
+        {
+            "run_id": "r-1",
+            "created_at": "2026-07-31T16:00:00",
+            "status": "—",
+            "owner_text": "first hello",
+        },
+    ]
+    async for app, pilot in _open_chat(stub):
+        # Declarative wiring: ctrl+h dispatches to show_history.
+        bound = app.active_bindings["ctrl+h"].binding
+        assert bound.action == "show_history"
+
+        await app.action_show_history()
+        await pilot.pause()
+
+        assert isinstance(app.screen, RunHistoryScreen)
+        text = _log_text(app.screen)
+        assert "completed" in text and "second hello" in text
+        assert "first hello" in text
+
+        await pilot.press("escape")
+        await pilot.pause()
+        assert not isinstance(app.screen, RunHistoryScreen)

@@ -26,6 +26,7 @@ from textual.widgets import Input, RichLog, Static
 
 from weaver.agent.turn import TurnResult
 from weaver.conversation.session import SessionWeave
+from weaver.tui.screens import RunHistoryScreen
 from weaver.tui.widgets import StatusBar, welcome_line
 
 logger = logging.getLogger(__name__)
@@ -41,6 +42,8 @@ class WeaverChat(App[None]):
         # Overrides Textual's base ctrl+c -> help_quit; ctrl+q stays as the
         # priority quit binding from the App base class.
         Binding("ctrl+c", "cancel_turn", "Cancel", show=False, priority=True),
+        # Plan 010 Phase D: ^h opens the run history screen (escape/q closes).
+        Binding("ctrl+h", "show_history", "History", show=False),
     ]
 
     def __init__(
@@ -115,6 +118,10 @@ class WeaverChat(App[None]):
                 on_delta=self._on_delta,
             )
             self._show_result(result)
+            # Phase D: context meter on the footer after each turn.
+            self.query_one(StatusBar).set_context(
+                result.token_count, result.token_budget
+            )
         finally:
             self._send_in_flight = False
             self._cancel_event = None
@@ -122,6 +129,11 @@ class WeaverChat(App[None]):
             self._stream_text = ""
             self._stream_widget().display = False
             self.query_one("#input", Input).focus()
+
+    async def action_show_history(self) -> None:
+        """Ctrl+H: fetch recent runs and show them; escape/q closes."""
+        entries = await self._sw.list_recent_turns(self._conv_id, limit=12)
+        await self.push_screen(RunHistoryScreen(entries))
 
     async def _on_delta(self, delta: str) -> None:
         """Append a live chunk to the stream area (preview only)."""

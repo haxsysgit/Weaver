@@ -921,3 +921,91 @@ async def test_send_on_delta_none_still_buffers(tmp_path):
         assert received == []
     finally:
         await sw.close()
+
+
+# ---------------------------------------------------------------------------
+# Plan 010 Phase D: observability (context meter + run history).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_assembler_no_budget_counts_only(tmp_path):
+    """token_budget=None: no truncation, full token_count reported."""
+    from weaver.conversation import ContextAssembler
+
+    items = _chat_items(3)
+    assembler = ContextAssembler("You are Weaver.", None)
+    kept, snapshot = await assembler.assemble(items)
+
+    assert kept == items  # count-only: nothing dropped
+    assert snapshot.token_budget is None
+    assert snapshot.token_count > 0
+    assert snapshot.item_count == len(items)
+
+
+@pytest.mark.asyncio
+async def test_send_reports_token_count_without_budget(tmp_path):
+    """Default chat (no token_budget) still gets a context meter."""
+    layer, model, provider = _fake_layer(_stop_response("Done."))
+    sw = _open_woven(Path(tmp_path), layer, model, _echo_registry())
+    await sw.open()
+    try:
+        conv_id = await sw.start_conversation("hi")
+        result = await sw.send(conv_id, "hello")
+        assert result.exit_reason == "completed"
+        assert result.token_count > 0
+        assert result.token_budget == 0  # unbounded
+    finally:
+        await sw.close()
+
+
+@pytest.mark.asyncio
+async def test_send_token_budget_reports_percent_math(tmp_path):
+    """With a budget, the result carries the same numbers the assembler used."""
+    from weaver.agent.tools import ToolExecutionPolicy
+
+    layer, model, provider = _fake_layer(_stop_response("Done."))
+    sw = SessionWeave(
+        Path(tmp_path) / ".weaver" / "state",
+        model_layer=layer,
+        model=model,
+        system_prompt="You are Weaver.",
+        tool_registry=_echo_registry(),
+        active_tools=("echo",),
+        execution_policy=ToolExecutionPolicy.read_only(),
+        token_budget=8,
+    )
+    await sw.open()
+    try:
+        conv_id = await sw.start_conversation("hi")
+        result = await sw.send(conv_id, "hello")
+        assert result.exit_reason == "completed"
+        assert result.token_budget == 8
+        assert result.token_count > 0
+        assert result.token_count <= result.token_budget  # chat fits, no drop
+    finally:
+        await sw.close()
+
+
+@pytest.mark.asyncio
+async def test_list_recent_turns_returns_runs_newest_first(tmp_path):
+    """History screen data: two turns, owner texts, completed status."""
+    layer, model, provider = _fake_layer(
+        _stop_response("One."),
+        _stop_response("Two."),
+    )
+    sw = _open_woven(Path(tmp_path), layer, model, _echo_registry())
+    await sw.open()
+    try:
+        conv_id = await sw.start_conversation("first hello")
+        await sw.send(conv_id, "second hello")
+
+        entries = await sw.list_recent_turns(conv_id)
+        assert [e["owner_text"] for e in entries] == ["second hello", "first hello"]
+        assert [e["status"] for e in entries] == ["completed", "—"]
+        assert all(e["run_id"] for e in entries)
+
+        entries = await sw.list_recent_turns(conv_id, limit=1)
+        assert [e["owner_text"] for e in entries] == ["second hello"]
+    finally:
+        await sw.close()

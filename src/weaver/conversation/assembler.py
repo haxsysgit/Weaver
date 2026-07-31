@@ -32,7 +32,7 @@ class ContextSnapshot:
     last_item_id: str
     item_count: int
     token_count: int
-    token_budget: int
+    token_budget: int | None  # None = count-only mode, no truncation
     created_at: str
 
 
@@ -86,9 +86,11 @@ class ContextAssembler:
     def __init__(
         self,
         system_prompt: str,
-        token_budget: int,
+        token_budget: int | None,
         encoding_name: str = "cl100k_base",
     ) -> None:
+        """budget None = count-only mode: no truncation, token_count still
+        reported (used by the TUI's context meter; Plan 010 Phase D)."""
         self._system_prompt = system_prompt
         self._token_budget = token_budget
         self._encoding = tiktoken.get_encoding(encoding_name)
@@ -113,7 +115,7 @@ class ContextAssembler:
         ]
         total = system_tokens + sum(block_counts)
 
-        if total <= self._token_budget or not blocks:
+        if self._token_budget is None or total <= self._token_budget:
             return items, self._snapshot(
                 conversation_id=conversation_id,
                 kept_items=items,

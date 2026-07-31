@@ -23,7 +23,7 @@ from weaver.agent.turn import (
 from weaver.agent.tools import ToolExecutionPolicy, ToolRegistry
 from weaver.model_layer import ModelLayer, ModelSpec
 
-from .assembler import ContextAssembler
+from .assembler import ContextAssembler, ContextSnapshot
 from .common import now
 from .coordinator import RunCoordinator, _tx
 from .items import (
@@ -70,11 +70,9 @@ class ConversationRunner:
         self._active_tools = active_tools
         self._execution_policy = execution_policy
         # Plan 009: no budget configured = unbounded, Plan 008 behavior.
-        self._assembler = (
-            ContextAssembler(system_prompt, token_budget)
-            if token_budget is not None
-            else None
-        )
+        # Plan 010 Phase D: the assembler always runs; a None budget means
+        # count-only (no truncation) so the TUI gets a token meter for free.
+        self._assembler = ContextAssembler(system_prompt, token_budget)
 
     def _persist_callback(
         self,
@@ -116,6 +114,7 @@ class ConversationRunner:
         run_turn tracks them in its own new_messages.
         """
         items = await self._repo.load_items(conversation_id)
+        snapshot: ContextSnapshot | None = None
         if self._assembler is not None:
             items, snapshot = await self._assembler.assemble(items)
             logger.info(
@@ -144,6 +143,12 @@ class ConversationRunner:
             ),
             on_delta=on_delta,
         )
+
+        # Plan 010 Phase D: surface the context meter on the result so the
+        # TUI footer can show tokens used (and % when a budget is set).
+        if snapshot is not None:
+            result.token_count = snapshot.token_count
+            result.token_budget = snapshot.token_budget or 0
 
         # Contract §3: single finalization. The final STOP assistant was
         # already persisted through the callback; complete_run records only
