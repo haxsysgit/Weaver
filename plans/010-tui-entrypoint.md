@@ -319,6 +319,9 @@ Commit: `plan 010: TUI code-path test`
 3. No-live-client-in-fake assertion (pattern from `tests/test_cli.py:8-24`).
 4. Tool set: fetch/update absent from the chat registry.
 5. CLI: `chat --help` exit 0, no `corpus` wording; `chat` without
+   key exits 2 before any call, receipt, or state dir; `chat --fake` is
+   the scripted mode. Startup loads `.env` then `.weaver/config.toml`
+   (`[api] key`, `[chat] model`); precedence real env > `.env` > config;
    `DEEPSEEK_KEY` exits 2 before any call.
 6. Ctrl+C binding unit: setting the cancel event while a scripted slow fake
    turn runs settles the turn as interrupted (deterministic via events, no
@@ -342,6 +345,8 @@ Commit: `plan 010: TUI code-path test`
 - [x] `textual>=2.0.0` added; `uv.lock` updated; import verified on Python 3.11.
 - [x] `src/weaver/tui/app.py` exists with `WeaverChat`.
 - [x] `weaver chat` CLI exists; live is default; `--fake` opts into fake.
+- [x] Startup config: `.env` + `.weaver/config.toml` load before dispatch
+  (owner-directed 2026-07-31; config.py, tests/test_config.py).
 - [x] Ctrl+C sets cancel_event; no task.cancel of model calls.
 - [x] Chat tool set excludes fetch/update; TUI never touches `novels/`.
 - [x] Full tests and lint pass.

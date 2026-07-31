@@ -185,6 +185,11 @@ weaver chat (live by default) / weaver chat --fake
 ## What this plan will prove
 
 - `weaver chat` opens a working Textual TUI.
+- Startup config (owner-directed 2026-07-31): `cli.run()` loads `.env`
+  (cwd) then `.weaver/config.toml` before dispatch. Schema: `[api] key`,
+  `[chat] model` (alias or id, default flash). Precedence: real env >
+  `.env` > config file; injected into os.environ so existing readers are
+  unchanged. Both files are gitignored (never committed).
 - `SessionWeave.send()` is called from the TUI's async event loop.
 - Fake mode works without credentials and never constructs a live client.
 - Live mode is the default; fake is opt-in via `--fake`; no key fails fast.

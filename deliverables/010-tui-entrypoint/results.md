@@ -84,6 +84,32 @@ verify the model id against the DeepSeek API docs. Changes in commit
   default-no-key exits 2; help shows `--fake`.
 - Full suite 185 passed, ruff clean, `uv pip check` clean.
 
+## Owner-directed correction 2 (2026-07-31): startup config (commit a4267ea)
+
+Owner asked for `.env` support (his key lives there) and a private `.weaver`
+config file loaded at startup.
+
+- `.env` (cwd) parsed without a dependency; `.weaver/config.toml` via stdlib
+  `tomllib`. Precedence: real env > `.env` > config file; values injected
+  into `os.environ` (DEEPSEEK_KEY, WEAVER_CHAT_MODEL) so existing readers
+  keep working.
+- Config schema: `[api] key` (DeepSeek key), `[chat] model` (alias `flash`/
+  `pro` or full id, default `deepseek-v4-flash`; validated, unknown ids
+  rejected with a clear error).
+- No-key default chat still exits 2 before any call, receipt, or state dir;
+  message now suggests `--fake` or the config file.
+- Old test pinning ".env must NOT be loaded" rewritten to the new contract:
+  tests run in clean tmp cwds; precedence is covered in tests/test_config.py.
+- `.weaver/config.toml` template created locally (gitignored; the key stays
+  in `.env` for now, config is the documented fallback).
+- Verified live: `uv run weaver chat` from the repo root loads `.env` and
+  opens the real Textual TUI in live mode (no message sent, no API call).
+- 9 new tests; full suite 194 passed; ruff clean.
+- Recorded failure: `monkeypatch.delenv(key)` in teardown records a restore
+  for a polluted value, so undo re-applied it to later tests (fake provider
+  saw WEAVER_CHAT_MODEL=deepseek-v4-pro and reported model_failed). Fixed
+  with direct `os.environ.pop` in teardown; documented in test_config.py.
+
 ## Repair pass (commit 2c0792b)
 
 Both reviewers passed with no blockers; one repair pass applied:
