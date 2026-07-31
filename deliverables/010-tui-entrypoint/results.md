@@ -178,6 +178,35 @@ full suite 203 passed; ruff clean.
   dashboard plan can read both later.
 - 8 new tests; suite 214 green; ruff clean.
 
+## Phase C: multi-line input, markdown replies, resume (2026-07-31, commit 2a8be00)
+
+- Input swapped for TextArea with a ChatInput subclass: enter bubbles to
+  the app's submit binding (prevent_default suppresses TextArea's newline
+  handler), shift+enter inserts a newline. On picker screens the focused
+  ListView's enter binding wins because non-priority bindings resolve
+  from the focused widget up.
+- Replies render as markdown (rich.markdown.Markdown); plain replies look
+  identical to before.
+- ^r conversation picker (recent conversations, last owner message,
+  current marked, enter/escape/q), ^n new conversation;
+  SessionWeave.list_conversations() over a repository query with the
+  JSON-body decode pattern from list_recent_turns.
+- Recorded failures (all traced against Textual 8.2.8 source):
+  1. run_action returns True for any existing action, so an App binding
+     can never "fall through" to a screen's binding; priority pass
+     ordering is App-first, so screen priority bindings don't help
+     either. The fix is binding placement (App non-priority) plus the
+     widget not consuming the key.
+  2. _on_key dispatch invokes every MRO handler unless prevent_default()
+     is called; a plain early-return override still lets TextArea's
+     enter-newline handler run and stop the event.
+  3. widget.has_focus is per-screen (a hidden widget keeps its screen's
+     focus slot), so the submit guard must compare against the global
+     app.focused.
+  4. pilot.press("enter") was the first real proof that TextArea eats
+     enter; the binding test was written before the behavior was pinned.
+- 8 new tests; suite 223 green; ruff clean.
+
 ## Repair pass (commit 2c0792b)
 
 Both reviewers passed with no blockers; one repair pass applied:

@@ -32,8 +32,11 @@
   by SessionWeave.list_recent_turns(). Debugged root cause: StatusBar
   `_context` attribute shadowed MessagePump._context() and crashed the
   pump; renamed to `_meter`.
-- **Phase C (next):** multi-line input, markdown replies, conversation
-  resume, live meter wiring. Awaits the owner's word after B+D acceptance.
+- **Phase C status:** Implemented (commit 2a8be00): multi-line TextArea
+  input (enter submits, shift+enter newline via a ChatInput subclass that
+  prevent_default()s the base enter handler), markdown rendering for
+  replies, and conversation resume (^r picker of recent conversations,
+  ^n starts a fresh one, SessionWeave.list_conversations).
 - **Priority:** P2
 - **Effort:** M
 - **Risk:** Medium (new dependency, first UI surface, cooperative-only cancellation)
