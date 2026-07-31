@@ -17,13 +17,13 @@ selection based on `DEEPSEEK_KEY`, and the tool registration boundary.
 | File | Purpose | Current state |
 | --- | --- | --- |
 | `plan.md` | Pointer to the canonical implementation plan | Planned 2026-07-30 |
-| `learning.md` | Plain-language understanding and owner gate | Pending confirmation |
-| `architecture.drawio` | Editable TUI architecture | Pending |
-| `architecture.svg` | Rendered architecture preview | Pending |
-| `results.md` | Deterministic observations and executed commands | Pending implementation |
-| `rubric.md` | Acceptance checklist | Pending implementation |
+| `learning.md` | Plain-language understanding and owner gate | Confirmed 2026-07-31 |
+| `architecture.drawio` | Editable TUI architecture | Built 2026-07-31 |
+| `architecture.svg` | Rendered architecture preview | Built 2026-07-31 |
+| `results.md` | Deterministic observations and executed commands | Implemented 2026-07-31 |
+| `rubric.md` | Acceptance checklist | Implemented 2026-07-31 |
 | `review-ledger.md` | Independent findings, repairs, and rechecks | Pending implementation |
-| `decision.md` | Owner's final accept or reject record | Pending |
+| `decision.md` | Owner's final accept or reject record | Pending owner decision |
 
 No novel prose, chats, credentials, private receipts, or raw model reasoning
 belong here.

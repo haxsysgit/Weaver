@@ -6,7 +6,7 @@
 
 ## Status
 
-- **State:** Admitted 2026-07-31 (learning gate confirmed by owner); in implementation
+- **State:** Admitted 2026-07-31 (learning gate confirmed by owner); implemented, awaiting independent review and owner decision
 - **Priority:** P2
 - **Effort:** M
 - **Risk:** Medium (new dependency, first UI surface, cooperative-only cancellation)
@@ -194,8 +194,8 @@ fallback; it is never hardcoded into the TUI module.
 | Add dependency | `uv add textual` | `textual>=2.0.0` in pyproject + uv.lock |
 | Import check | `uv run python -c "from weaver.tui import WeaverChat; print('import ok')"` | `import ok` |
 | CLI check | `uv run weaver chat --help` | Help text shows `chat`; no `corpus` wording |
-| Focused tests | `uv run pytest -q tests/test_conversation.py -k "tui or send"` (plus new test file if created) | All pass |
-| Full tests | `uv run pytest -q` | All pass (166 baseline; expect 172+) |
+| Focused tests | `uv run pytest -q tests/test_tui.py tests/test_conversation.py -k "tui or send"` | All pass |
+| Full tests | `uv run pytest -q` | All pass (178 baseline; 185 expected) |
 | Lint in scope | `uv run ruff check src/weaver/tui src/weaver/cli.py tests` | Exit 0 |
 | Package check | `uv pip check` | Compatible |
 
@@ -333,15 +333,16 @@ Commit: `plan 010: TUI code-path test`
 
 ## Done criteria
 
-- [ ] Owner confirmed Plan 010 learning gate (stale `fire` claims removed).
-- [ ] Plan 009 is accepted.
-- [ ] `textual>=2.0.0` added; `uv.lock` updated; import verified on Python 3.11.
-- [ ] `src/weaver/tui/app.py` exists with `WeaverChat`.
-- [ ] `weaver chat` CLI exists; fake is default; `--live` requires the key.
-- [ ] Ctrl+C sets cancel_event; no task.cancel of model calls.
-- [ ] Chat tool set excludes fetch/update; TUI never touches `novels/`.
-- [ ] Full tests and lint pass.
-- [ ] No changes to `agent/`, `conversation/` internals, or `model_layer/`.
+- [x] Owner confirmed Plan 010 learning gate (stale `fire` claims removed).
+- [x] Plan 009 is accepted.
+- [x] `textual>=2.0.0` added; `uv.lock` updated; import verified on Python 3.11.
+- [x] `src/weaver/tui/app.py` exists with `WeaverChat`.
+- [x] `weaver chat` CLI exists; fake is default; `--live` requires the key.
+- [x] Ctrl+C sets cancel_event; no task.cancel of model calls.
+- [x] Chat tool set excludes fetch/update; TUI never touches `novels/`.
+- [x] Full tests and lint pass.
+- [x] No changes to `agent/`, `model_layer/`; `conversation/` change is the
+  sanctioned `send(cancel_event=...)` seam only.
 - [ ] Two independent reviews have no open blocker.
 - [ ] Owner records Plan 010 final decision.
 

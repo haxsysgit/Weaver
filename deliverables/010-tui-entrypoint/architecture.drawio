@@ -1,0 +1,70 @@
+<mxfile host="app.diagrams.net">
+  <diagram id="plan-010-architecture" name="Plan 010 - TUI entrypoint">
+    <mxGraphModel dx="900" dy="640" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="1050" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="cli" value="weaver chat [--live]&#10;(argparse subcommand)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="200" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="mode" value="mode selection&#10;--live: DEEPSEEK_KEY required, else exit 2&#10;default: fake (never constructs DeepSeekProvider)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="40" y="150" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="build" value="SessionWeave(state_dir, model,&#10;chat registry, maintenance policy)&#10;.open() -&gt; start_conversation(&quot;&quot;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="40" y="280" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="app" value="WeaverChat(sw, conv_id, mode_label)&#10;await app.run_async()  (same event loop)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="40" y="410" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="header" value="Header&#10;&quot;Weaver — fake&quot; / &#10;&quot;Weaver — live deepseek-v4-flash&quot;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="330" y="40" width="220" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="log" value="RichLog #chat-log&#10;(markup, wrap, escaped text)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="330" y="130" width="220" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="input" value="Input #input&#10;enter submits · typing stays enabled" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="330" y="210" width="220" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="footer" value="Footer&#10;ctrl+c cancel · ctrl+q quit" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="330" y="290" width="220" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="send" value="on_input_submitted&#10;cancel_event = asyncio.Event()&#10;result = await sw.send(conv_id, text, cancel_event)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="330" y="400" width="220" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="cancel" value="action_cancel_turn (ctrl+c)&#10;cancel_event.set() — never task.cancel()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="330" y="520" width="220" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="db" value="weaver.sqlite3 (state dir)&#10;runs, items, receipts persist" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="620" y="400" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="tools" value="chat registry (maintenance policy)&#10;echo · inspect_novel_corpus&#10;build_novel_packet · export_novel&#10;fetch/update NEVER registered" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="620" y="520" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="n1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="cli" target="mode">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="mode" target="build">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="build" target="app">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="app" target="send">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="input" target="send">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="send" target="db">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="send" target="tools">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="n8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="cancel" target="send">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

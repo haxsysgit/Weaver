@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="640" viewBox="0 0 900 640" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#666"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="900" height="640" fill="#ffffff"/>
+
+  <!-- cli -->
+  <rect x="40" y="40" width="200" height="50" rx="6" fill="#fff2cc" stroke="#d6b656" stroke-width="1.5"/>
+  <text x="140" y="60" text-anchor="middle" font-weight="bold">weaver chat [--live]</text>
+  <text x="140" y="76" text-anchor="middle">(argparse subcommand)</text>
+
+  <!-- mode -->
+  <rect x="40" y="150" width="200" height="70" rx="6" fill="#f8cecc" stroke="#b85450" stroke-width="1.5"/>
+  <text x="140" y="170" text-anchor="middle" font-weight="bold">mode selection</text>
+  <text x="140" y="186" text-anchor="middle">--live: DEEPSEEK_KEY required,</text>
+  <text x="140" y="202" text-anchor="middle">else exit 2</text>
+  <text x="140" y="216" text-anchor="middle">default: fake (never constructs live)</text>
+
+  <!-- build -->
+  <rect x="40" y="280" width="200" height="70" rx="6" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+  <text x="140" y="300" text-anchor="middle" font-weight="bold">SessionWeave(state_dir, model,</text>
+  <text x="140" y="316" text-anchor="middle">chat registry, maintenance policy)</text>
+  <text x="140" y="332" text-anchor="middle">.open() -&gt; start_conversation("")</text>
+
+  <!-- app -->
+  <rect x="40" y="410" width="200" height="60" rx="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.5"/>
+  <text x="140" y="432" text-anchor="middle" font-weight="bold">WeaverChat(sw, conv_id, mode)</text>
+  <text x="140" y="448" text-anchor="middle">await app.run_async()</text>
+  <text x="140" y="462" text-anchor="middle">(same event loop as DB)</text>
+
+  <!-- header -->
+  <rect x="330" y="40" width="220" height="60" rx="6" fill="#e1d5e7" stroke="#9673a6" stroke-width="1.5"/>
+  <text x="440" y="62" text-anchor="middle" font-weight="bold">Header</text>
+  <text x="440" y="78" text-anchor="middle">"Weaver — fake"</text>
+  <text x="440" y="93" text-anchor="middle">"Weaver — live deepseek-v4-flash"</text>
+
+  <!-- log -->
+  <rect x="330" y="130" width="220" height="50" rx="6" fill="#e1d5e7" stroke="#9673a6" stroke-width="1.5"/>
+  <text x="440" y="152" text-anchor="middle" font-weight="bold">RichLog #chat-log</text>
+  <text x="440" y="168" text-anchor="middle">markup, wrap, escaped text</text>
+
+  <!-- input -->
+  <rect x="330" y="210" width="220" height="50" rx="6" fill="#e1d5e7" stroke="#9673a6" stroke-width="1.5"/>
+  <text x="440" y="232" text-anchor="middle" font-weight="bold">Input #input</text>
+  <text x="440" y="248" text-anchor="middle">enter submits · typing stays enabled</text>
+
+  <!-- footer -->
+  <rect x="330" y="290" width="220" height="50" rx="6" fill="#e1d5e7" stroke="#9673a6" stroke-width="1.5"/>
+  <text x="440" y="312" text-anchor="middle" font-weight="bold">Footer</text>
+  <text x="440" y="328" text-anchor="middle">ctrl+c cancel · ctrl+q quit</text>
+
+  <!-- send -->
+  <rect x="330" y="400" width="220" height="70" rx="6" fill="#d5e8d4" stroke="#82b366" stroke-width="1.5"/>
+  <text x="440" y="420" text-anchor="middle" font-weight="bold">on_input_submitted</text>
+  <text x="440" y="436" text-anchor="middle">cancel_event = asyncio.Event()</text>
+  <text x="440" y="452" text-anchor="middle">result = await sw.send(conv_id,</text>
+  <text x="440" y="468" text-anchor="middle">text, cancel_event)</text>
+
+  <!-- cancel -->
+  <rect x="330" y="520" width="220" height="50" rx="6" fill="#f8cecc" stroke="#b85450" stroke-width="1.5"/>
+  <text x="440" y="542" text-anchor="middle" font-weight="bold">action_cancel_turn (ctrl+c)</text>
+  <text x="440" y="558" text-anchor="middle">cancel_event.set() — never task.cancel()</text>
+
+  <!-- db -->
+  <rect x="620" y="400" width="200" height="60" rx="6" fill="#dae8fc" stroke="#6c8ebf" stroke-width="1.5"/>
+  <text x="720" y="422" text-anchor="middle" font-weight="bold">weaver.sqlite3 (state dir)</text>
+  <text x="720" y="438" text-anchor="middle">runs, items, receipts persist</text>
+
+  <!-- tools -->
+  <rect x="620" y="520" width="200" height="80" rx="6" fill="#f8cecc" stroke="#b85450" stroke-width="1.5"/>
+  <text x="720" y="542" text-anchor="middle" font-weight="bold">chat registry (maintenance)</text>
+  <text x="720" y="558" text-anchor="middle">echo · inspect_novel_corpus</text>
+  <text x="720" y="574" text-anchor="middle">build_novel_packet · export_novel</text>
+  <text x="720" y="590" text-anchor="middle">fetch/update NEVER registered</text>
+
+  <!-- arrows -->
+  <path d="M 140 90 L 140 148" stroke="#666" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <path d="M 140 220 L 140 278" stroke="#666" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <path d="M 140 350 L 140 408" stroke="#666" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <path d="M 240 440 L 328 440" stroke="#666" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <path d="M 440 260 L 440 398" stroke="#666" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <path d="M 552 440 L 618 432" stroke="#666" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <path d="M 552 452 L 618 552" stroke="#666" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <path d="M 440 570 L 440 472" stroke="#666" stroke-width="1.5" marker-end="url(#arrow)"/>
+</svg>
