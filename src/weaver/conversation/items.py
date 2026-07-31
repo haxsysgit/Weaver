@@ -82,11 +82,11 @@ def items_to_messages(items: list[ItemRecord]) -> list[ConversationMessage]:
                 )
             )
         elif item.kind == "tool_call":
-            missing = [k for k in ("tool_call_id", "name", "arguments") if k not in body]
+            missing = [
+                k for k in ("tool_call_id", "name", "arguments") if k not in body
+            ]
             if missing:
-                raise ValueError(
-                    f"item {item.id}: tool_call body missing {missing}"
-                )
+                raise ValueError(f"item {item.id}: tool_call body missing {missing}")
             messages.append(
                 ToolCallMessage(
                     message_id=item.id,
@@ -99,9 +99,7 @@ def items_to_messages(items: list[ItemRecord]) -> list[ConversationMessage]:
         elif item.kind == "tool_result":
             missing = [k for k in ("tool_call_id", "name", "result") if k not in body]
             if missing:
-                raise ValueError(
-                    f"item {item.id}: tool_result body missing {missing}"
-                )
+                raise ValueError(f"item {item.id}: tool_result body missing {missing}")
             messages.append(
                 ToolResultMessage(
                     message_id=item.id,

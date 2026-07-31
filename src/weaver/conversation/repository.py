@@ -122,9 +122,7 @@ class ConversationRepository:
         )
 
     async def _update_run_phase(self, run_id: str, phase: str) -> None:
-        await self._db.execute(
-            "UPDATE run SET phase = ? WHERE id = ?", (phase, run_id)
-        )
+        await self._db.execute("UPDATE run SET phase = ? WHERE id = ?", (phase, run_id))
 
     async def _next_sequence(self, conversation_id: str) -> int:
         cursor = await self._db.execute(
@@ -153,9 +151,7 @@ class ConversationRepository:
         assert row is not None
         return row[0]
 
-    async def _find_tool_result_for_call(
-        self, tool_call_id: str
-    ) -> str | None:
+    async def _find_tool_result_for_call(self, tool_call_id: str) -> str | None:
         """Return the item id of an existing tool_result for this
         tool_call_id, or None."""
         cursor = await self._db.execute(
@@ -169,9 +165,7 @@ class ConversationRepository:
 
     # -- public read queries --
 
-    async def find_interrupted_run(
-        self, conversation_id: str
-    ) -> RunRecord | None:
+    async def find_interrupted_run(self, conversation_id: str) -> RunRecord | None:
         cursor = await self._db.execute(
             "SELECT r.id, r.turn_id, r.attempt, r.phase, r.interrupted_run_id, r.created_at "
             "FROM run r "
@@ -227,9 +221,7 @@ class ConversationRepository:
             for r in rows
         ]
 
-    async def load_events(
-        self, conversation_id: str
-    ) -> list[EventRecord]:
+    async def load_events(self, conversation_id: str) -> list[EventRecord]:
         cursor = await self._db.execute(
             "SELECT id, conversation_id, sequence, run_id, kind, body, created_at "
             "FROM run_event WHERE conversation_id = ? ORDER BY sequence ASC",
@@ -248,6 +240,26 @@ class ConversationRepository:
             )
             for r in rows
         ]
+
+    async def load_conversations(
+        self, limit: int = 12
+    ) -> list[tuple[str, str, str | None]]:
+        """Newest-first conversations: (id, created_at, last owner body)."""
+        async with self._db.execute(
+            """
+            SELECT c.id, c.created_at, (
+                SELECT i.body FROM conversation_item i
+                WHERE i.conversation_id = c.id AND i.kind = 'owner'
+                ORDER BY i.sequence DESC LIMIT 1
+            ) AS last_owner
+            FROM conversation c
+            ORDER BY c.created_at DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ) as cur:
+            rows = await cur.fetchall()
+        return [(r[0], r[1], r[2]) for r in rows]
 
     async def load_runs(self, conversation_id: str) -> list[RunRecord]:
         cursor = await self._db.execute(

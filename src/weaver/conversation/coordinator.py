@@ -111,9 +111,7 @@ class RunCoordinator:
 
         db = self._repo._db
         async with _tx(db):
-            await self._repo._insert_turn(
-                turn_id, conversation_id, turn_sequence, ts
-            )
+            await self._repo._insert_turn(turn_id, conversation_id, turn_sequence, ts)
             await self._repo._insert_run(
                 run_id, turn_id, attempt=1, phase="queued", created_at=ts
             )
@@ -199,13 +197,9 @@ class RunCoordinator:
         db = self._repo._db
         async with _tx(db):
             # Enforce one result per tool call
-            existing = await self._repo._find_tool_result_for_call(
-                tool_call_id
-            )
+            existing = await self._repo._find_tool_result_for_call(tool_call_id)
             if existing is not None:
-                raise ValueError(
-                    f"tool_call_id {tool_call_id} already has a result"
-                )
+                raise ValueError(f"tool_call_id {tool_call_id} already has a result")
 
             # tool-call item
             seq_call = await self._repo._next_sequence(conversation_id)

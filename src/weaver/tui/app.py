@@ -1,13 +1,20 @@
 """Weaver chat TUI.
 
-Plan 010: one App class, thin widgets, no streaming, no markdown. The TUI
-is the attachment point for later plans (Plan 011, memory plans) — keep it
-thin: send + render.
+Plan 010: one App class, thin widgets. The TUI is the attachment point
+for later plans (Plan 011, memory plans) — keep it thin: send + render.
 
 Phase A (pi-shaped screen): no Header chrome (pi has none); the mode/model
 live in a one-line StatusBar under the input with a spinner while a turn
 runs; a single welcome line appears at start and is cleared by the first
 submit; the CLI prints a session line at exit.
+
+Phase B: live text deltas render in a hidden stream area while the model
+works; the final message lands in the log and the area hides again.
+
+Phase C: multi-line TextArea input (enter submits, shift+enter inserts a
+newline, pi-style), markdown rendering for replies, and conversation
+resume: ^r opens a picker of recent conversations (switch by selecting),
+^n starts a fresh one.
 
 Cancellation contract (Plan 010 §4): Ctrl+C sets the in-flight turn's
 cancel event, never task.cancel(). The turn settles through the runner's
@@ -19,21 +26,22 @@ from __future__ import annotations
 import asyncio
 import logging
 
+from rich.markdown import Markdown
 from rich.markup import escape
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.widgets import Input, RichLog, Static
+from textual.widgets import RichLog, Static, TextArea
 
 from weaver.agent.turn import TurnResult
 from weaver.conversation.session import SessionWeave
-from weaver.tui.screens import RunHistoryScreen
-from weaver.tui.widgets import StatusBar, welcome_line
+from weaver.tui.screens import ConversationPickerScreen, RunHistoryScreen
+from weaver.tui.widgets import ChatInput, StatusBar, welcome_line
 
 logger = logging.getLogger(__name__)
 
 
 class WeaverChat(App[None]):
-    """Pi-shaped chat window: RichLog history, Input, one-line StatusBar."""
+    """Pi-shaped chat window: RichLog history, TextArea, one-line StatusBar."""
 
     BINDINGS = [
         # Plan 010 §4: Ctrl+C cancels the in-flight turn instead of quitting.
@@ -44,6 +52,19 @@ class WeaverChat(App[None]):
         Binding("ctrl+c", "cancel_turn", "Cancel", show=False, priority=True),
         # Plan 010 Phase D: ^h opens the run history screen (escape/q closes).
         Binding("ctrl+h", "show_history", "History", show=False),
+        # Plan 010 Phase C: resume (^r) and new conversation (^n).
+        Binding("ctrl+r", "resume", "Resume", show=False),
+        Binding("ctrl+n", "new_conversation", "New", show=False),
+        # Enter submits. Non-priority: ChatInput never consumes enter (its
+        # _on_key lets it bubble), so the app binding fires on the chat
+        # screen; on the picker screen the focused ListView's enter binding
+        # wins because non-priority bindings are checked from the focused
+        # widget up.
+        Binding("enter", "submit_turn", "Send", show=False),
+        # Shift+Enter inserts a newline instead of submitting; terminals
+        # without the extended keyboard protocol can't report it, in which
+        # case the binding simply never fires (same tradeoff as pi).
+        Binding("shift+enter", "newline", "New line", show=False),
     ]
 
     def __init__(
@@ -68,13 +89,15 @@ class WeaverChat(App[None]):
         stream = Static(id="stream", markup=True)
         stream.display = False
         yield stream
-        yield Input(id="input", placeholder="Type a message...")
+        # Phase C: multi-line input. Enter submits (App binding), shift+
+        # enter inserts a newline (see BINDINGS and ChatInput).
+        yield ChatInput(id="input")
         yield StatusBar(self._mode_label)
 
     def on_mount(self) -> None:
         self._log(welcome_line(self._mode_label))
         self._welcome_shown = True
-        self.query_one("#input", Input).focus()
+        self.query_one("#input", TextArea).focus()
 
     def action_cancel_turn(self) -> None:
         """Ctrl+C: cancel the in-flight turn, or clear the input when idle.
@@ -87,18 +110,28 @@ class WeaverChat(App[None]):
             self._cancel_event.set()
             self._log("(cancelling…)")
             return
-        self.query_one("#input", Input).value = ""
+        self.query_one("#input", TextArea).clear()
 
-    async def on_input_submitted(self, event: Input.Submitted) -> None:
-        text = event.value.strip()
+    async def action_submit_turn(self) -> None:
+        """Enter: submit the input, or ignore when empty or already busy.
+
+        The guard returns before touching the input, so text typed while a
+        turn runs is never lost (same contract as Phase A).
+        """
+        textarea = self.query_one("#input", TextArea)
+        if self.focused is not textarea:
+            # Enter elsewhere (e.g. the history screen) must not submit.
+            # Note: widget.has_focus is per-screen (a hidden widget keeps
+            # its screen's focus slot), so the global app.focused is the
+            # right check.
+            return
+        text = textarea.text.strip()
         if not text:
             return
         if self._send_in_flight:
-            # One turn at a time: the input stays enabled so typing is not
-            # lost, but a second Enter must not race the in-flight send.
             self._log("(still thinking…)")
             return
-        event.input.clear()
+        textarea.clear()
         if self._welcome_shown:
             # pi-style: the startup line disappears with the first submit.
             self.query_one("#chat-log", RichLog).clear()
@@ -128,7 +161,34 @@ class WeaverChat(App[None]):
             self.query_one(StatusBar).set_busy(False)
             self._stream_text = ""
             self._stream_widget().display = False
-            self.query_one("#input", Input).focus()
+            self.query_one("#input", TextArea).focus()
+
+    def action_newline(self) -> None:
+        """Shift+Enter: insert a newline without submitting (pi-style)."""
+        textarea = self.query_one("#input", TextArea)
+        if self.focused is textarea:
+            textarea.insert("\n")
+
+    async def action_resume(self) -> None:
+        """Ctrl+R: pick a recent conversation to switch to."""
+        entries = await self._sw.list_conversations(limit=12)
+        await self.push_screen(
+            ConversationPickerScreen(entries, current_id=self._conv_id),
+            callback=self._on_pick_conversation,
+        )
+
+    def _on_pick_conversation(self, conv_id: str | None) -> None:
+        """Switch the active conversation; ignore no-op or cancelled picks."""
+        if conv_id is None or conv_id == self._conv_id:
+            return
+        self._conv_id = conv_id
+        self._log(f"[dim]switched to conversation {conv_id[:8]}[/dim]")
+
+    async def action_new_conversation(self) -> None:
+        """Ctrl+N: start a fresh conversation and switch to it."""
+        conv_id = await self._sw.start_conversation("")
+        self._conv_id = conv_id
+        self._log(f"[dim]new conversation {conv_id[:8]}[/dim]")
 
     async def action_show_history(self) -> None:
         """Ctrl+H: fetch recent runs and show them; escape/q closes."""
@@ -150,7 +210,9 @@ class WeaverChat(App[None]):
 
     def _show_result(self, result: TurnResult) -> None:
         if result.final_text:
-            self._log(f"[bold]Weaver:[/bold] {escape(result.final_text)}")
+            # Phase C: replies render as markdown (plain text renders as
+            # plain text, so fake-mode scripted replies look the same).
+            self._log(Markdown(result.final_text))
         elif result.exit_reason == "interrupted" and result.turn_id:
             # Real cancel: turn_id is set. A refused send (interrupted run
             # exists) carries an empty turn_id and must show its message.
@@ -160,5 +222,5 @@ class WeaverChat(App[None]):
         else:
             self._log(f"({result.exit_reason})")
 
-    def _log(self, text: str) -> None:
+    def _log(self, text: str | Markdown) -> None:
         self.query_one("#chat-log", RichLog).write(text)

@@ -80,13 +80,11 @@ async def _process_b(state_dir: Path) -> None:
         assert new_run_id is not None
 
         # The interrupted run's settled items should be visible
-        settled = await sw.repo.load_items(
-            conv_id, for_run_id=interrupted.id
-        )
+        settled = await sw.repo.load_items(conv_id, for_run_id=interrupted.id)
         tool_results = [i for i in settled if i.kind == "tool_result"]
-        assert (
-            len(tool_results) == 1
-        ), f"expected 1 tool_result, got {len(tool_results)}"
+        assert len(tool_results) == 1, (
+            f"expected 1 tool_result, got {len(tool_results)}"
+        )
 
         # Fake model sees the tool result and does NOT call the tool again
         runs = await sw.repo.load_runs(conv_id)
@@ -113,9 +111,7 @@ async def _process_b(state_dir: Path) -> None:
         assert len(tool_calls) == 1, (
             f"expected exactly 1 tool_call, got {len(tool_calls)}"
         )
-        tool_results_all = [
-            i for i in all_items if i.kind == "tool_result"
-        ]
+        tool_results_all = [i for i in all_items if i.kind == "tool_result"]
         assert len(tool_results_all) == 1, (
             f"expected exactly 1 tool_result, got {len(tool_results_all)}"
         )
@@ -130,9 +126,7 @@ async def _process_b(state_dir: Path) -> None:
         item_ids = [i.id for i in all_items]
         assert len(item_ids) == len(set(item_ids)), "duplicate item IDs"
         sequences = [i.sequence for i in all_items]
-        assert sequences == sorted(sequences), (
-            "item sequences not ordered"
-        )
+        assert sequences == sorted(sequences), "item sequences not ordered"
     finally:
         await sw.close()
 
@@ -155,12 +149,8 @@ async def _process_c(state_dir: Path) -> None:
         assert new_run_id is not None
 
         # Items from interrupted run exist but are NOT in the new run's scope
-        interrupted_items = await sw.repo.load_items(
-            conv_id, for_run_id=interrupted.id
-        )
-        assert len(interrupted_items) >= 1, (
-            "interrupted run should have items"
-        )
+        interrupted_items = await sw.repo.load_items(conv_id, for_run_id=interrupted.id)
+        assert len(interrupted_items) >= 1, "interrupted run should have items"
 
         # Fake model starts fresh: does NOT see the tool result
         runs = await sw.repo.load_runs(conv_id)

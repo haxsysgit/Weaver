@@ -13,7 +13,8 @@ set (see ctx_text).
 from __future__ import annotations
 
 from rich.markup import escape
-from textual.widgets import Static
+from textual import events
+from textual.widgets import Static, TextArea
 
 # pi uses a spinner in its status area while the model works; we mirror
 # that with a small braille frame set, ~10 fps.
@@ -92,9 +93,7 @@ class StatusBar(Static):
         self._refresh()
 
     def _refresh(self) -> None:
-        self.update(
-            status_text(self._mode_label, self._busy, self._tick, self._meter)
-        )
+        self.update(status_text(self._mode_label, self._busy, self._tick, self._meter))
 
     def set_busy(self, busy: bool) -> None:
         """Show the spinner while a turn is in flight; stop when idle."""
@@ -112,3 +111,21 @@ class StatusBar(Static):
     def _on_tick(self) -> None:
         self._tick += 1
         self._refresh()
+
+
+class ChatInput(TextArea):
+    """Multi-line input where enter NEVER inserts a newline.
+
+    TextArea natively consumes enter in _on_key (inserts \n). This
+    subclass lets it bubble instead: the app's non-priority enter binding
+    submits (pi model), and shift+enter hits the app's newline binding.
+    """
+
+    async def _on_key(self, event: events.Key) -> None:
+        if event.key == "enter":
+            # prevent_default() suppresses TextArea's base handler (which
+            # would insert a newline and stop the event); leaving the
+            # event un-stopped lets it bubble to the app's submit binding.
+            event.prevent_default()
+            return
+        await super()._on_key(event)

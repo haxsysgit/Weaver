@@ -80,7 +80,5 @@ async def migrate(db: aiosqlite.Connection) -> None:
     if row is not None:
         return
     await db.executescript(SCHEMA)
-    await db.execute(
-        "INSERT INTO _migration (version) VALUES (?)", (SCHEMA_VERSION,)
-    )
+    await db.execute("INSERT INTO _migration (version) VALUES (?)", (SCHEMA_VERSION,))
     await db.commit()

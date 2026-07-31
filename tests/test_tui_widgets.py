@@ -1,4 +1,4 @@
-"""Plan 010 Phase A: status bar, welcome line, and pi-shaped screen tests.
+"""Plan 010 Phase A + C + D widget tests.
 
 Pure helpers are tested directly; screen behavior is tested with a stub
 session through Textual's pilot, so no DB or model layer is involved (the
@@ -6,15 +6,15 @@ code path through a real SessionWeave is covered by tests/test_tui.py).
 
 Gated sends can't use pilot.press: press() waits for the screen to go
 idle, which never happens while a turn is in flight. Those tests submit
-via Input.action_submit() and settle with plain sleeps; the ctrl+c binding
-wiring is asserted declaratively.
+via app.action_submit_turn() and settle with plain sleeps; bindings are
+asserted declaratively and, where pump-safe, with pilot.press.
 """
 
 from __future__ import annotations
 
 import asyncio
 
-from textual.widgets import Input, RichLog, Static
+from textual.widgets import RichLog, Static, TextArea
 
 from weaver.agent.turn import TurnExitReason, TurnResult
 from weaver.tui.app import WeaverChat
@@ -50,6 +50,8 @@ class _StubSession:
         self.stream_chunks: list[str] = []
         self.streamed: list[str] = []
         self.recent_turns: list[dict] = []
+        self.conversations: list[dict] = []
+        self.started: list[str] = []
         self.scripted = TurnResult(
             turn_id="t-1",
             exit_reason=TurnExitReason.COMPLETED,
@@ -72,6 +74,13 @@ class _StubSession:
     async def list_recent_turns(self, conversation_id, limit=12):
         return list(self.recent_turns)
 
+    async def list_conversations(self, limit=12):
+        return list(self.conversations)
+
+    async def start_conversation(self, owner_text):
+        self.started.append(owner_text)
+        return "conv-new"
+
 
 def _log_text(node) -> str:
     """Plain text of everything currently in the node's RichLog."""
@@ -85,11 +94,16 @@ async def _open_chat(stub: _StubSession, mode: str = "fake"):
         yield app, pilot
 
 
-async def _submit(app, text: str) -> None:
-    """Submit text through the input widget without waiting for idle."""
-    input_widget = app.query_one("#input", Input)
-    input_widget.value = text
-    await input_widget.action_submit()
+async def _submit(app, text: str) -> asyncio.Task:
+    """Submit through the action; when a gate is set, run it as a task so
+    the test can observe the in-flight turn, then release the gate."""
+    app.query_one("#input", TextArea).text = text
+    task = asyncio.create_task(app.action_submit_turn())
+    if app._sw.gate is None:
+        await task  # completes the whole turn
+    else:
+        await asyncio.sleep(0.05)  # let the handler reach the gate
+    return task
 
 
 async def test_pilot_welcome_line_shown_then_cleared_by_first_submit():
@@ -104,15 +118,14 @@ async def test_pilot_welcome_line_shown_then_cleared_by_first_submit():
         log = _log_text(app)
         assert "Weaver chat" not in log  # welcome cleared on first submit
         assert "You: hi" in log
-        assert "Weaver: hello back" in log
+        assert "hello back" in log  # reply renders as (plain) markdown
 
 
 async def test_pilot_status_bar_spins_while_turn_runs_then_rests():
     stub = _StubSession()
     stub.gate = asyncio.Event()
     async for app, pilot in _open_chat(stub):
-        await _submit(app, "slow one")
-        await asyncio.sleep(0.1)  # let the submit handler reach the gate
+        task = await _submit(app, "slow one")
 
         status = app.query_one(StatusBar)
         assert status._busy
@@ -120,11 +133,12 @@ async def test_pilot_status_bar_spins_while_turn_runs_then_rests():
         assert stub.sent == [("conv-1", "slow one")]
 
         stub.gate.set()
+        await task
         await pilot.pause()  # settle once the send completes
 
         assert not status._busy
         assert "·" in str(status.content)
-        assert "Weaver: hello back" in _log_text(app)
+        assert "hello back" in _log_text(app)
 
 
 async def test_pilot_ctrl_c_bound_and_sets_cancel_event():
@@ -137,8 +151,7 @@ async def test_pilot_ctrl_c_bound_and_sets_cancel_event():
         assert bound.action == "cancel_turn"
         assert bound.priority
 
-        await _submit(app, "cancel me")
-        await asyncio.sleep(0.1)
+        task = await _submit(app, "cancel me")
 
         app.action_cancel_turn()
         assert stub.cancel_events[0] is not None
@@ -146,16 +159,17 @@ async def test_pilot_ctrl_c_bound_and_sets_cancel_event():
         assert "(cancelling…)" in _log_text(app)
 
         stub.gate.set()
+        await task
         await pilot.pause()
 
 
 async def test_pilot_ctrl_c_idle_clears_the_input():
     stub = _StubSession()
     async for app, pilot in _open_chat(stub):
-        input_widget = app.query_one("#input", Input)
-        input_widget.value = "half typed"
+        input_widget = app.query_one("#input", TextArea)
+        input_widget.text = "half typed"
         app.action_cancel_turn()
-        assert input_widget.value == ""
+        assert input_widget.text == ""
 
 
 async def test_pilot_stream_deltas_render_live_then_final_in_log():
@@ -165,8 +179,7 @@ async def test_pilot_stream_deltas_render_live_then_final_in_log():
     stub.stream_chunks = ["hello ", "back"]
     stub.gate = asyncio.Event()
     async for app, pilot in _open_chat(stub):
-        await _submit(app, "hi")
-        await asyncio.sleep(0.1)  # first chunk delivered, then gated
+        task = await _submit(app, "hi")
 
         stream = app.query_one("#stream", Static)
         assert stream.display is True
@@ -174,11 +187,12 @@ async def test_pilot_stream_deltas_render_live_then_final_in_log():
         assert stub.streamed == ["hello "]  # mid-turn: send not done
 
         stub.gate.set()
+        await task
         await pilot.pause()
 
         log = _log_text(app)
         assert "You: hi" in log
-        assert "Weaver: hello back" in log
+        assert "hello back" in log
         assert stream.display is False
 
 
@@ -202,16 +216,17 @@ async def test_pilot_second_submit_while_busy_shows_still_thinking():
     stub = _StubSession()
     stub.gate = asyncio.Event()
     async for app, pilot in _open_chat(stub):
-        input_widget = app.query_one("#input", Input)
-        first = asyncio.create_task(
-            app.on_input_submitted(Input.Submitted(input_widget, "first"))
-        )
+        input_widget = app.query_one("#input", TextArea)
+        input_widget.text = "first"
+        first = asyncio.create_task(app.action_submit_turn())
         await asyncio.sleep(0.1)  # first handler reaches the gate
 
-        await app.on_input_submitted(Input.Submitted(input_widget, "second"))
+        input_widget.text = "second"
+        await app.action_submit_turn()
 
         assert stub.sent == [("conv-1", "first")]  # second was refused
         assert "(still thinking…)" in _log_text(app)
+        assert input_widget.text == "second"  # typed text is not lost
 
         stub.gate.set()
         await first
@@ -291,3 +306,140 @@ async def test_pilot_ctrl_h_opens_history_screen_and_esc_closes():
         await pilot.press("escape")
         await pilot.pause()
         assert not isinstance(app.screen, RunHistoryScreen)
+
+
+# ---------------------------------------------------------------------------
+# Plan 010 Phase C: multi-line input, markdown replies, resume picker.
+# ---------------------------------------------------------------------------
+
+
+async def test_pilot_enter_binding_submits_not_newlines():
+    """Enter must submit (App binding) and never insert a newline, even
+    though TextArea natively maps enter to a newline."""
+    stub = _StubSession()
+    async for app, pilot in _open_chat(stub):
+        bound = app.active_bindings["enter"].binding
+        assert bound.action == "submit_turn"
+
+        app.query_one("#input", TextArea).text = "hi"
+        await pilot.press("enter")
+        await pilot.pause()
+
+        assert stub.sent == [("conv-1", "hi")]
+        assert app.query_one("#input", TextArea).text == ""
+
+
+async def test_pilot_shift_enter_inserts_newline():
+    stub = _StubSession()
+    async for app, pilot in _open_chat(stub):
+        bound = app.active_bindings["shift+enter"].binding
+        assert bound.action == "newline"
+
+        textarea = app.query_one("#input", TextArea)
+        textarea.text = "line one"
+        textarea.move_cursor((0, len("line one")))  # cursor where typing puts it
+        await pilot.press("shift+enter")
+        await pilot.pause()
+
+        assert textarea.text == "line one\n"
+        assert stub.sent == []  # nothing submitted
+
+
+async def test_multiline_submit_sends_full_text_and_clears():
+    stub = _StubSession()
+    async for app, pilot in _open_chat(stub):
+        await _submit(app, "line one\nline two\n")
+        await pilot.pause()
+
+        assert stub.sent == [("conv-1", "line one\nline two")]
+        assert app.query_one("#input", TextArea).text == ""
+
+
+async def test_markdown_reply_renders_in_log():
+    stub = _StubSession()
+    stub.scripted = TurnResult(
+        turn_id="t-1",
+        exit_reason=TurnExitReason.COMPLETED,
+        final_text="**bold** reply with `code`",
+    )
+    async for app, pilot in _open_chat(stub):
+        await _submit(app, "hi")
+        await pilot.pause()
+
+        log = _log_text(app)
+        assert "bold reply with code" in log  # markers stripped, text kept
+        assert "*bold*" not in log
+
+
+async def test_pilot_ctrl_r_picker_picks_and_switches():
+    from weaver.tui.screens import ConversationPickerScreen
+
+    stub = _StubSession()
+    stub.conversations = [
+        {
+            "conversation_id": "conv-2",
+            "created_at": "2026-07-31T17:00:00",
+            "last_owner_text": "second chat",
+        },
+        {
+            "conversation_id": "conv-1",
+            "created_at": "2026-07-31T16:00:00",
+            "last_owner_text": "first chat",
+        },
+    ]
+    async for app, pilot in _open_chat(stub):
+        bound = app.active_bindings["ctrl+r"].binding
+        assert bound.action == "resume"
+
+        await pilot.press("ctrl+r")
+        await pilot.pause()
+
+        assert isinstance(app.screen, ConversationPickerScreen)
+        labels = [
+            str(item.children[0].content) for item in app.screen.query("ListItem")
+        ]
+        assert "second chat" in labels[0] and "first chat" in labels[1]
+
+        await pilot.press("enter")  # selects the focused (first) item
+        await pilot.pause()
+
+        assert app._conv_id == "conv-2"
+        assert "switched to conversation conv-2" in _log_text(app)
+
+
+async def test_pilot_ctrl_r_picker_escape_cancels():
+    from weaver.tui.screens import ConversationPickerScreen
+
+    stub = _StubSession()
+    stub.conversations = [
+        {
+            "conversation_id": "conv-2",
+            "created_at": "2026-07-31T17:00:00",
+            "last_owner_text": "second chat",
+        },
+    ]
+    async for app, pilot in _open_chat(stub):
+        await pilot.press("ctrl+r")
+        await pilot.pause()
+        assert isinstance(app.screen, ConversationPickerScreen)
+
+        await pilot.press("escape")
+        await pilot.pause()
+
+        assert not isinstance(app.screen, ConversationPickerScreen)
+        assert app._conv_id == "conv-1"  # unchanged
+        assert "switched" not in _log_text(app)
+
+
+async def test_pilot_ctrl_n_starts_new_conversation():
+    stub = _StubSession()
+    async for app, pilot in _open_chat(stub):
+        bound = app.active_bindings["ctrl+n"].binding
+        assert bound.action == "new_conversation"
+
+        await pilot.press("ctrl+n")
+        await pilot.pause()
+
+        assert stub.started == [""]
+        assert app._conv_id == "conv-new"
+        assert "new conversation conv-new" in _log_text(app)

@@ -1024,3 +1024,22 @@ async def test_send_on_delta_raising_callback_does_not_fail_turn(tmp_path):
         assert result.final_text == "Done."
     finally:
         await sw.close()
+
+
+@pytest.mark.asyncio
+async def test_list_conversations_newest_first_with_preview(tmp_path):
+    """Phase C: recent conversations come back newest first with the last
+    owner message decoded from its JSON body."""
+    layer, model, provider = _fake_layer(_stop_response("ok"))
+    sw = _open_woven(Path(tmp_path), layer, model, _echo_registry())
+    await sw.open()
+    try:
+        first = await sw.start_conversation("first hello")
+        second = await sw.start_conversation("second hello")
+        convs = await sw.list_conversations()
+        assert [c["conversation_id"] for c in convs] == [second, first]
+        assert convs[0]["last_owner_text"] == "second hello"
+        assert convs[1]["last_owner_text"] == "first hello"
+        assert len(await sw.list_conversations(limit=1)) == 1
+    finally:
+        await sw.close()

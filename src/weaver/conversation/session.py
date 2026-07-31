@@ -82,10 +82,7 @@ class SessionWeave:
         self._repo = ConversationRepository(self._db)
         await self._repo.setup()
         self._coordinator = RunCoordinator(self._repo)
-        if (
-            self._model_layer is not None
-            and self._tool_registry is not None
-        ):
+        if self._model_layer is not None and self._tool_registry is not None:
             assert self._model is not None
             assert self._execution_policy is not None
             self._runner = ConversationRunner(
@@ -165,10 +162,33 @@ class SessionWeave:
         """Create relationship + conversation + first turn in one transaction.
         Returns conversation_id."""
         assert self._coordinator is not None
-        conv_id, _, _ = await self._coordinator.start_conversation_and_turn(
-            owner_text
-        )
+        conv_id, _, _ = await self._coordinator.start_conversation_and_turn(owner_text)
         return conv_id
+
+    async def list_conversations(self, limit: int = 12) -> list[dict]:
+        """Recent conversations, newest first, with the last owner message.
+
+        Each entry: conversation_id, created_at, last_owner_text (may be
+        empty when the conversation has no owner item yet).
+        """
+        assert self._repo is not None
+        rows = await self._repo.load_conversations(limit)
+        out = []
+        for conv_id, created_at, last_owner in rows:
+            text = ""
+            if last_owner:
+                try:
+                    text = json.loads(last_owner).get("content", "")
+                except ValueError:
+                    text = ""
+            out.append(
+                {
+                    "conversation_id": conv_id,
+                    "created_at": created_at,
+                    "last_owner_text": text,
+                }
+            )
+        return out
 
     async def list_recent_turns(
         self, conversation_id: str, limit: int = 12
@@ -214,9 +234,7 @@ class SessionWeave:
             )
         return entries
 
-    async def continue_interrupted(
-        self, conversation_id: str
-    ) -> str | None:
+    async def continue_interrupted(self, conversation_id: str) -> str | None:
         """If an interrupted run exists, continue it.
         Returns new run_id or None."""
         assert self._repo is not None and self._coordinator is not None
@@ -228,9 +246,7 @@ class SessionWeave:
         )
         return new_run_id
 
-    async def retry_interrupted(
-        self, conversation_id: str
-    ) -> str | None:
+    async def retry_interrupted(self, conversation_id: str) -> str | None:
         """If an interrupted run exists, retry it (omit interrupted items).
         Returns new run_id or None."""
         assert self._repo is not None and self._coordinator is not None
