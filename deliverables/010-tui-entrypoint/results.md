@@ -11,7 +11,7 @@ clean reviews (both rechecks PASS). Awaiting owner decision.
   import verified on Python 3.11 (`from weaver.tui import WeaverChat`).
 - `uv run python -c "from weaver.tui import WeaverChat; print('import ok')"`
   → `import ok`.
-- `uv run weaver chat --help` → help shows `chat` and `--live`; no `corpus`
+- `uv run weaver chat --help` → help shows `chat` and `--fake`; no `corpus`
   wording.
 - `uv run pytest -q tests/test_tui.py tests/test_conversation.py -k "tui or
   send"` → 11 passed.
@@ -30,10 +30,11 @@ clean reviews (both rechecks PASS). Awaiting owner decision.
   `sw.send(conv_id, text, cancel_event=...)` with a submit guard against
   concurrent turns; exit reasons render as `(interrupted)` /
   `(reason: safe_failure)`.
-- `src/weaver/cli.py`: `chat` subcommand (argparse style); fake default
-  (`FakeModelProvider` + scripted friendly STOP response); `--live`
-  requires `DEEPSEEK_KEY` (exit 2 before any call or receipt, verified no
-  state dir is created); `_chat_state_dir()` = `$WEAVER_STATE_DIR` or
+- `src/weaver/cli.py`: `chat` subcommand (argparse style); live default
+  (`DeepSeekProvider` + `deepseek-v4-flash`); `--fake` opts into
+  (`FakeModelProvider` + scripted friendly STOP response); live without
+  `DEEPSEEK_KEY` exits 2 before any call or receipt, verified no
+  state dir is created; `_chat_state_dir()` = `$WEAVER_STATE_DIR` or
   `.weaver/state`; `_chat_tool_registry()` = echo (READ) + the three
   chat-safe library tools via `register_chat_tools`; policy
   `maintenance()`; `_build_chat_session`/`_run_chat` split keeps the whole

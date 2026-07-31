@@ -6,7 +6,7 @@
 
 ## Status
 
-- **State:** implemented, two independent reviews clean (one repair pass applied, both recheck clean), awaiting owner decision
+- **State:** Accepted by owner 2026-07-31; decision recorded in deliverables/010-tui-entrypoint/decision.md
 - **Priority:** P2
 - **Effort:** M
 - **Risk:** Medium (new dependency, first UI surface, cooperative-only cancellation)

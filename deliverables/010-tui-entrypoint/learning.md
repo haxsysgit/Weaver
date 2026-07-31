@@ -37,11 +37,13 @@ for every downstream experiment.
   added in Plan 008 or 010 — setting the cancel event)".
 - `FakeModelProvider` (`model_layer/fake.py:26-56`): pre-programmed
   responses; checks `cancel_event` at stream start and yields an ABORTED
-  response when set. TUI default mode. `_default_response` (no scripted
+  response when set. TUI opt-in mode (`--fake`). `_default_response` (no scripted
   responses) would emit a tool call when tools exist — so chat fake mode
   MUST pass scripted responses.
-- `config.py` (`src/weaver/config.py:1-20`): reads `DEEPSEEK_KEY` from the
-  process environment. Does NOT auto-load `.env`. Fake mode needs no key.
+- `config.py` (`src/weaver/config.py`): reads `DEEPSEEK_KEY` from the
+  process environment; since the startup-config correction it also loads
+  `.env` and `.weaver/config.toml` (`[api] key`, `[chat] model`) at CLI
+  startup. Fake mode needs no key.
 - `cli.py` (`src/weaver/cli.py:1-118`): argparse-based CLI (not `fire`) with
   `doctor`, `experiment`, `library` subcommands. No `chat` yet. The fake/live
   split pattern at `cli.py:146-165` (mutually exclusive flags, exit 2 before

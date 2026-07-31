@@ -35,6 +35,25 @@ Open items: none blocking; owner decision pending.
   prompt, or TUI copy; `WEAVER_STATE_DIR` honored with `.weaver/state`
   fallback; fake scripted responses never fire a tool call.
 
+## Owner-directed correction rounds
+
+Round 1 (commit `d5fd8b7`, live default): owner asked why chat is fake by
+default and directed live-first with `--fake` opt-in, plus verifying the
+model id against the DeepSeek API docs (`deepseek-v4-flash` confirmed
+current, code already used it). Both reviewers rechecked: PASS, no
+blockers; 5 MINOR doc-accuracy items from the find-replace (stale
+`--live` mentions, garbled mode-selection prose, wrong commit hash in
+results.md) fixed in `d4f37d0`; diagram updated in `fd7b1fc`.
+
+Round 2 (commit `a4267ea`, startup config): owner asked for `.env` support
+and a private `.weaver` config (`[api] key`, `[chat] model`). Precedence
+real env > `.env` > config file, injected into os.environ so existing
+readers are unchanged. The old test pinning ".env must NOT be loaded"
+was rewritten to the new contract. Both reviewers rechecked the complete
+candidate: PASS, no blockers; 4 MINOR doc-accuracy items (stale pre-flip
+prose in results.md and learning.md, missing ledger entries) fixed in the
+closing commit.
+
 ## Repair and recheck
 
 - Repair commit `2c0792b` (one repair pass, allowed by the plan): MINOR-1
