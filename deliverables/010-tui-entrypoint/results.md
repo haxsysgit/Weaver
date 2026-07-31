@@ -67,6 +67,23 @@ clean reviews (both rechecks PASS). Awaiting owner decision.
    registration) and uses Weaver-language descriptions (no "corpus" word,
    Contract §1).
 
+## Owner-directed correction (2026-07-31): live is the default
+
+Owner asked why chat is fake by default, directed live-first, and asked to
+verify the model id against the DeepSeek API docs. Changes in commit
+`9f1a3f5` (pending):
+
+- `weaver chat` now runs **live DeepSeek by default**; fake is opt-in via
+  `--fake` (flag inverted from `--live`).
+- No key + no flag: exits 2 before any call or receipt, message says set
+  `DEEPSEEK_KEY` or pass `--fake`. No state dir created.
+- Model id verified against https://api-docs.deepseek.com/: `deepseek-v4-flash`
+  is a real current model (docs: updated to DeepSeek-V4-Flash-0731, call
+  method unchanged) — the code already used the correct id, no change needed.
+- Fake-mode reply text updated (no stale `--live` mention). Tests updated:
+  default-no-key exits 2; help shows `--fake`.
+- Full suite 185 passed, ruff clean, `uv pip check` clean.
+
 ## Repair pass (commit 2c0792b)
 
 Both reviewers passed with no blockers; one repair pass applied:

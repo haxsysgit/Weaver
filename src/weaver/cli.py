@@ -59,9 +59,9 @@ CHAT_FAKE_RESPONSES = (
         assistant_message=ModelMessage(
             role="assistant",
             content=(
-                "I read you. This is a fake-mode reply — no real model is "
-                "running. Set DEEPSEEK_KEY and use `weaver chat --live` to "
-                "talk to the real Weaver."
+                "I read you. This is a fake-mode reply (--fake) — no real "
+                "model is running. Set DEEPSEEK_KEY and run `weaver chat` "
+                "to talk to the real Weaver."
             ),
         ),
         provider_id="deepseek",
@@ -110,12 +110,12 @@ def _parser() -> argparse.ArgumentParser:
 
     chat = subcommands.add_parser(
         "chat",
-        help="Open the Weaver chat window.",
+        help="Open the Weaver chat window (live DeepSeek by default).",
     )
     chat.add_argument(
-        "--live",
+        "--fake",
         action="store_true",
-        help="Use live DeepSeek mode; requires DEEPSEEK_KEY.",
+        help="Use deterministic fake mode; default is live DeepSeek.",
     )
     library_commands = library.add_subparsers(dest="library_command", required=True)
 
@@ -240,7 +240,10 @@ async def _build_chat_session(
 async def _run_chat(state_dir: Path, *, live: bool) -> int:
     """Open the session and run the TUI on the same event loop."""
     if live and not os.environ.get("DEEPSEEK_KEY"):
-        print("ERROR live chat requires DEEPSEEK_KEY; no call was made.")
+        print(
+            "ERROR live chat requires DEEPSEEK_KEY; set DEEPSEEK_KEY or "
+            "pass --fake for a scripted session. No call was made."
+        )
         return 2
     sw, conv_id, mode_label = await _build_chat_session(
         state_dir,
@@ -260,7 +263,7 @@ def run(argv: Sequence[str] | None = None) -> int:
     state_root = _state_root()
 
     if args.command == "chat":
-        return asyncio.run(_run_chat(_chat_state_dir(), live=args.live))
+        return asyncio.run(_run_chat(_chat_state_dir(), live=not args.fake))
 
     if args.command == "doctor":
         checks = run_doctor(

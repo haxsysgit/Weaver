@@ -18,7 +18,8 @@ loop, direct `await session.send()`, no HTTP bridge, no serialization.
 
 `weaver chat` opens a Textual window. The owner types a message, presses
 Enter, and sees Weaver's response appear. Fake-model mode works without
-credentials and is the default. Live mode requires `--live` and a
+credentials and is the default. Fake mode requires `--fake` (owner
+   correction 2026-07-31: live is the default; fake is opt-in) and a
 `DEEPSEEK_KEY`. Ctrl+C sets the turn's cancel event instead of killing the
 app. The TUI is the attachment point for every downstream experiment.
 
@@ -115,7 +116,7 @@ app. The TUI is the attachment point for every downstream experiment.
    Policy is `maintenance()`; `active_tools` names exactly the registered
    set. The TUI itself never imports `novels/` and never writes library
    files; it only registers tools that may touch them.
-7. Mode selection: `weaver chat` defaults to fake. `weaver chat --live`
+7. Mode selection: `weaver chat` defaults to live. `weaver chat --fake`
    requires `DEEPSEEK_KEY`; absent → exit 2 before any call or receipt (no
    state dir created). Fake mode constructs `FakeModelProvider("deepseek",
    models=DEEPSEEK_MODELS, responses=CHAT_FAKE_RESPONSES)` with a scripted

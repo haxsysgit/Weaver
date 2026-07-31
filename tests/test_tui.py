@@ -59,12 +59,13 @@ async def test_chat_tool_registry_excludes_fetch_update() -> None:
 def test_chat_help_exits_zero_without_corpus_wording(
     capsys,
 ) -> None:
-    """`weaver chat --help` exits 0 and contains no corpus wording (§1)."""
+    """`weaver chat --help` exits 0, no corpus wording, live by default."""
     with pytest.raises(SystemExit) as excinfo:
         cli.run(["chat", "--help"])
     assert excinfo.value.code == 0
     out = capsys.readouterr().out
     assert "chat" in out
+    assert "--fake" in out
     assert "corpus" not in out.lower()
 
 
@@ -73,15 +74,17 @@ def test_chat_live_without_key_exits_2_without_state(
     monkeypatch,
     capsys,
 ) -> None:
-    """`weaver chat --live` without DEEPSEEK_KEY exits 2 before any call."""
+    """Default (live) chat without DEEPSEEK_KEY exits 2 before any call."""
     monkeypatch.delenv("DEEPSEEK_KEY", raising=False)
     state_path = tmp_path / "state"
     monkeypatch.setenv("WEAVER_STATE_DIR", str(state_path))
 
-    exit_code = cli.run(["chat", "--live"])
+    exit_code = cli.run(["chat"])
 
+    out = capsys.readouterr().out
     assert exit_code == 2
-    assert "requires DEEPSEEK_KEY" in capsys.readouterr().out
+    assert "requires DEEPSEEK_KEY" in out
+    assert "--fake" in out
     assert not state_path.exists()
 
 

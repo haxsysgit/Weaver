@@ -35,7 +35,8 @@ Give the owner a working chat window to talk to Weaver during development.
 After this plan, `weaver chat` opens a Textual TUI. The owner types a
 message, presses Enter, and sees Weaver's response appear in a scrollable
 conversation pane. Fake-model mode works without credentials and is the
-default. Live mode requires an explicit `--live` flag and a `DEEPSEEK_KEY`.
+default. Fake mode requires an explicit `--fake` flag (owner-directed
+correction, 2026-07-31: live is the default; fake is opt-in).
 Ctrl+C sets the turn's cancel event instead of killing the app.
 
 ## Why this matters
@@ -128,7 +129,8 @@ never writes library files.
 - Default: **fake mode** — `FakeModelProvider` with a scripted response set
   that produces a friendly non-streamed reply. Fake mode must never construct
   `DeepSeekProvider` (reuse the `NetworkMustNotBeConstructed` test pattern).
-- `weaver chat --live`: requires `DEEPSEEK_KEY`; absent → exit 2 before any
+- `weaver chat` (default, live): requires `DEEPSEEK_KEY`; absent → exit 2
+  before any
   call or receipt (same as the experiment commands).
 - The active mode is displayed in the TUI header (e.g. `Weaver — fake` /
   `Weaver — live deepseek-v4-flash`) so the owner is never unsure which mode
@@ -278,7 +280,8 @@ Commit: `plan 010: build minimal Textual TUI`
 Add a `chat` subcommand to `src/weaver/cli.py` in argparse style, mirroring
 the existing `--fake|--live` pattern:
 
-- default fake; `--live` requires `DEEPSEEK_KEY` (exit 2 if absent);
+- default live; `--fake` opts into scripted mode; live requires
+  `DEEPSEEK_KEY` (exit 2 if absent, message suggests `--fake`);
 - state dir from `WEAVER_STATE_DIR` (fallback `.weaver/state`);
 - register echo + library inspection tools only (Contract §2);
 - `ToolExecutionPolicy.maintenance()` (READ + INTERNAL_WRITE) for both modes
@@ -314,7 +317,7 @@ Commit: `plan 010: TUI code-path test`
    completed.
 3. No-live-client-in-fake assertion (pattern from `tests/test_cli.py:8-24`).
 4. Tool set: fetch/update absent from the chat registry.
-5. CLI: `chat --help` exit 0, no `corpus` wording; `chat --live` without
+5. CLI: `chat --help` exit 0, no `corpus` wording; `chat` without
    `DEEPSEEK_KEY` exits 2 before any call.
 6. Ctrl+C binding unit: setting the cancel event while a scripted slow fake
    turn runs settles the turn as interrupted (deterministic via events, no
@@ -337,7 +340,7 @@ Commit: `plan 010: TUI code-path test`
 - [x] Plan 009 is accepted.
 - [x] `textual>=2.0.0` added; `uv.lock` updated; import verified on Python 3.11.
 - [x] `src/weaver/tui/app.py` exists with `WeaverChat`.
-- [x] `weaver chat` CLI exists; fake is default; `--live` requires the key.
+- [x] `weaver chat` CLI exists; live is default; `--fake` opts into fake.
 - [x] Ctrl+C sets cancel_event; no task.cancel of model calls.
 - [x] Chat tool set excludes fetch/update; TUI never touches `novels/`.
 - [x] Full tests and lint pass.
