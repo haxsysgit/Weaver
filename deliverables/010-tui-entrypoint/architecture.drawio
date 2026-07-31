@@ -4,10 +4,10 @@
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="cli" value="weaver chat [--live]&#10;(argparse subcommand)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+        <mxCell id="cli" value="weaver chat [--fake]&#10;(argparse subcommand)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
           <mxGeometry x="40" y="40" width="200" height="50" as="geometry" />
         </mxCell>
-        <mxCell id="mode" value="mode selection&#10;--live: DEEPSEEK_KEY required, else exit 2&#10;default: fake (never constructs DeepSeekProvider)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+        <mxCell id="mode" value="mode selection&#10;default: live (DEEPSEEK_KEY required, else exit 2)&#10;--fake: scripted, never constructs DeepSeekProvider" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
           <mxGeometry x="40" y="150" width="200" height="70" as="geometry" />
         </mxCell>
         <mxCell id="build" value="SessionWeave(state_dir, model,&#10;chat registry, maintenance policy)&#10;.open() -&gt; start_conversation(&quot;&quot;)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
