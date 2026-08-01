@@ -20,6 +20,10 @@ from textual.widgets import Static, TextArea
 # that with a small braille frame set, ~10 fps.
 SPINNER_FRAMES = ("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏")
 
+# Checkpoint pilot: a dim line between turns so consecutive turns read as
+# blocks once speaker labels are gone.
+TURN_SEPARATOR = "────"
+
 _IDLE_DOT = "·"
 
 

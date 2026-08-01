@@ -443,3 +443,16 @@ async def test_pilot_ctrl_n_starts_new_conversation():
         assert stub.started == [""]
         assert app._conv_id == "conv-new"
         assert "new conversation conv-new" in _log_text(app)
+
+
+async def test_pilot_turn_separator_between_turns():
+    """Checkpoint pilot: each turn is separated by a dim line (red first)."""
+    from weaver.tui.widgets import TURN_SEPARATOR
+
+    stub = _StubSession()
+    async for app, pilot in _open_chat(stub):
+        await _submit(app, "first turn")
+        await pilot.pause()
+        await _submit(app, "second turn")
+        await pilot.pause()
+        assert _log_text(app).count(TURN_SEPARATOR) == 2

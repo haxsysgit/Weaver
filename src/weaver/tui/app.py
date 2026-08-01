@@ -35,7 +35,7 @@ from textual.widgets import RichLog, Static, TextArea
 from weaver.agent.turn import TurnResult
 from weaver.conversation.session import SessionWeave
 from weaver.tui.screens import ConversationPickerScreen, RunHistoryScreen
-from weaver.tui.widgets import ChatInput, StatusBar, welcome_line
+from weaver.tui.widgets import ChatInput, StatusBar, TURN_SEPARATOR, welcome_line
 
 logger = logging.getLogger(__name__)
 
@@ -149,7 +149,9 @@ class WeaverChat(App[None]):
 
         # pi-style: no speaker labels; the user line is dim
         # italic so it reads as "the thing I typed" next to the
-        # model reply rendered as plain markdown.
+        # model reply rendered as plain markdown. A dim separator
+        # line opens each turn (checkpoint pilot).
+        self._log(TURN_SEPARATOR)
         self._log(f"[dim italic]{escape(text)}[/dim italic]")
         self._send_in_flight = True
         self._cancel_event = asyncio.Event()

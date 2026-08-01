@@ -15,6 +15,17 @@
 - Label hypotheses, observations, and accepted decisions separately.
 - Record failures as evidence. Do not hide them with silent retries.
 
+## Checkpoints (every 10 plans)
+
+- After every 10 plans (010→011, 020→021, …), before the next plan: walk
+  through the last 10 plans, update method knowledge from the web, codify
+  what changed in `docs/process/`, and prove it with one real slice.
+- This is a standing ritual, not a numbered plan. It does not consume a
+  plan number or a decision gate.
+- The standing workflow is in `docs/process/`: `subagent-fleet.md`
+  (roles, isolation, orchestration shapes) and `tdd-workflow.md`
+  (test-first red/green loop). Code work follows it.
+
 ## Weaver language
 
 - Use Weaver-themed, plain names for anything shown to the owner, an end user,
