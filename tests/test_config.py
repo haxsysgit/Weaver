@@ -124,9 +124,7 @@ def test_cli_run_loads_startup_config(tmp_path, monkeypatch, capsys) -> None:
     assert not (tmp_path / "state").exists()
 
 
-async def test_build_chat_session_uses_configured_model(
-    tmp_path, monkeypatch
-) -> None:
+async def test_build_chat_session_uses_configured_model(tmp_path, monkeypatch) -> None:
     """[chat] model drives the live session's model id and mode label."""
     monkeypatch.setenv("DEEPSEEK_KEY", "sk-test")
     monkeypatch.setenv("WEAVER_CHAT_MODEL", "deepseek-v4-pro")
@@ -139,5 +137,25 @@ async def test_build_chat_session_uses_configured_model(
     )
     try:
         assert mode_label == "live deepseek-v4-pro"
+    finally:
+        await sw.close()
+
+
+async def test_fake_chat_works_with_configured_pro_model(tmp_path, monkeypatch):
+    """Checkpoint audit fix: [chat] model = pro must not break --fake mode
+    (the scripted response used to fail model matching every turn)."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("WEAVER_CHAT_MODEL", "deepseek-v4-pro")
+    monkeypatch.delenv("DEEPSEEK_KEY", raising=False)
+
+    from weaver import cli
+
+    sw, conv_id, _mode_label = await cli._build_chat_session(
+        tmp_path / "state",
+        live=False,
+    )
+    try:
+        result = await sw.send(conv_id, "hi")
+        assert result.exit_reason == "completed"
     finally:
         await sw.close()

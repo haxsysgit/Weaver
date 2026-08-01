@@ -123,6 +123,16 @@ class ContextAssembler:
                 token_count=total,
             )
 
+        # Checkpoint audit fix: empty input with a budget below the system
+        # prompt used to IndexError on the pin fallback below.
+        if not blocks:
+            return items, self._snapshot(
+                conversation_id=conversation_id,
+                kept_items=items,
+                first_item_id=None,
+                token_count=system_tokens,
+            )
+
         # Pin: the block holding the most recent owner message.
         pin_index = 0
         for index in range(len(blocks) - 1, -1, -1):

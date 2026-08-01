@@ -106,8 +106,14 @@ def items_to_messages(items: list[ItemRecord]) -> list[ConversationMessage]:
                     turn_id=item.turn_id,
                     call_id=body["tool_call_id"],
                     tool_name=body["name"],
-                    ok=True,
+                    # Checkpoint audit fix: rows written before the fix have
+                    # no ok/error keys and were clean successes; new rows
+                    # carry failure metadata so cancelled/blocked/failed
+                    # calls replay as failed (Plan 004 contract).
+                    ok=body.get("ok", True),
                     result=body["result"],
+                    error_code=body.get("error_code"),
+                    error=body.get("error"),
                 )
             )
         else:
@@ -154,6 +160,15 @@ def message_to_item(
             "name": message.tool_name,
             "result": message.result,
         }
+        # Checkpoint audit fix: record failures so they survive the durable
+        # round trip. Clean successes stay minimal (ok absent = True on read)
+        # so existing rows and writes are unchanged.
+        if not message.ok:
+            body["ok"] = False
+            if message.error_code is not None:
+                body["error_code"] = message.error_code
+            if message.error is not None:
+                body["error"] = message.error
     else:
         raise TypeError(f"unknown message type {type(message).__name__}")
 

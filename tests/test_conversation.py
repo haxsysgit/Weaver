@@ -1043,3 +1043,83 @@ async def test_list_conversations_newest_first_with_preview(tmp_path):
         assert len(await sw.list_conversations(limit=1)) == 1
     finally:
         await sw.close()
+
+
+async def test_tool_result_round_trip_preserves_failure_metadata():
+    """Checkpoint audit fix: a cancelled/blocked/failed tool result must
+    survive the durable round trip as failed — Plan 004 records cancelled
+    calls as cancelled, not completed (was dropped to ok=True)."""
+    from weaver.agent.messages import ToolResultMessage
+    from weaver.conversation.items import items_to_messages, message_to_item
+
+    original = ToolResultMessage(
+        message_id="m1",
+        call_id="call-x",
+        tool_name="echo",
+        ok=False,
+        result=None,
+        error_code="cancelled",
+        error="cancelled by user",
+    )
+    item = message_to_item(
+        original,
+        conversation_id="c1",
+        run_id="r1",
+        turn_id="t1",
+        sequence=1,
+        created_at="2026-08-01T00:00:00",
+    )
+    [replay] = items_to_messages([item])
+    assert replay.ok is False
+    assert replay.error_code == "cancelled"
+    assert replay.error == "cancelled by user"
+
+
+async def test_assembler_empty_input_tight_budget_does_not_raise():
+    """Checkpoint audit fix: assemble([]) with a budget below the system
+    prompt used to IndexError on the pin fallback."""
+    from weaver.conversation.assembler import ContextAssembler
+
+    assembler = ContextAssembler("You are Weaver.", token_budget=1)
+    kept, snapshot = await assembler.assemble([])
+    assert kept == []
+    assert snapshot.item_count == 0
+    assert snapshot.token_count > 1  # the system prompt alone exceeds
+
+
+async def test_send_persist_failure_marks_run_interrupted():
+    """Plan 008 test-plan item 3: a raising persist callback produces
+    PERSISTENCE_FAILED and the run lands interrupted, not completed."""
+    from weaver.agent.tools import ToolExecutionPolicy
+
+    import weaver.conversation.runner as runner_module
+
+    real_callback = runner_module.ConversationRunner._persist_callback
+
+    async def failing_callback(self, *args, **kwargs):
+        await real_callback(self, *args, **kwargs)
+        raise RuntimeError("disk on fire")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        layer, model, provider = _fake_layer(_stop_response("Done."))
+        registry = _echo_registry()
+        sw = SessionWeave(
+            Path(tmp) / ".weaver" / "state",
+            model_layer=layer,
+            model=model,
+            system_prompt="You are Weaver.",
+            tool_registry=registry,
+            active_tools=("echo",),
+            execution_policy=ToolExecutionPolicy.read_only(),
+        )
+        runner_module.ConversationRunner._persist_callback = failing_callback
+        try:
+            await sw.open()
+            conv_id = await sw.start_conversation("")
+            result = await sw.send(conv_id, "hi")
+            assert result.exit_reason == "persistence_failed"
+            runs = await sw._repo.load_runs(conv_id)
+            assert runs[-1].phase == "interrupted"
+        finally:
+            runner_module.ConversationRunner._persist_callback = real_callback
+            await sw.close()

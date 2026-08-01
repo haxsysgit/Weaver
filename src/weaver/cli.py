@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import dataclasses
 import json
 import os
 from pathlib import Path
@@ -190,6 +191,9 @@ async def _build_chat_session(
     fresh conversation started. _run_chat runs the app on top; tests use
     this builder to exercise the same code path without a terminal.
     """
+    # Config [chat] model (alias or id) picks the model; flash is the default.
+    model_id = os.environ.get("WEAVER_CHAT_MODEL") or DEEPSEEK_FLASH.model_id
+
     if live:
         api_key = os.environ.get("DEEPSEEK_KEY")
         if not api_key:
@@ -199,14 +203,20 @@ async def _build_chat_session(
             timeout_seconds=DEFAULT_TIMEOUT_SECONDS,
         )
     else:
+        # Checkpoint audit fix: the scripted response carries the requested
+        # model id so [chat] model = pro no longer fails every fake turn
+        # (the fake stands in for any registered model).
         provider = FakeModelProvider(
             "deepseek",
             models=DEEPSEEK_MODELS,
-            responses=CHAT_FAKE_RESPONSES,
+            responses=(
+                dataclasses.replace(
+                    CHAT_FAKE_RESPONSES[0],
+                    model_id=model_id,
+                ),
+            ),
         )
 
-    # Config [chat] model (alias or id) picks the model; flash is the default.
-    model_id = os.environ.get("WEAVER_CHAT_MODEL") or DEEPSEEK_FLASH.model_id
     mode_label = f"live {model_id}" if live else "fake"
 
     model_layer = ModelLayer()
@@ -307,9 +317,7 @@ def run(argv: Sequence[str] | None = None) -> int:
                     )
                 )
             elif args.library_command == "packet":
-                result = asyncio.run(
-                    build_novel_packet(args.novel_id, args.chapters)
-                )
+                result = asyncio.run(build_novel_packet(args.novel_id, args.chapters))
             else:
                 result = asyncio.run(
                     export_novel(
@@ -330,10 +338,7 @@ def run(argv: Sequence[str] | None = None) -> int:
             "conflict",
         }
         action_counts = result.get("action_counts", {})
-        statuses = {
-            action.get("status")
-            for action in result.get("actions", [])
-        }
+        statuses = {action.get("status") for action in result.get("actions", [])}
         return (
             1
             if statuses & failed
