@@ -18,9 +18,8 @@ evidence, review, and human decision gates must also be complete.
 | [009 - Context assembler](009-context-assembler.md) | Accepted 2026-07-31 | Plan 008 accepted | Give run_turn() a context window it can't exceed: token budget, truncation, pinned owner message |
 | [010 - TUI entrypoint](010-tui-entrypoint.md) | Accepted; reopened for UI sharpening | Plan 009 accepted | Owner chat window: weaver chat opens Textual TUI with direct await session.send() |
 | [011 - Direct-reading baseline](011-direct-reading-baseline.md) | Planned; learning gate required | Plan 010 accepted | Compare Flash and Pro reading the same novel packet blind: the first time Weaver reads a novel |
-| [012 - Subagent fleet and TDD workflow](012-subagent-fleet-tdd.md) | Planned; learning gate required | Plans 001-010 accepted | Codify the subagent fleet, orchestration playbook, and red/green TDD loop; prove it with a pilot slice |
-| 013 - Direct-reading baseline (original) | Deferred (renumbered from 008; historical) | Plans 002-011 accepted | Blind Flash/Pro comparison over selected chapter packets |
-| 014 - First compiled-memory experiment (original) | Deferred (renumbered from 009; historical) | Plan 013 (original) accepted | Compare bounded compiled Markdown memory with direct rereading |
+| 012 - Direct-reading baseline (original) | Deferred (renumbered from 008) | Plans 002-011 accepted | Blind Flash/Pro comparison over selected chapter packets |
+| 013 - First compiled-memory experiment (original) | Deferred (renumbered from 009) | Plan 012 accepted | Compare bounded compiled Markdown memory with direct rereading |
 
 ## Execution order
 
@@ -32,10 +31,8 @@ building blocks:
 3. **010** — TUI. Without this, the owner can't talk to Weaver.
 4. **011** — direct-reading baseline. The first time Weaver reads a novel.
 
-The rows marked (original) are the deferred literary experiments, renumbered
-from the old plans 008/009; they wait until the conversation infrastructure
-(008-011) is complete. The active 012 is the subagent fleet and TDD workflow
-plan.
+Plans 012-013 are the original deferred literary experiments, renumbered.
+They wait until the conversation infrastructure (008-011) is complete.
 
 Only one numbered plan may be active in implementation or review at a time.
 Plan 008's final owner decision is recorded as **Accepted** in
