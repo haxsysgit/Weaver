@@ -194,9 +194,7 @@ async def test_structured_arguments_become_stable_json() -> None:
 
     response = await layer.complete(
         DEEPSEEK_PRO,
-        ModelRequest(
-            messages=(ModelMessage(role="user", content="synthetic"),)
-        ),
+        ModelRequest(messages=(ModelMessage(role="user", content="synthetic"),)),
         asyncio.Event(),
     )
 
@@ -214,6 +212,8 @@ async def test_structured_arguments_become_stable_json() -> None:
         ("function_call", ModelStopReason.TOOL_USE),
         ("length", ModelStopReason.LENGTH),
         ("content_filter", ModelStopReason.ERROR),
+        # Unknown/absent finish reason: the ERROR default, categorized.
+        ("", ModelStopReason.ERROR),
     ],
 )
 async def test_stop_reason_mapping(raw_reason, expected) -> None:
@@ -227,14 +227,14 @@ async def test_stop_reason_mapping(raw_reason, expected) -> None:
 
     response = await layer.complete(
         DEEPSEEK_PRO,
-        ModelRequest(
-            messages=(ModelMessage(role="user", content="synthetic"),)
-        ),
+        ModelRequest(messages=(ModelMessage(role="user", content="synthetic"),)),
         asyncio.Event(),
     )
 
     assert response.stop_reason == expected
     assert response.raw_stop_reason == raw_reason
+    if not raw_reason:
+        assert response.error_category == "provider_stop"
 
 
 @pytest.mark.asyncio
@@ -251,9 +251,7 @@ async def test_cancellation_is_aborted_before_sdk_start() -> None:
 
     response = await layer.complete(
         DEEPSEEK_PRO,
-        ModelRequest(
-            messages=(ModelMessage(role="user", content="synthetic"),)
-        ),
+        ModelRequest(messages=(ModelMessage(role="user", content="synthetic"),)),
         cancel_event,
     )
 
@@ -291,11 +289,7 @@ async def test_usage_is_normalized_and_reasoning_text_stays_ephemeral() -> None:
         event
         async for event in layer.stream(
             DEEPSEEK_PRO,
-            ModelRequest(
-                messages=(
-                    ModelMessage(role="user", content="synthetic"),
-                )
-            ),
+            ModelRequest(messages=(ModelMessage(role="user", content="synthetic"),)),
             asyncio.Event(),
         )
     ]
@@ -346,6 +340,34 @@ async def test_usage_is_normalized_and_reasoning_text_stays_ephemeral() -> None:
             ),
             "connection",
         ),
+        (
+            openai.APIStatusError(
+                "synthetic",
+                response=httpx.Response(
+                    401,
+                    request=httpx.Request(
+                        "POST",
+                        "https://api.deepseek.com/chat/completions",
+                    ),
+                ),
+                body=None,
+            ),
+            "authentication",
+        ),
+        (
+            openai.APIStatusError(
+                "synthetic",
+                response=httpx.Response(
+                    429,
+                    request=httpx.Request(
+                        "POST",
+                        "https://api.deepseek.com/chat/completions",
+                    ),
+                ),
+                body=None,
+            ),
+            "rate_limit",
+        ),
     ],
 )
 async def test_provider_failures_are_safely_classified(
@@ -362,11 +384,71 @@ async def test_provider_failures_are_safely_classified(
 
     response = await layer.complete(
         DEEPSEEK_PRO,
-        ModelRequest(
-            messages=(ModelMessage(role="user", content="synthetic"),)
-        ),
+        ModelRequest(messages=(ModelMessage(role="user", content="synthetic"),)),
         asyncio.Event(),
     )
 
     assert response.stop_reason == ModelStopReason.ERROR
     assert response.error_category == expected_category
+
+
+@pytest.mark.asyncio
+async def test_mid_stream_cancel_closes_sdk_stream() -> None:
+    """The loop-top cancel check closes the SDK stream (deepseek.py:127)."""
+    cancel_event = asyncio.Event()
+
+    class SelfCancellingStream(StubStream):
+        async def _iterate(self):
+            yield self._chunks[0]
+            cancel_event.set()
+            # A second delivery so the provider's loop-top check fires.
+            yield self._chunks[0]
+
+    completions = StubCompletions([])
+    completions.stream = SelfCancellingStream([chunk(content="partial")])
+    provider = DeepSeekProvider("test-only-key", sdk_client=sdk_with(completions))
+    layer = ModelLayer()
+    layer.register_provider(provider)
+
+    response = await layer.complete(
+        DEEPSEEK_PRO,
+        ModelRequest(messages=(ModelMessage(role="user", content="synthetic"),)),
+        cancel_event,
+    )
+
+    assert response.stop_reason == ModelStopReason.ABORTED
+    assert response.raw_stop_reason == "cancelled"
+    assert completions.stream.closed is True
+
+
+@pytest.mark.asyncio
+async def test_task_cancel_closes_sdk_stream() -> None:
+    """A CancelledError thrown into the stream still closes it
+    (deepseek.py:168-176): cleanup, not a stuck connection."""
+
+    class HangingStream(StubStream):
+        async def _iterate(self):
+            yield self._chunks[0]
+            await asyncio.sleep(3600)
+
+    completions = StubCompletions([])
+    completions.stream = HangingStream([chunk(content="partial")])
+    provider = DeepSeekProvider("test-only-key", sdk_client=sdk_with(completions))
+    layer = ModelLayer()
+    layer.register_provider(provider)
+
+    task = asyncio.create_task(
+        layer.complete(
+            DEEPSEEK_PRO,
+            ModelRequest(messages=(ModelMessage(role="user", content="synthetic"),)),
+            asyncio.Event(),
+        )
+    )
+    await asyncio.sleep(0.05)  # let the task reach the hanging stream
+    task.cancel()
+    # The provider converts the cancellation into an ABORTED terminal
+    # response and closes the stream, so the task completes normally.
+    response = await task
+    assert response.stop_reason == ModelStopReason.ABORTED
+    assert response.raw_stop_reason == "cancelled"
+    assert completions.stream.closed is True

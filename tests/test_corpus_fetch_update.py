@@ -44,9 +44,7 @@ async def test_fetch_preview_selects_exact_range_without_source_calls(
     assert source.calls == []
     assert [action.chapter for action in result.actions] == [2, 3]
     assert all(action.status.value == "previewed" for action in result.actions)
-    assert not (
-        tmp_path / "novels/shadow-slave/0001-0100/chapter-0002.txt"
-    ).exists()
+    assert not (tmp_path / "novels/shadow-slave/0001-0100/chapter-0002.txt").exists()
 
 
 @pytest.mark.asyncio
@@ -129,12 +127,11 @@ async def test_default_update_repairs_known_files_and_stops_at_first_404(
     assert first.stopped_at_chapter == 4
     assert first.stop_reason == "first_404"
     assert second.stopped_at_chapter == 4
-    assert all(
-        action.chapter not in {1, 2, 3}
-        for action in second.actions
-    )
-    assert not (tmp_path / "novels/shadow-slave/urls.md").read_text().endswith(
-        "chapter-4\n"
+    assert all(action.chapter not in {1, 2, 3} for action in second.actions)
+    assert (
+        not (tmp_path / "novels/shadow-slave/urls.md")
+        .read_text()
+        .endswith("chapter-4\n")
     )
 
 
@@ -278,18 +275,12 @@ def test_atomic_replace_failure_after_folder_move_preserves_placeholder(
             expected_old_sha256=sha256_bytes(original),
         )
 
-    canonical = (
-        tmp_path
-        / "novels"
-        / "shadow-slave"
-        / "3001-3100"
-        / "chapter-3047.txt"
-    )
+    canonical = tmp_path / "novels" / "shadow-slave" / "3001-3100" / "chapter-3047.txt"
     assert captured.value.category is ErrorCategory.FILESYSTEM
     assert canonical.read_bytes() == original
-    assert len(
-        list((tmp_path / "novels" / "shadow-slave").rglob("chapter-3047.txt"))
-    ) == 1
+    assert (
+        len(list((tmp_path / "novels" / "shadow-slave").rglob("chapter-3047.txt"))) == 1
+    )
 
 
 @pytest.mark.asyncio
@@ -320,10 +311,14 @@ async def test_concurrent_valid_file_is_preserved_as_conflict(tmp_path) -> None:
 @pytest.mark.asyncio
 async def test_mutating_tool_hardens_corpus_and_receipts_are_metadata_only(
     tmp_path,
+    monkeypatch,
 ) -> None:
     novel_root = make_project(tmp_path, [1])
     path = write_chapter(tmp_path, 1, mode=0o644)
     os.chmod(novel_root, 0o755)
+    # A real secret in the environment: a receipt that dumped env or secrets
+    # would fail the assertion below (was vacuous with nothing set).
+    monkeypatch.setenv("FIRECRAWL_API_KEY", "sk-test-secret")
     service = CorpusService(
         project_root=tmp_path,
         source=FakeChapterSource({}),

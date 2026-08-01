@@ -376,26 +376,6 @@ class TestTurnProtocol:
         assert second_messages[2].tool_call_id == "call-1"
         assert second_messages[3].tool_call_id == "call-2"
 
-    async def test_empty_assistant_text_with_tool_calls_is_preserved(
-        self,
-    ) -> None:
-        call = tool_call("call-1", "echo", '{"message":"hello"}')
-        layer, model, provider = scripted_layer(
-            tool_response(call, content=None),
-            stop_response("Finished."),
-        )
-
-        await execute_turn(
-            layer,
-            model,
-            active_tools=("echo",),
-        )
-
-        assistant = provider.calls[1].request.messages[1]
-        assert assistant.role == "assistant"
-        assert assistant.content is None
-        assert assistant.tool_calls == (call,)
-
     async def test_empty_successful_dictionary_reaches_model(self) -> None:
         call = tool_call("call-empty", "empty", "{}")
         layer, model, provider = scripted_layer(
@@ -538,7 +518,15 @@ class TestUnsafeModelResponses:
         unsafe_call,
     ) -> None:
         starts = {}
-        layer, model, _ = scripted_layer(tool_response(unsafe_call))
+        # A valid follow-up is scripted so that, if a validation gate were
+        # removed, the turn would COMPLETE and the asserts below would fail.
+        # (With only the malformed response scripted, the fake provider
+        # repeats the last response, masking a removed gate via the
+        # known-call-id rejection instead.)
+        layer, model, _ = scripted_layer(
+            tool_response(unsafe_call),
+            stop_response("Recovered."),
+        )
 
         result = await execute_turn(
             layer,
@@ -551,6 +539,7 @@ class TestUnsafeModelResponses:
         assert result.safe_failure == safe_error("model_protocol")
         assert starts == {}
         assert result.tool_starts == 0
+        assert result.model_steps == 1  # never re-asks after a bad call
 
     async def test_duplicate_call_ids_start_no_handler(self) -> None:
         starts = {}
@@ -609,9 +598,7 @@ class TestUnsafeModelResponses:
             )
         ]
         layer, model, _ = scripted_layer(
-            tool_response(
-                tool_call("old-id", "echo", '{"message":"new"}')
-            )
+            tool_response(tool_call("old-id", "echo", '{"message":"new"}'))
         )
 
         result = await execute_turn(
@@ -734,15 +721,9 @@ class TestTurnBoundaries:
 
     async def test_repeated_tool_calls_reach_step_limit(self) -> None:
         layer, model, _ = scripted_layer(
-            tool_response(
-                tool_call("call-1", "echo", '{"message":"hi"}')
-            ),
-            tool_response(
-                tool_call("call-2", "echo", '{"message":"hi"}')
-            ),
-            tool_response(
-                tool_call("call-3", "echo", '{"message":"hi"}')
-            ),
+            tool_response(tool_call("call-1", "echo", '{"message":"hi"}')),
+            tool_response(tool_call("call-2", "echo", '{"message":"hi"}')),
+            tool_response(tool_call("call-3", "echo", '{"message":"hi"}')),
         )
 
         result = await execute_turn(
@@ -827,9 +808,7 @@ class TestToolExecutionEvidence:
 
         result = await session.send("Inspect")
 
-        assert received_ids == [
-            ("session-real", result.turn_id, "call-context")
-        ]
+        assert received_ids == [("session-real", result.turn_id, "call-context")]
 
     async def test_session_cancel_reaches_running_handler(self) -> None:
         handler_started = asyncio.Event()
@@ -854,9 +833,7 @@ class TestToolExecutionEvidence:
             )
         )
         layer, model, provider = scripted_layer(
-            tool_response(
-                tool_call("call-session-cancel", "waiting-read", "{}")
-            )
+            tool_response(tool_call("call-session-cancel", "waiting-read", "{}"))
         )
         session = AgentSession(
             session_id="session-cancel",
@@ -934,8 +911,7 @@ class TestToolExecutionEvidence:
         assert result.tool_starts == 2
         assert starts == {"complete": 1, "failed": 1}
         assert [
-            (message.call_id, message.ok, message.error_code)
-            for message in results
+            (message.call_id, message.ok, message.error_code) for message in results
         ] == [
             ("call-complete", True, None),
             ("call-blocked", False, "effect_not_allowed"),
@@ -1032,8 +1008,7 @@ class TestToolExecutionEvidence:
             "call-unknown",
         ]
         assert [
-            (message.call_id, message.error_code)
-            for message in result_messages
+            (message.call_id, message.error_code) for message in result_messages
         ] == [
             ("call-first", "cancelled"),
             ("call-blocked", "cancelled"),

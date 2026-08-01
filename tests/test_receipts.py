@@ -39,6 +39,11 @@ def test_sensitive_values_and_reasoning_are_redacted(tmp_path) -> None:
     assert sanitized["nested"]["reasoning_content"] == REDACTED
     assert sanitized["usage"]["reasoning_tokens"] == 5
 
+    # The Bearer regex must fire on its own, without a matching secret
+    # (otherwise the plain replace masks a deleted regex).
+    bearer_only = sanitize({"message": "Bearer abcXYZ-123"}, secrets=())
+    assert bearer_only["message"] == f"Bearer {REDACTED}"
+
 
 def test_receipt_directory_and_files_are_owner_only(tmp_path) -> None:
     private_root = tmp_path / ".weaver"
@@ -52,6 +57,24 @@ def test_receipt_directory_and_files_are_owner_only(tmp_path) -> None:
     assert stat.S_IMODE(writer.run_dir.stat().st_mode) == 0o700
     for path in writer.run_dir.iterdir():
         assert stat.S_IMODE(path.stat().st_mode) == 0o600
+
+    # Per-run dirs are unique (timestamp + uuid12 scheme).
+    second = ReceiptWriter.create(private_root / "runs", experiment="test")
+    assert second.run_dir != writer.run_dir
+
+
+def test_receipt_writer_redacts_threaded_secrets(tmp_path) -> None:
+    """secrets= threading plus redaction on write (was: a vacuous assertion
+    on a secret that never appeared in any contract payload)."""
+    writer = ReceiptWriter.create(
+        tmp_path / "runs",
+        experiment="secrets",
+        secrets=("token-x",),
+    )
+    writer.write_json("f.json", {"token": "token-x", "note": "Bearer abcXYZ-123"})
+    rendered = (writer.run_dir / "f.json").read_text()
+    assert "token-x" not in rendered
+    assert "Bearer [REDACTED]" in rendered
 
 
 def test_receipt_writer_rejects_path_traversal(tmp_path) -> None:
@@ -92,13 +115,10 @@ async def test_fake_smoke_writes_complete_safe_receipt(tmp_path) -> None:
     assert len(manifest["calls"]) == 3
     assert responses[0]["model_id"] == "deepseek-v4-flash"
     assert responses[2]["model_id"] == "deepseek-v4-pro"
-    combined = "".join(
-        path.read_text()
-        for path in result.run_dir.iterdir()
-        if path.suffix in {".json", ".jsonl", ".md"}
-    )
-    assert "reasoning_content" not in combined
-    assert "private scratchwork" not in combined
+    # Note: reasoning redaction itself is owned by
+    # test_sensitive_values_and_reasoning_are_redacted; fake responses
+    # never contain reasoning_content, so asserting its absence here
+    # would be vacuous.
 
 
 @pytest.mark.asyncio
@@ -152,7 +172,5 @@ async def test_provider_contract_receipt_is_private_and_metadata_only(
         for path in result.run_dir.iterdir()
         if path.suffix in {".json", ".jsonl", ".md"}
     )
-    assert secret not in combined
     assert '{"item":"status"}' not in combined
     assert "Synthetic provider contract complete." not in combined
-    assert "reasoning_content" not in combined

@@ -50,7 +50,18 @@ async def test_packet_is_ordered_idempotent_and_records_source_hashes(
     assert first.packet_sha256 == second.packet_sha256
     assert first.chapters == [1, 2, 3]
     packet = (tmp_path / first.packet_path).read_text()
-    assert packet.index("Chapter 1") < packet.index("Chapter 2") < packet.index("Chapter 3")
+    assert (
+        packet.index("Chapter 1")
+        < packet.index("Chapter 2")
+        < packet.index("Chapter 3")
+    )
+    # A constant/wrong hash would pass the equality above; pin it against
+    # the actual file bytes.
+    from weaver.corpus.text import sha256_bytes
+
+    assert first.packet_sha256 == sha256_bytes(
+        (tmp_path / first.packet_path).read_bytes()
+    )
     assert len(first.source_hashes) == 3
     manifest = json.loads((tmp_path / first.manifest_path).read_text())
     assert [item["chapter"] for item in manifest["source_hashes"]] == [1, 2, 3]
@@ -94,9 +105,22 @@ async def test_txt_markdown_and_epub_exports_are_ordered_and_reproducible(
 
     txt_text = (tmp_path / txt.export_path).read_text()
     md_text = (tmp_path / markdown.export_path).read_text()
-    assert txt_text.index("Chapter 1") < txt_text.index("Chapter 2") < txt_text.index("Chapter 3")
-    assert md_text.index("Chapter 1") < md_text.index("Chapter 2") < md_text.index("Chapter 3")
+    assert (
+        txt_text.index("Chapter 1")
+        < txt_text.index("Chapter 2")
+        < txt_text.index("Chapter 3")
+    )
+    assert (
+        md_text.index("Chapter 1")
+        < md_text.index("Chapter 2")
+        < md_text.index("Chapter 3")
+    )
     assert md_text.startswith("# Shadow Slave\n")
+    # Body content: each chapter's first-paragraph marker appears exactly
+    # once (ordering alone would pass a wrong-body-but-ordered export).
+    for chapter in (1, 2, 3):
+        assert txt_text.count(f"Synthetic chapter {chapter} paragraph 1") == 1
+        assert md_text.count(f"Synthetic chapter {chapter} paragraph 1") == 1
     assert epub_first.export_sha256 == epub_second.export_sha256
 
     book = epub.read_epub(str(tmp_path / epub_first.export_path))
@@ -150,8 +174,7 @@ async def test_agent_registry_exposes_five_typed_metadata_only_tools(
 
     assert [schema.name for schema in schemas] == list(names)
     assert all(
-        schema.parameters.get("additionalProperties") is False
-        for schema in schemas
+        schema.parameters.get("additionalProperties") is False for schema in schemas
     )
     context = ToolExecutionContext(
         session_id="session",

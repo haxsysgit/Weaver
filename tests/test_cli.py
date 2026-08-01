@@ -1,3 +1,5 @@
+import json
+
 from weaver import cli
 
 
@@ -34,6 +36,12 @@ def test_live_cli_rejects_missing_credential_without_receipt(
     state_path = tmp_path / "private-runs"
     monkeypatch.setenv("WEAVER_STATE_DIR", str(state_path))
 
+    class ClientMustNotBeConstructed:
+        def __init__(self, *args, **kwargs):
+            raise AssertionError("missing key constructed a live client")
+
+    monkeypatch.setattr(cli, "DeepSeekProvider", ClientMustNotBeConstructed)
+
     exit_code = cli.run(["experiment", "model-smoke", "--live"])
 
     assert exit_code == 2
@@ -57,9 +65,7 @@ def test_provider_contract_fake_cli_runs_four_scripted_requests(
 
     monkeypatch.setattr(cli, "DeepSeekProvider", NetworkMustNotBeConstructed)
 
-    exit_code = cli.run(
-        ["experiment", "provider-tool-contract", "--fake"]
-    )
+    exit_code = cli.run(["experiment", "provider-tool-contract", "--fake"])
 
     assert exit_code == 0
     assert "PASSED provider-tool-contract" in capsys.readouterr().out
@@ -69,6 +75,9 @@ def test_provider_contract_fake_cli_runs_four_scripted_requests(
     response_text = response_path.read_text()
     assert "deepseek-v4-flash" in response_text
     assert "deepseek-v4-pro" in response_text
+    # The name promises four scripted requests; pin the manifest count.
+    manifest = json.loads((run_dirs[0] / "manifest.json").read_text())
+    assert manifest["settings"]["maximum_api_requests"] == 4
 
 
 def test_provider_contract_live_cli_checks_key_before_client_or_receipt(
@@ -93,9 +102,7 @@ def test_provider_contract_live_cli_checks_key_before_client_or_receipt(
 
     monkeypatch.setattr(cli, "DeepSeekProvider", ClientMustNotBeConstructed)
 
-    exit_code = cli.run(
-        ["experiment", "provider-tool-contract", "--live"]
-    )
+    exit_code = cli.run(["experiment", "provider-tool-contract", "--live"])
 
     assert exit_code == 2
     assert "requires DEEPSEEK_KEY" in capsys.readouterr().out
@@ -107,9 +114,17 @@ def test_doctor_has_no_network_requirement(
     monkeypatch,
     capsys,
 ) -> None:
+    import socket
+
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("DEEPSEEK_KEY", raising=False)
     monkeypatch.setenv("WEAVER_STATE_DIR", str(tmp_path / "private-runs"))
+
+    # Falsifiable: any real socket connection attempt fails the test.
+    def no_network(*args, **kwargs):
+        raise AssertionError("doctor attempted a network call")
+
+    monkeypatch.setattr(socket.socket, "connect", no_network)
 
     exit_code = cli.run(["doctor"])
 

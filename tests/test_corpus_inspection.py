@@ -44,21 +44,21 @@ async def test_inspection_reports_url_and_file_structure_without_prose(
     assert result.counts["wrongly_placed"] == 0
     assert result.counts["overly_public"] >= 1
     assert result.url_list.duplicates == [3]
-    assert [
-        (item.start, item.end)
-        for item in result.url_list.out_of_order_lines
-    ] == [(4, 4)]
-    assert [
-        (item.start, item.end)
-        for item in result.url_list.malformed_lines
-    ] == [(5, 5)]
+    assert [(item.start, item.end) for item in result.url_list.out_of_order_lines] == [
+        (4, 4)
+    ]
+    assert [(item.start, item.end) for item in result.url_list.malformed_lines] == [
+        (5, 5)
+    ]
     rendered = result.model_dump_json()
     assert "Synthetic chapter" not in rendered
     assert "[Chapter not available]" not in rendered
 
     manifest = json.loads((tmp_path / result.manifest_path).read_text())
     assert manifest["entries"]
-    assert all("text" not in entry and "raw_html" not in entry for entry in manifest["entries"])
+    assert all(
+        "text" not in entry and "raw_html" not in entry for entry in manifest["entries"]
+    )
 
 
 @pytest.mark.asyncio
@@ -99,11 +99,13 @@ async def test_inspection_refuses_symlinked_corpus_root(tmp_path) -> None:
     )
 
     service = CorpusService(project_root=project)
-    with pytest.raises(Exception) as captured:
+    from weaver.corpus.errors import CorpusError
+
+    with pytest.raises(CorpusError) as captured:
         await service.inspect_novel_corpus(
             InspectNovelCorpusInput(novel_id="shadow-slave")
         )
-    assert getattr(captured.value, "category", None).value == "security"
+    assert captured.value.category.value == "security"
 
 
 def test_url_list_parses_human_readable_anchor_lines(tmp_path) -> None:

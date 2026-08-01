@@ -34,7 +34,7 @@ def _clean_env(monkeypatch):
 
 
 def test_dotenv_sets_key(tmp_path, monkeypatch) -> None:
-    _write(tmp_path, ".env", "# comment\nDEEPSEEK_KEY=sk-test\nEMPTY=\n")
+    _write(tmp_path, ".env", "# comment\nDEEPSEEK_KEY=sk-test\n")
     monkeypatch.chdir(tmp_path)
 
     config.load_startup_config()
@@ -137,6 +137,9 @@ async def test_build_chat_session_uses_configured_model(tmp_path, monkeypatch) -
     )
     try:
         assert mode_label == "live deepseek-v4-pro"
+        # The label is derived from the same env var as the model, so pin
+        # the wiring itself: the session really runs the pro spec.
+        assert sw._runner._model.model_id == "deepseek-v4-pro"
     finally:
         await sw.close()
 

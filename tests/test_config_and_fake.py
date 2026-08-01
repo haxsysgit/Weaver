@@ -21,7 +21,7 @@ def test_missing_credential_is_rejected() -> None:
 
 
 def test_invalid_model_alias_is_rejected() -> None:
-    with pytest.raises(InvalidModelAliasError):
+    with pytest.raises(InvalidModelAliasError, match="Unknown model alias 'turbo'"):
         resolve_model("turbo")
 
 

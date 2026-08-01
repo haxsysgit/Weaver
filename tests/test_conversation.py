@@ -77,13 +77,19 @@ async def test_subprocess_retry():
 
 
 @pytest.mark.asyncio
-async def test_delete_workflows_db_safe():
-    """Deleting an optional workflows database is harmless."""
+async def test_open_creates_only_weaver_sqlite():
+    """open() leaves no stray databases behind (was: dead test asserting on
+    a workflows.sqlite3 file nothing ever creates)."""
+    from weaver.conversation import SessionWeave
+
     with tempfile.TemporaryDirectory() as tmp:
         state_dir = Path(tmp) / ".weaver" / "state"
-        wf = state_dir / "workflows.sqlite3"
-        assert not wf.exists()
-        wf.unlink(missing_ok=True)
+        sw = SessionWeave(state_dir)
+        await sw.open()
+        try:
+            assert [p.name for p in state_dir.glob("*.sqlite3")] == ["weaver.sqlite3"]
+        finally:
+            await sw.close()
 
 
 @pytest.mark.asyncio
@@ -251,22 +257,24 @@ async def test_repo_find_interrupted_run_none():
 
 
 @pytest.mark.asyncio
-async def test_repo_load_items_for_run_id():
-    """load_items with for_run_id filters to a specific run."""
-    from weaver.conversation import SessionWeave
-
+async def test_repo_load_items_for_run_id(tmp_path):
+    """load_items with for_run_id filters to a specific run (the filter is
+    observable: a second run's items must be excluded)."""
+    layer, model, provider = _fake_layer(_stop_response("One."))
     with tempfile.TemporaryDirectory() as tmp:
-        state_dir = Path(tmp) / ".weaver" / "state"
-        sw = SessionWeave(state_dir)
+        sw = _open_woven(Path(tmp), layer, model, _echo_registry())
         await sw.open()
         try:
             conv_id = await sw.start_conversation("hello")
             runs = await sw.repo.load_runs(conv_id)
             run = runs[0]
+            await sw.send(conv_id, "second hello")
             for_run = await sw.repo.load_items(conv_id, for_run_id=run.id)
 
             assert len(for_run) >= 1
             assert all(i.run_id == run.id for i in for_run)
+            all_items = await sw.repo.load_items(conv_id)
+            assert any(i.run_id != run.id for i in all_items)  # filter is real
         finally:
             await sw.close()
 
@@ -403,12 +411,11 @@ def _open_woven(tmp: Path, layer, model, registry) -> SessionWeave:
     return sw
 
 
-@pytest.mark.asyncio
 def test_items_to_messages_assistant_tool_calls_guard():
     """Contract §4: corrupted assistant tool_calls entries raise ValueError
     with the item id instead of a bare KeyError/TypeError."""
+    from weaver.conversation.items import items_to_messages
     from weaver.conversation.repository import ItemRecord
-    from weaver.conversation.runner import _items_to_messages
 
     def item(body: dict) -> ItemRecord:
         return ItemRecord(
@@ -423,13 +430,13 @@ def test_items_to_messages_assistant_tool_calls_guard():
         )
 
     with pytest.raises(ValueError, match="itm12345678ab"):
-        _items_to_messages(
+        items_to_messages(
             [item({"tool_calls": [{"id": "c1"}]})]
         )  # missing name/arguments
     with pytest.raises(ValueError, match="itm12345678ab"):
-        _items_to_messages([item({"tool_calls": ["nope"]})])  # non-dict entry
+        items_to_messages([item({"tool_calls": ["nope"]})])  # non-dict entry
     with pytest.raises(ValueError, match="itm12345678ab"):
-        _items_to_messages([item({"tool_calls": "nope"})])  # not a list
+        items_to_messages([item({"tool_calls": "nope"})])  # not a list
 
 
 async def test_send_fake_turn():
@@ -903,9 +910,8 @@ async def test_send_on_delta_streams_chunks_before_completion(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_send_on_delta_none_still_buffers(tmp_path):
+async def test_send_without_on_delta_completes(tmp_path):
     """Default send() drains the stream with no delta callbacks."""
-    received: list[str] = []
     layer, model, provider = _fake_layer(_stop_response("Done."))
     sw = _open_woven(Path(tmp_path), layer, model, _echo_registry())
     await sw.open()
@@ -914,7 +920,6 @@ async def test_send_on_delta_none_still_buffers(tmp_path):
         result = await sw.send(conv_id, "hello")
         assert result.exit_reason == "completed"
         assert result.final_text == "Done."
-        assert received == []
     finally:
         await sw.close()
 
@@ -956,8 +961,9 @@ async def test_send_reports_token_count_without_budget(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_send_token_budget_reports_percent_math(tmp_path):
-    """With a budget, the result carries the same numbers the assembler used."""
+async def test_send_token_budget_reports_meter_numbers(tmp_path):
+    """With a budget, the result carries the same numbers the assembler used.
+    (renamed: the percent is computed by the TUI's ctx_text, not here)"""
     from weaver.agent.tools import ToolExecutionPolicy
 
     layer, model, provider = _fake_layer(_stop_response("Done."))
@@ -1096,9 +1102,11 @@ async def test_send_persist_failure_marks_run_interrupted():
 
     real_callback = runner_module.ConversationRunner._persist_callback
 
-    async def failing_callback(self, *args, **kwargs):
-        await real_callback(self, *args, **kwargs)
-        raise RuntimeError("disk on fire")
+    def failing_callback(self, conversation_id, run_id, turn_id):
+        async def callback(message):
+            raise RuntimeError("disk on fire")
+
+        return callback
 
     with tempfile.TemporaryDirectory() as tmp:
         layer, model, provider = _fake_layer(_stop_response("Done."))

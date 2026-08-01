@@ -27,7 +27,7 @@ from .assembler import ContextAssembler
 from .common import now
 from .coordinator import RunCoordinator, _tx
 from .items import (
-    items_to_messages as _items_to_messages,  # plan 008 private names, kept for existing tests
+    items_to_messages as _items_to_messages,  # runner-internal names
     message_to_item as _message_to_item,
 )
 from .repository import ConversationRepository

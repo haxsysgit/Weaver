@@ -1,8 +1,8 @@
 """Plan 010 TUI code-path tests (no terminal required).
 
 These tests exercise the same code path the Textual TUI runs: the chat
-session built by cli._build_chat_session plus SessionWeave.send(). Full
-headless widget tests (Textual pilot) are deferred per the plan.
+session built by cli._build_chat_session plus SessionWeave.send().
+Headless widget tests (Textual pilot) live in test_tui_widgets.py.
 """
 
 import asyncio

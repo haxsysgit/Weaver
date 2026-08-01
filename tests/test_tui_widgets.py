@@ -128,7 +128,7 @@ async def test_pilot_status_bar_spins_while_turn_runs_then_rests():
         task = await _submit(app, "slow one")
 
         status = app.query_one(StatusBar)
-        assert status._busy
+        # Busy is proven observably: a spinner frame replaces the idle dot.
         assert any(frame in str(status.content) for frame in SPINNER_FRAMES)
         assert stub.sent == [("conv-1", "slow one")]
 
@@ -136,8 +136,7 @@ async def test_pilot_status_bar_spins_while_turn_runs_then_rests():
         await task
         await pilot.pause()  # settle once the send completes
 
-        assert not status._busy
-        assert "·" in str(status.content)
+        assert "·" in str(status.content)  # idle dot is back
         assert "hello back" in _log_text(app)
 
 
@@ -168,7 +167,9 @@ async def test_pilot_ctrl_c_idle_clears_the_input():
     async for app, pilot in _open_chat(stub):
         input_widget = app.query_one("#input", TextArea)
         input_widget.text = "half typed"
-        app.action_cancel_turn()
+        # Real keypress: proves the app's priority ctrl+c binding beats the
+        # focused TextArea's own ctrl+c copy binding.
+        await pilot.press("ctrl+c")
         assert input_widget.text == ""
 
 
@@ -291,11 +292,8 @@ async def test_pilot_ctrl_h_opens_history_screen_and_esc_closes():
         },
     ]
     async for app, pilot in _open_chat(stub):
-        # Declarative wiring: ctrl+h dispatches to show_history.
-        bound = app.active_bindings["ctrl+h"].binding
-        assert bound.action == "show_history"
-
-        await app.action_show_history()
+        # Real keypress: proves ctrl+h dispatches to show_history.
+        await pilot.press("ctrl+h")
         await pilot.pause()
 
         assert isinstance(app.screen, RunHistoryScreen)
@@ -403,8 +401,12 @@ async def test_pilot_ctrl_r_picker_picks_and_switches():
         await pilot.press("enter")  # selects the focused (first) item
         await pilot.pause()
 
-        assert app._conv_id == "conv-2"
         assert "switched to conversation conv-2" in _log_text(app)
+        # Routing is observable: the next submit goes to the switched
+        # conversation, not conv-1.
+        await _submit(app, "hello again")
+        await pilot.pause()
+        assert stub.sent == [("conv-2", "hello again")]
 
 
 async def test_pilot_ctrl_r_picker_escape_cancels():
@@ -427,8 +429,11 @@ async def test_pilot_ctrl_r_picker_escape_cancels():
         await pilot.pause()
 
         assert not isinstance(app.screen, ConversationPickerScreen)
-        assert app._conv_id == "conv-1"  # unchanged
         assert "switched" not in _log_text(app)
+        # Routing is observable: an escape keeps the current conversation.
+        await _submit(app, "still here")
+        await pilot.pause()
+        assert stub.sent == [("conv-1", "still here")]
 
 
 async def test_pilot_ctrl_n_starts_new_conversation():
@@ -441,8 +446,12 @@ async def test_pilot_ctrl_n_starts_new_conversation():
         await pilot.pause()
 
         assert stub.started == [""]
-        assert app._conv_id == "conv-new"
         assert "new conversation conv-new" in _log_text(app)
+        # Routing is observable: the next submit goes to the fresh
+        # conversation.
+        await _submit(app, "fresh start")
+        await pilot.pause()
+        assert stub.sent == [("conv-new", "fresh start")]
 
 
 async def test_pilot_turn_separator_between_turns():

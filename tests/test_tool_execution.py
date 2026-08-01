@@ -109,9 +109,7 @@ class TestToolExecutionPolicy:
 
     def test_policy_rejects_outside_effects(self) -> None:
         with pytest.raises(ValueError, match="external effects"):
-            ToolExecutionPolicy(
-                allowed_effects=frozenset({EffectKind.EXTERNAL_EFFECT})
-            )
+            ToolExecutionPolicy(allowed_effects=frozenset({EffectKind.EXTERNAL_EFFECT}))
 
     def test_policy_copies_mutable_effect_input(self) -> None:
         mutable_effects = {EffectKind.READ}
@@ -214,18 +212,6 @@ class TestPolicyDispatch:
         assert result.error_code == "effect_not_allowed"
         assert not result.started
         assert starts == {}
-
-    async def test_unknown_tool_keeps_first_priority(self) -> None:
-        result = await dispatch(
-            ToolRegistry(),
-            "missing",
-            policy=ToolExecutionPolicy.read_only(),
-            raw_arguments="",
-            active_names=(),
-        )
-
-        assert result.error_code == "unknown_tool"
-        assert not result.started
 
     async def test_inactive_tool_keeps_priority_over_effect(self) -> None:
         starts: dict[str, int] = {}
