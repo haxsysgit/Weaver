@@ -584,6 +584,16 @@ class CorpusStore:
     def harden_corpus_permissions(self) -> None:
         root = self.layout.novel_root
         self.assert_safe_path(root, base=self.layout.project_root)
+        # Checkpoint audit fix: secure_directory's boundary is the layout
+        # root itself, so the private root's parent (e.g. .weaver/corpus)
+        # kept mkdir's umask (775). Owner-only state means the whole
+        # private chain above the layout root is 700 too.
+        private_parent = self.layout.state_root.parent
+        if (
+            private_parent.is_relative_to(self.layout.project_root)
+            and private_parent.exists()
+        ):
+            os.chmod(private_parent, 0o700)
         for current_root, directory_names, file_names in os.walk(
             root,
             followlinks=False,
