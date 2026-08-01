@@ -1,6 +1,8 @@
 # Checkpoint 001-010 (2026-07-31)
 
-Ritual run after plans 001-010, before plan 011. See checkpoints.md.
+**Status: complete.** Ritual run after plans 001-010, before plan 011.
+See checkpoints.md. Follow-up: docs generalized to be harness-agnostic
+(f6b9479) — roles are the contract, harness bindings in an appendix.
 
 ## 1. Walkthrough of plans 001-010
 
