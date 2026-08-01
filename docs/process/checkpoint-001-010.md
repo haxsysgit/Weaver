@@ -49,8 +49,11 @@ What changed in this repo: we already ran the verify/critic shape
 (fresh-context reviews with runtime verify commands) and pipeline gates
 (learning gate -> build -> review -> owner gate). New: test-first
 discipline with recorded red runs for future slices, the fleet role map
-onto pi's builtin agents, and promotion guidance. See
-subagent-fleet.md and tdd-workflow.md.
+onto pi's builtin agents, and promotion guidance. The docs were
+generalized to be harness-agnostic right after this checkpoint (roles
+are the contract; pi, Claude Code, Codex, and opencode bindings live in
+the appendix of subagent-fleet.md). See subagent-fleet.md and
+tdd-workflow.md.
 
 ## 3. Codified
 

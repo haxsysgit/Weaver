@@ -24,7 +24,9 @@
   plan number or a decision gate.
 - The standing workflow is in `docs/process/`: `subagent-fleet.md`
   (roles, isolation, orchestration shapes) and `tdd-workflow.md`
-  (test-first red/green loop). Code work follows it.
+  (test-first red/green loop). Code work follows it. The docs are
+  harness-agnostic: roles and discipline are the contract, with per-
+  harness bindings (pi, Claude Code, Codex, opencode) in an appendix,
 
 ## Weaver language
 

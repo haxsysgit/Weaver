@@ -1,7 +1,12 @@
 # TDD workflow for plan slices
 
 The default way of doing code work in Weaver, from the checkpoint
-ritual. Test-first: the test is a contract the agent cannot fake.
+ritual. **Harness-agnostic**: the loop is pure discipline — write the
+test, watch it fail, implement, verify mechanically — and works identically
+in any coding harness, with or without subagents. The critic step uses
+whatever independent-review mechanism the harness provides (see
+subagent-fleet.md). Test-first: the test is a contract the agent cannot
+fake.
 
 ## The loop
 
@@ -19,7 +24,9 @@ ritual. Test-first: the test is a contract the agent cannot fake.
    not compile.
 5. **Critic** — a fresh-context independent review (see
    subagent-fleet.md) that sees the diff + requirements only, with
-   structured verdicts and runtime verify commands.
+   structured verdicts and runtime verify commands. Any harness: spawn
+   a read-only reviewer with the diff and the requirements, never the
+   author's reasoning.
 6. **Record** — outcomes and failures in the deliverable's results.md
    and review-ledger.md. Failures are evidence, not embarrassments.
 
