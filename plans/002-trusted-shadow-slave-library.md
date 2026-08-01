@@ -275,3 +275,27 @@ later admitted plan renames or wraps them safely.
 - Chat or agent orchestration.
 - Implementing or selecting a whole-system agent framework.
 - Any novel other than Shadow Slave.
+
+## Checkpoint audit corrections (2026-08-01)
+
+Spec-vs-code audit results. 31/31 claims verified, 29 aligned, 2
+partial. No hard-invariant violations. Doc fixes:
+
+1. DOC — "A valid local chapter that disagrees with a later webpage is
+   a conflict" is unreachable: valid chapters are never refetched, so
+   no webpage comparison occurs. Real conflict sources: file hash
+   changed since the manifest, duplicated chapter files, mutation
+   between inventory and commit. Local files are preserved in all
+   paths. Reworded accordingly.
+2. DOC — the legacy-folder rename (3001-3047 -> 3001-3100) happens on
+   the first validated write of any chapter 3001-3100 while the
+   canonical folder is absent; order-dependent, now stated.
+3. FIXED — private parent chain: `.weaver/corpus` sat at 775 because
+   secure_directory's boundary is the layout root. Commit ed19d30
+   chmods the layout root's parent to 700 when present.
+4. NOTE — transient conflict reporting: once a conflict is written to
+   the manifest, the next inspection no longer flags it (the seed set
+   is valid/wrongly_placed only). If conflicts should persist until a
+   human decision, seed `conflict` too — deferred.
+5. NOTE — `stop_reason` inconsistency: repair loop reports the error
+   category, continuation loop reports "first_404". Cosmetic.

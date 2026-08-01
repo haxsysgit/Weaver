@@ -297,3 +297,20 @@ Stop and report if:
 Run this contract suite whenever `openai`, DeepSeek payload mapping, message
 types, or the conversation loop changes. Keep the HTTP assertions about
 Weaver's required fields so normal SDK header changes do not create noise.
+
+## Checkpoint audit corrections (2026-08-01)
+
+Spec-vs-code audit results. 30/30 claims verified, 28 aligned, 2
+partial. No code bugs in plan-005 scope. Doc fixes:
+
+1. DOC — the missing-key floor ("env -u DEEPSEEK_KEY ... --live"
+   refuses before any client) was superseded by Plan 010's startup
+   config (owner-directed 2026-07-31): `.env` and `.weaver/config.toml`
+   key sourcing restored. The floor is now "no key in env, .env, or
+   config file". The plan's command row is annotated accordingly; run
+   that command from a clean cwd (or tmp) to get the refusal.
+2. DOC — "tool-result IDs must match the assistant call" lists a
+   negative test that does not exist: the runner builds the tool result
+   from the response's own call_id, so a mismatch is unreachable by
+   construction. Reworded to "linked call IDs asserted exactly on the
+   second request body".

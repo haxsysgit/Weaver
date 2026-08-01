@@ -347,3 +347,21 @@ Stop and report if:
 - Compaction and narrative-thread context assembly (Plan 006 deferred items).
 - Tokenizer parity with DeepSeek's real tokenizer.
 - TUI, live models, corpus tools remain outside Plan 009.
+
+## Checkpoint audit corrections (2026-08-01)
+
+Spec-vs-code audit results. 18/18 claims verified, 17 aligned, 1
+partial (type). One low-severity code bug, fixed. Doc fixes:
+
+1. FIXED — assemble([]) with a budget below the system prompt raised
+   IndexError on the pin fallback. Commit 9ffb0ab returns a sane
+   snapshot for empty input (count-only mode already did).
+2. DOC — Contract §2 garbled parenthetical ("its sequence is recorded
+   in the snapshot as pinned_item_id is not") removed; the pinned
+   boundary is expressed as first_item_id of the oldest included
+   exchange, exactly as implemented.
+3. DOC — Contract §5 and the snapshot field are `token_budget: int |
+   None` (None = count-only, Plan 010 Phase D), not `int`.
+4. DOC — learning.md point 9 and the assemble-sequence diagram say the
+   assembler is absent when no budget is set; it now always runs in
+   count-only mode. Behavioral claims unchanged.

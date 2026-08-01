@@ -184,3 +184,20 @@ explicit owner direction:
 1. Approved plan and safe baseline.
 2. Tested implementation candidate.
 3. Final accepted or rejected decision and evidence.
+
+## Checkpoint audit corrections (2026-08-01)
+
+Spec-vs-code audit results (fleet fan-out, read-only). Alignment: 33/33
+claims verified, 30 aligned, 3 partial. No code bugs. Doc fixes:
+
+1. DOC — "await ModelClient.complete(request)" is stale. The real
+   provider-neutral boundary is `ModelLayer.complete(model, request,
+   cancel_event)`; no `ModelClient` exists. Rubric Gate B wording
+   updates with it.
+2. DOC — "normalize returned model ID" overstates: the adapter never
+   reads `chunk.model`; `ModelResponse.model_id` records the requested
+   id. Reworded to "normalize the requested model ID and record it in
+   receipts; capturing a served fallback model id is future work."
+3. NOTE — `.weaver/corpus` was 775 (mkdir umask on a parent dir). Fixed
+   in code (commit ed19d30): the corpus hardening now chmods the
+   private parent chain to 700. Covered under Plan 002's scope.

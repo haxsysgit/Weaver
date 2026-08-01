@@ -329,3 +329,20 @@ approval remain outside Plan 003.
 
 Existing internal `corpus` symbols remain as Weaver's private-library
 implementation until a later admitted plan safely renames them.
+
+## Checkpoint audit corrections (2026-08-01)
+
+Spec-vs-code audit results. 24/24 claims verified, 22 aligned, 2
+partial. No code bugs in plan-003 scope. Doc fixes:
+
+1. FIXED (adjacent) — the PARTIAL on "tool calls survive replay":
+   failed tool results dropped `ok`/`error_code`/`error` in the durable
+   mapping and replayed as successes (Plan 004 invariant). Commit
+   9ffb0ab persists failure metadata in the Plan 008/009 mapping table;
+   the preservation claim now holds for failures too.
+2. DOC — the dispatch order list predates Plan 004: the effect-permission
+   gate sits between "active" and "JSON syntax". Noted.
+3. DOC — "reject blank or malformed JSON" runs at the turn boundary and
+   dispatch, not inside the DeepSeek adapter (which passes text through
+   untouched). Intent unchanged: nothing is repaired, nothing reaches a
+   handler.

@@ -557,3 +557,28 @@ Stop and report if:
   persistence.
 - Live model calls, corpus tools in conversation, relationship memory,
   LangGraph, and TUI remain outside Plan 008.
+
+## Checkpoint audit corrections (2026-08-01)
+
+Spec-vs-code audit results. 13/13 claims verified, all aligned. No code
+bugs. Doc fixes:
+
+1. DOC — stale line refs: the persist seam is at turn.py:43-45 and
+   _persist at turn.py:114-128 (Phase B streaming grew the file; the
+   plan cites 38 and 71-84).
+2. DOC — the pinned mapping table moved from runner.py into items.py
+   (Plan 009 extraction, verbatim); runner.py re-exports the private
+   names. Noted.
+3. DOC — run_turn_in_run now interposes ContextAssembler.assemble()
+   (Plan 009) with token_budget=None as count-only (Plan 010 Phase D);
+   Plan 008 behavior preserved and guarded by
+   test_runner_unbounded_default_preserves_plan008.
+4. FIXED (coverage) — plan test-plan items 3/7 ("a raising callback
+   produces PERSISTENCE_FAILED and an interrupted run") were uncovered.
+   Commit 9ffb0ab adds test_send_persist_failure_marks_run_interrupted;
+   the behavior was already correct, now locked.
+5. NOTE — find_interrupted_run matches phase='interrupted' only; a hard
+   crash leaves queued/model_call_pending/settling and the next send
+   starts a new turn (see Plan 006 correction 1). Out of plan-008's
+   contract; a future plan wiring send() as the primary path should
+   reconcile it.

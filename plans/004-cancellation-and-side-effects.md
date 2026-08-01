@@ -340,3 +340,28 @@ requires reviewer attention.
 Plan 007 may expose only a library inspection capability. Any later plan that
 activates fetch, update, export, memory writes, or outside communication must
 admit the matching effect and test cancellation near its commit point.
+
+## Checkpoint audit corrections (2026-08-01)
+
+Spec-vs-code audit results. 26/26 claims verified, 24 aligned, 2
+partial (both in the durable layer). One hard-invariant violation,
+fixed. Doc fixes:
+
+1. FIXED — "Cancelled calls are recorded as cancelled, not failed or
+   completed" was violated on the durable path: the Plan 008/009
+   mapping wrote only `result` for tool_result items, so cancelled,
+   blocked, and failed calls replayed as `ok=True` ("Tool execution
+   failed."). Commit 9ffb0ab persists failure metadata and reads old
+   rows as successes. In-memory evidence was always correct.
+2. DOC — the raise_if_cancelled() checkpoint contract ships as helper +
+   contract + tests; the registered corpus handlers (inspect/build/
+   export under maintenance()) do not call it yet. This matches the
+   plan's own Step-4 deferral; restated as such.
+3. NOTE — the cancelled-batch record is not absolute under persistence
+   failure: a mid-batch DB failure breaks the loop and the tail loses
+   its cancelled records. Reachable only on DB write failure.
+4. NOTE — latent session wedge: external `task.cancel()` of
+   AgentSession.send skips the busy/cancel cleanup (CancelledError is a
+   BaseException in 3.11). Nothing in the repo does this (TUI contract
+   forbids task.cancel); worth try/finally when task-level cancellation
+   is ever legitimate.

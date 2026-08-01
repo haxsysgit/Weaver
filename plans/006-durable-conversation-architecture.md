@@ -152,3 +152,35 @@ deletion safety, and diagram/preview agreement.
 - [x] Two reviews and rechecks have no blocker.
 - [x] Full verification floor passes.
 - [x] Owner records the final Plan 006 decision.
+
+## Checkpoint audit corrections (2026-08-01)
+
+Spec-vs-code audit results. 26/26 claims verified, 17 aligned, 6
+partial, 3 missing (all future contracts). One significant real gap.
+Doc fixes:
+
+1. DEFERRED (significant) — startup recovery is not implemented: no
+   startup scan reads unfinished phases, no `recovery_request` table
+   exists, and `find_interrupted_run` matches only
+   `phase='interrupted'`. A hard kill mid-turn leaves
+   `queued`/`model_call_pending`/`settling`; the next `send()` starts a
+   fresh turn and re-invokes the model — "No startup path silently
+   repeats a model call or tool" is unenforced on real crashes. The
+   Plan 007 proof simulates crashes via explicit `mark_interrupted`,
+   which is not equivalent. Recovery wiring is a future plan.
+2. DOC — the intermediate phases (`model_call_pending`, `settling`) are
+   written only by coordinator helpers used in the proof path; the
+   wired runner goes `queued` -> terminal. Plan 008's terminal-only
+   mapping is consistent with the runner.
+3. DOC — item-settled events: only `run_queued`/`run_completed` exist;
+   "a committed item and its item-settled event cannot disagree" is
+   vacuous until settled-item notices are implemented (future).
+4. DOC — `continue_interrupted`/`retry_interrupted` are repository-level
+   seams; nothing (TUI, CLI) invokes them, and `run_turn_in_run` loads
+   the full history, so retry does not actually omit the failed run's
+   items today. Reworded to repository-level only.
+5. DOC — one-result-per-call is app-enforced (settle_tool pre-check +
+   ValueError), not a DB constraint. Reworded.
+6. DOC — FIFO busy turns, steering, interruption/context item kinds,
+   snapshot persistence, approvals/memories/opinions tables: all future
+   contracts, none implemented. Annotated as such.

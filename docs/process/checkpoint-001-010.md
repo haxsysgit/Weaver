@@ -1,78 +1,74 @@
-# Checkpoint 001-010 (2026-07-31)
+# Checkpoint 001-010 (2026-08-01)
 
-**Status: complete.** Ritual run after plans 001-010, before plan 011.
-See checkpoints.md. Follow-up: docs generalized to be harness-agnostic
-(f6b9479) — roles are the contract, harness bindings in an appendix.
+**Status: complete.** Standing ritual after every 10 plans: walk plans
+001-010, audit the codebase against what each plan specified, correct
+what does not align. See checkpoints.md for the ritual.
 
-## 1. Walkthrough of plans 001-010
+## Method
 
-Verified against the live repo (HEAD `3789d00` at walkthrough time, full
-suite 223 passed):
+Ten read-only spec-vs-code audits (the fleet, fan-out), one per plan:
+each extracted every specifiable claim from the plan (functions,
+signatures, invariants, file paths, verification floors) and verified
+each against the live code, with the verification floor re-run. The
+parent reconciled the findings, applied code fixes, and corrected the
+plan documents.
 
-| Plan | State | Owner decision | Deliverables |
-|---|---|---|---|
-| 001 experimental-foundation | Accepted 2026-07-29 | Accepted | full set |
-| 002 trusted shadow-slave library | Accepted 2026-07-30 | Accepted | full set |
-| 003 preserve-tool-protocol | Accepted and closed | Accepted | full set |
-| 004 cancellation-and-side-effects | Accepted and closed | Accepted | full set |
-| 005 provider-tool-contract | Accepted 2026-07-30 | Accepted | full set |
-| 006 durable-conversation-architecture | Accepted | Accepted | full set + research docs |
-| 007 restart-safe-conversation-proof | Implemented + repair | Accepted | full set (no diagram; contract did not demand one) |
-| 007.5 audit-repair | Working plan | — | no deliverable set (working plan) |
-| 008 wire-conversation-loop | Accepted, pushed d6bf9f8 | Accepted | full set |
-| 009 context-assembler | Accepted, pushed 39899bd | Accepted | full set |
-| 010 tui-entrypoint | Accepted; reopened for UI sharpening; phases A-D accepted; label cleanup at HEAD | Accepted + phase addenda | full set incl. analysis + deep-dive |
+## Alignment summary
 
-Gaps: none blocking. plans/README rows match plan states.
+| Plan | Claims | Aligned | Partial | Missing | Code bugs | Disposition |
+|---|---|---|---|---|---|---|
+| 001 foundation | 33 | 30 | 3 | 0 | none | doc corrections (boundary name, model-id claim) |
+| 002 shadow-slave library | 31 | 29 | 2 | 0 | none (1 perms drift) | doc corrections + perms fix |
+| 003 tool protocol | 24 | 22 | 2 | 0 | none in scope | doc corrections (dispatch order, rejection site) |
+| 004 cancellation/effects | 26 | 24 | 2 | 0 | **1 hard-invariant violation** | **fixed** (replay truth) + docs |
+| 005 provider-tool-contract | 30 | 28 | 2 | 0 | none in scope | doc corrections (key floor superseded) |
+| 006 durable conversation | 26 | 17 | 6 | 3 | **1 significant gap** | deferred (startup recovery) + docs |
+| 007 restart proof | 17 | 11 | 6 | 0 | none | doc corrections (crash table overstates) |
+| 008 wire the loop | 13 | 13 | 0 | 0 | none | doc corrections + missing test added |
+| 009 context assembler | 18 | 17 | 1 | 0 | **1 low bug** | **fixed** (empty-input crash) + docs |
+| 010 TUI entrypoint | 26 | 24 | 2 | 0 | **1 reproducible bug** | **fixed** (fake+pro) + docs |
+| **Total** | **244** | **215** | **24** | **3** | **3 fixed, 1 deferred** | |
 
-## 2. Knowledge update (web research)
+The three "missing" plan-006 claims (startup recovery, FIFO/steering
+turns, approvals/memories tables) are future contracts the plan itself
+never built — recorded as deferred, not silently accepted as done.
 
-Sources: Simon Willison "Red/green TDD"; AgentsCamp "Multi-Agent
-Orchestration" and "TDD with AI Agents: Red-Green as an Agent Loop";
-AgentPatterns.ai "Test-Driven Agent Development"; Addy Osmani "The Code
-Agent Orchestra".
+## Code fixes (all red-green with tests, full suite 228 green)
 
-What we took from it:
+1. **Plan 004 invariant — replay truth (9ffb0ab).** The durable mapping
+   wrote only `result` for tool_result items, so cancelled, blocked, and
+   failed calls replayed as clean successes ("Tool execution failed.")
+   on resume/replay. The mapping now persists failure metadata and reads
+   legacy rows as successes. In-memory evidence was always correct.
+2. **Plan 009 — empty-input crash (9ffb0ab).** `assemble([])` with a
+   budget below the system prompt raised IndexError on the pin fallback.
+   Returns a sane snapshot now.
+3. **Plan 010 — fake chat with a configured pro model (9ffb0ab).**
+   `weaver chat --fake` with `[chat] model = pro` failed every turn with
+   MODEL_FAILED (scripted response pinned to flash). The fake now stands
+   in for the requested model.
+4. **Plan 002 — private parent chain (ed19d30).** `.weaver/corpus` sat
+   at 775 (mkdir umask on a parent dir); the hardening now chmods the
+   layout root's parent to 700. Live dir fixed too.
+5. **Coverage (9ffb0ab).** Plan 008 test-plan item 3
+   (PERSISTENCE_FAILED -> interrupted run) was untested; the behavior
+   was already correct, now locked.
 
-- **Red/green TDD**: write the test, confirm it fails (red), implement
-  until green, never edit the test. Skipping red risks a test that
-  already passes. The test is a contract the agent cannot fake.
-- **Context isolation is the product**: subagents get clean windows and
-  return summaries; constraints go in the task prompt; two agents
-  agreeing from separate contexts is real corroboration.
-- **Four shapes**: fan-out (parallel independent), pipeline (ordered
-  with narrowing and gates), orchestrator-worker (process owner, no edit
-  tools), verify/critic (fresh-context, structured ship|fix). Default to
-  one thread; promote only when a shape fits.
-- **Mechanical checks close every run** — agents report success on code
-  that doesn't compile.
+## Plan corrections
 
-What changed in this repo: we already ran the verify/critic shape
-(fresh-context reviews with runtime verify commands) and pipeline gates
-(learning gate -> build -> review -> owner gate). New: test-first
-discipline with recorded red runs for future slices, the fleet role map
-onto pi's builtin agents, and promotion guidance. The docs were
-generalized to be harness-agnostic right after this checkpoint (roles
-are the contract; pi, Claude Code, Codex, and opencode bindings live in
-the appendix of subagent-fleet.md). See subagent-fleet.md and
-tdd-workflow.md.
+Every plan file gained a "Checkpoint audit corrections (2026-08-01)"
+section with its findings and disposition (FIXED / DOC / DEFERRED).
+Highlights: 006's startup-recovery gap is the most significant open
+item (a hard kill mid-turn silently starts a fresh model call on the
+next send; recovery wiring is a future plan); 007's crash table now
+says recovery is exercised only for explicitly marked-interrupted runs;
+005's missing-key floor is annotated as superseded by Plan 010's
+startup config.
 
-## 3. Codified
+## What this checkpoint proved
 
-- `docs/process/subagent-fleet.md` — roles, isolation rules, playbook.
-- `docs/process/tdd-workflow.md` — the red/green/refactor/gate/critic loop.
-- `docs/process/checkpoints.md` — the ritual itself.
-
-## 4. Proof run: turn separator (TDD red -> green)
-
-Feature: with speaker labels gone, consecutive turns blur together. A
-dim separator line opens each turn so turns read as blocks.
-
-- **Red**: `test_pilot_turn_separator_between_turns` written first —
-  FAILED with `ImportError: cannot import name 'TURN_SEPARATOR'`
-  (the feature did not exist).
-- **Green**: `TURN_SEPARATOR = "────"` added to widgets.py; the
-  separator is logged before each user line in app.py. Test passes.
-- **Mechanical gate**: `tests/test_tui_widgets.py` 22 passed; full suite
-  224 passed; ruff clean.
-- Verdict: the loop works in this repo; it is now the standing workflow.
+The fleet + TDD workflow works at repo scale: ten parallel read-only
+auditors each returned a claim-vs-code table, and the reconciliation
+found and fixed three real bugs plus one permissions drift that no
+single-context pass would have surfaced. The red/green loop held (each
+fix started as a failing test).

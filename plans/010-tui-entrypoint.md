@@ -421,3 +421,27 @@ Stop and report if:
   this TUI as their interface.
 - Exposing network-backed library tools to chat (with an external-effect
   gate).
+
+## Checkpoint audit corrections (2026-08-01)
+
+Spec-vs-code audit results. 26/26 claims verified, 24 aligned, 2
+partial. One reproducible bug, fixed. Doc fixes:
+
+1. FIXED — `weaver chat --fake` with `[chat] model = pro` failed every
+   turn with MODEL_FAILED: the scripted fake response was pinned to
+   flash and failed model matching. Commit 9ffb0ab makes the fake stand
+   in for the requested model. Regression test added.
+2. DOC — stale deepseek.py line cites in "Current state" (cancel checks
+   now at ~90 and ~127-133; the cited sticky path at 151-157 does not
+   exist — cleanup closes the stream and yields ABORTED on cancel).
+3. DOC — Contract §3 "displayed in the TUI header" is self-amended by
+   Phase A: mode/model live in the one-line StatusBar. Wording updated.
+4. DOC — "no Header/Footer chrome" is scoped to the main chat screen;
+   the picker and history overlays yield a Header deliberately.
+5. NOTE — a cancelled conversation is a dead end in the TUI: the next
+   send refuses with INTERRUPTED_RUN_EXISTS and the TUI never calls
+   continue/retry; only ^n/^r escape. Wiring retry into resume is
+   future work.
+6. NOTE — invalid TOML or [chat] model surfaces as a raw traceback
+   (cli.run does not catch load_startup_config's ValueError). Cosmetic;
+   a clean ERROR line is future work.

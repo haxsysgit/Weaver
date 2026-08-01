@@ -161,3 +161,30 @@ Before Plan 007's final owner gate, it will need:
 The old live metadata-chat plan is superseded. This draft does not admit code.
 The next action after Plan 006 final acceptance is Plan 007 research and owner
 confirmation, not implementation.
+
+## Checkpoint audit corrections (2026-08-01)
+
+Spec-vs-code audit results. The core proof holds (exact fake history
+survives a real subprocess boundary; no duplicates; continue does not
+re-run the tool; both subprocess tests pass). 17/17 claims, 11 aligned,
+6 partial. Doc fixes:
+
+1. DOC — learning.md Q10 crash table overstates recovery: a hard crash
+   mid-turn leaves a non-terminal phase that `find_interrupted_run`
+   does not surface, and no startup scan exists. Recovery is exercised
+   only for runs explicitly `mark_interrupted`-ed; the proof simulates
+   the crash that way. Correction added.
+2. DOC — stale line refs in Q3/Q6 (start_turn 99, settle_tool 184,
+   complete_run 246, continue load ~330). Re-pointed.
+3. DOC — Q8 "file permission test deferred" is stale: both directory
+   (0o700) and DB file (0o600) permissions are asserted today.
+4. DOC — Q7/Q4 stale after 007.5: `settle_tool` enforces one result per
+   call_id (ValueError) and `retry_interrupted` exists and is tested.
+5. DOC — Q2 phase model is proof-path-only: the wired send() path never
+   writes the intermediate phases (see Plan 006 correction 2).
+6. DOC — stale statuses: learning.md header and deliverables README say
+   "Unadmitted/Pending" but decision.md records Accepted. Flipped.
+7. NOTE — `_runner.py` is legacy, not dead: exercised by the subprocess
+   tests, but Plan 008 superseded its mechanism (it hardcodes fake model
+   behavior instead of calling run_turn()); the projection-path proof
+   is now the stronger replay check.
