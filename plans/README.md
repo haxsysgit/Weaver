@@ -19,7 +19,7 @@ evidence, review, and human decision gates must also be complete.
 | [010 - TUI entrypoint](010-tui-entrypoint.md) | Accepted and closed 2026-08-02 | Plan 009 accepted | Weaver's developer and debugging console; maintenance fixes only, no further product polish |
 | [011 - Local browser chat entrypoint](011-web-chat-entrypoint.md) | Planned; appraisal learning gate required | Plan 010 closed; checkpoint 001-010 complete | Appraise current ChatGPT behaviour, then prove one private local browser conversation |
 | [012 - Direct-reading baseline](012-direct-reading-baseline.md) | Planned; learning gate required | Plan 011 accepted | Compare Flash and Pro reading the same novel packet blind: the first time Weaver reads a novel |
-| 013 - Responsive interface and installable PWA | Deferred | Plan 012 accepted | Build the polished responsive Weaver interface and test installability |
+| [013 - Responsive interface and installable PWA](013-responsive-interface-pwa.md) | Deferred | Plan 012 accepted | Build the polished responsive Weaver interface (sidebar, settings, Markdown, PWA) from the Plan 011 deferrals |
 | 014+ - Compiled-memory experiments | Deferred | Plan 013 accepted | Compare bounded compiled memory with direct rereading |
 
 ## Execution order
@@ -30,7 +30,10 @@ recorded in `docs/process/checkpoint-001-010.md`. The next sequence is:
 1. **011**: appraise chat behaviour, stop at the owner gate, then prove one
    local browser conversation.
 2. **012**: run the direct-reading baseline.
-3. **013**: turn the accepted proof into a polished responsive PWA.
+3. **013**: turn the accepted proof into a polished responsive PWA; its scope
+   is the behaviour deferred from Plan 011 (sidebar, message actions,
+   settings, Markdown, responsive collapse, PWA, framework decision),
+   detailed in `plans/013-responsive-interface-pwa.md`.
 4. **014+**: begin compiled-memory experiments.
 
 Native Android and iOS remain deferred until Plan 013 proves a concrete PWA
