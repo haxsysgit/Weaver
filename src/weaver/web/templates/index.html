@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Weaver</title>
+  <link rel="stylesheet" href="/static/weaver.css">
+</head>
+<body>
+  <main class="column">
+    <header class="brand">
+      <span class="brand-name">Weaver</span>
+      <span class="brand-mode" id="mode-label">fake</span>
+    </header>
+
+    <section class="transcript" id="transcript" aria-live="polite"></section>
+
+    <footer class="composer-wrap">
+      <div class="composer" id="composer">
+        <button id="attach" type="button" aria-label="Add files" title="Add files (coming later)" disabled>&#43;</button>
+        <textarea id="input" rows="1" placeholder="Ask Weaver" aria-label="Message Weaver"></textarea>
+        <button id="send" type="button" aria-label="Send" title="Send">&#8593;</button>
+        <button id="stop" type="button" aria-label="Stop" title="Stop" hidden>&#9632;</button>
+      </div>
+      <p class="hint" id="hint">Weaver runs locally. Nothing leaves this machine.</p>
+    </footer>
+  </main>
+  <script src="/static/weaver.js" defer></script>
+</body>
+</html>

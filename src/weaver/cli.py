@@ -37,10 +37,19 @@ from .model_layer import (
 from .agent.tools import ToolRegistry
 from .conversation.session import SessionWeave
 from .tui import WeaverChat
+from .web import serve_web
 
 # NOTE: the developer surface's system prompt and fake responses live in
 # chat_runtime as DEVELOPER_SYSTEM_PROMPT and FAKE_RESPONSES. cli re-exports
 # nothing.
+
+
+def _port_arg(value: str) -> int:
+    """Argparse type: a TCP port in 1..65535, else a parse error (exit 2)."""
+    port = int(value)
+    if not 1 <= port <= 65535:
+        raise argparse.ArgumentTypeError("port must be between 1 and 65535")
+    return port
 
 
 def _state_root() -> Path:
@@ -87,6 +96,22 @@ def _parser() -> argparse.ArgumentParser:
         "--fake",
         action="store_true",
         help="Use deterministic fake mode; default is live DeepSeek.",
+    )
+
+    web = subcommands.add_parser(
+        "web",
+        help="Serve the local browser chat (live DeepSeek by default).",
+    )
+    web.add_argument(
+        "--fake",
+        action="store_true",
+        help="Use deterministic fake mode; default is live DeepSeek.",
+    )
+    web.add_argument(
+        "--port",
+        type=_port_arg,
+        default=8000,
+        help="Port to bind on 127.0.0.1 (default 8000).",
     )
     library_commands = library.add_subparsers(dest="library_command", required=True)
 
@@ -180,6 +205,30 @@ async def _run_chat(state_dir: Path, *, live: bool) -> int:
     return 0
 
 
+async def _run_web(state_dir: Path, *, live: bool, port: int) -> int:
+    """Serve the local browser chat on 127.0.0.1.
+
+    Missing live credentials exit 2 before state is opened or a socket
+    binds (Plan 011 Gate 2 contract).
+    """
+    if live and not os.environ.get("DEEPSEEK_KEY"):
+        print(
+            "ERROR live web chat requires DEEPSEEK_KEY; set it, add it to "
+            ".weaver/config.toml ([api] key), or pass --fake for a scripted "
+            "session. No call was made."
+        )
+        return 2
+    runtime = await open_chat_runtime(
+        state_dir,
+        live=live,
+        surface="web",
+    )
+    try:
+        return await serve_web(runtime, host="127.0.0.1", port=port)
+    finally:
+        await runtime.close()
+
+
 def run(argv: Sequence[str] | None = None) -> int:
     parser = _parser()
     args = parser.parse_args(argv)
@@ -189,6 +238,9 @@ def run(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "chat":
         return asyncio.run(_run_chat(_chat_state_dir(), live=not args.fake))
+
+    if args.command == "web":
+        return asyncio.run(_run_web(_chat_state_dir(), live=not args.fake, port=args.port))
 
     if args.command == "doctor":
         checks = run_doctor(
