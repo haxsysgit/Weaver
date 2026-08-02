@@ -6,8 +6,8 @@
 
 ## Status
 
-- **State:** Planned; learning and appraisal gate required
-- **Admitted implementation:** No
+- **State:** Admitted for implementation; Gate 1 accepted by owner 2026-08-02
+- **Admitted implementation:** Yes (Gate 1 behaviour decisions confirmed)
 - **Depends on:** Plan 010 accepted and closed; checkpoint 001 to 010 complete
 - **Priority:** P2
 - **Effort:** L
@@ -278,8 +278,24 @@ Authentication, accounts, hosted access, sync, sharing, dashboards, a full
 sidebar, message actions, Markdown rendering, PWA installation, native apps,
 and library access are outside Plan 011.
 
+## Executor corrections (Gate 1 accepted 2026-08-02)
+
+- The appraisal tooling was retired after the design reference was produced
+  (see learning.md): `chatgpt_appraisal.py`, `chatgpt_extract.py`, their
+  tests, `playwright-contracts.md`, and the Playwright dev dependency were
+  deleted. The design reference
+  (`deliverables/011-web-chat-entrypoint/chatgpt-ui-design-reference.md`)
+  is the Gate 1 deliverable, built from owner-captured screenshots plus a
+  dev-style extraction of the signed-in profile (measured values).
+- The owner confirmed the adopt/skip list and the plain HTML/CSS/JS
+  boundary (no framework, no build step). A framework decision, if any, is
+  deferred to Plan 013.
+- Gate 1's fixed-scope probe list (signed-out entry, sidebar states,
+  settings, offline state) was superseded: the owner's real captures and
+  the extraction pass covered the states that matter, and the unproven
+  sub-768 px collapse is recorded as a known gap in learning.md.
+
 ## Current stop
 
-Plan 011 is unadmitted. Run and present the ChatGPT appraisal first. Do not
-start the shared runtime, server, API, or browser interface until the owner
-accepts the behaviour decisions.
+**Resolved 2026-08-02: owner confirmed the behaviour decisions and directed
+implementation to start.** Build order below is now executable.

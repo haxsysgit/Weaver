@@ -2,12 +2,17 @@
 
 ## Gate status
 
-**Unadmitted. Appraisal and owner confirmation are required before browser
-implementation.**
-
-Plan 010 is accepted and closed. The checkpoint covering Plans 001 to 010 is
-complete. Those facts allow Plan 011 learning work, but they do not admit its
-runtime, API, or browser build.
+**Admitted for implementation. Owner confirmed the behaviour decisions on
+2026-08-02.** The appraisal ran against the owner's signed-in ChatGPT Plus
+profile (dark theme): screenshots plus a live dev-style extraction
+produced the design reference
+(`deliverables/011-web-chat-entrypoint/chatgpt-ui-design-reference.md`)
+with measured values, and the owner accepted the adopt/skip list. The
+owner also confirmed the entrypoint stays plain HTML/CSS/JavaScript with
+no frontend framework and no build step; a framework decision, if any, is
+deferred to Plan 013. Gate 1's fixed-scope probe list was superseded by
+the owner-captured screenshots and the extractor pass (recorded in
+results.md).
 
 ## Observation
 
@@ -49,15 +54,29 @@ browser session has been opened for this plan.
 ## Questions this gate must answer
 
 1. Which ChatGPT behaviours should Weaver adopt in Plan 011?
+   **Answered by the adopt/skip list in the design reference (accepted
+   2026-08-02):** sidebar + centered 768 px column + black canvas, capsule
+   composer with a send arrow, user bubble, bare assistant text, action
+   rows, hairlines, cards only for file-like results, palette verbatim.
 2. Which useful behaviours belong in Plan 013 instead?
+   **Voice/mic/dictation, the intelligence selector, hosted-service
+   settings rows, PWA polish.** The framework decision also lands at 013.
 3. Which behaviours conflict with Weaver's identity or privacy boundary and
    should be rejected?
+   **Everything implying a hosted multi-owner service; no CDN, no CORS, no
+   third-party assets; local-only 127.0.0.1.**
 4. Which desktop and mobile states could not be proven?
+   **Sub-768 px responsive collapse was only partially measured (the 52 px
+   rail is confirmed). The rest of the fixed-state list was superseded by
+   the owner's captures and the extractor pass.**
 5. Does the proposed one-column browser proof still cover the smallest useful
    conversation flow?
+   **Yes: one conversation, streaming, stop, cancel, reload, new chat.
+   Confirmed by the owner when admitting implementation.**
 
 ## Required owner decision
 
-After the sanitized matrix, decision table, and Weaver state map are ready,
-stop. The owner confirms or corrects the behaviour decisions. Only that
-decision admits browser implementation.
+**Given on 2026-08-02: the owner confirmed the adopt/skip list, the vanilla
+HTML/CSS/JS boundary, and directed the build to start.** That decision admits
+browser implementation. The final owner gate after implementation, tests,
+and independent review remains outstanding.
