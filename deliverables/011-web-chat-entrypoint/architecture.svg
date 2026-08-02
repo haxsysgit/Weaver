@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" font-family="Arial, sans-serif">
+  <defs>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#6c8ebf" /></marker>
+    <marker id="arrow-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#9673a6" /></marker>
+    <marker id="arrow-yellow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#d6b656" /></marker>
+  </defs>
+  <rect width="1400" height="900" fill="#ffffff" />
+  <text x="700" y="42" text-anchor="middle" font-size="22" font-weight="700" fill="#263238">Plan 011: Local browser chat entrypoint</text>
+
+  <g fill="none" stroke-width="3">
+    <path d="M430 195 H505" stroke="#6c8ebf" marker-end="url(#arrow-blue)" />
+    <path d="M895 195 H970" stroke="#6c8ebf" marker-start="url(#arrow-blue)" marker-end="url(#arrow-blue)" />
+    <path d="M700 300 V355 H235 V410" stroke="#9673a6" marker-end="url(#arrow-purple)" />
+    <path d="M430 525 H505" stroke="#9673a6" marker-end="url(#arrow-purple)" />
+    <path d="M700 525 H1165" stroke="#d6b656" marker-end="url(#arrow-yellow)" />
+  </g>
+
+  <g>
+    <rect x="40" y="90" width="390" height="210" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="2" />
+    <path d="M40 122 H430" stroke="#666666" />
+    <text x="58" y="113" font-size="16" font-weight="700" fill="#333333">Launch</text>
+    <rect x="70" y="155" width="330" height="100" rx="9" fill="#ffffff" stroke="#666666" />
+    <text x="235" y="183" text-anchor="middle" font-size="14" fill="#333333"><tspan x="235">weaver web [--fake] [--port]</tspan><tspan x="235" dy="22">live default; exit 2 without key</tspan><tspan x="235" dy="22">before any state dir or socket</tspan><tspan x="235" dy="22">binds 127.0.0.1 only</tspan></text>
+  </g>
+  <g>
+    <rect x="505" y="90" width="390" height="210" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="2" />
+    <path d="M505 122 H895" stroke="#6c8ebf" />
+    <text x="523" y="113" font-size="16" font-weight="700" fill="#33495f">FastAPI app</text>
+    <rect x="535" y="145" width="330" height="130" rx="9" fill="#e3f2fd" stroke="#6c8ebf" />
+    <text x="700" y="174" text-anchor="middle" font-size="14" fill="#33495f"><tspan x="700">conversation create and list</tspan><tspan x="700" dy="22">SSE turns: delta then completed /</tspan><tspan x="700" dy="22">interrupted / failed</tspan><tspan x="700" dy="22">cooperative cancel route</tspan><tspan x="700" dy="22">422 blank-long 404 unknown 409 busy</tspan></text>
+  </g>
+  <g>
+    <rect x="970" y="90" width="390" height="210" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="2" />
+    <path d="M970 122 H1360" stroke="#6c8ebf" />
+    <text x="988" y="113" font-size="16" font-weight="700" fill="#33495f">Browser page</text>
+    <rect x="1000" y="145" width="330" height="130" rx="9" fill="#e3f2fd" stroke="#6c8ebf" />
+    <text x="1165" y="174" text-anchor="middle" font-size="14" fill="#33495f"><tspan x="1165">plain HTML CSS JS, no CDN</tspan><tspan x="1165" dy="22">textContent rendering only</tspan><tspan x="1165" dy="22">capsule composer, user bubble</tspan><tspan x="1165" dy="22">bare assistant text and copy</tspan><tspan x="1165" dy="22">localStorage: active id only</tspan></text>
+  </g>
+  <g>
+    <rect x="40" y="410" width="390" height="230" rx="12" fill="#e1d5e7" stroke="#9673a6" stroke-width="2" />
+    <path d="M40 442 H430" stroke="#9673a6" />
+    <text x="58" y="433" font-size="16" font-weight="700" fill="#594563">open_chat_runtime boundary</text>
+    <rect x="70" y="470" width="330" height="125" rx="9" fill="#f3e8f7" stroke="#9673a6" />
+    <text x="235" y="499" text-anchor="middle" font-size="14" fill="#594563"><tspan x="235">shared runtime, surface web</tspan><tspan x="235" dy="22">zero tools, read-only policy</tspan><tspan x="235" dy="22">no conversation on open</tspan><tspan x="235" dy="22">mode label live or fake</tspan></text>
+  </g>
+  <g>
+    <rect x="505" y="410" width="390" height="230" rx="12" fill="#e1d5e7" stroke="#9673a6" stroke-width="2" />
+    <path d="M505 442 H895" stroke="#9673a6" />
+    <text x="523" y="433" font-size="16" font-weight="700" fill="#594563">SessionWeave</text>
+    <rect x="535" y="470" width="330" height="125" rx="9" fill="#f3e8f7" stroke="#9673a6" />
+    <text x="700" y="499" text-anchor="middle" font-size="14" fill="#594563"><tspan x="700">send with on_delta streaming</tspan><tspan x="700" dy="22">cancel_event cooperative,</tspan><tspan x="700" dy="22">never task.cancel on model work</tspan><tspan x="700" dy="22">token count from snapshot</tspan><tspan x="700" dy="22">load_transcript, conversation_exists</tspan></text>
+  </g>
+  <g>
+    <rect x="970" y="410" width="390" height="230" rx="12" fill="#fff2cc" stroke="#d6b656" stroke-width="2" />
+    <path d="M970 442 H1360" stroke="#d6b656" />
+    <text x="988" y="433" font-size="16" font-weight="700" fill="#685927">Private durable state</text>
+    <rect x="1000" y="470" width="330" height="125" rx="9" fill="#fff9e6" stroke="#d6b656" />
+    <text x="1165" y="499" text-anchor="middle" font-size="14" fill="#685927"><tspan x="1165">weaver.sqlite3 WAL</tspan><tspan x="1165" dy="22">owner and assistant records</tspan><tspan x="1165" dy="22">run lifecycle persisted</tspan><tspan x="1165" dy="22">owner-only file permissions</tspan></text>
+  </g>
+  <g>
+    <rect x="40" y="720" width="1320" height="120" rx="12" fill="#f8cecc" stroke="#b85450" stroke-width="2" stroke-dasharray="8 5" />
+    <path d="M40 752 H1360" stroke="#b85450" />
+    <text x="58" y="743" font-size="16" font-weight="700" fill="#6f3230">Local privacy boundary</text>
+    <rect x="70" y="775" width="1260" height="45" rx="9" fill="#fde8e8" stroke="#b85450" />
+    <text x="700" y="802" text-anchor="middle" font-size="14" fill="#6f3230">loopback only; no CORS, no CDN, no third-party assets; textContent rendering; canaries never appear in HTML, JSON, SSE, JS, logs, or errors</text>
+  </g>
+  <g>
+    <polygon points="505,195 493,188 493,202" fill="#6c8ebf" />
+    <polygon points="895,195 907,188 907,202" fill="#6c8ebf" />
+    <polygon points="970,195 958,188 958,202" fill="#6c8ebf" />
+    <polygon points="235,410 228,398 242,398" fill="#9673a6" />
+    <polygon points="505,525 493,518 493,532" fill="#9673a6" />
+    <polygon points="1165,525 1153,518 1153,532" fill="#d6b656" />
+    <text x="925" y="188" font-size="12" fill="#33495f">SSE down, POST up</text>
+    <path d="M700 640 V675 H1100 V640 H1165" fill="none" stroke="#9673a6" stroke-width="2" stroke-dasharray="7 6" />
+    <polygon points="1165,640 1153,633 1153,647" fill="#9673a6" />
+    <text x="840" y="670" font-size="12" fill="#6b5a72">filtered transcript</text>
+  </g>
+  <rect x="830" y="700" width="530" height="40" rx="8" fill="#f5f5f5" stroke="#666666" />
+  <text x="1095" y="725" text-anchor="middle" font-size="12" fill="#444444">Blue: browser and API | Purple: runtime | Yellow: state | Red: privacy boundary</text>
+</svg>

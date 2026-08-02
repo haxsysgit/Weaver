@@ -18,7 +18,8 @@ implementation.
 | `results.md` | Executed evidence | Gate 1 evidence recorded |
 | `rubric.md` | Learning and acceptance checks | Gate pending |
 | `review-ledger.md` | Independent findings and rechecks | Not started |
-| `decision.md` | Appraisal and final owner decisions | Appraisal accepted; final pending || `chatgpt-ui-design-reference.md` | Measured ChatGPT UI design target | Gate 1 deliverable, accepted |
+| `decision.md` | Appraisal and final owner decisions | Appraisal accepted; final pending |
+| `chatgpt-ui-design-reference.md` | Measured ChatGPT UI design target | Gate 1 deliverable, accepted |
 
 Private authenticated captures belong only under
 `.weaver/research/chatgpt-ui/<timestamp>/`. Do not place screenshots,

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="drawio" version="30.2.4">
+  <diagram name="Plan 011 ChatGPT-to-Weaver UI state map">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="Plan 011: ChatGPT-to-Weaver UI state map" style="text;html=1;strokeColor=none;fillColor=none;fontSize=18;fontFamily=Helvetica;align=center;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="380" y="20" width="640" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="chatgpt-head" value="ChatGPT state (measured 2026-08-02)" style="swimlane;html=1;rounded=1;startSize=32;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="90" width="620" height="700" as="geometry" />
+        </mxCell>
+        <mxCell id="c-landing" value="Empty chat landing" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e3f2fd;strokeColor=#6c8ebf;" vertex="1" parent="chatgpt-head">
+          <mxGeometry x="30" y="55" width="560" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="c-composer" value="Composer capsule" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e3f2fd;strokeColor=#6c8ebf;" vertex="1" parent="chatgpt-head">
+          <mxGeometry x="30" y="195" width="560" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="c-chat" value="Chat surface" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e3f2fd;strokeColor=#6c8ebf;" vertex="1" parent="chatgpt-head">
+          <mxGeometry x="30" y="335" width="560" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="c-sidebar" value="Sidebar (deferred to 013)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e3f2fd;strokeColor=#6c8ebf;" vertex="1" parent="chatgpt-head">
+          <mxGeometry x="30" y="475" width="560" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="c-slash" value="Slash menu (deferred to 013)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e3f2fd;strokeColor=#6c8ebf;" vertex="1" parent="chatgpt-head">
+          <mxGeometry x="30" y="590" width="560" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="weaver-head" value="Weaver state (Plan 011 scope)" style="swimlane;html=1;rounded=1;startSize=32;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="740" y="90" width="620" height="700" as="geometry" />
+        </mxCell>
+        <mxCell id="w-landing" value="Empty chat landing&#xa;centered 768 px column on black" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e8f7;strokeColor=#9673a6;" vertex="1" parent="weaver-head">
+          <mxGeometry x="30" y="55" width="560" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="w-composer" value="Capsule composer&#xa;send arrow replaces voice and selector" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e8f7;strokeColor=#9673a6;" vertex="1" parent="weaver-head">
+          <mxGeometry x="30" y="195" width="560" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="w-chat" value="Chat surface&#xa;user bubble right, bare assistant text,&#xa;copy action only" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e8f7;strokeColor=#9673a6;" vertex="1" parent="weaver-head">
+          <mxGeometry x="30" y="335" width="560" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="w-sidebar" value="No sidebar in 011&#xa;the one-column proof" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fde8e8;strokeColor=#b85450;dashed=1;" vertex="1" parent="weaver-head">
+          <mxGeometry x="30" y="475" width="560" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="w-slash" value="No slash menu in 011&#xa;plain text input only" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fde8e8;strokeColor=#b85450;dashed=1;" vertex="1" parent="weaver-head">
+          <mxGeometry x="30" y="590" width="560" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-landing" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#6c8ebf;fontSize=10;" edge="1" parent="1" source="c-landing" target="w-landing">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-composer" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#6c8ebf;fontSize=10;" edge="1" parent="1" source="c-composer" target="w-composer">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-chat" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#6c8ebf;fontSize=10;" edge="1" parent="1" source="c-chat" target="w-chat">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-sidebar" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;dashed=1;strokeColor=#b85450;fontSize=10;" edge="1" parent="1" source="c-sidebar" target="w-sidebar">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-slash" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;dashed=1;strokeColor=#b85450;fontSize=10;" edge="1" parent="1" source="c-slash" target="w-slash">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="legend" value="Blue: ChatGPT measured state  |  Purple: Weaver adopted in 011  |  Red dashed: deferred to 013" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=center;" vertex="1" parent="1">
+          <mxGeometry x="830" y="820" width="530" height="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

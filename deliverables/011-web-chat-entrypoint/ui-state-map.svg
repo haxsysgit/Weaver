@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" font-family="Arial, sans-serif">
+  <defs>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#6c8ebf" /></marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#b85450" /></marker>
+  </defs>
+  <rect width="1400" height="900" fill="#ffffff" />
+  <text x="700" y="42" text-anchor="middle" font-size="22" font-weight="700" fill="#263238">Plan 011: ChatGPT-to-Weaver UI state map</text>
+
+  <g fill="none" stroke-width="3">
+    <path d="M660 210 H740" stroke="#6c8ebf" marker-end="url(#arrow-blue)" />
+    <path d="M660 320 H740" stroke="#6c8ebf" marker-end="url(#arrow-blue)" />
+    <path d="M660 445 H740" stroke="#6c8ebf" marker-end="url(#arrow-blue)" />
+    <path d="M660 570 H740" stroke="#b85450" stroke-dasharray="8 6" marker-end="url(#arrow-red)" />
+    <path d="M660 675 H740" stroke="#b85450" stroke-dasharray="8 6" marker-end="url(#arrow-red)" />
+  </g>
+
+  <g>
+    <rect x="40" y="90" width="620" height="700" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="2" />
+    <path d="M40 122 H660" stroke="#6c8ebf" />
+    <text x="58" y="113" font-size="16" font-weight="700" fill="#33495f">ChatGPT state (measured 2026-08-02)</text>
+    <rect x="70" y="145" width="560" height="120" rx="9" fill="#e3f2fd" stroke="#6c8ebf" />
+    <text x="350" y="174" text-anchor="middle" font-size="14" fill="#33495f"><tspan x="350" font-weight="700">Empty chat landing</tspan><tspan x="350" dy="22">heading + centered composer mid-page</tspan><tspan x="350" dy="22">(owner screenshots: composer bottom-pinned)</tspan><tspan x="350" dy="22">disclaimer line under composer</tspan></text>
+    <rect x="70" y="285" width="560" height="120" rx="9" fill="#e3f2fd" stroke="#6c8ebf" />
+    <text x="350" y="314" text-anchor="middle" font-size="14" fill="#33495f"><tspan x="350" font-weight="700">Composer capsule</tspan><tspan x="350" dy="22">768 x 52 px, radius 28 px, surface #212121</tspan><tspan x="350" dy="22">model selector + dictation + voice on right</tspan><tspan x="350" dy="22">voice slot becomes send arrow when text present</tspan></text>
+    <rect x="70" y="425" width="560" height="120" rx="9" fill="#e3f2fd" stroke="#6c8ebf" />
+    <text x="350" y="454" text-anchor="middle" font-size="14" fill="#33495f"><tspan x="350" font-weight="700">Chat surface</tspan><tspan x="350" dy="22">user bubble #323232d9 radius 20 px right</tspan><tspan x="350" dy="22">bare assistant text 16 px / 26 px</tspan><tspan x="350" dy="22">action row: copy share regenerate overflow</tspan></text>
+    <rect x="70" y="565" width="560" height="95" rx="9" fill="#e3f2fd" stroke="#6c8ebf" />
+    <text x="350" y="594" text-anchor="middle" font-size="14" fill="#33495f"><tspan x="350" font-weight="700">Sidebar</tspan><tspan x="350" dy="22">260 px (52 px collapsed rail), Library,</tspan><tspan x="350" dy="22">Projects, Scheduled, Plugins, More, account</tspan></text>
+    <rect x="70" y="680" width="560" height="80" rx="9" fill="#e3f2fd" stroke="#6c8ebf" />
+    <text x="350" y="709" text-anchor="middle" font-size="14" fill="#33495f"><tspan x="350" font-weight="700">Slash menu</tspan><tspan x="350" dy="22">ten rows: files, dictate, feedback, model,</tspan><tspan x="350" dy="22">projects, personalization, intelligence, search</tspan></text>
+  </g>
+  <g>
+    <rect x="740" y="90" width="620" height="700" rx="12" fill="#e1d5e7" stroke="#9673a6" stroke-width="2" />
+    <path d="M740 122 H1360" stroke="#9673a6" />
+    <text x="758" y="113" font-size="16" font-weight="700" fill="#594563">Weaver state (Plan 011 scope)</text>
+    <rect x="770" y="145" width="560" height="120" rx="9" fill="#f3e8f7" stroke="#9673a6" />
+    <text x="1050" y="174" text-anchor="middle" font-size="14" fill="#594563"><tspan x="1050" font-weight="700">Empty chat landing</tspan><tspan x="1050" dy="22">centered 768 px column on black</tspan><tspan x="1050" dy="22">no top header, no disclaimer</tspan><tspan x="1050" dy="22">mode label in the page header row</tspan></text>
+    <rect x="770" y="285" width="560" height="120" rx="9" fill="#f3e8f7" stroke="#9673a6" />
+    <text x="1050" y="314" text-anchor="middle" font-size="14" fill="#594563"><tspan x="1050" font-weight="700">Capsule composer</tspan><tspan x="1050" dy="22">same 768 x 52 px capsule, radius 28 px</tspan><tspan x="1050" dy="22">send arrow replaces voice and selector</tspan><tspan x="1050" dy="22">enter submits, shift-enter newline</tspan></text>
+    <rect x="770" y="425" width="560" height="120" rx="9" fill="#f3e8f7" stroke="#9673a6" />
+    <text x="1050" y="454" text-anchor="middle" font-size="14" fill="#594563"><tspan x="1050" font-weight="700">Chat surface</tspan><tspan x="1050" dy="22">user bubble right, bare assistant text</tspan><tspan x="1050" dy="22">textContent rendering, no markup</tspan><tspan x="1050" dy="22">copy action only under replies</tspan></text>
+    <rect x="770" y="565" width="560" height="95" rx="9" fill="#fde8e8" stroke="#b85450" stroke-dasharray="8 6" />
+    <text x="1050" y="594" text-anchor="middle" font-size="14" fill="#6f3230"><tspan x="1050" font-weight="700">No sidebar in 011</tspan><tspan x="1050" dy="22">the one-column proof; sidebar deferred</tspan><tspan x="1050" dy="22">to Plan 013</tspan></text>
+    <rect x="770" y="680" width="560" height="80" rx="9" fill="#fde8e8" stroke="#b85450" stroke-dasharray="8 6" />
+    <text x="1050" y="709" text-anchor="middle" font-size="14" fill="#6f3230"><tspan x="1050" font-weight="700">No slash menu in 011</tspan><tspan x="1050" dy="22">plain text input only; deferred to 013</tspan></text>
+  </g>
+  <g>
+    <polygon points="740,210 728,203 728,217" fill="#6c8ebf" />
+    <polygon points="740,320 728,313 728,327" fill="#6c8ebf" />
+    <polygon points="740,445 728,438 728,452" fill="#6c8ebf" />
+    <polygon points="740,570 728,563 728,577" fill="#b85450" />
+    <polygon points="740,675 728,668 728,682" fill="#b85450" />
+    <text x="700" y="202" text-anchor="middle" font-size="12" fill="#33495f">adopt</text>
+    <text x="700" y="312" text-anchor="middle" font-size="12" fill="#33495f">adopt</text>
+    <text x="700" y="437" text-anchor="middle" font-size="12" fill="#33495f">adopt</text>
+    <text x="700" y="562" text-anchor="middle" font-size="12" fill="#6f3230">013</text>
+    <text x="700" y="667" text-anchor="middle" font-size="12" fill="#6f3230">013</text>
+  </g>
+  <rect x="830" y="820" width="530" height="40" rx="8" fill="#f5f5f5" stroke="#666666" />
+  <text x="1095" y="845" text-anchor="middle" font-size="12" fill="#444444">Blue: ChatGPT measured state | Purple: Weaver adopted in 011 | Red dashed: deferred to 013</text>
+</svg>

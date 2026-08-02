@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="drawio" version="30.2.4">
+  <diagram name="Plan 011 local browser chat">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="Plan 011: Local browser chat entrypoint" style="text;html=1;strokeColor=none;fillColor=none;fontSize=18;fontFamily=Helvetica;align=center;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="380" y="20" width="640" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="launch" value="Launch" style="swimlane;html=1;rounded=1;startSize=32;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="90" width="390" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="launch-node" value="weaver web [--fake] [--port]&#xa;live default; exit 2 without key&#xa;before any state dir or socket&#xa;binds 127.0.0.1 only" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="launch">
+          <mxGeometry x="30" y="65" width="330" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="api" value="FastAPI app" style="swimlane;html=1;rounded=1;startSize=32;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="505" y="90" width="390" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="api-node" value="conversation create and list&#xa;SSE turns: delta then completed /&#xa;interrupted / failed&#xa;cooperative cancel route&#xa;422 blank-long 404 unknown 409 busy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e3f2fd;strokeColor=#6c8ebf;" vertex="1" parent="api">
+          <mxGeometry x="30" y="55" width="330" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="browser" value="Browser page" style="swimlane;html=1;rounded=1;startSize=32;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="970" y="90" width="390" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="browser-node" value="plain HTML CSS JS, no CDN&#xa;textContent rendering only&#xa;capsule composer, user bubble&#xa;bare assistant text and copy&#xa;localStorage: active id only" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e3f2fd;strokeColor=#6c8ebf;" vertex="1" parent="browser">
+          <mxGeometry x="30" y="55" width="330" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="runtime" value="open_chat_runtime boundary" style="swimlane;html=1;rounded=1;startSize=32;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="410" width="390" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="runtime-node" value="shared runtime, surface web&#xa;zero tools, read-only policy&#xa;no conversation on open&#xa;mode label live or fake" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e8f7;strokeColor=#9673a6;" vertex="1" parent="runtime">
+          <mxGeometry x="30" y="60" width="330" height="125" as="geometry" />
+        </mxCell>
+        <mxCell id="session" value="SessionWeave" style="swimlane;html=1;rounded=1;startSize=32;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="505" y="410" width="390" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="session-node" value="send with on_delta streaming&#xa;cancel_event cooperative,&#xa;never task.cancel on model work&#xa;token count from snapshot&#xa;load_transcript, conversation_exists" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e8f7;strokeColor=#9673a6;" vertex="1" parent="session">
+          <mxGeometry x="30" y="60" width="330" height="125" as="geometry" />
+        </mxCell>
+        <mxCell id="state" value="Private durable state" style="swimlane;html=1;rounded=1;startSize=32;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="970" y="410" width="390" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="state-node" value="weaver.sqlite3 WAL&#xa;owner and assistant records&#xa;run lifecycle persisted&#xa;owner-only file permissions" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff9e6;strokeColor=#d6b656;" vertex="1" parent="state">
+          <mxGeometry x="30" y="60" width="330" height="125" as="geometry" />
+        </mxCell>
+        <mxCell id="boundary" value="Local privacy boundary" style="swimlane;html=1;rounded=1;startSize=32;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="720" width="1320" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="boundary-node" value="loopback only; no CORS, no CDN, no third-party assets; textContent rendering; canaries never appear in HTML, JSON, SSE, JS, logs, or errors" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fde8e8;strokeColor=#b85450;" vertex="1" parent="boundary">
+          <mxGeometry x="30" y="45" width="1260" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-launch-api" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#6c8ebf;" edge="1" parent="1" source="launch" target="api">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-browser-api" value="SSE down, POST up" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;endFill=1;startArrow=classic;startFill=1;strokeWidth=2;strokeColor=#6c8ebf;fontSize=10;" edge="1" parent="1" source="browser" target="api">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-api-runtime" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#9673a6;" edge="1" parent="1" source="api" target="runtime">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-runtime-session" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#9673a6;" edge="1" parent="1" source="runtime" target="session">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-session-state" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#d6b656;" edge="1" parent="1" source="session" target="state">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-state-session" value="filtered transcript" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=1;dashed=1;strokeColor=#9673a6;fontSize=10;" edge="1" parent="1" source="state" target="session">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="legend" value="Blue: browser and API  |  Purple: runtime  |  Yellow: state  |  Red: privacy boundary" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=center;" vertex="1" parent="1">
+          <mxGeometry x="830" y="700" width="530" height="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
