@@ -39,15 +39,16 @@ The first Plan 011 slice is research, not implementation.
 
 ### Research dependency and command
 
-- Use Playwright directly (already in the project environment with Chromium
-  installed) for the visible-browser appraisal. Owner-approved deviation
-  2026-08-02: the draft's Crawl4AI is a scraping framework, the wrong shape
-  for interactive sign-in and fixed-state observation; Playwright's
-  persistent-context profiles and accessibility-role queries are the native
-  fit and add zero dependencies. Playwright stays a development-only tool
-  and must never become a Weaver web-runtime dependency.
-- Provide one repeatable research command using a dedicated managed Chromium
-  profile named `weaver-chatgpt-appraisal`.
+- The appraisal tooling was retired 2026-08-02 after the design reference
+  was produced (see learning.md): the staged probe checklist guessed the
+  wrong roles, and the owner's screenshots plus a live dev-style
+  extraction from the signed-in profile were more reliable. The Playwright
+  dev dependency and the `chatgpt_appraisal` / `chatgpt_extract` modules,
+  their tests, and `playwright-contracts.md` were deleted. Raw captures
+  stay owner-only under `.weaver/research/chatgpt-ui/`. Gate 1's
+  deliverable is the design reference
+  (`deliverables/011-web-chat-entrypoint/chatgpt-ui-design-reference.md`)
+  and the owner's adopt/skip decision on it.
 - Open a visible browser. The owner signs in personally.
 - Never accept, export, print, log, or commit cookies or credentials.
 - Prefer accessibility roles and accessible names. Fail visibly when a state

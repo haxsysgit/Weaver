@@ -38,20 +38,22 @@ run (owner signs in personally). Browser implementation not admitted.
 ## Appraisal evidence (2026-08-02)
 
 - Owner signed in personally through the persistent profile (Cloudflare
-  passed after the automation-fingerprint fix). Screenshots and
-  dev-accurate extractions captured; the probe checklist was a dead end
-  (wrong role names, mismatch with real UI) and was replaced by a
-  dev-style extractor (`src/weaver/chatgpt_extract.py`) that pulls
-  computed styles, rects, CSS custom properties, and font stacks from the
-  live signed-in page in dark theme.
+  passed after the automation-fingerprint fix). The staged probe checklist
+  was a dead end (wrong role names: composer is a textbox "Chat with
+  ChatGPT", "New chat" is a link), so the design reference was built from
+  the owner's screenshots plus a dev-style extraction from the live
+  signed-in page (computed styles, rects, CSS variables, font stack) in
+  dark theme.
 - The design reference
   (`deliverables/011-web-chat-entrypoint/chatgpt-ui-design-reference.md`)
-  is now built from measured values: 260 px sidebar, 768 px column,
-  composer 28 px radius `#212121`, slash menu and settings modal 16 px
-  radius with the layered popover shadow, system-ui font stack with the
-  "Circle" webfont on top, dark palette from CSS variables.
-- Raw captures live owner-only under `.weaver/research/chatgpt-ui/`
-  (never committed).
+  carries measured values: 260 px sidebar, 768 px column, composer 28 px
+  radius `#212121`, slash menu and settings modal 16 px radius with the
+  layered popover shadow, system-ui font stack with the "Circle" webfont
+  on top, dark palette from CSS variables.
+- The appraisal tooling (probe command, extractor, tests,
+  playwright-contracts.md, Playwright dev dependency) was retired on
+  2026-08-02; raw captures stay owner-only under
+  `.weaver/research/chatgpt-ui/` (never committed).
 
 ## Pending
 
