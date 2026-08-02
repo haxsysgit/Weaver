@@ -1,11 +1,11 @@
-# Plan 011 Deliverables
+# Plan 012 Deliverables
 
 This folder holds public, content-free evidence for the direct-reading
 baseline: the first time Weaver reads a novel.
 
 ## Architecture
 
-![Plan 011 architecture](architecture.svg)
+![Plan 012 architecture](architecture.svg)
 
 - Editable source: [`architecture.drawio`](architecture.drawio)
 - Rendered preview: [`architecture.svg`](architecture.svg)

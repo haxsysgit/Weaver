@@ -6,6 +6,7 @@ Headless widget tests (Textual pilot) live in test_tui_widgets.py.
 """
 
 import asyncio
+import json
 
 import pytest
 
@@ -99,6 +100,7 @@ async def test_tui_send_completed_turn_persists_items(tmp_path) -> None:
         result = await sw.send(conv_id, "Hello")
         assert result.exit_reason == "completed"
         assert result.final_text
+        assert "\N{EM DASH}" not in result.final_text
         assert mode_label == "fake"
         items = await sw.repo.load_items(conv_id)
         assert len(items) == 3  # start owner, "Hello" owner, assistant final
@@ -170,5 +172,92 @@ async def test_send_cancel_event_settles_interrupted(tmp_path) -> None:
         # The interrupted run is recorded; next send refuses to auto-continue.
         interrupted = await sw.repo.find_interrupted_run(conv_id)
         assert interrupted is not None
+    finally:
+        await sw.close()
+
+
+async def test_session_transcript_filters_private_protocol_records(tmp_path) -> None:
+    """The TUI seam returns only owner/Weaver prose, never tool protocol."""
+    from weaver.conversation.session import SessionWeave
+
+    sw = SessionWeave(tmp_path / "state")
+    await sw.open()
+    try:
+        conv_id = await sw.start_conversation("")
+        assert await sw.conversation_exists(conv_id)
+        assert not await sw.conversation_exists("unknown-conversation")
+
+        opener_items = await sw.repo.load_items(conv_id)
+        opener_runs = await sw.repo.load_runs(conv_id)
+        opener = opener_items[0]
+        opener_run = opener_runs[0]
+        await sw.coordinator.insert_assistant_item(
+            conv_id,
+            opener_run.id,
+            opener.turn_id,
+            "PRIVATE_ASSISTANT_CANARY",
+            tool_calls=[
+                {
+                    "id": "private-call",
+                    "name": "echo",
+                    "arguments": json.dumps({"message": "PRIVATE_ARGUMENT_CANARY"}),
+                }
+            ],
+        )
+        await sw.coordinator.settle_tool(
+            conv_id,
+            opener_run.id,
+            opener.turn_id,
+            "private-call",
+            "echo",
+            json.dumps({"message": "PRIVATE_ARGUMENT_CANARY"}),
+            "PRIVATE_RESULT_CANARY",
+        )
+        await sw.coordinator.complete_run(
+            conv_id,
+            opener_run.id,
+            opener.turn_id,
+            "First visible reply",
+        )
+
+        turn_id, run_id = await sw.coordinator.start_turn(
+            conv_id,
+            "Owner follow-up",
+            turn_sequence=2,
+        )
+        await sw.coordinator.insert_assistant_item(
+            conv_id,
+            run_id,
+            turn_id,
+            "",
+        )
+        await sw.coordinator.complete_run(
+            conv_id,
+            run_id,
+            turn_id,
+            "Second visible reply",
+        )
+
+        transcript = await sw.load_transcript(conv_id)
+
+        assert [message["role"] for message in transcript] == [
+            "weaver",
+            "owner",
+            "weaver",
+        ]
+        assert [message["content"] for message in transcript] == [
+            "First visible reply",
+            "Owner follow-up",
+            "Second visible reply",
+        ]
+        assert all(
+            set(message)
+            == {"message_id", "turn_id", "role", "content", "created_at"}
+            for message in transcript
+        )
+        serialized = json.dumps(transcript)
+        assert "PRIVATE_ARGUMENT_CANARY" not in serialized
+        assert "PRIVATE_ASSISTANT_CANARY" not in serialized
+        assert "PRIVATE_RESULT_CANARY" not in serialized
     finally:
         await sw.close()

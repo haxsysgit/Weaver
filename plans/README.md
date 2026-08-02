@@ -16,33 +16,37 @@ evidence, review, and human decision gates must also be complete.
 | [007.5 - Audit repair](007.5-audit-repair.md) | Implemented | Plan 007 complete | Retry method, tool-call uniqueness constraint, single-tx start, dedup, repo tests, stale docs |
 | [008 - Wire the conversation loop](008-wire-conversation-loop.md) | Accepted 2026-07-31 | Plan 007 accepted | Zip conversation/ and agent/ into one working conversation: SessionWeave.send() calls run_turn() |
 | [009 - Context assembler](009-context-assembler.md) | Accepted 2026-07-31 | Plan 008 accepted | Give run_turn() a context window it can't exceed: token budget, truncation, pinned owner message |
-| [010 - TUI entrypoint](010-tui-entrypoint.md) | Accepted; reopened for UI sharpening | Plan 009 accepted | Owner chat window: weaver chat opens Textual TUI with direct await session.send() |
-| [011 - Direct-reading baseline](011-direct-reading-baseline.md) | Planned; learning gate required | Plan 010 accepted | Compare Flash and Pro reading the same novel packet blind: the first time Weaver reads a novel |
-| 012 - Direct-reading baseline (original) | Deferred (renumbered from 008) | Plans 002-011 accepted | Blind Flash/Pro comparison over selected chapter packets |
-| 013 - First compiled-memory experiment (original) | Deferred (renumbered from 009) | Plan 012 accepted | Compare bounded compiled Markdown memory with direct rereading |
+| [010 - TUI entrypoint](010-tui-entrypoint.md) | Accepted and closed 2026-08-02 | Plan 009 accepted | Weaver's developer and debugging console; maintenance fixes only, no further product polish |
+| [011 - Local browser chat entrypoint](011-web-chat-entrypoint.md) | Planned; appraisal learning gate required | Plan 010 closed; checkpoint 001-010 complete | Appraise current ChatGPT behaviour, then prove one private local browser conversation |
+| [012 - Direct-reading baseline](012-direct-reading-baseline.md) | Planned; learning gate required | Plan 011 accepted | Compare Flash and Pro reading the same novel packet blind: the first time Weaver reads a novel |
+| 013 - Responsive interface and installable PWA | Deferred | Plan 012 accepted | Build the polished responsive Weaver interface and test installability |
+| 014+ - Compiled-memory experiments | Deferred | Plan 013 accepted | Compare bounded compiled memory with direct rereading |
 
 ## Execution order
 
-Plans 001-007 are complete (007.5 applied). Plans 008-011 are sequential
-building blocks:
+Plans 001-010 are complete (007.5 applied). The checkpoint before Plan 011 is
+recorded in `docs/process/checkpoint-001-010.md`. The next sequence is:
 
-1. **008** — wire the loop. Without this, SessionWeave can't run a turn.
-2. **009** — context assembler. Without this, long conversations exceed budgets.
-3. **010** — TUI. Without this, the owner can't talk to Weaver.
-4. **011** — direct-reading baseline. The first time Weaver reads a novel.
+1. **011**: appraise chat behaviour, stop at the owner gate, then prove one
+   local browser conversation.
+2. **012**: run the direct-reading baseline.
+3. **013**: turn the accepted proof into a polished responsive PWA.
+4. **014+**: begin compiled-memory experiments.
 
-Plans 012-013 are the original deferred literary experiments, renumbered.
-They wait until the conversation infrastructure (008-011) is complete.
+Native Android and iOS remain deferred until Plan 013 proves a concrete PWA
+limitation.
 
 Only one numbered plan may be active in implementation or review at a time.
 Plan 008's final owner decision is recorded as **Accepted** in
 `deliverables/008-wire-conversation-loop/decision.md` (2026-07-31).
 Plan 009 is **Accepted** (2026-07-31); its decision is recorded in
 `deliverables/009-context-assembler/decision.md`.
-Plan 010 is **Accepted** (2026-07-31) and **reopened by the owner for UI
-sharpening** (2026-07-31); its decision is recorded in
-`deliverables/010-tui-entrypoint/decision.md`. It shipped live-by-default
-chat with `--fake` opt-in and startup config loading (`.env` +
-`.weaver/config.toml`). New UI phases amend the plan with their own review
-and owner gate. Plan 011 (direct-reading baseline) stays gated until the
-owner finishes the UI work.
+Plan 010 is **Accepted and closed** (2026-08-02); its decision is recorded in
+`deliverables/010-tui-entrypoint/decision.md`. It remains Weaver's developer
+and debugging console. Maintenance bug fixes are allowed, but it receives no
+further product polish and is no longer a product surface.
+
+Plan 011 is unadmitted at its appraisal learning gate. Do not start the shared
+runtime, server, API, or browser interface until the owner confirms the
+sanitized ChatGPT-to-Weaver behaviour decisions. Plan 012 remains gated behind
+Plan 011. Do not begin Plan 013 automatically.

@@ -2,9 +2,82 @@
 
 ## Status
 
-Review 1 (event loop/cancellation) and Review 2 (mode/scope/credentials) both
-passed. One repair pass applied (commit `2c0792b`); both rechecks clean.
-Open items: none blocking; owner decision pending.
+Earlier slice reviews remain recorded below. The 2026-08-02 final
+developer-console repair received fresh-context reviews covering:
+
+1. terminal input, cancellation, persistence, and transcript filtering;
+2. UX, focus, small-terminal layout, and documentation accuracy.
+
+Final repair verdicts: both PASS after one red-green repair round each. The
+owner-directed role-layout closeout also passed its runtime and UX rechecks.
+Owner decision: accepted and closed 2026-08-02.
+
+## Owner-directed role-layout closeout (2026-08-02)
+
+### Runtime and privacy review
+
+- Initial verdict: **FIX**, low-risk coverage gap.
+- Finding: success and persisted redraw proved OWNER and WEAVER ordering, but
+  cancellation and safe-failure branches did not pin the same order.
+- Repair: added direct cancellation and safe-failure role-order assertions.
+- Recheck: **PASS**. Both focused tests and Ruff passed. No cancellation,
+  persistence, reasoning, or privacy regression remained.
+
+### UX, terminal width, and documentation reviews
+
+- Initial verdict: **FIX**. At 80 x 24, Markdown was four cells wider than
+  the transcript content area and needed horizontal scrolling.
+- Repair: removed horizontal transcript padding and added a long-Markdown
+  guard. `max_scroll_x` is zero and the final words remain visible at both
+  80 x 24 and 120 x 36.
+- Independent follow-up finding: Rich's default H2 colour rendered at about
+  1.6:1 contrast on the transcript background. The canonical plan also still
+  referred to removed header chrome.
+- Repair: added explicit Weaver colours for H1 through H6, tested H2 at RGB
+  211, 220, 221 with bold styling, and corrected the plan to say contextual
+  status line.
+- Final recheck: **PASS**. H2 contrast is about 13:1, wrap guards remain green,
+  diagram source and preview match, and the status-line wording is current.
+
+### Closeout disposition
+
+No blocker, major, minor, or unresolved nit remains in the role-layout slice.
+The owner accepted and closed Plan 010.
+
+## Final developer-console review (2026-08-02)
+
+### Review 1: terminal input, cancellation, persistence, filtering
+
+- Reviewer: fresh-context read-only reviewer.
+- Initial verdict: **FIX**.
+- Finding: selecting the already-active chat returned before canonical
+  transcript redraw, so transient RichLog text could survive Ctrl+R.
+- Red evidence:
+  `test_pilot_ctrl_r_current_chat_redraws_canonical_transcript` failed with
+  `TRANSIENT_UI_CANARY` still visible.
+- Repair: removed the same-ID early return. Every selected persisted chat now
+  passes existence checking and canonical redraw.
+- Recheck: **PASS**. The new test and all Ctrl+R tests passed. No other
+  terminal, cancellation, persistence, or privacy finding remained.
+
+### Review 2: UX, focus, small terminals, documentation
+
+- Reviewer: fresh-context read-only reviewer.
+- Initial verdict: **FIX**.
+- Findings: help, history, and recovery RichLogs used flexible height, so
+  panels expanded to the 80% cap; F1 omitted Escape and lowercase `q` while
+  calling itself the complete key reference.
+- Red evidence: geometry test measured a 19-row help panel at 80 x 24; help
+  copy test failed on missing Escape.
+- Repair: overlay RichLogs now use content height with a 16-row cap. Help adds
+  Escape and lowercase `q`.
+- Recheck: **PASS**. Independent measurements at both sizes: help 17 rows,
+  one-row history 7, recovery 11. Focus, recovery-to-picker routing, docs,
+  diagram labels, and preview checks passed.
+
+### Final review disposition
+
+No blocker, major, minor, or unresolved nit remains in the final repair.
 
 ## Review 1: Event-loop integration and cancellation
 
@@ -139,4 +212,4 @@ as a secondary assert behind the observable `status.content` check.
 - None blocking. NITs recorded above (regression coverage for repaired
   branches; `CancelledError` mid-build edge; Ctrl+C no-op with no turn in
   flight) are deferred.
-- Owner decision pending in `decision.md`.
+- Owner decision accepted and closed in `decision.md`.

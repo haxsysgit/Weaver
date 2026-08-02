@@ -165,6 +165,14 @@ class ConversationRepository:
 
     # -- public read queries --
 
+    async def conversation_exists(self, conversation_id: str) -> bool:
+        """Return whether a conversation ID is present in durable state."""
+        cursor = await self._db.execute(
+            "SELECT 1 FROM conversation WHERE id = ? LIMIT 1",
+            (conversation_id,),
+        )
+        return await cursor.fetchone() is not None
+
     async def find_interrupted_run(self, conversation_id: str) -> RunRecord | None:
         cursor = await self._db.execute(
             "SELECT r.id, r.turn_id, r.attempt, r.phase, r.interrupted_run_id, r.created_at "

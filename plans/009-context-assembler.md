@@ -337,7 +337,7 @@ Stop and report if:
 - Snapshot persistence (a `context_snapshot` table + migration) is a future
   plan; design the schema in learning.md now so the later migration is
   additive.
-- Future memory plans (Plan 012+) will reuse `ContextAssembler` for
+- Future memory plans (Plan 014+) will reuse `ContextAssembler` for
   narrative-thread assembly; keep the interface item-list-in,
   filtered-item-list-out so memory sources can be injected later.
 

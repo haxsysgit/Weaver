@@ -60,7 +60,7 @@ CHAT_FAKE_RESPONSES = (
         assistant_message=ModelMessage(
             role="assistant",
             content=(
-                "I read you. This is a fake-mode reply (--fake) — no real "
+                "I read you. This is a fake-mode reply (--fake), no real "
                 "model is running. Set DEEPSEEK_KEY and run `weaver chat` "
                 "to talk to the real Weaver."
             ),

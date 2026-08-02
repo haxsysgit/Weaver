@@ -35,5 +35,21 @@ Phase B (streaming deltas, d135ac6) and Phase D (observability,
 0ec98fb, 067722a) were implemented one at a time, each with its own
 independent review (both PASS, no blockers), and are accepted per the
 owner's advance instruction. Commits pushed as 18e6d3e. Suite 215 green,
-ruff clean. Phase C (multi-line input, markdown replies, conversation
-resume) awaits the owner's word.
+ruff clean. Phase C (multi-line input, Markdown replies, conversation
+resume) was later implemented, reviewed, and included in the final acceptance.
+
+## Final developer-console gate (2026-08-02)
+
+The final repair candidate adds the 3 to 8 row composer, terminal-safe keymap,
+filtered transcript reload, correct new/switch chat redraw, compact overlays,
+F1 help, explicit cancellation recovery, distinct OWNER and WEAVER transcript
+blocks, safe Markdown wrapping, and readable heading colours. The command
+floor and every independent recheck passed.
+
+The owner directed the final layout repair and official closure on 2026-08-02.
+The recorded decision is:
+
+> Accepted as Weaver’s developer and debugging console. No further product polish.
+
+Plan 010 is closed. Maintenance bug fixes remain allowed, but the TUI is no
+longer a product surface.

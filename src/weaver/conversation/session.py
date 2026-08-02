@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 import json
+import logging
 import os
 from pathlib import Path
+from typing import Literal, TypedDict
 
 import aiosqlite
 
@@ -19,6 +20,16 @@ from .repository import ConversationRepository
 from .runner import INTERRUPTED_RUN_EXISTS, ConversationRunner
 
 logger = logging.getLogger(__name__)
+
+
+class TranscriptMessage(TypedDict):
+    """One owner-visible message from Weaver's persisted chat history."""
+
+    message_id: str
+    turn_id: str
+    role: Literal["owner", "weaver"]
+    content: str
+    created_at: str
 
 
 class SessionWeave:
@@ -189,6 +200,55 @@ class SessionWeave:
                 }
             )
         return out
+
+    async def conversation_exists(self, conversation_id: str) -> bool:
+        """Distinguish an empty persisted chat from an unknown ID."""
+        assert self._repo is not None
+        return await self._repo.conversation_exists(conversation_id)
+
+    async def load_transcript(
+        self, conversation_id: str
+    ) -> list[TranscriptMessage]:
+        """Return only persisted prose intended for the owner.
+
+        Empty openers, assistant tool requests, tool calls, tool results,
+        and empty assistant records stay inside Weaver's private protocol.
+        """
+        assert self._repo is not None
+        items = await self._repo.load_items(conversation_id)
+        transcript: list[TranscriptMessage] = []
+        for item in items:
+            if item.kind not in ("owner", "assistant"):
+                continue
+            try:
+                body = json.loads(item.body)
+            except json.JSONDecodeError as error:
+                raise ValueError(
+                    f"item {item.id}: body is not valid JSON"
+                ) from error
+            if not isinstance(body, dict):
+                raise ValueError(f"item {item.id}: body is not a JSON object")
+
+            content = body.get("content", "")
+            if not isinstance(content, str):
+                raise ValueError(f"item {item.id}: content is not text")
+            if not content.strip():
+                continue
+            if item.kind == "assistant" and body.get("tool_calls"):
+                continue
+
+            role: Literal["owner", "weaver"]
+            role = "owner" if item.kind == "owner" else "weaver"
+            transcript.append(
+                {
+                    "message_id": item.id,
+                    "turn_id": item.turn_id,
+                    "role": role,
+                    "content": content,
+                    "created_at": item.created_at,
+                }
+            )
+        return transcript
 
     async def list_recent_turns(
         self, conversation_id: str, limit: int = 12

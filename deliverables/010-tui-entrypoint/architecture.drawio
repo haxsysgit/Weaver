@@ -1,83 +1,72 @@
-<mxfile host="app.diagrams.net">
-  <diagram id="plan-010-architecture" name="Plan 010 - TUI entrypoint">
-    <mxGraphModel dx="900" dy="640" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="980" pageHeight="1080" math="0" shadow="0">
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="drawio" version="30.2.4">
+  <diagram name="Plan 010 developer console">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="cli" value="weaver chat [--fake]&#10;(argparse subcommand, live is default)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
-          <mxGeometry x="40" y="40" width="200" height="50" as="geometry" />
+        <mxCell id="title" value="Plan 010: Weaver developer and debugging console" style="text;html=1;strokeColor=none;fillColor=none;fontSize=18;fontFamily=Helvetica;align=center;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="380" y="20" width="640" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="mode" value="startup config + mode&#10;load_startup_config(): env &gt; .env &gt; .weaver/config.toml&#10;live default (no key anywhere: exit 2)&#10;--fake: scripted, never constructs DeepSeekProvider" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
-          <mxGeometry x="40" y="150" width="200" height="90" as="geometry" />
+        <mxCell id="launch" value="Launch" style="swimlane;html=1;rounded=1;startSize=32;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="90" width="390" height="210" as="geometry" />
         </mxCell>
-        <mxCell id="build" value="SessionWeave(state_dir, model,&#10;chat registry, maintenance policy)&#10;.open() -&gt; start_conversation(&quot;&quot;)&#10;(^n later creates more conversations)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
-          <mxGeometry x="40" y="300" width="200" height="80" as="geometry" />
+        <mxCell id="launch-node" value="weaver chat [--fake]&#xa;startup config and mode&#xa;one async event loop" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;" vertex="1" parent="launch">
+          <mxGeometry x="30" y="65" width="330" height="100" as="geometry" />
         </mxCell>
-        <mxCell id="app" value="WeaverChat(sw, conv_id, mode_label)&#10;await app.run_async()  (same event loop)&#10;exit prints the session line" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
-          <mxGeometry x="40" y="440" width="200" height="70" as="geometry" />
+        <mxCell id="console" value="Open console" style="swimlane;html=1;rounded=1;startSize=32;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="505" y="90" width="390" height="210" as="geometry" />
         </mxCell>
-        <mxCell id="welcome" value="welcome line in log&#10;cleared by first submit (pi-style)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
-          <mxGeometry x="330" y="40" width="220" height="50" as="geometry" />
+        <mxCell id="console-node" value="OWNER and WEAVER transcript blocks&#xa;labelled stream preview&#xa;3 to 8 row composer&#xa;contextual status line" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e3f2fd;strokeColor=#6c8ebf;" vertex="1" parent="console">
+          <mxGeometry x="30" y="55" width="330" height="120" as="geometry" />
         </mxCell>
-        <mxCell id="log" value="RichLog #chat-log&#10;escaped user lines · markdown replies" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
-          <mxGeometry x="330" y="120" width="220" height="50" as="geometry" />
+        <mxCell id="actions" value="Owner controls" style="swimlane;html=1;rounded=1;startSize=32;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="970" y="90" width="390" height="210" as="geometry" />
         </mxCell>
-        <mxCell id="stream" value="Static #stream (hidden)&#10;live text deltas while model streams&#10;cleared and hidden after the turn" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
-          <mxGeometry x="330" y="200" width="220" height="60" as="geometry" />
+        <mxCell id="actions-node" value="Send and newline&#xa;history and chat picker&#xa;new chat and F1 help&#xa;cooperative cancel recovery" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e8f7;strokeColor=#9673a6;" vertex="1" parent="actions">
+          <mxGeometry x="30" y="55" width="330" height="120" as="geometry" />
         </mxCell>
-        <mxCell id="input" value="ChatInput #input (TextArea)&#10;enter submits (bubbles to app binding)&#10;shift+enter inserts a newline" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
-          <mxGeometry x="330" y="290" width="220" height="60" as="geometry" />
+        <mxCell id="session" value="SessionWeave boundary" style="swimlane;html=1;rounded=1;startSize=32;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="410" width="390" height="230" as="geometry" />
         </mxCell>
-        <mxCell id="status" value="StatusBar (one line)&#10;spinner while busy · mode · ctx meter&#10;hints: ^c cancel · ^h history · ^q quit" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
-          <mxGeometry x="330" y="380" width="220" height="60" as="geometry" />
+        <mxCell id="session-node" value="send and live deltas&#xa;load_transcript&#xa;conversation_exists&#xa;list, start, and close lifecycle" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e8f7;strokeColor=#9673a6;" vertex="1" parent="session">
+          <mxGeometry x="30" y="60" width="330" height="125" as="geometry" />
         </mxCell>
-        <mxCell id="send" value="action_submit_turn&#10;cancel_event = asyncio.Event()&#10;await sw.send(conv_id, text, cancel_event, on_delta)&#10;footer: set_context(token_count, token_budget)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
-          <mxGeometry x="330" y="500" width="220" height="90" as="geometry" />
+        <mxCell id="state" value="Private durable state" style="swimlane;html=1;rounded=1;startSize=32;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="505" y="410" width="390" height="230" as="geometry" />
         </mxCell>
-        <mxCell id="actions" value="actions&#10;^c cancel_turn (priority, never task.cancel)&#10;^h show_history&#10;^r resume (picker) · ^n new conversation&#10;^q quit (base priority)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
-          <mxGeometry x="330" y="640" width="220" height="90" as="geometry" />
+        <mxCell id="state-node" value="weaver.sqlite3&#xa;owner and assistant records&#xa;tool protocol stays private&#xa;owner-only file permissions" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff9e6;strokeColor=#d6b656;" vertex="1" parent="state">
+          <mxGeometry x="30" y="60" width="330" height="125" as="geometry" />
         </mxCell>
-        <mxCell id="pickers" value="screens (dumb views)&#10;RunHistoryScreen (^h): recent runs, esc/q&#10;ConversationPickerScreen (^r): recent&#10;conversations, enter picks, esc/q" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
-          <mxGeometry x="330" y="780" width="220" height="80" as="geometry" />
+        <mxCell id="boundary" value="Developer-only boundary" style="swimlane;html=1;rounded=1;startSize=32;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="970" y="410" width="390" height="230" as="geometry" />
         </mxCell>
-        <mxCell id="db" value="weaver.sqlite3 (state dir)&#10;conversations, runs, items persist&#10;list_conversations / list_recent_turns" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
-          <mxGeometry x="640" y="500" width="220" height="70" as="geometry" />
+        <mxCell id="boundary-node" value="maintenance tool profile&#xa;fetch and refresh excluded&#xa;cancel event only&#xa;no model task cancellation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fde8e8;strokeColor=#b85450;" vertex="1" parent="boundary">
+          <mxGeometry x="30" y="60" width="330" height="125" as="geometry" />
         </mxCell>
-        <mxCell id="tools" value="chat registry (maintenance policy)&#10;echo · inspect_novel_corpus&#10;build_novel_packet · export_novel&#10;fetch/update NEVER registered" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
-          <mxGeometry x="640" y="640" width="220" height="80" as="geometry" />
-        </mxCell>
-        <mxCell id="n1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="cli" target="mode">
+        <mxCell id="edge-launch-console" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#6c8ebf;" edge="1" parent="1" source="launch" target="console">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="n2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="mode" target="build">
+        <mxCell id="edge-console-actions" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#9673a6;" edge="1" parent="1" source="console" target="actions">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="n3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="build" target="app">
+        <mxCell id="edge-console-session" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#9673a6;" edge="1" parent="1" source="console" target="session">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="n4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="app" target="send">
+        <mxCell id="edge-actions-session" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#9673a6;" edge="1" parent="1" source="actions" target="session">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="n5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="input" target="send">
+        <mxCell id="edge-session-state" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#d6b656;" edge="1" parent="1" source="session" target="state">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="n6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="send" target="db">
+        <mxCell id="edge-session-boundary" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#b85450;" edge="1" parent="1" source="session" target="boundary">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="n7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="send" target="tools">
+        <mxCell id="edge-state-session" value="filtered transcript" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=1;dashed=1;strokeColor=#9673a6;fontSize=10;" edge="1" parent="1" source="state" target="session">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="n8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="actions" target="send">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="n9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="actions" target="pickers">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="n10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="pickers" target="db">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="n11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="status" target="send">
-          <mxGeometry relative="1" as="geometry" />
+        <mxCell id="legend" value="Blue: console  |  Purple: runtime  |  Yellow: state  |  Red: hard boundary" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;align=center;" vertex="1" parent="1">
+          <mxGeometry x="830" y="720" width="530" height="40" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>

@@ -20,9 +20,8 @@ from textual.widgets import Static, TextArea
 # that with a small braille frame set, ~10 fps.
 SPINNER_FRAMES = ("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏")
 
-# Checkpoint pilot: a dim line between turns so consecutive turns read as
-# blocks once speaker labels are gone.
-TURN_SEPARATOR = "────"
+OWNER_LABEL = "[bold #95a6a8]OWNER[/]"
+WEAVER_LABEL = "[bold #8fb8bd]WEAVER[/]"
 
 _IDLE_DOT = "·"
 
@@ -58,9 +57,13 @@ def status_text(
     """
     indicator = spinner_frame(tick) if busy else _IDLE_DOT
     ctx = f"[dim] · ctx {escape(context)}[/dim]" if context else ""
+    if busy:
+        hints = " · ^c cancel · ^q quit"
+    else:
+        hints = " · enter send · ^j newline · f1 help"
     return (
         f"[dim]{indicator}[/dim] [bold]{escape(mode_label)}[/bold]{ctx}"
-        f"[dim] · ^c cancel · ^h history · ^q quit[/dim]"
+        f"[dim]{hints}[/dim]"
     )
 
 
@@ -68,7 +71,7 @@ def welcome_line(mode_label: str) -> str:
     """Single startup line, pi-style (minimal, no banner)."""
     return (
         f"[dim]Weaver chat · [/dim]{escape(mode_label)}"
-        f"[dim] · ^c cancels, ^h history, ^q quits[/dim]"
+        f"[dim] · enter sends, ^j adds a line, f1 shows every key[/dim]"
     )
 
 
@@ -124,6 +127,25 @@ class ChatInput(TextArea):
     subclass lets it bubble instead: the app's non-priority enter binding
     submits (pi model), and shift+enter hits the app's newline binding.
     """
+
+    MIN_HEIGHT = 3
+    MAX_HEIGHT = 8
+
+    def on_mount(self) -> None:
+        self._fit_to_content()
+
+    def on_resize(self) -> None:
+        self.call_after_refresh(self._fit_to_content)
+
+    def on_text_area_changed(self, event: TextArea.Changed) -> None:
+        if event.text_area is self:
+            self.call_after_refresh(self._fit_to_content)
+
+    def _fit_to_content(self) -> None:
+        """Fit visible wrapped lines, then let TextArea scroll at the cap."""
+        content_rows = max(1, self.wrapped_document.height)
+        height = content_rows + 2
+        self.styles.height = max(self.MIN_HEIGHT, min(self.MAX_HEIGHT, height))
 
     async def _on_key(self, event: events.Key) -> None:
         if event.key == "enter":

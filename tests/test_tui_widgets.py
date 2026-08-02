@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import asyncio
 
+from rich.color import ColorTriplet
+from textual._xterm_parser import XTermParser
 from textual.widgets import RichLog, Static, TextArea
 
 from weaver.agent.turn import TurnExitReason, TurnResult
@@ -31,13 +33,24 @@ def test_status_text_idle_has_dot_mode_and_hints():
     text = status_text("live deepseek-v4-flash", busy=False)
     assert "·" in text
     assert "live deepseek-v4-flash" in text
-    assert "^c cancel" in text and "^q quit" in text
+    assert "enter send" in text
+    assert "^j newline" in text
+    assert "f1 help" in text
     assert all(frame not in text for frame in SPINNER_FRAMES)
 
 
 def test_welcome_line_mentions_mode_and_hints():
     line = welcome_line("fake")
-    assert "fake" in line and "^q quits" in line
+    assert "fake" in line
+    assert "enter sends" in line
+    assert "f1 shows every key" in line
+
+
+def test_status_text_busy_has_cancel_hint():
+    text = status_text("fake", busy=True)
+    assert "^c cancel" in text
+    assert "^q quit" in text
+    assert "enter send" not in text
 
 
 class _StubSession:
@@ -51,6 +64,10 @@ class _StubSession:
         self.streamed: list[str] = []
         self.recent_turns: list[dict] = []
         self.conversations: list[dict] = []
+        self.transcripts: dict[str, list[dict]] = {
+            "conv-1": [],
+            "conv-new": [],
+        }
         self.started: list[str] = []
         self.scripted = TurnResult(
             turn_id="t-1",
@@ -81,6 +98,12 @@ class _StubSession:
         self.started.append(owner_text)
         return "conv-new"
 
+    async def load_transcript(self, conversation_id):
+        return list(self.transcripts[conversation_id])
+
+    async def conversation_exists(self, conversation_id):
+        return conversation_id in self.transcripts
+
 
 def _log_text(node) -> str:
     """Plain text of everything currently in the node's RichLog."""
@@ -88,10 +111,29 @@ def _log_text(node) -> str:
     return " ".join(str(strip.text) for strip in log.lines)
 
 
+def _log_lines(node) -> list[str]:
+    """Rendered transcript lines, including deliberate blank spacing."""
+    log = node.query_one(RichLog)
+    return [str(strip.text).rstrip() for strip in log.lines]
+
+
+def _chat_log_lines(app: WeaverChat) -> list[str]:
+    """Main transcript lines even when a recovery overlay is active."""
+    log = app.query_one("#chat-log", RichLog)
+    return [str(strip.text).rstrip() for strip in log.lines]
+
+
 async def _open_chat(stub: _StubSession, mode: str = "fake"):
     app = WeaverChat(stub, "conv-1", mode_label=mode)  # type: ignore[arg-type]
     async with app.run_test() as pilot:
         yield app, pilot
+
+
+def _raw_key_names(raw_input: str) -> list[str]:
+    """Parse the same bytes a terminal driver gives Textual."""
+    parser = XTermParser()
+    messages = [*parser.feed(raw_input), *parser.tick()]
+    return [message.key for message in messages if hasattr(message, "key")]
 
 
 async def _submit(app, text: str) -> asyncio.Task:
@@ -117,8 +159,18 @@ async def test_pilot_welcome_line_shown_then_cleared_by_first_submit():
         assert stub.sent == [("conv-1", "hi")]
         log = _log_text(app)
         assert "Weaver chat" not in log  # welcome cleared on first submit
-        assert "hi" in log  # no speaker labels: the user line is plain text
-        assert "hello back" in log  # reply renders as (plain) markdown
+        assert "OWNER" in log
+        assert "hi" in log
+        assert "WEAVER" in log
+        assert "hello back" in log
+
+        rendered_lines = _log_lines(app)
+        assert rendered_lines.index("OWNER") < rendered_lines.index("hi")
+        assert rendered_lines.index("hi") < rendered_lines.index("WEAVER")
+        assert rendered_lines.index("WEAVER") < rendered_lines.index("hello back")
+        assert "" in rendered_lines[
+            rendered_lines.index("hi") + 1 : rendered_lines.index("WEAVER")
+        ]
 
 
 async def test_pilot_status_bar_spins_while_turn_runs_then_rests():
@@ -171,6 +223,8 @@ async def test_pilot_ctrl_c_idle_clears_the_input():
         # focused TextArea's own ctrl+c copy binding.
         await pilot.press("ctrl+c")
         assert input_widget.text == ""
+        await pilot.pause()
+        assert input_widget.region.height == 3
 
 
 async def test_pilot_stream_deltas_render_live_then_final_in_log():
@@ -184,6 +238,7 @@ async def test_pilot_stream_deltas_render_live_then_final_in_log():
 
         stream = app.query_one("#stream", Static)
         assert stream.display is True
+        assert "WEAVER" in str(stream.content)
         assert "hello " in str(stream.content)  # markup source, text is plain
         assert stub.streamed == ["hello "]  # mid-turn: send not done
 
@@ -192,9 +247,102 @@ async def test_pilot_stream_deltas_render_live_then_final_in_log():
         await pilot.pause()
 
         log = _log_text(app)
-        assert "hi" in log  # user line has no label
+        assert "OWNER" in log
+        assert "hi" in log
+        assert "WEAVER" in log
         assert "hello back" in log
         assert stream.display is False
+
+
+async def test_persisted_transcript_keeps_roles_clear_at_supported_sizes():
+    transcript = [
+        {
+            "message_id": "m-owner",
+            "turn_id": "t-1",
+            "role": "owner",
+            "content": "owner message",
+            "created_at": "2026-08-02T10:00:00",
+        },
+        {
+            "message_id": "m-weaver",
+            "turn_id": "t-1",
+            "role": "weaver",
+            "content": "Weaver response",
+            "created_at": "2026-08-02T10:00:01",
+        },
+    ]
+
+    for terminal_size in ((80, 24), (120, 36)):
+        stub = _StubSession()
+        stub.transcripts["conv-1"] = transcript
+        app = WeaverChat(stub, "conv-1")  # type: ignore[arg-type]
+
+        async with app.run_test(size=terminal_size) as pilot:
+            await pilot.pause()
+            rendered_lines = _log_lines(app)
+
+            assert rendered_lines.index("OWNER") < rendered_lines.index(
+                "owner message"
+            )
+            assert rendered_lines.index("owner message") < rendered_lines.index(
+                "WEAVER"
+            )
+            assert rendered_lines.index("WEAVER") < rendered_lines.index(
+                "Weaver response"
+            )
+            assert "" in rendered_lines[
+                rendered_lines.index("owner message")
+                + 1 : rendered_lines.index("WEAVER")
+            ]
+
+
+async def test_markdown_reply_wraps_without_horizontal_scroll_at_supported_sizes():
+    long_reply = (
+        "Weaver keeps the complete response readable when the terminal wraps "
+        "this deliberately long model sentence without clipping any words."
+    )
+
+    for terminal_size in ((80, 24), (120, 36)):
+        stub = _StubSession()
+        stub.scripted = TurnResult(
+            turn_id="t-wrap",
+            exit_reason=TurnExitReason.COMPLETED,
+            final_text=long_reply,
+        )
+        app = WeaverChat(stub, "conv-1")  # type: ignore[arg-type]
+
+        async with app.run_test(size=terminal_size) as pilot:
+            await _submit(app, "wrap this reply")
+            await pilot.pause()
+
+            transcript = app.query_one("#chat-log", RichLog)
+            assert transcript.max_scroll_x == 0
+            assert "without clipping any words." in _log_text(app)
+
+
+async def test_markdown_heading_uses_readable_weaver_colour():
+    stub = _StubSession()
+    stub.scripted = TurnResult(
+        turn_id="t-heading",
+        exit_reason=TurnExitReason.COMPLETED,
+        final_text="## Visible heading\n\nBody text",
+    )
+    app = WeaverChat(stub, "conv-1")  # type: ignore[arg-type]
+
+    async with app.run_test(size=(80, 24)) as pilot:
+        await _submit(app, "heading contrast check")
+        await pilot.pause()
+
+        transcript = app.query_one("#chat-log", RichLog)
+        heading_line = next(
+            line for line in transcript.lines if str(line.text).strip() == "Visible heading"
+        )
+        heading_segment = next(
+            segment for segment in heading_line._segments if segment.text.strip()
+        )
+        assert heading_segment.style.color is not None
+        assert heading_segment.style.color.triplet == ColorTriplet(211, 220, 221)
+        assert heading_segment.style.bold
 
 
 async def test_pilot_empty_submit_ignored_and_log_stays():
@@ -249,12 +397,14 @@ def test_ctx_text_formats():
     assert ctx_text(9999, 10000) == "99%"
 
 
-def test_status_text_includes_context_and_history_hint():
+def test_status_text_includes_context_and_idle_hints():
     from weaver.tui.widgets import status_text
 
     text = status_text("live deepseek-v4-flash", busy=False, context="40%")
     assert "ctx 40%" in text
-    assert "^h history" in text
+    assert "enter send" in text
+    assert "^j newline" in text
+    assert "f1 help" in text
 
 
 async def test_pilot_footer_shows_context_after_send():
@@ -273,7 +423,18 @@ async def test_pilot_footer_shows_context_after_send():
         assert "ctx 1.2k" in str(status.content)
 
 
-async def test_pilot_ctrl_h_opens_history_screen_and_esc_closes():
+def test_raw_terminal_control_bytes_map_to_audited_keys():
+    assert _raw_key_names("\x0a") == ["ctrl+j"]
+    assert _raw_key_names("\x14") == ["ctrl+t"]
+    assert _raw_key_names("\x08") == ["backspace"]
+    assert _raw_key_names("\x12") == ["ctrl+r"]
+    assert _raw_key_names("\x0e") == ["ctrl+n"]
+    assert _raw_key_names("\x03") == ["ctrl+c"]
+    assert _raw_key_names("\x11") == ["ctrl+q"]
+    assert _raw_key_names("\x1bOP") == ["f1"]
+
+
+async def test_pilot_ctrl_t_opens_history_screen_and_esc_closes():
     from weaver.tui.screens import RunHistoryScreen
 
     stub = _StubSession()
@@ -292,8 +453,8 @@ async def test_pilot_ctrl_h_opens_history_screen_and_esc_closes():
         },
     ]
     async for app, pilot in _open_chat(stub):
-        # Real keypress: proves ctrl+h dispatches to show_history.
-        await pilot.press("ctrl+h")
+        # Real keypress: proves ctrl+t dispatches to show_history.
+        await pilot.press("ctrl+t")
         await pilot.pause()
 
         assert isinstance(app.screen, RunHistoryScreen)
@@ -343,6 +504,22 @@ async def test_pilot_shift_enter_inserts_newline():
         assert stub.sent == []  # nothing submitted
 
 
+async def test_pilot_ctrl_j_inserts_guaranteed_newline():
+    stub = _StubSession()
+    async for app, pilot in _open_chat(stub):
+        bound = app.active_bindings["ctrl+j"].binding
+        assert bound.action == "newline"
+
+        textarea = app.query_one("#input", TextArea)
+        textarea.text = "line one"
+        textarea.move_cursor((0, len("line one")))
+        await pilot.press("ctrl+j")
+        await pilot.pause()
+
+        assert textarea.text == "line one\n"
+        assert stub.sent == []
+
+
 async def test_multiline_submit_sends_full_text_and_clears():
     stub = _StubSession()
     async for app, pilot in _open_chat(stub):
@@ -351,6 +528,7 @@ async def test_multiline_submit_sends_full_text_and_clears():
 
         assert stub.sent == [("conv-1", "line one\nline two")]
         assert app.query_one("#input", TextArea).text == ""
+        assert app.query_one("#input", TextArea).region.height == 3
 
 
 async def test_markdown_reply_renders_in_log():
@@ -385,6 +563,31 @@ async def test_pilot_ctrl_r_picker_picks_and_switches():
             "last_owner_text": "first chat",
         },
     ]
+    stub.transcripts["conv-1"] = [
+        {
+            "message_id": "m-1",
+            "turn_id": "t-1",
+            "role": "owner",
+            "content": "old visible chat",
+            "created_at": "2026-07-31T16:00:00",
+        }
+    ]
+    stub.transcripts["conv-2"] = [
+        {
+            "message_id": "m-2",
+            "turn_id": "t-2",
+            "role": "owner",
+            "content": "selected owner message",
+            "created_at": "2026-07-31T17:00:00",
+        },
+        {
+            "message_id": "m-3",
+            "turn_id": "t-2",
+            "role": "weaver",
+            "content": "selected Weaver reply",
+            "created_at": "2026-07-31T17:00:01",
+        },
+    ]
     async for app, pilot in _open_chat(stub):
         bound = app.active_bindings["ctrl+r"].binding
         assert bound.action == "resume"
@@ -401,7 +604,10 @@ async def test_pilot_ctrl_r_picker_picks_and_switches():
         await pilot.press("enter")  # selects the focused (first) item
         await pilot.pause()
 
-        assert "switched to conversation conv-2" in _log_text(app)
+        visible_log = _log_text(app)
+        assert "selected owner message" in visible_log
+        assert "selected Weaver reply" in visible_log
+        assert "old visible chat" not in visible_log
         # Routing is observable: the next submit goes to the switched
         # conversation, not conv-1.
         await _submit(app, "hello again")
@@ -436,8 +642,48 @@ async def test_pilot_ctrl_r_picker_escape_cancels():
         assert stub.sent == [("conv-1", "still here")]
 
 
+async def test_pilot_ctrl_r_current_chat_redraws_canonical_transcript():
+    stub = _StubSession()
+    stub.conversations = [
+        {
+            "conversation_id": "conv-1",
+            "created_at": "2026-07-31T16:00:00",
+            "last_owner_text": "canonical owner message",
+        }
+    ]
+    stub.transcripts["conv-1"] = [
+        {
+            "message_id": "m-canonical",
+            "turn_id": "t-canonical",
+            "role": "owner",
+            "content": "canonical owner message",
+            "created_at": "2026-07-31T16:00:00",
+        }
+    ]
+    async for app, pilot in _open_chat(stub):
+        app._log("TRANSIENT_UI_CANARY")
+        assert "TRANSIENT_UI_CANARY" in _log_text(app)
+
+        await pilot.press("ctrl+r")
+        await pilot.pause()
+        await pilot.press("enter")
+        await pilot.pause()
+
+        assert "canonical owner message" in _log_text(app)
+        assert "TRANSIENT_UI_CANARY" not in _log_text(app)
+
+
 async def test_pilot_ctrl_n_starts_new_conversation():
     stub = _StubSession()
+    stub.transcripts["conv-1"] = [
+        {
+            "message_id": "m-old",
+            "turn_id": "t-old",
+            "role": "weaver",
+            "content": "old reply must disappear",
+            "created_at": "2026-07-31T16:00:00",
+        }
+    ]
     async for app, pilot in _open_chat(stub):
         bound = app.active_bindings["ctrl+n"].binding
         assert bound.action == "new_conversation"
@@ -446,7 +692,9 @@ async def test_pilot_ctrl_n_starts_new_conversation():
         await pilot.pause()
 
         assert stub.started == [""]
-        assert "new conversation conv-new" in _log_text(app)
+        visible_log = _log_text(app)
+        assert "old reply must disappear" not in visible_log
+        assert "Weaver chat" in visible_log
         # Routing is observable: the next submit goes to the fresh
         # conversation.
         await _submit(app, "fresh start")
@@ -454,14 +702,219 @@ async def test_pilot_ctrl_n_starts_new_conversation():
         assert stub.sent == [("conv-new", "fresh start")]
 
 
-async def test_pilot_turn_separator_between_turns():
-    """Checkpoint pilot: each turn is separated by a dim line (red first)."""
-    from weaver.tui.widgets import TURN_SEPARATOR
+async def test_composer_grows_wraps_clamps_and_clears_at_both_sizes():
+    for terminal_size in ((80, 24), (120, 36)):
+        stub = _StubSession()
+        app = WeaverChat(stub, "conv-1")  # type: ignore[arg-type]
+        async with app.run_test(size=terminal_size) as pilot:
+            composer = app.query_one("#input", TextArea)
+            assert composer.region.height == 3
 
+            composer.text = "one\ntwo\nthree"
+            await pilot.pause()
+            assert composer.region.height == 5
+
+            composer.text = "\n".join(f"line {index}" for index in range(12))
+            await pilot.pause()
+            assert composer.region.height == 8
+            assert composer.virtual_size.height > composer.content_size.height
+
+            composer.clear()
+            await pilot.pause()
+            assert composer.region.height == 3
+
+            wrap_width = composer.wrap_width
+            composer.text = "x" * (wrap_width + 4)
+            await pilot.pause()
+            assert composer.region.height == 4
+
+
+async def test_f1_opens_complete_key_help_and_returns_focus():
+    from weaver.tui.screens import KeyHelpScreen
+
+    stub = _StubSession()
+    async for app, pilot in _open_chat(stub):
+        await pilot.press("f1")
+        await pilot.pause()
+
+        assert isinstance(app.screen, KeyHelpScreen)
+        help_text = _log_text(app.screen)
+        for expected in (
+            "Enter",
+            "Ctrl+J",
+            "Ctrl+T",
+            "Ctrl+R",
+            "Ctrl+N",
+            "Ctrl+C",
+            "Ctrl+Q",
+            "F1",
+            "Escape",
+            "q            close overlay",
+        ):
+            assert expected in help_text
+
+        await pilot.press("escape")
+        await pilot.pause()
+        assert app.focused is app.query_one("#input", TextArea)
+
+
+async def test_cancelled_turn_opens_recovery_actions_without_retry():
+    from weaver.tui.screens import CancellationRecoveryScreen
+
+    stub = _StubSession()
+    stub.scripted = TurnResult(
+        turn_id="t-interrupted",
+        exit_reason=TurnExitReason.INTERRUPTED,
+        final_text="",
+    )
+    async for app, pilot in _open_chat(stub):
+        await _submit(app, "cancelled owner message")
+        await pilot.pause()
+
+        assert isinstance(app.screen, CancellationRecoveryScreen)
+        transcript_lines = _chat_log_lines(app)
+        assert transcript_lines.index("OWNER") < transcript_lines.index(
+            "cancelled owner message"
+        )
+        assert transcript_lines.index(
+            "cancelled owner message"
+        ) < transcript_lines.index("WEAVER")
+        assert transcript_lines.index("WEAVER") < transcript_lines.index(
+            "(cancelled)"
+        )
+        recovery_text = _log_text(app.screen)
+        assert "Start new chat" in recovery_text
+        assert "Choose another chat" in recovery_text
+        assert "Escape" in recovery_text
+        assert "retry" not in recovery_text.lower()
+        assert "continue" not in recovery_text.lower()
+
+        await pilot.press("escape")
+        await pilot.pause()
+        assert app._conv_id == "conv-1"
+        assert app.focused is app.query_one("#input", TextArea)
+
+
+async def test_safe_failure_renders_inside_a_weaver_role_block():
+    stub = _StubSession()
+    stub.scripted = TurnResult(
+        turn_id="t-failed",
+        exit_reason=TurnExitReason.MODEL_FAILED,
+        safe_failure="model unavailable",
+    )
+
+    async for app, pilot in _open_chat(stub):
+        await _submit(app, "owner failure check")
+        await pilot.pause()
+
+        transcript_lines = _chat_log_lines(app)
+        assert transcript_lines.index("OWNER") < transcript_lines.index(
+            "owner failure check"
+        )
+        owner_message_index = transcript_lines.index("owner failure check")
+        weaver_label_index = transcript_lines.index("WEAVER")
+        safe_failure_index = transcript_lines.index(
+            "(TurnExitReason.MODEL_FAILED: model unavailable)"
+        )
+        assert owner_message_index < weaver_label_index
+        assert weaver_label_index < safe_failure_index
+
+
+async def test_recovery_start_new_chat_clears_interrupted_transcript():
+    from weaver.tui.screens import CancellationRecoveryScreen
+
+    stub = _StubSession()
+    stub.scripted = TurnResult(
+        turn_id="t-interrupted",
+        exit_reason=TurnExitReason.INTERRUPTED,
+        final_text="",
+    )
+    async for app, pilot in _open_chat(stub):
+        await _submit(app, "interrupted message")
+        await pilot.pause()
+        assert isinstance(app.screen, CancellationRecoveryScreen)
+
+        await pilot.press("enter")
+        await pilot.pause()
+
+        assert stub.started == [""]
+        assert app._conv_id == "conv-new"
+        assert "interrupted message" not in _log_text(app)
+        assert "Weaver chat" in _log_text(app)
+
+
+async def test_overlays_fit_and_return_focus_at_supported_terminal_sizes():
+    from weaver.tui.screens import ConversationPickerScreen, KeyHelpScreen
+
+    for terminal_size in ((80, 24), (120, 36)):
+        stub = _StubSession()
+        stub.conversations = [
+            {
+                "conversation_id": "conv-1",
+                "created_at": "2026-07-31T16:00:00",
+                "last_owner_text": "current chat",
+            }
+        ]
+        app = WeaverChat(stub, "conv-1")  # type: ignore[arg-type]
+        async with app.run_test(size=terminal_size) as pilot:
+            await pilot.press("ctrl+r")
+            await pilot.pause()
+            assert isinstance(app.screen, ConversationPickerScreen)
+            assert app.screen.region.size == terminal_size
+
+            await pilot.press("escape")
+            await pilot.pause()
+            assert app.focused is app.query_one("#input", TextArea)
+
+            await pilot.press("f1")
+            await pilot.pause()
+            assert isinstance(app.screen, KeyHelpScreen)
+            assert app.screen.region.size == terminal_size
+            assert "Ctrl+J" in _log_text(app.screen)
+
+            await pilot.press("escape")
+            await pilot.pause()
+            assert app.focused is app.query_one("#input", TextArea)
+
+
+async def test_overlay_panels_fit_content_instead_of_filling_height_cap():
+    from weaver.tui.screens import CancellationRecoveryScreen, KeyHelpScreen
+
+    for terminal_size in ((80, 24), (120, 36)):
+        stub = _StubSession()
+        stub.recent_turns = [
+            {
+                "run_id": "r-1",
+                "created_at": "2026-07-31T16:00:00",
+                "status": "completed",
+                "owner_text": "one short turn",
+            }
+        ]
+        app = WeaverChat(stub, "conv-1")  # type: ignore[arg-type]
+        async with app.run_test(size=terminal_size) as pilot:
+            await app.push_screen(KeyHelpScreen())
+            await pilot.pause()
+            assert app.screen.query_one(".overlay-panel").region.height <= 18
+
+            await pilot.press("escape")
+            await pilot.press("ctrl+t")
+            await pilot.pause()
+            assert app.screen.query_one(".overlay-panel").region.height <= 9
+
+            await pilot.press("escape")
+            await app.push_screen(CancellationRecoveryScreen())
+            await pilot.pause()
+            assert app.screen.query_one(".overlay-panel").region.height <= 12
+
+
+async def test_pilot_role_labels_separate_consecutive_turns():
     stub = _StubSession()
     async for app, pilot in _open_chat(stub):
         await _submit(app, "first turn")
         await pilot.pause()
         await _submit(app, "second turn")
         await pilot.pause()
-        assert _log_text(app).count(TURN_SEPARATOR) == 2
+
+        visible_log = _log_text(app)
+        assert visible_log.count("OWNER") == 2
+        assert visible_log.count("WEAVER") == 2

@@ -6,9 +6,8 @@
 
 Owner's words: "okay now ive confirmed plan 10 learning.md, start implementing".
 
-This confirmation admits Plan 010 implementation. It does not accept the
-future implementation. The final owner decision remains pending after tests,
-inspection, and independent review.
+This confirmation admitted Plan 010 implementation. The final owner decision
+was later accepted and closed on 2026-08-02. See `decision.md`.
 
 ## Tiny model
 
@@ -21,8 +20,8 @@ Enter, and sees Weaver's response appear. Live DeepSeek mode is the
 default (owner-directed correction 2026-07-31: live is the default; fake is
 opt-in via `--fake`) and requires a `DEEPSEEK_KEY`. Fake mode works without
 credentials and never constructs a live client. Ctrl+C sets the turn's
-cancel event instead of killing the app. The TUI is the attachment point
-for every downstream experiment.
+cancel event instead of killing the app. The TUI is now Weaver's maintenance-
+only developer and debugging console, not a downstream product surface.
 
 ## The pieces (re-verified 2026-07-31, post-Plan 009)
 

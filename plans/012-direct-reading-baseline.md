@@ -1,4 +1,4 @@
-# Plan 011: Direct-reading baseline
+# Plan 012: Direct-reading baseline
 
 > **Executor instructions:** Execute only after Plan 010 is accepted. Read this
 > plan, the accepted Plan 010 results, and every file in "Current state" before
@@ -8,6 +8,9 @@
 
 ## Status
 
+- **Tooling:** All work in this plan uses `uv`: `uv run` for every command,
+  `uv add` for dependencies (updates `uv.lock`), `uv sync`/`uv lock --check`
+  for the environment. No pip or poetry anywhere.
 - **State:** Planned; learning gate required
 - **Priority:** P2
 - **Effort:** L
@@ -18,7 +21,7 @@
 - **Audited at:** 2026-07-31 — current-state claims corrected (real packet
   signature, no experiment registry, not all tools deterministic); provider
   edge cases and the timeout gap pinned as prerequisite repairs
-- **Learning gate:** `deliverables/011-direct-reading-baseline/learning.md`
+- **Learning gate:** `deliverables/012-direct-reading-baseline/learning.md`
 - **Final decision:** pending
 
 ## Goal
@@ -35,7 +38,7 @@ and results contain answer text and metadata only — never chapter prose.
 
 ## Why this matters
 
-Plans 001--010 built the infrastructure to have a conversation. Plan 011 is
+Plans 001--011 build the infrastructure to have a conversation. Plan 012 is
 the first time Weaver reads a novel. It answers: can a model, given raw
 chapter text in a single context window, understand what happened?
 
@@ -60,7 +63,7 @@ wrong or missed — they are repaired/corrected in Slice 0 and the contract:
    (Firecrawl); only inspect/packet/export are.
 4. `timeout_seconds` is recorded in manifests but **never enforced**
    (no `asyncio.wait_for` anywhere in `experiment.py`) — a trickling model
-   would run forever. Plan 011 mandates enforcement.
+   would run forever. Plan 012 mandates enforcement.
 
 ## Current state
 
@@ -195,7 +198,7 @@ Per question, classify: **agree** (same entities/events), **partial**
 **unverifiable** (citation not found in packet). Hallucination check: any
 cited passage must substring-match the packet; mismatches are recorded as
 citations-not-found. The matrix plus both raw answers land in
-`deliverables/011-direct-reading-baseline/results.md`.
+`deliverables/012-direct-reading-baseline/results.md`.
 
 ### 6. Live discipline
 
@@ -226,12 +229,12 @@ change only in Slice 0 repairs.
 - `src/weaver/cli.py` (`direct-reading` experiment name)
 - `src/weaver/model_layer/fake.py` only if a scripted direct-reading
   response set is needed (additive only)
-- Plan 011 deliverables and `plans/README.md`
+- Plan 012 deliverables and `plans/README.md`
 
 ### Out of scope
 
 - `conversation/`, `agent/`
-- compiled memory, retrieval, LangGraph, wiki generation (Plan 012+)
+- compiled memory, retrieval, LangGraph, wiki generation (Plan 014+)
 - multi-packet reading; packet text in receipts; `.env` loading
 
 ## Commands
@@ -259,7 +262,7 @@ behavior change observed in existing provider/corpus tests.
 
 ### Slice 1: Confirm the learning gate
 
-Answer five questions in `deliverables/011-direct-reading-baseline/learning.md`:
+Answer five questions in `deliverables/012-direct-reading-baseline/learning.md`:
 
 1. Packet selection: which chapters from Shadow Slave form the reading
    packet, and what makes them a good test (standalone arc, known
@@ -277,7 +280,7 @@ Answer five questions in `deliverables/011-direct-reading-baseline/learning.md`:
 Re-verify every cited line in the drafted 2026-07-30 answers (the packet
 signature claim there is stale).
 
-Commit: `plan 011: learning gate answers`
+Commit: `plan 012: learning gate answers`
 
 ### Slice 2: Build the reading experiment
 
@@ -297,7 +300,7 @@ Steps:
 5. Receipt payload: packet metadata + hashes + answers + token counts +
    error categories only (Contract §2). Post-run receipt scan (Contract §2).
 
-Commit: `plan 011: direct-reading experiment`
+Commit: `plan 012: direct-reading experiment`
 
 ### Slice 3: Fake-model dry run
 
@@ -311,7 +314,7 @@ uv run weaver experiment direct-reading --fake
 The dry run must complete without a key and produce the same receipt
 structure as the live run.
 
-Commit: `plan 011: fake dry-run for direct reading`
+Commit: `plan 012: fake dry-run for direct reading`
 
 ### Slice 4: Live run and evidence
 
@@ -323,11 +326,11 @@ uv run weaver experiment direct-reading --live
 
 Record: raw answers, token counts, the comparison matrix, refusals,
 hallucinations (citations-not-found), and error categories. Write results to
-`deliverables/011-direct-reading-baseline/results.md` — answer text and
+`deliverables/012-direct-reading-baseline/results.md`: answer text and
 metadata only, no chapter text. Verify `reasoning_effort: high` on the first
 call (Contract §6).
 
-Commit: `plan 011: live direct-reading evidence`
+Commit: `plan 012: live direct-reading evidence`
 
 ## Test plan
 
@@ -358,7 +361,7 @@ Commit: `plan 011: live direct-reading evidence`
 
 ## Done criteria
 
-- [ ] Owner confirmed Plan 011 learning gate (chapter list, questions,
+- [ ] Owner confirmed Plan 012 learning gate (chapter list, questions,
   methodology).
 - [ ] Plan 010 is accepted.
 - [ ] Slice 0 repairs merged with their regression tests.
@@ -370,7 +373,7 @@ Commit: `plan 011: live direct-reading evidence`
 - [ ] Full tests and lint pass.
 - [ ] No changes to `conversation/` or `agent/`.
 - [ ] Two independent reviews have no open blocker.
-- [ ] Owner records Plan 011 final decision.
+- [ ] Owner records Plan 012 final decision.
 
 ## STOP conditions
 
@@ -394,7 +397,7 @@ Stop and report if:
   that handles novel text must guarantee by construction that prose never
   reaches receipt writers (this plan's receipt-scan pattern is the template).
 - This baseline is the control group for compiled-memory experiments
-  (Plan 012+); keep the packet selection and question set stable so later
+  (Plan 014+); keep the packet selection and question set stable so later
   results are comparable.
 - The smoke-vs-contract stop-on-first-failure asymmetry is deliberate
   (Contract §6); if it ever changes, both experiments must be updated
@@ -405,7 +408,7 @@ Stop and report if:
 
 ## Deferred work
 
-- Compiled-memory experiments (Plan 012+) — use this baseline as the control
+- Compiled-memory experiments (Plan 014+): use this baseline as the control
   group.
 - Multi-packet reading (chapters across multiple context windows).
 - Tool-based retrieval (lookup_passage tool during conversation).

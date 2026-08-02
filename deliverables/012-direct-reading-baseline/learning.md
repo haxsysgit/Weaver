@@ -4,7 +4,7 @@
 
 **Unadmitted. Owner confirmation required before implementation.**
 
-Plan 010 must be accepted first. This confirmation admits Plan 011
+Plans 010 and 011 must be accepted first. This confirmation admits Plan 012
 implementation. It does not accept the future implementation. The final owner
 decision remains pending after tests, inspection, and independent review.
 
@@ -12,7 +12,7 @@ decision remains pending after tests, inspection, and independent review.
 
 Weaver has never read a novel. Every plan so far built infrastructure.
 
-Plan 011 is the first time a model receives chapter text and answers
+Plan 012 is the first time a model receives chapter text and answers
 comprehension questions. It sends identical chapter packets to both
 `deepseek-v4-flash` and `deepseek-v4-pro`, asks the same questions, and
 produces a structured comparison. The result is the baseline against which
@@ -35,7 +35,7 @@ measured.
   for dry runs. The `--fake` flag scripts two models giving slightly different
   answers to the same questions.
 - `experiment.py` (`src/weaver/experiment.py`): existing experiment framework
-  with `model-smoke` and `provider-tool-contract`. Plan 011 adds
+  with `model-smoke` and `provider-tool-contract`. Plan 012 adds
   `run_direct_reading` following the same pattern: an async function returning
   a `dict` with structured results, registered in the CLI experiment table.
 - `receipts.py` (`src/weaver/receipts.py`): writes experiment results to

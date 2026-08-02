@@ -2,8 +2,116 @@
 
 ## Status
 
-Implemented 2026-07-31 (Slices 1-4); one repair pass applied after two
-clean reviews (both rechecks PASS). Awaiting owner decision.
+Final developer-console repair built, independently reviewed, accepted, and
+closed 2026-08-02. The complete command floor is green.
+
+## Final developer-console repair (2026-08-02)
+
+### Observations
+
+- Raw terminal proof explains the broken history key: byte `0x08` reaches
+  Textual as Backspace, not Ctrl+H. Byte `0x14` reaches it as Ctrl+T.
+- The old composer had no height rule, so Textual split the screen and gave
+  it 12 rows at 80 x 24. The repaired composer owns a 3 to 8 row range and
+  sizes from Textual's wrapped document height.
+- Chat switching previously changed only `_conv_id` and appended a status
+  line. It never loaded or redrew persisted items.
+- A cancelled conversation already refused another send, but the TUI had no
+  explicit recovery view.
+
+### Built
+
+- Terminal-safe keys: Enter sends; Ctrl+J always adds a line; Shift+Enter is
+  an optional alias; Ctrl+T opens turn history; Ctrl+R chooses a chat;
+  Ctrl+N starts a chat; Ctrl+C cancels or clears; Ctrl+Q quits; F1 shows the
+  complete help overlay.
+- `ChatInput` starts at 3 rows, grows for explicit and wrapped lines, caps at
+  8 rows, scrolls internally, and resets after send or clear.
+- The main console uses an open transcript, compact composer, clearer focus,
+  quiet Weaver colours, a streaming preview, and contextual status hints.
+- Owner messages and Weaver responses now open with distinct `OWNER` and
+  `WEAVER` labels and a blank row between role blocks. The streaming preview
+  carries the same Weaver label. Raw provider reasoning remains private and
+  is never rendered.
+- `SessionWeave.load_transcript()` returns only `message_id`, `turn_id`,
+  `role`, `content`, and `created_at`. Empty openers, tool-request assistant
+  records, tool calls, tool results, and empty assistant records are removed.
+- `SessionWeave.conversation_exists()` distinguishes an empty chat from an
+  unknown ID.
+- Ctrl+N clears the visible transcript. Ctrl+R loads and replaces it from
+  SQLite. Compact overlays no longer use Textual's oversized Header widget.
+- Cooperative cancellation opens explicit Start new chat, Choose another
+  chat, and Escape-back routes. It does not claim it can restart model work.
+
+### Red and green evidence
+
+- Initial focused red run: 5 failed, 1 passed. Missing transcript seam,
+  12-row composer, stale picker transcript, and missing help/recovery screens
+  all failed for the expected reasons.
+- First implementation run exposed one stylesheet error: Textual rejected
+  CSS `min()` and blocked every overlay. Replacing it with `width` plus
+  `max-width` fixed the actual parser error.
+- Re-run: 8 focused repair tests passed.
+- Pre-review TUI/session focus: 38 passed.
+- Review repair 1: same-chat canonical-redraw test failed, then passed after
+  removing the early return.
+- Review repair 2: compact-overlay geometry and complete-help tests failed,
+  then passed after content-height sizing and copy repair.
+- Final layout red run: 3 role-separation tests failed because the transcript
+  had no labels and the streaming preview exposed only response text.
+- Final layout green run: new-send, streaming, persisted-reload, and
+  consecutive-turn tests passed with distinct OWNER and WEAVER blocks at
+  both 80 x 24 and 120 x 36.
+- Runtime review found missing direct proof for cancelled and failed result
+  ordering. The added tests now pin OWNER, owner message, WEAVER, then the
+  cancellation or safe-failure line.
+- UX review reproduced four cells of horizontal scroll for Markdown at
+  80 x 24. Removing transcript horizontal padding reduced it to zero at both
+  supported sizes while preserving the complete final words.
+- A second UX pass found Rich's default H2 colour rendered at about 1.6:1
+  contrast. Explicit Weaver heading colours now give the tested H2 about
+  13:1 contrast against the transcript background.
+
+### Diagram evidence
+
+- Draw.io source and SVG both parse as XML.
+- Source count: 23 cells, 14 vertices, 7 edges; every edge has geometry.
+- No Mermaid files exist.
+- draw.io CLI: unavailable locally. A matching SVG was maintained directly.
+- SVG preview converted to a 1400 x 900 PNG in `/tmp` and visually inspected.
+
+### Final command floor and use evidence
+
+- `uv run pytest tests/test_tui.py tests/test_tui_widgets.py -q`: 44 passed.
+- `uv run pytest -q`: 247 passed.
+- `uv run ruff check src/weaver tests`: clean.
+- `uv pip check`: 124 packages checked, all compatible.
+- `uv lock --check`: resolved successfully.
+- Real PTY session at 80 x 24: `weaver chat --fake` opened, sent one fixed
+  synthetic message, displayed the OWNER and WEAVER blocks with a blank row
+  between them, streamed and persisted the reply, and exited with Ctrl+Q.
+  Fresh `SessionWeave` readback returned owner/Weaver roles and the same
+  synthetic exchange; SQLite mode was 600.
+- Changed-file scan: no credential pattern, private source prose, chapter
+  text, secret, or raw reasoning field found. Synthetic privacy canaries are
+  confined to tests and proven absent from `load_transcript()` output.
+- Staged-file list: empty. The owner's pre-existing untracked notes and
+  `spikes/` stayed untouched.
+- Recorded verification failures: one shell-quoting error in the first scan
+  command; direct `/tmp` deletion was rejected by the safety layer; recoverable
+  trash was unsupported for `/tmp`. These did not change repository data.
+
+### Owner decision
+
+> Accepted as Weaver’s developer and debugging console. No further product polish.
+
+Maintenance bug fixes remain allowed. The TUI is no longer a product surface.
+
+## Historical implementation record
+
+The sections below preserve the earlier Plan 010 slices and their executed
+evidence. Counts and UI descriptions there are point-in-time records, not the
+final 2026-08-02 candidate.
 
 ## Executed commands
 

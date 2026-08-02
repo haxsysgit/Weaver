@@ -6,10 +6,12 @@
 
 ## Status
 
-- **State:** Accepted 2026-07-31; **reopened by owner 2026-07-31 for UI
-  sharpening** (stay-open directive: "keep it open, i'll probably be in plan
-  10 for a while"). Original acceptance stands for the chat core; new UI
-  phases amend this plan and get their own review before the owner gate.
+- **Tooling:** All work in this plan uses `uv` — `uv run` for every command,
+  `uv add` for dependencies (updates `uv.lock`), `uv sync`/`uv lock --check`
+  for the environment. No pip or poetry anywhere.
+- **State:** Accepted and closed 2026-08-02 as Weaver's developer and
+  debugging console. Maintenance bug fixes remain allowed. The TUI is no
+  longer a product surface and receives no further product polish.
 - **UI sharpening phases (owner discussion 2026-07-31):** A quick wins
   (footer status bar, startup card, resume line, reply styling); B streaming
   deltas (model-layer seam, review like the persist carve-out); C capability
@@ -37,6 +39,12 @@
   prevent_default()s the base enter handler), markdown rendering for
   replies, and conversation resume (^r picker of recent conversations,
   ^n starts a fresh one, SessionWeave.list_conversations).
+- **Final developer-console repair:** Accepted 2026-08-02. Adds the
+  3 to 8 row composer, audited terminal-safe keys, filtered transcript seam,
+  correct new/switch chat redraw, compact overlays, F1 help, and explicit
+  cancellation recovery. The owner-directed closeout adds distinct OWNER and
+  WEAVER blocks to new sends, streaming, and persisted transcript redraws;
+  prevents horizontal Markdown clipping; and gives headings readable colours.
 - **Priority:** P2
 - **Effort:** M
 - **Risk:** Medium (new dependency, first UI surface, cooperative-only cancellation)
@@ -47,7 +55,7 @@
   no `fire`, real tool signatures); cancellation contract pinned as
   cooperative-only after a live repro of sticky task cancellation
 - **Learning gate:** `deliverables/010-tui-entrypoint/learning.md`
-- **Final decision:** pending
+- **Final decision:** Accepted as Weaver’s developer and debugging console. No further product polish.
 - **Executor corrections (owner-authorized, 2026-07-31):** `SessionWeave.send()`
   gains an optional `cancel_event` kwarg (Contract §4 needs the TUI to set it;
   `None` preserves Plan 008/009 behavior); chat sessions use
@@ -81,6 +89,9 @@ The owner deferred TUI development to Plan 007 (`plans/007-restart-safe-conversa
 Plan 007 is complete. The TUI attachment point exists.
 
 ## Current state
+
+This is the admission snapshot from 2026-07-31. Later phase sections and the
+2026-08-02 final repair section supersede its UI and dependency descriptions.
 
 ### `src/weaver/cli.py:17-118` — Weaver CLI (corrected)
 
@@ -163,8 +174,8 @@ never writes library files.
 - `weaver chat` (default, live): requires `DEEPSEEK_KEY`; absent → exit 2
   before any
   call or receipt (same as the experiment commands).
-- The active mode is displayed in the TUI header (e.g. `Weaver — fake` /
-  `Weaver — live deepseek-v4-flash`) so the owner is never unsure which mode
+- The active mode is displayed in the contextual status line (for example,
+  `fake` or `live deepseek-v4-flash`) so the owner is never unsure which mode
   is running.
 
 ### 4. Cancellation contract (cooperative-only)
@@ -382,7 +393,13 @@ Commit: `plan 010: TUI code-path test`
 - [x] Full tests and lint pass.
 - [x] No changes to `agent/`, `model_layer/`; `conversation/` change is the
   sanctioned `send(cancel_event=...)` seam only.
-- [ ] Two independent reviews have no open blocker.
+- [x] Auto-growing 3 to 8 row composer works at 80 x 24 and 120 x 36.
+- [x] Raw terminal bytes prove Ctrl+J newline and Ctrl+T history.
+- [x] Typed transcript and conversation-existence seams are implemented.
+- [x] New/switch chat replaces the visible transcript.
+- [x] Cooperative cancellation shows explicit recovery routes.
+- [x] F1 help and compact overlays work at both required terminal sizes.
+- [x] Two independent reviews have no open blocker.
 - [ ] Owner records Plan 010 final decision.
 
 ## STOP conditions
@@ -406,19 +423,23 @@ Stop and report if:
 - Exposing `fetch`/`update` to chat later requires re-classifying them as
   `EXTERNAL_EFFECT` with an approval path (audit finding B2) — do not
   shortcut this by registering them in a maintenance policy.
-- The TUI is the integration surface for Plan 011 and the memory plans; keep
-  `WeaverChat` thin (send + render) so those plans can attach views without
-  rewriting it.
+- The TUI remains a thin developer and debugging adapter. Product-facing chat
+  work moves to Plan 011 and later web plans, without adding product polish
+  here.
 - Textual versions move fast; the import check in the verification floor is
   the guard, and `uv.lock` pins the tested version.
 
 ## Deferred work
 
+This list is the original admission record. Streaming, markdown, and basic
+multi-conversation controls were later admitted and built inside Plan 010.
+
 - Streaming text display (character-by-character in TUI).
 - Markdown rendering, syntax highlighting, scroll-to-bottom.
 - Multi-conversation TUI (tabs, conversation list).
-- Direct-reading baseline (Plan 011) and compiled memory experiments use
-  this TUI as their interface.
+- Direct-reading baseline (Plan 012) and compiled-memory experiments (Plan
+  014+) may reuse the conversation runtime, but the TUI is not their product
+  interface.
 - Exposing network-backed library tools to chat (with an external-effect
   gate).
 
@@ -445,3 +466,44 @@ partial. One reproducible bug, fixed. Doc fixes:
 6. NOTE — invalid TOML or [chat] model surfaces as a raw traceback
    (cli.run does not catch load_startup_config's ValueError). Cosmetic;
    a clean ERROR line is future work.
+
+## Final developer-console repair slice (2026-08-02)
+
+### Hypotheses confirmed by red tests
+
+1. Ctrl+H was broken because the terminal byte is parsed as Backspace.
+   Ctrl+T has its own raw byte and is safe for turn history.
+2. The half-screen composer came from flexible layout with no owned height.
+3. Chat switching stayed visually stale because only `_conv_id` changed.
+4. Safe cancellation already existed in the runner, but the console needed a
+   visible route away from the interrupted chat.
+
+### Candidate contract
+
+- `ChatInput`: 3 rows initially; grow for explicit or wrapped lines; cap at
+  8 rows and scroll; reset after send or clear.
+- Keys: Enter send; Ctrl+J newline; optional Shift+Enter newline; Ctrl+T turn
+  history; Ctrl+R choose chat; Ctrl+N new chat; Ctrl+C cancel/clear; Ctrl+Q
+  quit; F1 complete help.
+- `SessionWeave.load_transcript(conversation_id)` exposes only owner/Weaver
+  prose with five fields. Private tool protocol and empty records stay out.
+- `SessionWeave.conversation_exists(conversation_id)` separates an empty chat
+  from an unknown ID.
+- New chat and chosen chat replace the RichLog instead of appending a status
+  line.
+- A settled cooperative cancellation opens safe new-chat, choose-chat, and
+  back routes. Existing model recovery methods remain unwired.
+- The main view stays open and minimal. History, picker, help, and recovery
+  use compact titled panels with no Header widget.
+- New sends, streaming previews, and persisted redraws label OWNER and WEAVER
+  blocks with a blank row between them. Raw provider reasoning stays private.
+
+### Gate
+
+Complete. The command floor, real TUI, updated diagram, and independent
+reviews passed. The owner recorded:
+
+> Accepted as Weaver’s developer and debugging console. No further product polish.
+
+Plan 010 is closed. Maintenance bug fixes remain allowed, but the TUI is no
+longer a product surface.
