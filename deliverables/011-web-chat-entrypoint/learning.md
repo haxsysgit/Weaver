@@ -20,9 +20,18 @@ browser session has been opened for this plan.
   Crawl4AI is a scraping framework, and this gate needs an interactive
   visible browser with personal sign-in, fixed viewports, screenshots, and
   accessibility-role queries, which is Playwright's native model.
-- Playwright 1.56 with Chromium is already installed in the project
-  environment and a launch was verified; the swap adds zero dependencies and
-  Crawl4AI's heavy dev-group install is dropped.
+- Playwright 1.62 with Chromium is installed in the project environment
+  (pinned `playwright>=1.62.0` in the dev dependency group; the appraisal
+  command is built on version-verified contracts, see
+  `playwright-contracts.md`). A headless launch was verified after the
+  missing chromium-1234 build was installed. The swap adds no web-runtime
+  dependencies and Crawl4AI's heavy dev-group install is dropped.
+- Contract notes from the verification: `page.accessibility` was removed in
+  Playwright 1.57, so probes use `get_by_role(role, name=...)` and tree
+  dumps use `page.aria_snapshot()`; headful is viable on this machine
+  (X11 display present, no xvfb needed); the profile directory holds
+  cookies, so it stays under `.weaver/` and the command never calls
+  `cookies()` or `storage_state()`.
 - Decision: use Playwright directly, with a managed persistent-context
   profile named `weaver-chatgpt-appraisal`. Playwright remains a
   development-only tool and never a Weaver web-runtime dependency.
