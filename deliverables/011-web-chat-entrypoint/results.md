@@ -2,8 +2,11 @@
 
 ## Status
 
-Gate 1 research tooling is built and reviewed 2026-08-02. Appraisal not yet
-run (owner signs in personally). Browser implementation not admitted.
+Gate 1 appraisal is complete and accepted by the owner 2026-08-02: the
+design reference was produced from the owner's captures and a dev-style
+extraction of the signed-in profile, and the behaviour decisions are
+recorded in decision.md. Browser implementation is admitted and in
+progress (shared runtime extracted; server and page next).
 
 ## Recorded transition
 

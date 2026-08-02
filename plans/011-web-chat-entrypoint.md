@@ -157,6 +157,7 @@ weaver web [--fake] [--port PORT]
 
 | Route | Required result |
 | --- | --- |
+| `GET /api/conversations` | `200 [{"conversation_id":"...","title":"..."}]`, newest first |
 | `POST /api/conversations` | `201 {"conversation_id":"..."}` |
 | `GET /api/conversations/{id}/messages` | filtered persisted transcript |
 | `POST /api/conversations/{id}/turns` | SSE stream for `{"message":"..."}` |
@@ -294,6 +295,13 @@ and library access are outside Plan 011.
   settings, offline state) was superseded: the owner's real captures and
   the extraction pass covered the states that matter, and the unproven
   sub-768 px collapse is recorded as a known gap in learning.md.
+- Scope correction (2026-08-02, independent review): the design
+  reference's adopt list is narrowed to Plan 011's boundaries. The
+  sidebar and its chrome, regenerate, and settings behaviours are not in
+  Plan 011 (plan Excluded list); copy is admitted only as a local browser
+  action. "Choose another chat" after cancellation needs the conversation
+  list, so the API contract gains `GET /api/conversations`. All deferred
+  UI behaviours move to Plan 013. Recorded in decision.md.
 
 ## Current stop
 

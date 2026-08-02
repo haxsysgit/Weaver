@@ -241,17 +241,29 @@ slash menu, split vertically: left nav ~180 px, right panel ~501 px,
 
 ## 10. Adopt / skip for Weaver's web chat
 
-Adopt (design only, plain HTML/CSS, no new capability):
-- 250 px sidebar, 768 px centered column, black canvas, no top header.
-- Capsule composer with plus/placeholder on the left, one status selector
-  and a send control on the right (Weaver gets a normal send arrow, the
-  voice button is skipped).
+Scope note (2026-08-02, independent review): Plan 011 excludes a full
+sidebar and message actions (plan Excluded list). The adopt list below is
+narrowed to Plan 011's one-column proof. The sidebar, regenerate, and
+settings behaviours in this reference are deferred to Plan 013, not
+adopted here.
+
+Adopt in Plan 011 (design only, plain HTML/CSS, no new capability):
+- 768 px centered column, black canvas, no top header.
+- Capsule composer with plus/placeholder on the left and a send control
+  on the right (Weaver gets a normal send arrow, the voice button is
+  skipped).
 - User bubble `#2F2F2F` radius 20 px right-aligned; assistant text bare
   on black, 16 px / 26 px line height.
-- Action row under replies (copy, regenerate), ~32 px spacing.
+- Copy as a local browser action under replies (no server round trip).
 - Hairline separators `#353535` for lists; cards `#202020` with 1 px
   `#424242` border radius 15 px only for file-like results.
 - The palette table above, verbatim.
+
+Deferred to Plan 013:
+- The sidebar (250 px and its chrome: Library, Projects, Scheduled,
+  Plugins, More, account footer) and the 52 px collapsed rail.
+- Regenerate and broader message actions; settings modal.
+- Voice, the intelligence selector, Markdown rendering, PWA.
 
 Skip (capability or noise):
 - Voice mode, mic, dictation.

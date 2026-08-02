@@ -46,7 +46,8 @@ Plan 010 is **Accepted and closed** (2026-08-02); its decision is recorded in
 and debugging console. Maintenance bug fixes are allowed, but it receives no
 further product polish and is no longer a product surface.
 
-Plan 011 is unadmitted at its appraisal learning gate. Do not start the shared
-runtime, server, API, or browser interface until the owner confirms the
-sanitized ChatGPT-to-Weaver behaviour decisions. Plan 012 remains gated behind
-Plan 011. Do not begin Plan 013 automatically.
+Plan 011 is admitted for implementation (Gate 1 appraisal accepted
+2026-08-02; behaviour decisions in `deliverables/011-web-chat-entrypoint/decision.md`).
+The shared runtime is extracted; the server and browser interface are in
+implementation. Plan 012 remains gated behind Plan 011. Do not begin Plan 013
+automatically.

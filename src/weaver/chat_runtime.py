@@ -34,6 +34,7 @@ from .model_layer import (
     ModelLayer,
     ModelMessage,
     ModelResponse,
+    ModelStopReason,
 )
 
 Surface = Literal["developer", "web"]
@@ -56,21 +57,22 @@ WEB_SYSTEM_PROMPT = (
 WEB_ACTIVE_TOOLS: tuple[str, ...] = ()
 
 # Scripted fake-mode reply: friendly, non-streamed, honest about being fake.
+# Surface-neutral text: it must not advertise a command that only one of
+# the two surfaces knows (independent review finding, 2026-08-02).
 FAKE_RESPONSES = (
     ModelResponse(
         assistant_message=ModelMessage(
             role="assistant",
             content=(
                 "I read you. This is a fake-mode reply (--fake), no real "
-                "model is running. Set DEEPSEEK_KEY and run `weaver web` "
-                "to talk to the real Weaver."
+                "model is running. Set DEEPSEEK_KEY and start again to talk "
+                "to the real Weaver."
             ),
         ),
         provider_id=DEEPSEEK_FLASH.provider_id,
         model_id=DEEPSEEK_FLASH.model_id,
-        stop_reason="stop",
+        stop_reason=ModelStopReason.STOP,
         raw_stop_reason="stop",
-        usage=None,
     ),
 )
 

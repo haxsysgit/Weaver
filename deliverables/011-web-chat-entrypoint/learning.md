@@ -16,8 +16,14 @@ results.md).
 
 ## Observation
 
-No current ChatGPT UI observation has been recorded yet. No authenticated
-browser session has been opened for this plan.
+The appraisal ran on 2026-08-02 against the owner's signed-in ChatGPT
+Plus profile (dark theme): the owner's six screenshots plus a live
+dev-style extraction (computed styles, rects, CSS variables, font stack)
+produced the design reference with measured values. Raw captures stay
+owner-only under `.weaver/research/chatgpt-ui/`. The reference's
+adopt/skip list was narrowed to Plan 011's scope (no sidebar, no
+regenerate, copy only as a local browser action); the rest is deferred to
+Plan 013.
 
 ## Appraisal tool decision (owner-approved 2026-08-02)
 
