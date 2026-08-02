@@ -35,8 +35,25 @@ run (owner signs in personally). Browser implementation not admitted.
 - Independent review: PASS after one repair pass (fail-visible probe exit
   code, profile dir renamed to match the recorded name, records updated).
 
+## Appraisal evidence (2026-08-02)
+
+- Owner signed in personally through the persistent profile (Cloudflare
+  passed after the automation-fingerprint fix). Screenshots and
+  dev-accurate extractions captured; the probe checklist was a dead end
+  (wrong role names, mismatch with real UI) and was replaced by a
+  dev-style extractor (`src/weaver/chatgpt_extract.py`) that pulls
+  computed styles, rects, CSS custom properties, and font stacks from the
+  live signed-in page in dark theme.
+- The design reference
+  (`deliverables/011-web-chat-entrypoint/chatgpt-ui-design-reference.md`)
+  is now built from measured values: 260 px sidebar, 768 px column,
+  composer 28 px radius `#212121`, slash menu and settings modal 16 px
+  radius with the layered popover shadow, system-ui font stack with the
+  "Circle" webfont on top, dark palette from CSS variables.
+- Raw captures live owner-only under `.weaver/research/chatgpt-ui/`
+  (never committed).
+
 ## Pending
 
-- The owner runs the appraisal (sign in personally, walk the fixed states).
-- Sanitized observation matrix, decision table, and Weaver state map.
-- Owner decision on adopted behaviours; only then is Gate 2 admitted.
+- Owner decision on adopted behaviours (the adopt/skip list at the end of
+  the design reference); only then is Gate 2 admitted.
