@@ -62,3 +62,23 @@ progress (shared runtime extracted; server and page next).
 
 - Owner decision on adopted behaviours (the adopt/skip list at the end of
   the design reference); only then is Gate 2 admitted.
+
+## Gate 2 build (2026-08-02)
+
+- Shared runtime extracted from cli.py with `open_chat_runtime(state_dir,
+  *, live, surface)`: developer and web profiles, no-conversation-on-open,
+  missing live credentials raise before any state dir exists.
+- FastAPI app: conversation create/list, filtered transcript, SSE turns,
+  cooperative cancel, owned turn tasks with per-stream asyncio queues,
+  settlement on disconnect and shutdown (cancel event, never task.cancel
+  on model work), 422 blank/over-32000-char, 404 unknown conversation,
+  409 second active turn.
+- Plain HTML/CSS/JS page: textContent rendering, same-origin assets, no
+  CDN or framework. Real ephemeral uvicorn proof: create → list → stream
+  (delta before completed) → transcript → reload with no duplicates; no
+  private canaries in HTML/JSON/SSE/JS/logs.
+- Width inspection (headless Chromium, direct binary, no Playwright):
+  desktop 1440x900 capsule centered in the 768 px column with black
+  gutters; phone 390x844 capsule spans near full width with the accent
+  send button. Evidence: `evidence/web-desktop-1440x900.png`,
+  `evidence/web-phone-390x844.png`.
