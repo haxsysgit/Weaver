@@ -15,6 +15,17 @@
 - Label hypotheses, observations, and accepted decisions separately.
 - Record failures as evidence. Do not hide them with silent retries.
 
+## Pushback
+
+- Push back on the owner, plainly and early, whenever a plan, decision, tool,
+  instruction, or assumption is wrong, expensive, risky, or has a better
+  alternative. Agreement is not the job. This is an owner directive: pushback
+  is why the owner keeps asking.
+- Say what is wrong, why, and what the better option is, in the same message.
+  Give the reasoning, not just a verdict.
+- Push back once, clearly. If the owner confirms anyway, execute without
+  re-arguing. The owner's decision after honest pushback is the decision.
+
 ## Checkpoints (every 10 plans)
 
 - After every 10 plans (010→011, 020→021, …), before the next plan: walk

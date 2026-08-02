@@ -39,16 +39,22 @@ The first Plan 011 slice is research, not implementation.
 
 ### Research dependency and command
 
-- Add Crawl4AI to the development dependency group only. It must never become
-  a Weaver web-runtime dependency.
+- Use Playwright directly (already in the project environment with Chromium
+  installed) for the visible-browser appraisal. Owner-approved deviation
+  2026-08-02: the draft's Crawl4AI is a scraping framework, the wrong shape
+  for interactive sign-in and fixed-state observation; Playwright's
+  persistent-context profiles and accessibility-role queries are the native
+  fit and add zero dependencies. Playwright stays a development-only tool
+  and must never become a Weaver web-runtime dependency.
 - Provide one repeatable research command using a dedicated managed Chromium
   profile named `weaver-chatgpt-appraisal`.
 - Open a visible browser. The owner signs in personally.
 - Never accept, export, print, log, or commit cookies or credentials.
 - Prefer accessibility roles and accessible names. Fail visibly when a state
   cannot be reached.
-- Before the command is built, verify the current Crawl4AI contracts against
-  its official identity, browser-hook, and interaction documentation.
+- Before the command is built, verify the current Playwright contracts for
+  persistent contexts, accessibility-role queries, and viewport control
+  against its official documentation.
 
 ### Fixed appraisal scope
 

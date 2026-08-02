@@ -14,6 +14,19 @@ runtime, API, or browser build.
 No current ChatGPT UI observation has been recorded yet. No authenticated
 browser session has been opened for this plan.
 
+## Appraisal tool decision (owner-approved 2026-08-02)
+
+- The draft specified Crawl4AI for the appraisal. The executor pushed back:
+  Crawl4AI is a scraping framework, and this gate needs an interactive
+  visible browser with personal sign-in, fixed viewports, screenshots, and
+  accessibility-role queries, which is Playwright's native model.
+- Playwright 1.56 with Chromium is already installed in the project
+  environment and a launch was verified; the swap adds zero dependencies and
+  Crawl4AI's heavy dev-group install is dropped.
+- Decision: use Playwright directly, with a managed persistent-context
+  profile named `weaver-chatgpt-appraisal`. Playwright remains a
+  development-only tool and never a Weaver web-runtime dependency.
+
 ## Appraisal contract
 
 - Use a visible managed Chromium profile named `weaver-chatgpt-appraisal`.
