@@ -135,6 +135,9 @@ class ToolRegistry:
             raise ValueError(f"duplicate tool name: {tool.name}")
         self._tools[tool.name] = tool
 
+    def has(self, name: str) -> bool:
+        return name in self._tools
+
     def active_schemas(
         self,
         active_names: tuple[str, ...],

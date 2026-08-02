@@ -1,6 +1,5 @@
 import argparse
 import asyncio
-import dataclasses
 import json
 import os
 from pathlib import Path
@@ -8,6 +7,10 @@ from typing import Sequence
 
 from pydantic import ValidationError
 
+from .chat_runtime import (
+    _developer_tool_registry,
+    open_chat_runtime,
+)
 from .config import DEFAULT_TIMEOUT_SECONDS, load_startup_config
 from .corpus.errors import CorpusError, safe_error_message
 from .corpus.tools import (
@@ -15,8 +18,6 @@ from .corpus.tools import (
     export_novel,
     fetch_novel_chapters,
     inspect_novel_corpus,
-    register_chat_tools,
-    service_from_environment,
     update_novel_corpus,
 )
 from .doctor import run_doctor
@@ -32,45 +33,14 @@ from .model_layer import (
     DeepSeekProvider,
     FakeModelProvider,
     ModelLayer,
-    ModelMessage,
-    ModelResponse,
-    ModelStopReason,
 )
-from .agent.tools import (
-    EffectKind,
-    ToolDefinition,
-    ToolExecutionPolicy,
-    ToolRegistry,
-)
+from .agent.tools import ToolRegistry
 from .conversation.session import SessionWeave
 from .tui import WeaverChat
 
-# Chat session system prompt: Weaver words only, never the word "corpus"
-# (Plan 010 Contract §1).
-CHAT_SYSTEM_PROMPT = (
-    "You are Weaver, a lifelong reader with a private library of novels. "
-    "Keep replies plain and honest. You can inspect the library, build "
-    "reading packets, and export editions. You cannot fetch or update the "
-    "library from chat."
-)
-
-# Scripted fake-mode reply: friendly, non-streamed, honest about being fake.
-CHAT_FAKE_RESPONSES = (
-    ModelResponse(
-        assistant_message=ModelMessage(
-            role="assistant",
-            content=(
-                "I read you. This is a fake-mode reply (--fake), no real "
-                "model is running. Set DEEPSEEK_KEY and run `weaver chat` "
-                "to talk to the real Weaver."
-            ),
-        ),
-        provider_id="deepseek",
-        model_id=DEEPSEEK_FLASH.model_id,
-        stop_reason=ModelStopReason.STOP,
-        raw_stop_reason="stop",
-    ),
-)
+# NOTE: the developer surface's system prompt and fake responses live in
+# chat_runtime as DEVELOPER_SYSTEM_PROMPT and FAKE_RESPONSES. cli re-exports
+# nothing.
 
 
 def _state_root() -> Path:
@@ -156,28 +126,10 @@ def _parser() -> argparse.ArgumentParser:
 def _chat_tool_registry() -> ToolRegistry:
     """Echo + library inspection tools only (Plan 010 Contract §2).
 
-    fetch/update are never registered, so the chat session cannot invoke
-    network-backed tools at all.
+    Thin adapter over the shared developer registry so existing tests
+    keep importing the cli seam.
     """
-    registry = ToolRegistry()
-
-    async def echo_handler(arguments: dict, context) -> dict:
-        return {"echo": arguments}
-
-    registry.register(
-        ToolDefinition(
-            name="echo",
-            description="Echo back arguments (development tool).",
-            parameters={
-                "type": "object",
-                "properties": {"message": {"type": "string"}},
-            },
-            handler=echo_handler,
-            effect_kind=EffectKind.READ,
-        )
-    )
-    register_chat_tools(registry, service_from_environment(live_source=False))
-    return registry
+    return _developer_tool_registry()
 
 
 async def _build_chat_session(
@@ -191,61 +143,16 @@ async def _build_chat_session(
     fresh conversation started. _run_chat runs the app on top; tests use
     this builder to exercise the same code path without a terminal.
     """
-    # Config [chat] model (alias or id) picks the model; flash is the default.
-    model_id = os.environ.get("WEAVER_CHAT_MODEL") or DEEPSEEK_FLASH.model_id
-
-    if live:
-        api_key = os.environ.get("DEEPSEEK_KEY")
-        if not api_key:
-            raise ValueError("live chat requires DEEPSEEK_KEY")
-        provider = DeepSeekProvider(
-            api_key,
-            timeout_seconds=DEFAULT_TIMEOUT_SECONDS,
-        )
-    else:
-        # Checkpoint audit fix: the scripted response carries the requested
-        # model id so [chat] model = pro no longer fails every fake turn
-        # (the fake stands in for any registered model).
-        provider = FakeModelProvider(
-            "deepseek",
-            models=DEEPSEEK_MODELS,
-            responses=(
-                dataclasses.replace(
-                    CHAT_FAKE_RESPONSES[0],
-                    model_id=model_id,
-                ),
-            ),
-        )
-
-    mode_label = f"live {model_id}" if live else "fake"
-
-    model_layer = ModelLayer()
-    model_layer.register_provider(provider)
-    model = model_layer.get_model(
-        DEEPSEEK_FLASH.provider_id,
-        model_id,
-    )
-    registry = _chat_tool_registry()
-    sw = SessionWeave(
+    runtime = await open_chat_runtime(
         state_dir,
-        model_layer=model_layer,
-        model=model,
-        system_prompt=CHAT_SYSTEM_PROMPT,
-        tool_registry=registry,
-        active_tools=(
-            "echo",
-            "inspect_novel_corpus",
-            "build_novel_packet",
-            "export_novel",
-        ),
-        execution_policy=ToolExecutionPolicy.maintenance(),
+        live=live,
+        surface="developer",
     )
-    await sw.open()
     try:
-        conv_id = await sw.start_conversation("")
-        return sw, conv_id, mode_label
+        conv_id = await runtime.session.start_conversation("")
+        return runtime.session, conv_id, runtime.mode_label
     except Exception:
-        await sw.close()
+        await runtime.close()
         raise
 
 
