@@ -1,24 +1,35 @@
-# Results: Lore graph build (Shadow Slave 1-100)
+# Results: Build Weaver's first Shadow Slave knowledge
 
 ## Status
 
-Pilot slice complete (chapter 1, three eyes), approved by the owner
-2026-08-03 with two binding rules: fresh-context reader subagents, and
-readers open only their assigned chapter file. Full run 2-100 in progress.
-Final owner decision pending.
+Plan wording locked by the owner 2026-08-03 (plain-language revision). The
+old chapter 1 attempt is quarantined to a private `old-attempts` folder.
+Reading has not started. Final owner decision pending.
 
-## Pilot (2026-08-03)
+## Timeline
 
-- Chapter 1 read by the orchestrating agent plus two reader lenses
-  (plot/causality, characters/worldbuilding); all three analyses reconciled
-  into chapters/0001.md, lore-graph.jsonl (entities + edges with chapter
-  evidence), threads.md (8 open threads), timeline.md, method.md under
-  .weaver/knowledge/shadow-slave/.
-- Research on fictional understanding for agents recorded in method.md
-  (Narrative World Model, ReadAgent, STAGE, ReverieMem, story-bible tools).
-- Process lesson recorded and fixed: the first pilot used session-inheriting
-  readers that wrote files themselves (including this results file) against
-  instruction. The approved loop uses fresh-context reader subagents that
-  return analysis text only; the orchestrating agent is the sole writer.
-- No novel file modified; no KB content committed; KB perms 700 (dirs) /
-  600 (files).
+### 2026-08-03: Plan revision locked
+
+- The owner supplied a plain-language revision of Plan 012 (reading flow,
+  saved files, notebook checker, completion list) and confirmed it.
+- Locked choices recorded in `learning.md` and `plans/012`:
+  reader-positioned knowledge (Weaver talks according to where the reader
+  is), three independent reads per chapter, pure reading with no embeddings
+  or search, chapters 1-100 from the start, old attempt quarantined, short
+  novel excerpts allowed only in private chapter notes, chapter JSON files
+  are the master copy.
+- The early chapter 1 pilot (built before the gate record and final
+  contract) is candidate evidence only, never accepted output. Its verified
+  content will not be reused in the new run.
+
+## Checks run
+
+- None yet for the main reading. The notebook checker
+  (`scripts/check_story_notebook.py`) is built on synthetic data before
+  chapter 1 is re-read.
+
+## Outcomes
+
+- No novel file modified.
+- No knowledge base content committed.
+- No private story knowledge in committed files.

@@ -18,7 +18,7 @@ evidence, review, and human decision gates must also be complete.
 | [009 - Context assembler](009-context-assembler.md) | Accepted 2026-07-31 | Plan 008 accepted | Give run_turn() a context window it can't exceed: token budget, truncation, pinned owner message |
 | [010 - TUI entrypoint](010-tui-entrypoint.md) | Accepted and closed 2026-08-02 | Plan 009 accepted | Weaver's developer and debugging console; maintenance fixes only, no further product polish |
 | [011 - Local browser chat entrypoint](011-web-chat-entrypoint.md) | Accepted 2026-08-03 | Plan 010 closed; checkpoint 001-010 complete | Appraise current ChatGPT behaviour, then prove one private local browser conversation |
-| [012 - Lore graph build (Shadow Slave 1-100)](012-direct-reading-baseline.md) | Pilot accepted 2026-08-03; chapters 2-100 in progress | Plan 011 accepted | The executing agent reads chapters 1-100 directly with two fresh-context readers per chapter and builds the private interconnected lore graph from pure reading (no vector DB / RAG) |
+| [012 - Lore graph build (Shadow Slave 1-100)](012-direct-reading-baseline.md) | Active at owner gate; early chapter-1 pilot recorded; chapters 2-100 paused | Plan 011 accepted | The executing agent reads chapters 1-100 directly with two fresh-context readers per chapter and builds the private interconnected lore graph from pure reading (no vector DB / RAG) |
 | [013 - Responsive interface and installable PWA](013-responsive-interface-pwa.md) | Deferred | Plan 012 accepted | Build the polished responsive Weaver interface (sidebar, settings, Markdown, PWA) from the Plan 011 deferrals |
 | 014+ - Compiled-memory experiments | Deferred | Plan 013 accepted | Compare bounded compiled memory with direct rereading |
 
@@ -50,7 +50,7 @@ and debugging console. Maintenance bug fixes are allowed, but it receives no
 further product polish and is no longer a product surface.
 
 Plan 011 is **Accepted** (2026-08-03); both owner decisions are recorded in
-`deliverables/011-web-chat-entrypoint/decision.md`. Plan 012 is accepted at its
-learning gate (direction and chapter-1 pilot confirmed 2026-08-03) and is
-running chapters 2-100. Plan 013 stays gated until Plan 012's final
-decision is recorded.
+`deliverables/011-web-chat-entrypoint/decision.md`. Plan 012 is active at its
+owner gate: the plan wording and locked choices are confirmed 2026-08-03,
+and the final decision is recorded after the notebook and its review. Plan
+013 stays gated until Plan 012's final decision.

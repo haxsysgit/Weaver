@@ -1,82 +1,62 @@
-# Learning Note: Lore graph build (Shadow Slave 1-100)
+# Learning Note: Build Weaver's first Shadow Slave knowledge
 
 ## Gate status
 
-**Confirmed by owner 2026-08-03** — direction and pilot accepted.
+**Confirmed by owner 2026-08-03.** The owner reviewed the plain-language
+revision of Plan 012 and locked the choices below. Reading starts after the
+owner names the agents for the three reader jobs.
 
-The owner re-scoped this plan on 2026-08-03: it is an agent-executed
-reading build, not a Weaver codebase experiment. The chapter-1 pilot was
-executed early (before the gate record was formalized), verified against
-the source, and accepted by the owner with two binding rules. The final
-owner decision still follows the full run and independent review.
+## What this plan is
 
-The superseded 2026-07-30 draft (a Weaver experiment comparing
-`deepseek-v4-flash` vs `deepseek-v4-pro` on a single novel packet, with
-packets, receipts, and `run_direct_reading`) is history; git preserves it.
-Every current record describes the lore-graph build.
+Read Shadow Slave chapters 1 to 100 and build a private story notebook:
+readable chapter notes, fixed-format JSON records, larger pages (people,
+places, powers, groups, items), and a connection file. Every saved statement
+points back to the chapter and exact location that supports it. Weaver's
+code is unchanged. The novel files stay the final source of truth.
 
-## Owner direction (2026-08-03, corrected)
+## Owner direction (2026-08-03, locked)
 
-1. **Agent-executed lore-graph build.** The coordinator (pi or Codex — the
-   plan is harness-agnostic, see `docs/process/subagent-fleet.md`) reads
-   the novel directly and builds an interconnected knowledge base (lore
-   graph) the best way it can. Weaver is NOT the reader and is not touched:
-   it lacks subagents, multi-agent orchestration, and read/bash tooling and
-   is a later milestone.
-2. **Multi-eye reading.** The coordinator dispatches two fresh-context
-   reader subagents per chapter so every chapter gets three pairs of eyes.
-   The analyses build on each other through the accumulated knowledge base.
-   Readers run with clean context, open only their assigned chapter file,
-   and return analysis text only; the coordinator is the sole writer.
-3. **The flash/Terra arms are not dead; they are the fleet.** The
-   coordinator runs as deepseek-v4-flash; a GPT-5.6 Terra/Codex reader may
-   join later. Context window claims (1M flash, 272K Terra) are
-   owner-stated, unverified in committed evidence, and unnecessary for
-   per-chapter reading; the plan does not rely on them.
-4. **Chapters:** start from the beginning of the novel, chapters 1-100
-   (verified: `novels/shadow-slave/0001-0100/`, 100 chapter files).
-5. **Pure reading knowledge base.** No vector database (Qdrant), RAG, or
-   other retrieval machinery in this plan. The accumulated reading output
-   IS the knowledge base; later plans build retrieval on top of it.
-6. **Research component.** The plan researches how to enable/implement
-   fictional understanding for agents (lore graphs, narrative
-   comprehension) and feeds the method.
-7. **Deliverable home:** `.weaver/knowledge/shadow-slave/` — private,
-   owner-only, never committed. Committed deliverables contain no novel
-   prose or story-derived knowledge.
+1. **Reader-positioned knowledge.** Weaver must only talk according to where
+   the reader is in the story. The notebook keeps "when this became known"
+   on every entry and never erases earlier knowledge when later chapters
+   reveal more. Storing the user's current chapter and preferences (best
+   character, best scene, and similar) is a later Weaver app feature, not
+   this plan.
+2. **Three independent reads per chapter.** Lead reader, plot and cause
+   checker, character and world checker. They do not see each other's
+   findings; the lead compares and reopens the novel before saving.
+3. **Pure reading.** No chunking, embeddings, vector search, or RAG in this
+   plan. Later plans build retrieval on top of the notebook.
+4. **Chapters 1 to 100, from the start** (`novels/shadow-slave/0001-0100/`,
+   100 files, verified).
+5. **The old chapter 1 attempt is quarantined.** It moves to a private
+   `old-attempts` folder and nobody reads it during the new chapter 1 run.
+   Chapter 1 is re-read from zero under the final contract.
+6. **Excerpts:** short exact novel lines are allowed only inside private
+   readable chapter notes when they help prove a point. JSON and connection
+   files store chapter locations only, never copied prose.
+7. **Knowledge labels:** `confirmed_fact`, `character_belief`,
+   `interpretation`, `theory`, `conflict`.
+8. **Master copy:** the chapter JSON files are the master; larger pages and
+   the connection file are rebuilt from them.
 
-## Binding rules (owner-approved 2026-08-03)
+## Binding rules
 
-1. **Fresh-context readers** — every reader subagent starts with a clean
-   context containing only its task prompt, the accepted-knowledge digest,
-   and the exact chapter file path. No session inheritance, no repo
-   browsing, no KB access.
-2. **Read exactly the assigned chapter(s)** — the only file a reader may
-   open is its assigned novel chapter file. Nothing else.
-
-## Roles (harness-agnostic)
-
-| Role | Contract |
-| --- | --- |
-| Coordinator and graph writer | reads every chapter; curates the accepted-knowledge digest; dispatches the two readers; reconciles; sole writer of the KB |
-| Plot and causality reader | fresh-context subagent; assigned chapter only; analysis text only |
-| Character and world-state reader | fresh-context subagent; assigned chapter only; analysis text only |
-| Independent reviewer | fresh-context, post-run; consistency checks; never edits |
-
-## Graph contract (summary)
-
-The full write contract is in `plans/012-direct-reading-baseline.md`.
-Essentials: append-only JSONL records (entity/edge/thread/checkpoint);
-atomic per-chapter batches; stable ids with aliases; confidence and
-verification marking per record; per-chapter checkpoints with source sha256;
-duplicate and dangling-edge detection; restart from the last checkpoint.
+1. **Fresh-context readers.** Each reader gets a clean context with only
+   its job, the current chapter, and the confirmed earlier knowledge. No
+   session inheritance, no browsing the repo, no touching the notebook.
+2. **Read exactly the assigned chapter.** The only novel file a reader
+   opens is its assigned chapter. No other files, ever. Readers return
+   analysis text only and never write files.
+3. **The coordinator is the sole writer** of the notebook.
+4. **Later knowledge never leaks backwards.** A chapter 40 reading never
+   uses knowledge from chapter 41. The confirmed-knowledge digest is the
+   only bridge.
 
 ## Confirmation record
 
-- Owner choice: direction confirmed and chapter-1 pilot accepted with the
-  binding rules above
+- Owner choice: plain-language plan and locked choices confirmed
 - Date: 2026-08-03
-- Corrections or added constraints: pure reading only (no vector DB/RAG);
-  chapters 1-100 from the start; harness-agnostic (no pi/fork-specific
-  patterns); readers fresh-context and chapter-file-only; coordinator sole
-  writer; git cannot restore novels (0 tracked files)
+- Corrections or added constraints: reader-positioned knowledge (owner);
+  quarantined old attempt; excerpt policy limited to private chapter notes;
+  no diagrams created or updated
