@@ -65,6 +65,22 @@
 - Do not open novel files unless an admitted plan explicitly requires a
   bounded reading packet. Plan 001 forbids reading novel content.
 
+## Reading and extraction discipline
+
+- The source text is the only source of truth. Reading the chapter straight
+  through is the work; everything else is bookkeeping.
+- Validators and checkers (for example `scripts/check_story_notebook.py`)
+  are format gates, never content graders. A PASS only proves the output is
+  well-shaped, not that it is correct or complete.
+- Never let a checker or schema drive what you extract. Extract from the
+  chapter first, in full, then check the format. If the two disagree, the
+  record is wrong, not the chapter.
+- Read each chapter to its end. Missed content clusters where a scene's
+  resolution lands after its climax (who actually killed whom, what happened
+  after the emotional peak, the closing scene).
+- Do not trust a parallel agent's notebook claims as your own extraction.
+  Verify against the source or say you verified.
+
 ## Experiments
 
 - Run deterministic tests before live model calls.
@@ -78,11 +94,9 @@
 ## Completion
 
 - Verify the admitted slice with its documented command floor.
-- Every numbered plan must include an editable Draw.io architecture diagram
-  and a rendered SVG or PNG preview in its deliverables before the final owner
-  gate. Link both from the deliverables README, validate the source, and inspect
-  the render. If the draw.io CLI is unavailable, keep the editable `.drawio`
-  source, add a matching SVG preview, and record the missing exporter.
+- Diagrams are optional. Do not create, update, validate, render, or require a
+  diagram for a numbered plan unless the owner explicitly asks for one in that
+  plan. Existing diagrams remain historical evidence and never block a gate.
 - Audit staged files for credentials and private source text before any commit.
 - A passing implementation is not an accepted experiment until the owner
   records the decision.
