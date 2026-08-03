@@ -1,39 +1,38 @@
-# Learning Note: Direct-reading baseline
+# Learning Note: Lore graph build (Shadow Slave 1-100)
 
 ## Gate status
 
-**Active at the learning gate. Owner confirmation is required before
-implementation.**
+**Confirmed by owner 2026-08-03** — direction and pilot accepted.
 
-Plans 010 and 011 are accepted. The owner re-scoped the models and chapter
-selection on 2026-08-03 (recorded below). Confirming this direction admits
-Plan 012 implementation; it does not accept the future implementation. The
-final owner decision will still follow tests, inspection, and independent
-review.
+The owner re-scoped this plan on 2026-08-03: it is an agent-executed
+reading build, not a Weaver codebase experiment. The chapter-1 pilot was
+executed early (before the gate record was formalized), verified against
+the source, and accepted by the owner with two binding rules. The final
+owner decision still follows the full run and independent review.
+
+The superseded 2026-07-30 draft (a Weaver experiment comparing
+`deepseek-v4-flash` vs `deepseek-v4-pro` on a single novel packet, with
+packets, receipts, and `run_direct_reading`) is history; git preserves it.
+Every current record describes the lore-graph build.
 
 ## Owner direction (2026-08-03, corrected)
 
-Recorded final understanding after the owner's corrections:
-
-1. **Plan 012 is an agent-executed lore-graph build, not a Weaver codebase
-   experiment.** The executing agent (pi or Codex — the plan is
-   harness-agnostic, see `docs/process/subagent-fleet.md`) reads the novel
-   directly and builds an interconnected knowledge base (lore graph) the
-   best way it can. Weaver is NOT the reader and is not touched: it lacks
-   subagents, multi-agent orchestration, and read/bash tooling and is a
-   later milestone.
-2. **Multi-eye reading.** The orchestrating agent dispatches two
-   fresh-context reader subagents per chapter so every chapter gets three
-   pairs of eyes. The orchestrator and the two readers analyse each chapter
-   and their analyses build on each other (the accumulated knowledge base
-   is the shared memory). Reader subagents run with clean context, open
-   only their assigned chapter file, and return analysis text only — the
-   orchestrator is the sole writer.
-3. **The flash/Terra arms are not dead; they are the fleet.** pi runs as
-   deepseek-v4-flash; subordinates can be flash forks, and a GPT-5.6
-   Terra/Codex subordinate may join later (272K context window, noted).
-   The owner stated deepseek-v4-flash has a 1M token context window, so
-   chapters 1-500 fit; irrelevant to per-chapter subagent reading anyway.
+1. **Agent-executed lore-graph build.** The coordinator (pi or Codex — the
+   plan is harness-agnostic, see `docs/process/subagent-fleet.md`) reads
+   the novel directly and builds an interconnected knowledge base (lore
+   graph) the best way it can. Weaver is NOT the reader and is not touched:
+   it lacks subagents, multi-agent orchestration, and read/bash tooling and
+   is a later milestone.
+2. **Multi-eye reading.** The coordinator dispatches two fresh-context
+   reader subagents per chapter so every chapter gets three pairs of eyes.
+   The analyses build on each other through the accumulated knowledge base.
+   Readers run with clean context, open only their assigned chapter file,
+   and return analysis text only; the coordinator is the sole writer.
+3. **The flash/Terra arms are not dead; they are the fleet.** The
+   coordinator runs as deepseek-v4-flash; a GPT-5.6 Terra/Codex reader may
+   join later. Context window claims (1M flash, 272K Terra) are
+   owner-stated, unverified in committed evidence, and unnecessary for
+   per-chapter reading; the plan does not rely on them.
 4. **Chapters:** start from the beginning of the novel, chapters 1-100
    (verified: `novels/shadow-slave/0001-0100/`, 100 chapter files).
 5. **Pure reading knowledge base.** No vector database (Qdrant), RAG, or
@@ -43,142 +42,41 @@ Recorded final understanding after the owner's corrections:
    fictional understanding for agents (lore graphs, narrative
    comprehension) and feeds the method.
 7. **Deliverable home:** `.weaver/knowledge/shadow-slave/` — private,
-   owner-only, never committed.
+   owner-only, never committed. Committed deliverables contain no novel
+   prose or story-derived knowledge.
 
-This supersedes the earlier draft below (2026-07-30) and the first-pass
-re-scope (flash vs pro packet experiment), which are history.
-## Tiny model
+## Binding rules (owner-approved 2026-08-03)
 
-> Superseded by the 2026-08-03 owner direction above. This section
-describes the 2026-07-30 draft (a Weaver codebase experiment comparing
-flash vs pro on one packet), which no longer matches the plan's scope.
+1. **Fresh-context readers** — every reader subagent starts with a clean
+   context containing only its task prompt, the accepted-knowledge digest,
+   and the exact chapter file path. No session inheritance, no repo
+   browsing, no KB access.
+2. **Read exactly the assigned chapter(s)** — the only file a reader may
+   open is its assigned novel chapter file. Nothing else.
 
-Weaver has never read a novel. Every plan so far built infrastructure.
+## Roles (harness-agnostic)
 
-Plan 012 is the first time a model receives chapter text and answers
-comprehension questions. It sends identical chapter packets to both
-`deepseek-v4-flash` and `deepseek-v4-pro`, asks the same questions, and
-produces a structured comparison. The result is the baseline against which
-every future approach (compiled memory, RAG, narrative threads, wiki) is
-measured.
+| Role | Contract |
+| --- | --- |
+| Coordinator and graph writer | reads every chapter; curates the accepted-knowledge digest; dispatches the two readers; reconciles; sole writer of the KB |
+| Plot and causality reader | fresh-context subagent; assigned chapter only; analysis text only |
+| Character and world-state reader | fresh-context subagent; assigned chapter only; analysis text only |
+| Independent reviewer | fresh-context, post-run; consistency checks; never edits |
 
-## The pieces
+## Graph contract (summary)
 
-- `build_novel_packet` (`corpus/tools.py`, Plan 002): assembles chapters into
-  a `NovelPacket` with metadata. Takes `novel_id` and an explicit
-  `chapters: list[int]` (sorted, deduped, validated). This is the reading material.
-- `ModelLayer.complete()` (`model_layer/layer.py`, Plan 003): sends a
-  `ModelRequest` to a specific model and returns a `ModelResponse`. The
-  experiment calls this once per model — no conversation, no turns, no
-  tools in the request.
-- `deepseek-v4-flash` and `deepseek-v4-pro` (`model_layer/deepseek.py`): the
-  two admitted DeepSeek models. Both have 128K token context windows (verify
-  actual limit before running). Both require `DEEPSEEK_KEY`.
-- `FakeModelProvider` (`model_layer/fake.py:30-56`): pre-programmed responses
-  for dry runs. The `--fake` flag scripts two models giving slightly different
-  answers to the same questions.
-- `experiment.py` (`src/weaver/experiment.py`): existing experiment framework
-  with `model-smoke` and `provider-tool-contract`. Plan 012 adds
-  `run_direct_reading` following the same pattern: an async function returning
-  a `dict` with structured results, registered in the CLI experiment table.
-- `receipts.py` (`src/weaver/receipts.py`): writes experiment results to
-  owner-only receipt files. The direct-reading receipt must NOT contain
-  chapter text — only answers, comparison metadata, and token counts.
-- `docs/decisions/006-conversation-architecture.md:28-34`: the notebook is
-  exact history. The reading experiment does not use the notebook — each
-  model call is a standalone request with no conversation history. This is
-  intentional: the baseline measures raw reading comprehension without
-  conversation context.
-
-## What I understood
-
-1. The experiment is NOT a conversation. It sends one `ModelRequest` per
-   model with the system prompt, chapter packet, and questions as the user
-   message. No `run_turn()`, no `SessionWeave`, no tool dispatch. This is
-   the simplest possible reading test.
-2. Chapter selection: the plan does NOT specify which chapters. The learning
-   gate must identify a self-contained arc (10--30 chapters) that a reader
-   can follow without prior knowledge. The chapters must fit in one context
-   window (verify token count before running). The owner decides the
-   selection before implementation.
-3. Question design: 5--8 questions covering literal recall ("What happened
-   when X arrived at Y?"), character state ("What did character Z believe at
-   this point?"), causal reasoning ("Why did event A cause event B?"), and
-   thematic interpretation ("What does this arc suggest about the novel's
-   larger themes?"). Answers must cite specific passages.
-4. Blind protocol: each model receives the same system prompt, chapter text,
-   and questions in separate API calls. Neither model sees the other's
-   answer. The expected answer is NOT included in the prompt. The comparison
-   is done after both calls complete.
-5. Comparison methodology: answers are compared on correctness (did the model
-   state a fact that appears in the text?), completeness (did it cover the
-   key points?), hallucination (did it invent a detail not in the text?),
-   and citation accuracy (did the passages it cited actually say what it
-   claims?). A structured matrix records agreement, disagreement, and partial
-   matches.
-6. Fake mode: `FakeModelProvider` is pre-loaded with two `ModelResponse`
-   objects — one for Flash (gets 3/5 questions right), one for Pro (gets
-   4/5 right, cites better). The `--fake` flag produces a realistic
-   comparison without API credits.
-7. Live mode: requires `DEEPSEEK_KEY`. Calls Flash then Pro sequentially
-   (not parallel). Records the raw answer text, token counts, and the
-   comparison matrix. Chapter text does NOT enter receipts or logs.
-8. The experiment output is a `dict` with: `flash` and `pro` keys
-   (each with `answer`, `token_count`, `stop_reason`), `comparison`
-   (matrix of agreement/disagreement per question), and `experiment`
-   metadata (chapter range, question count, timestamp).
-9. No chapter text is stored in the experiment output. Only answer text,
-   comparison, and metadata. The receipt file is written with owner-only
-   permissions via `receipts.py`.
-10. The experiment is registered as `"direct-reading"` in the CLI.
-    `weaver experiment direct-reading --fake` runs the dry run.
-    `weaver experiment direct-reading` runs the live comparison.
-
-## Experiment flow
-
-```text
-weaver experiment direct-reading [--fake]
-    |
-    +--> corpus.build_novel_packet(novel_id, chapters=[...]) → packet
-    +--> construct system prompt + chapters + questions
-    |
-    +--> Flash call:
-    |       model_layer.complete(flash, request, cancel_event)
-    |       → ModelResponse(assistant_message.content, stop_reason, usage)
-    |
-    +--> Pro call:
-    |       model_layer.complete(pro, request, cancel_event)
-    |       → ModelResponse(assistant_message.content, stop_reason, usage)
-    |
-    +--> parse answers → comparison matrix
-    +--> write receipt (no chapter text) → return dict
-```
-
-## What this plan will prove
-
-- The corpus → packet → model → answer pipeline works end-to-end.
-- Two models reading identical text produce comparable answers.
-- The comparison methodology distinguishes correct, incomplete, and
-  hallucinated answers.
-- Token counts are recorded for both models.
-- Fake mode produces a realistic comparison without API credits.
-- No chapter text leaks into receipts, logs, or committed files.
-
-## What it will not prove
-
-- Conversation-based reading (the model has one turn, no follow-up).
-- Multi-packet reading across context windows.
-- Compiled memory or retrieval-augmented reading.
-- Statistical significance (one packet, two models, N=1).
-- A specific model is "better" at reading — this is a baseline, not a
-  benchmark.
-- Any literary comprehension system is ready to ship.
+The full write contract is in `plans/012-direct-reading-baseline.md`.
+Essentials: append-only JSONL records (entity/edge/thread/checkpoint);
+atomic per-chapter batches; stable ids with aliases; confidence and
+verification marking per record; per-chapter checkpoints with source sha256;
+duplicate and dangling-edge detection; restart from the last checkpoint.
 
 ## Confirmation record
 
-- Owner choice: pending
-- Date: pending
-- Corrections or added constraints: pending
-
-The learning gate requires the owner to select the chapter range and approve
-the question set before implementation.
+- Owner choice: direction confirmed and chapter-1 pilot accepted with the
+  binding rules above
+- Date: 2026-08-03
+- Corrections or added constraints: pure reading only (no vector DB/RAG);
+  chapters 1-100 from the start; harness-agnostic (no pi/fork-specific
+  patterns); readers fresh-context and chapter-file-only; coordinator sole
+  writer; git cannot restore novels (0 tracked files)

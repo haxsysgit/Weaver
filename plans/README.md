@@ -18,7 +18,7 @@ evidence, review, and human decision gates must also be complete.
 | [009 - Context assembler](009-context-assembler.md) | Accepted 2026-07-31 | Plan 008 accepted | Give run_turn() a context window it can't exceed: token budget, truncation, pinned owner message |
 | [010 - TUI entrypoint](010-tui-entrypoint.md) | Accepted and closed 2026-08-02 | Plan 009 accepted | Weaver's developer and debugging console; maintenance fixes only, no further product polish |
 | [011 - Local browser chat entrypoint](011-web-chat-entrypoint.md) | Accepted 2026-08-03 | Plan 010 closed; checkpoint 001-010 complete | Appraise current ChatGPT behaviour, then prove one private local browser conversation |
-| [012 - Direct-reading baseline](012-direct-reading-baseline.md) | Active at learning gate; implementation not admitted | Plan 011 accepted | Compare Flash and Pro reading the same novel packet blind: the first time Weaver reads a novel |
+| [012 - Lore graph build (Shadow Slave 1-100)](012-direct-reading-baseline.md) | Pilot accepted 2026-08-03; chapters 2-100 in progress | Plan 011 accepted | The executing agent reads chapters 1-100 directly with two fresh-context readers per chapter and builds the private interconnected lore graph from pure reading (no vector DB / RAG) |
 | [013 - Responsive interface and installable PWA](013-responsive-interface-pwa.md) | Deferred | Plan 012 accepted | Build the polished responsive Weaver interface (sidebar, settings, Markdown, PWA) from the Plan 011 deferrals |
 | 014+ - Compiled-memory experiments | Deferred | Plan 013 accepted | Compare bounded compiled memory with direct rereading |
 
@@ -29,7 +29,7 @@ recorded in `docs/process/checkpoint-001-010.md`. The next sequence is:
 
 1. **011**: appraise chat behaviour, stop at the owner gate, then prove one
    local browser conversation.
-2. **012**: run the direct-reading baseline.
+2. **012**: run the lore graph build (chapters 1-100).
 3. **013**: turn the accepted proof into a polished responsive PWA; its scope
    is the behaviour deferred from Plan 011 (sidebar, message actions,
    settings, Markdown, responsive collapse, PWA, framework decision),
@@ -50,7 +50,7 @@ and debugging console. Maintenance bug fixes are allowed, but it receives no
 further product polish and is no longer a product surface.
 
 Plan 011 is **Accepted** (2026-08-03); both owner decisions are recorded in
-`deliverables/011-web-chat-entrypoint/decision.md`. Plan 012 is now active at
-its learning gate. Its implementation remains unadmitted until the owner
-selects the chapter range and approves the question set. Do not begin Plan 013
-automatically.
+`deliverables/011-web-chat-entrypoint/decision.md`. Plan 012 is accepted at its
+learning gate (direction and chapter-1 pilot confirmed 2026-08-03) and is
+running chapters 2-100. Plan 013 stays gated until Plan 012's final
+decision is recorded.

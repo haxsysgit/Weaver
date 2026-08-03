@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" font-family="Arial, sans-serif">
+  <defs>
+    <marker id="arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#b85450" /></marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#6c8ebf" /></marker>
+    <marker id="arrow-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#9673a6" /></marker>
+    <marker id="arrow-yellow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#d6b656" /></marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#82b366" /></marker>
+  </defs>
+  <rect width="1400" height="900" fill="#ffffff" />
+  <text x="700" y="42" text-anchor="middle" font-size="22" font-weight="700" fill="#263238">Plan 012: Lore graph build (Shadow Slave 1-100)</text>
+
+  <g fill="none" stroke-width="3">
+    <path d="M430 205 H505" stroke="#b85450" marker-end="url(#arrow-red)" />
+    <path d="M430 440 H505" stroke="#6c8ebf" marker-start="url(#arrow-blue)" marker-end="url(#arrow-blue)" />
+    <path d="M895 440 H970" stroke="#6c8ebf" marker-start="url(#arrow-blue)" marker-end="url(#arrow-blue)" />
+    <path d="M430 500 H505" stroke="#9673a6" marker-end="url(#arrow-purple)" />
+    <path d="M895 500 H970" stroke="#9673a6" marker-end="url(#arrow-purple)" />
+    <path d="M895 205 H970" stroke="#d6b656" marker-end="url(#arrow-yellow)" />
+    <path d="M700 320 V650 H505" stroke="#6c8ebf" marker-end="url(#arrow-blue)" />
+    <path d="M1165 320 V560 H505" stroke="#82b366" stroke-dasharray="7 6" marker-end="url(#arrow-green)" />
+  </g>
+
+  <g>
+    <rect x="40" y="90" width="390" height="230" rx="12" fill="#f8cecc" stroke="#b85450" stroke-width="2" />
+    <path d="M40 122 H430" stroke="#b85450" />
+    <text x="58" y="113" font-size="16" font-weight="700" fill="#6f3230">Private novel library (immutable)</text>
+    <rect x="70" y="145" width="330" height="130" rx="9" fill="#fde8e8" stroke="#b85450" />
+    <text x="235" y="174" text-anchor="middle" font-size="14" fill="#6f3230"><tspan x="235">novels/shadow-slave/0001-0100/</tspan><tspan x="235" dy="22">chapters 1-100, read-only</tspan><tspan x="235" dy="22">not tracked by git (0 files)</tspan><tspan x="235" dy="22">recovery via backup or Plan 002 tools</tspan></text>
+  </g>
+  <g>
+    <rect x="505" y="90" width="390" height="230" rx="12" fill="#e1d5e7" stroke="#9673a6" stroke-width="2" />
+    <path d="M505 122 H895" stroke="#9673a6" />
+    <text x="523" y="113" font-size="16" font-weight="700" fill="#594563">Coordinator and graph writer</text>
+    <rect x="535" y="145" width="330" height="130" rx="9" fill="#f3e8f7" stroke="#9673a6" />
+    <text x="700" y="174" text-anchor="middle" font-size="14" fill="#594563"><tspan x="700">reads each chapter directly</tspan><tspan x="700" dy="22">curates accepted-knowledge digest</tspan><tspan x="700" dy="22">dispatches two readers in parallel</tspan><tspan x="700" dy="22">reconciles 3 analyses, sole KB writer</tspan><tspan x="700" dy="22">runs batch validation</tspan></text>
+  </g>
+  <g>
+    <rect x="970" y="90" width="390" height="230" rx="12" fill="#fff2cc" stroke="#d6b656" stroke-width="2" />
+    <path d="M970 122 H1360" stroke="#d6b656" />
+    <text x="988" y="113" font-size="16" font-weight="700" fill="#685927">Private lore graph</text>
+    <rect x="1000" y="145" width="330" height="130" rx="9" fill="#fff9e6" stroke="#d6b656" />
+    <text x="1165" y="174" text-anchor="middle" font-size="14" fill="#685927"><tspan x="1165">.weaver/knowledge/shadow-slave/ 700</tspan><tspan x="1165" dy="22">lore-graph.jsonl append-only records</tspan><tspan x="1165" dy="22">chapters/ notes, threads, timeline</tspan><tspan x="1165" dy="22">per-chapter checkpoints + source sha256</tspan><tspan x="1165" dy="22">never committed</tspan></text>
+  </g>
+  <g>
+    <rect x="40" y="400" width="390" height="170" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="2" />
+    <path d="M40 432 H430" stroke="#666666" />
+    <text x="58" y="423" font-size="16" font-weight="700" fill="#444444">Reader: plot and causality</text>
+    <rect x="70" y="455" width="330" height="85" rx="9" fill="#ffffff" stroke="#666666" />
+    <text x="235" y="484" text-anchor="middle" font-size="14" fill="#444444"><tspan x="235">fresh-context subagent</tspan><tspan x="235" dy="22">reads assigned chapter file only</tspan><tspan x="235" dy="22">returns analysis text only, never writes</tspan></text>
+  </g>
+  <g>
+    <rect x="970" y="400" width="390" height="170" rx="12" fill="#f5f5f5" stroke="#666666" stroke-width="2" />
+    <path d="M970 432 H1360" stroke="#666666" />
+    <text x="988" y="423" font-size="16" font-weight="700" fill="#444444">Reader: characters and world-state</text>
+    <rect x="1000" y="455" width="330" height="85" rx="9" fill="#ffffff" stroke="#666666" />
+    <text x="1165" y="484" text-anchor="middle" font-size="14" fill="#444444"><tspan x="1165">fresh-context subagent</tspan><tspan x="1165" dy="22">reads assigned chapter file only</tspan><tspan x="1165" dy="22">never sees reader A's conclusions</tspan></text>
+  </g>
+  <g>
+    <rect x="40" y="680" width="390" height="150" rx="12" fill="#d5e8d4" stroke="#82b366" stroke-width="2" />
+    <path d="M40 712 H430" stroke="#82b366" />
+    <text x="58" y="703" font-size="16" font-weight="700" fill="#3a5a3a">Independent reviewer (post-run)</text>
+    <rect x="70" y="735" width="330" height="70" rx="9" fill="#eaf5ea" stroke="#82b366" />
+    <text x="235" y="764" text-anchor="middle" font-size="14" fill="#3a5a3a"><tspan x="235">fresh-context, never edits</tspan><tspan x="235" dy="22">entity continuity, thread tracking</tspan><tspan x="235" dy="22">graph vs source spot checks</tspan></text>
+  </g>
+  <g>
+    <rect x="505" y="680" width="390" height="150" rx="12" fill="#dae8fc" stroke="#6c8ebf" stroke-width="2" />
+    <path d="M505 712 H895" stroke="#6c8ebf" />
+    <text x="523" y="703" font-size="16" font-weight="700" fill="#33495f">Public deliverables (sanitized only)</text>
+    <rect x="535" y="735" width="330" height="70" rx="9" fill="#e6f0fc" stroke="#6c8ebf" />
+    <text x="700" y="764" text-anchor="middle" font-size="14" fill="#33495f"><tspan x="700">learning, results, rubric, decision</tspan><tspan x="700" dy="22">review ledger, architecture diagram</tspan><tspan x="700" dy="22">sanitized research summary, no prose</tspan></text>
+  </g>
+  <g>
+    <polygon points="505,205 493,198 493,212" fill="#b85450" />
+    <polygon points="505,440 493,433 493,447" fill="#6c8ebf" />
+    <polygon points="970,440 958,433 958,447" fill="#6c8ebf" />
+    <polygon points="505,500 493,493 493,507" fill="#9673a6" />
+    <polygon points="970,500 958,493 958,507" fill="#9673a6" />
+    <polygon points="970,205 958,198 958,212" fill="#d6b656" />
+    <polygon points="505,650 493,643 493,657" fill="#6c8ebf" />
+    <polygon points="505,560 493,553 493,567" fill="#82b366" />
+    <text x="330" y="200" text-anchor="end" font-size="12" fill="#6f3230">chapter file</text>
+    <text x="360" y="433" text-anchor="end" font-size="12" fill="#33495f">digest + chapter path</text>
+    <text x="1040" y="433" font-size="12" fill="#33495f">digest + chapter path</text>
+    <text x="360" y="493" text-anchor="end" font-size="12" fill="#6b5a72">analysis text</text>
+    <text x="1040" y="493" font-size="12" fill="#6b5a72">analysis text</text>
+    <text x="925" y="198" text-anchor="end" font-size="12" fill="#685927">writes (sole writer)</text>
+    <text x="790" y="580" font-size="12" fill="#6b5a72">sanitized evidence</text>
+    <text x="795" y="660" font-size="12" fill="#3a5a3a">checks</text>
+  </g>
+  <rect x="320" y="850" width="760" height="40" rx="8" fill="#f5f5f5" stroke="#666666" />
+  <text x="700" y="875" text-anchor="middle" font-size="12" fill="#444444">Purple: coordinator loop | Red: private source | Yellow: private state | Blue: public deliverables | Green: review</text>
+</svg>
