@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; font-src 'self'">
   <title>Weaver</title>
   <link rel="stylesheet" href="/static/weaver.css">
 </head>
@@ -10,7 +11,12 @@
   <main class="column">
     <header class="brand">
       <span class="brand-name">Weaver</span>
-      <span class="brand-mode" id="mode-label">fake</span>
+      <span class="brand-mode" id="mode-label">{{MODE_LABEL}}</span>
+      <span class="brand-spacer"></span>
+      <select id="chat-picker" aria-label="Choose another chat" title="Choose another chat">
+        <option value="">Choose a chat…</option>
+      </select>
+      <button id="new-chat" type="button" title="Start a new chat">New chat</button>
     </header>
 
     <section class="transcript" id="transcript" aria-live="polite"></section>

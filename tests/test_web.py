@@ -189,42 +189,31 @@ async def test_concurrent_turn_409(tmp_path) -> None:
 
 async def test_cancel_active_turn_returns_202_and_interrupted_event(tmp_path) -> None:
     runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
-    gate = asyncio.Event()
     entered = asyncio.Event()
 
-    async def gated_send(conversation_id, text, cancel_event=None, on_delta=None):
+    async def cancel_aware_send(conversation_id, text, cancel_event=None, on_delta=None):
         from weaver.agent.errors import safe_error
         from weaver.agent.turn import TurnExitReason
 
         entered.set()
-        await gate.wait()
-        if cancel_event is not None and cancel_event.is_set():
-            return type(
-                "R",
-                (),
-                {
-                    "turn_id": "t1",
-                    "exit_reason": TurnExitReason.INTERRUPTED,
-                    "final_text": "",
-                    "safe_failure": safe_error("interrupted"),
-                    "token_count": 0,
-                    "token_budget": 0,
-                },
-            )()
+        # Cooperative send: finish as soon as the cancel event is set.
+        if cancel_event is not None:
+            await cancel_event.wait()
         return type(
             "R",
             (),
             {
                 "turn_id": "t1",
-                "exit_reason": TurnExitReason.COMPLETED,
-                "final_text": "ok",
+                "exit_reason": TurnExitReason.INTERRUPTED,
+                "final_text": "",
+                "safe_failure": safe_error("interrupted"),
                 "token_count": 0,
                 "token_budget": 0,
             },
         )()
 
     original_send = runtime.session.send
-    runtime.session.send = gated_send  # type: ignore[method-assign]
+    runtime.session.send = cancel_aware_send  # type: ignore[method-assign]
     app = create_app(runtime)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://127.0.0.1") as client:
@@ -247,9 +236,125 @@ async def test_cancel_active_turn_returns_202_and_interrupted_event(tmp_path) ->
         await entered.wait()
         cancel = await client.post(f"/api/conversations/{conv}/cancel")
         assert cancel.status_code == 202
-        gate.set()
         events = await task
         assert "interrupted" in events
         assert "completed" not in events
     await runtime.close()
     runtime.session.send = original_send  # type: ignore[method-assign]
+
+
+async def test_failed_exit_reason_emits_failed_event(tmp_path) -> None:
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+
+    async def failing_send(conversation_id, text, cancel_event=None, on_delta=None):
+        from weaver.agent.turn import TurnExitReason
+
+        return type(
+            "R",
+            (),
+            {
+                "turn_id": "t1",
+                "exit_reason": TurnExitReason.MODEL_FAILED,
+                "final_text": "",
+                "safe_failure": "provider rejected the request",
+                "token_count": 0,
+                "token_budget": 0,
+            },
+        )()
+
+    original_send = runtime.session.send
+    runtime.session.send = failing_send  # type: ignore[method-assign]
+    app = create_app(runtime)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://127.0.0.1") as client:
+        conv = (await client.post("/api/conversations")).json()["conversation_id"]
+        events = []
+        payloads = []
+        async with client.stream(
+            "POST",
+            f"/api/conversations/{conv}/turns",
+            json={"message": "boom"},
+        ) as resp:
+            assert resp.status_code == 200
+            async for line in resp.aiter_lines():
+                if line.startswith("event:"):
+                    events.append(line.split(":", 1)[1].strip())
+                elif line.startswith("data:"):
+                    payloads.append(json.loads(line.split(":", 1)[1].strip()))
+    assert "failed" in events
+    assert "completed" not in events
+    assert payloads[-1]["code"] == "model_failed"
+    assert "provider" in payloads[-1]["message"]
+    await runtime.close()
+    runtime.session.send = original_send  # type: ignore[method-assign]
+
+
+async def test_turn_settles_before_next_turn(tmp_path) -> None:
+    """After a turn ends, the registry is clean: the next turn is 200.
+
+    (A mid-stream disconnect needs real socket semantics that the buffered
+    ASGITransport cannot simulate; that case is proven against an ephemeral
+    uvicorn server and recorded in results.md.)
+    """
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    app = create_app(runtime)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://127.0.0.1") as client:
+        conv = (await client.post("/api/conversations")).json()["conversation_id"]
+        async with client.stream(
+            "POST",
+            f"/api/conversations/{conv}/turns",
+            json={"message": "one"},
+        ) as resp:
+            assert resp.status_code == 200
+            await resp.aread()
+        # First turn fully consumed: the entry is gone, so this is 200, not 409.
+        async with client.stream(
+            "POST",
+            f"/api/conversations/{conv}/turns",
+            json={"message": "two"},
+        ) as resp:
+            assert resp.status_code == 200
+    await runtime.close()
+
+
+async def test_index_has_csp_and_live_mode_label(tmp_path) -> None:
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    app = create_app(runtime)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://127.0.0.1") as client:
+        resp = await client.get("/")
+        assert resp.status_code == 200
+        assert "Content-Security-Policy" in resp.headers
+        assert "default-src 'self'" in resp.headers["Content-Security-Policy"]
+        assert "fake" in resp.text  # mode label injected from the runtime
+        assert "{{MODE_LABEL}}" not in resp.text
+        assert "sk-test-secret" not in resp.text
+    await runtime.close()
+
+
+async def test_mutating_routes_reject_nonlocal_origin(tmp_path) -> None:
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    app = create_app(runtime)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://127.0.0.1") as client:
+        resp = await client.post(
+            "/api/conversations",
+            headers={"Origin": "https://evil.example"},
+        )
+        assert resp.status_code == 403
+        conv = (await client.post("/api/conversations")).json()["conversation_id"]
+        resp = await client.post(
+            f"/api/conversations/{conv}/turns",
+            json={"message": "x"},
+            headers={"Origin": "https://evil.example"},
+        )
+        assert resp.status_code == 403
+        # A loopback origin is accepted.
+        resp = await client.post(
+            f"/api/conversations/{conv}/turns",
+            json={"message": "x"},
+            headers={"Origin": "http://127.0.0.1"},
+        )
+        assert resp.status_code == 200
+    await runtime.close()

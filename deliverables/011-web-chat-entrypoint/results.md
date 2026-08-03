@@ -82,3 +82,31 @@ progress (shared runtime extracted; server and page next).
   gutters; phone 390x844 capsule spans near full width with the accent
   send button. Evidence: `evidence/web-desktop-1440x900.png`,
   `evidence/web-phone-390x844.png`.
+
+## Review repairs (2026-08-02)
+
+Both independent reviews returned after the width evidence. Runtime/API
+review: FIX with two majors; browser/UX review: PASS with two mediums.
+All findings fixed and covered by tests:
+
+- Failures now emit the `failed` SSE event: MODEL_FAILED, LIMIT_REACHED,
+  PERSISTENCE_FAILED and INCOMPLETE map to `failed` with a code and safe
+  message; only COMPLETED emits `completed`. (test_failed_exit_reason_emits_failed_event)
+- A turn's registry entry stays until its task finishes: the task removes
+  itself in a finally, so a second turn cannot start while the first is
+  still settling (plan: settle before removing). The 409 guard no longer
+  races the settle window. (test_turn_settles_before_next_turn)
+- Real disconnect proof against ephemeral uvicorn: a raw-socket SSE client
+  that hard-closes mid-stream is followed by a new turn accepted with 200
+  (not 409), proving settlement removed the entry.
+- Same-origin CSP: meta tag plus a Content-Security-Policy header on the
+  index response; host and origin checks on all mutating routes (403 for
+  non-loopback). (test_mutating_routes_reject_nonlocal_origin,
+  test_index_has_csp_and_live_mode_label)
+- First-page boundary completed: the real mode label is injected into the
+  page (no hardcoded fake), New chat control, and a Choose another chat
+  picker populated from GET /api/conversations; focus returns to the
+  composer after each turn; placeholder colour matches the reference.
+- Dead TURN_TIMEOUT_SECONDS constant removed; the module comment no longer
+  claims a timeout ceiling that did not exist (the provider's own timeout
+  bounds each request).

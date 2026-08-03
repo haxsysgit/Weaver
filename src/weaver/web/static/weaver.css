@@ -51,6 +51,28 @@ html, body {
   padding: 1px 8px;
 }
 
+.brand-spacer { flex: 1; }
+
+.brand select,
+.brand button {
+  background: var(--surface-2);
+  border: none;
+  color: var(--text);
+  border-radius: 10px;
+  font-size: 13px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+.brand select:focus,
+.brand button:focus {
+  outline: 1px solid var(--accent);
+}
+
+.composer textarea::placeholder {
+  color: #b8b8b8;
+}
+
 .transcript {
   flex: 1;
   overflow-y: auto;

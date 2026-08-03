@@ -7,6 +7,8 @@ const els = {
   stop: document.getElementById("stop"),
   hint: document.getElementById("hint"),
   mode: document.getElementById("mode-label"),
+  picker: document.getElementById("chat-picker"),
+  newChat: document.getElementById("new-chat"),
 };
 
 let conversationId = null;
@@ -60,6 +62,43 @@ async function createConversation() {
   localStorage.setItem("weaver.conversation", conversationId);
 }
 
+async function startNewChat() {
+  await createConversation();
+  els.transcript.replaceChildren();
+  els.input.focus();
+}
+
+async function refreshPicker(selectedId) {
+  const resp = await fetch("/api/conversations");
+  if (!resp.ok) return;
+  const rows = await resp.json();
+  els.picker.replaceChildren();
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Choose a chat…";
+  els.picker.appendChild(placeholder);
+  for (const row of rows) {
+    const option = document.createElement("option");
+    option.value = row.conversation_id;
+    option.textContent = row.title;
+    if (row.conversation_id === selectedId) option.selected = true;
+    els.picker.appendChild(option);
+  }
+}
+
+els.picker.addEventListener("change", async () => {
+  const id = els.picker.value;
+  if (!id) return;
+  els.transcript.replaceChildren();
+  if (await loadConversation(id)) {
+    conversationId = id;
+    localStorage.setItem("weaver.conversation", id);
+    els.input.focus();
+  }
+});
+
+els.newChat.addEventListener("click", () => startNewChat());
+
 async function loadConversation(id) {
   const resp = await fetch(`/api/conversations/${id}/messages`);
   if (!resp.ok) return false;
@@ -76,6 +115,7 @@ async function bootstrap() {
   } else {
     await createConversation();
   }
+  await refreshPicker(conversationId);
 }
 
 /* --- streaming a turn --- */
@@ -104,7 +144,7 @@ async function sendTurn(text) {
     });
 
     if (resp.status === 409) {
-      setStatus("A turn is already running. Waiting is not available yet; start a new chat.", "error-line");
+      setStatus("A turn is already running. Start a new chat or choose another below.", "error-line");
       return;
     }
     if (!resp.ok) {
@@ -136,6 +176,7 @@ async function sendTurn(text) {
     els.send.hidden = false;
     els.stop.hidden = true;
     streamWrap.textContent = preview || streamWrap.textContent;
+    els.input.focus();
   }
 }
 
@@ -155,7 +196,7 @@ function handleEvent(raw, streamWrap, setPreview) {
     streamWrap.textContent = data.text;
     setPreview(data.text);
   } else if (event === "interrupted") {
-    setStatus(data.message || "Turn interrupted.", "error-line");
+    setStatus((data.message || "Turn interrupted.") + " Start a new chat or choose another.", "error-line");
   } else if (event === "failed") {
     setStatus(data.message || "Turn failed.", "error-line");
   }
