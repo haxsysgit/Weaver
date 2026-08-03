@@ -5,12 +5,53 @@
 **Active at the learning gate. Owner confirmation is required before
 implementation.**
 
-Plans 010 and 011 are accepted. The remaining gate is the owner's chapter
-selection and question approval. That confirmation admits Plan 012
-implementation; it does not accept the future implementation. The final owner
-decision will still follow tests, inspection, and independent review.
+Plans 010 and 011 are accepted. The owner re-scoped the models and chapter
+selection on 2026-08-03 (recorded below). Confirming this direction admits
+Plan 012 implementation; it does not accept the future implementation. The
+final owner decision will still follow tests, inspection, and independent
+review.
 
+## Owner direction (2026-08-03, corrected)
+
+Recorded final understanding after the owner's corrections:
+
+1. **Plan 012 is an agent-executed lore-graph build, not a Weaver codebase
+   experiment.** The executing agent (pi or Codex — the plan is
+   harness-agnostic, see `docs/process/subagent-fleet.md`) reads the novel
+   directly and builds an interconnected knowledge base (lore graph) the
+   best way it can. Weaver is NOT the reader and is not touched: it lacks
+   subagents, multi-agent orchestration, and read/bash tooling and is a
+   later milestone.
+2. **Multi-eye reading.** The orchestrating agent dispatches two
+   fresh-context reader subagents per chapter so every chapter gets three
+   pairs of eyes. The orchestrator and the two readers analyse each chapter
+   and their analyses build on each other (the accumulated knowledge base
+   is the shared memory). Reader subagents run with clean context, open
+   only their assigned chapter file, and return analysis text only — the
+   orchestrator is the sole writer.
+3. **The flash/Terra arms are not dead; they are the fleet.** pi runs as
+   deepseek-v4-flash; subordinates can be flash forks, and a GPT-5.6
+   Terra/Codex subordinate may join later (272K context window, noted).
+   The owner stated deepseek-v4-flash has a 1M token context window, so
+   chapters 1-500 fit; irrelevant to per-chapter subagent reading anyway.
+4. **Chapters:** start from the beginning of the novel, chapters 1-100
+   (verified: `novels/shadow-slave/0001-0100/`, 100 chapter files).
+5. **Pure reading knowledge base.** No vector database (Qdrant), RAG, or
+   other retrieval machinery in this plan. The accumulated reading output
+   IS the knowledge base; later plans build retrieval on top of it.
+6. **Research component.** The plan researches how to enable/implement
+   fictional understanding for agents (lore graphs, narrative
+   comprehension) and feeds the method.
+7. **Deliverable home:** `.weaver/knowledge/shadow-slave/` — private,
+   owner-only, never committed.
+
+This supersedes the earlier draft below (2026-07-30) and the first-pass
+re-scope (flash vs pro packet experiment), which are history.
 ## Tiny model
+
+> Superseded by the 2026-08-03 owner direction above. This section
+describes the 2026-07-30 draft (a Weaver codebase experiment comparing
+flash vs pro on one packet), which no longer matches the plan's scope.
 
 Weaver has never read a novel. Every plan so far built infrastructure.
 

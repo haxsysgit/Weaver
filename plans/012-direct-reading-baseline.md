@@ -1,423 +1,222 @@
-# Plan 012: Direct-reading baseline
+# Plan 012: Lore graph build (Shadow Slave, chapters 1-100)
 
-> **Executor instructions:** Plan 011 is accepted, so learning-gate work may
-> begin. Read this plan, the accepted Plan 011 results, and every file in
-> "Current state" before editing. Do not read novel content, make source edits,
-> or run live calls until the owner confirms the learning gate. After that,
-> run each verification gate and record failures. Slice 0 repairs three
-> provider edge cases and one library-integrity ordering bug before the
-> experiment is built. Do not skip it.
+> **Executor instructions:** Plan 011 is accepted. The owner re-scoped this
+> plan on 2026-08-03: it is no longer a Weaver codebase experiment. It is an
+> agent-executed reading build. The executing agent reads Shadow Slave
+> chapters 1-100 directly from `novels/shadow-slave/0001-0100/` with two
+> fresh-context reader subagents and builds an interconnected knowledge base
+> (lore graph). Weaver is not the reader and is not touched. Do not modify
+> any file under `novels/`. Do not commit any knowledge base content. The
+> owner's wording: "we will build lore graph, find and research how to
+> enable or implement fictional understanding for agents and a lot of
+> things".
+>
+> This plan is **harness-agnostic**: it must run the same under pi, Codex,
+> or any capable agent harness. Roles and discipline are the contract;
+> per-harness bindings (which tool spawns a fresh-context subagent, how to
+> pass file paths) live in the harness appendix of
+> `docs/process/subagent-fleet.md`. There are no harness-specific patterns
+> in this plan (no fork, no agent-name-specific tooling).
 
 ## Status
 
-- **Tooling:** All work in this plan uses `uv`: `uv run` for every command,
-  `uv add` for dependencies (updates `uv.lock`), `uv sync`/`uv lock --check`
-  for the environment. No pip or poetry anywhere.
-- **State:** Active at learning gate; implementation not admitted
+- **Tooling:** `uv` for repo commands; the reading itself uses the harness's
+  native tools (read files, run commands, spawn fresh-context subagents).
+- **State:** Pilot approved by owner 2026-08-03; full run 1-100 in progress
 - **Priority:** P2
-- **Effort:** L
-- **Risk:** Medium (first novel-content test, live model calls required)
+- **Effort:** L (100 chapters, multi-eye reading)
+- **Risk:** Medium (private source material; long-running careful build)
 - **Depends on:** Plan 011 accepted 2026-08-03
-- **Category:** Experiment and comprehension
-- **Planned at:** commit `e523383`, 2026-07-30
-- **Audited at:** 2026-07-31 — current-state claims corrected (real packet
-  signature, no experiment registry, not all tools deterministic); provider
-  edge cases and the timeout gap pinned as prerequisite repairs
+- **Category:** Agent reading and knowledge base
+- **Planned at:** commit `e523383`, 2026-07-30 (as a Weaver experiment);
+  re-scoped by owner 2026-08-03
 - **Learning gate:** `deliverables/012-direct-reading-baseline/learning.md`
 - **Final decision:** pending
 
 ## Current stop
 
-The owner must select the chapter range and approve the question set in
-`deliverables/012-direct-reading-baseline/learning.md`. No novel content,
-source implementation, or live model call is admitted before that decision.
+The owner approved the pilot (chapter 1, three eyes) and the loop on
+2026-08-03, with two binding rules:
+
+1. **Fresh-context subagents** — every reader subagent starts with a clean
+   context containing only its task prompt and the file path(s) it must
+   read. No session inheritance, no repo browsing, no knowledge base access.
+2. **Read exactly the assigned chapter(s)** — the only file a reader
+   subagent may open is the novel chapter file (or chapter files) it is
+   assigned. Nothing else: no plans, no code, no other chapters, no KB.
+
+The orchestrating agent is the **sole writer** of the knowledge base.
 
 ## Goal
 
-Compare two models reading the same novel packet blind and answering the same
-questions.
-
-After this plan, a deterministic experiment sends identical chapter packets
-to both `deepseek-v4-flash` and `deepseek-v4-pro`, asks the same set of
-comprehension questions, and produces a structured comparison report. The
-experiment proves the reading pipeline (library → packet → model → answer)
-end-to-end before any compiled memory or retrieval system is built. Receipts
-and results contain answer text and metadata only — never chapter prose.
+Read Shadow Slave chapters 1-100 from the start and build an interconnected
+knowledge base (lore graph) from pure reading. The orchestrating agent reads
+each chapter itself and, for every chapter, dispatches two fresh-context
+reader subagents (different lenses) so each chapter gets three eyes. The
+analyses build on each other through the shared knowledge base, which the
+orchestrator alone writes. The accumulated output IS the deliverable. No
+vector database (Qdrant), RAG, or retrieval machinery in this plan; later
+plans build on top of the graph. The plan also researches how agents can
+implement fictional understanding.
 
 ## Why this matters
 
-Plans 001--011 build the infrastructure to have a conversation. Plan 012 is
-the first time Weaver reads a novel. It answers: can a model, given raw
-chapter text in a single context window, understand what happened?
+This is the first time the agent stack actually reads the novel. The lore
+graph is the seed data for Weaver's future reading capabilities and for any
+later retrieval, and it is built the careful way: chapter by chapter, three
+eyes per chapter, every new analysis grounded in what the graph already
+knows. Weaver itself cannot do this yet (no subagents, no orchestration, no
+read/bash tools) and stays untouched.
 
-The result is the baseline against which every future approach (compiled
-memory, RAG, narrative threads, Karpathy-style wiki) is measured. If Flash
-and Pro perform identically, that's a data point. If neither can answer
-basic plot questions, the approach needs rethinking before investing in
-sophisticated memory systems.
+## Discipline
 
-This was the original Plan 008, deferred until the conversation
-infrastructure existed.
+- `novels/` is immutable private source: read-only, never modified.
+- Reader subagents open only their assigned chapter file(s) — no other
+  files, ever.
+- Reader subagents run with fresh context: their task prompt is the only
+  context they see. Constraints live in the prompt because they cannot see
+  the parent session.
+- The orchestrating agent is the sole writer. Subagents return analysis
+  text; they never write files, never touch the knowledge base, never touch
+  the repo.
+- The knowledge base lives at `.weaver/knowledge/shadow-slave/` with
+  owner-only permissions and is never committed.
+- No chapter prose, raw reasoning traces, or credentials enter any
+  committed file; the knowledge base holds short quoted passages only where
+  needed for verification.
+- Every per-chapter analysis builds on the accumulated graph; nothing is
+  written from a cold context when the graph already covers the ground.
+- A passing pilot is not a done plan: the owner records the final decision
+  after the full run and independent review.
 
-The audit before this rewrite found four things the earlier plan text got
-wrong or missed — they are repaired/corrected in Slice 0 and the contract:
+## Roles
 
-1. `build_novel_packet` takes `(novel_id, chapters: list[int])`, not
-   `(start_chapter, end_chapter)`.
-2. There is no experiment registry — `cli.py` dispatches by name; the real
-   pattern is `run_model_smoke(model_layer, *, flash_model, pro_model, mode,
-   receipt_root, secrets, timeout_seconds) -> ExperimentResult`.
-3. Not all library tools are deterministic — fetch/update are network-backed
-   (Firecrawl); only inspect/packet/export are.
-4. `timeout_seconds` is recorded in manifests but **never enforced**
-   (no `asyncio.wait_for` anywhere in `experiment.py`) — a trickling model
-   would run forever. Plan 012 mandates enforcement.
+| Role | Who | Contract |
+| --- | --- | --- |
+| Orchestrator | the executing agent (pi or Codex) | reads every chapter directly; dispatches the two readers per chapter; merges their analyses with its own read; sole writer of the KB |
+| Reader A | fresh-context subagent | plot/causality lens; reads the assigned chapter file only; returns structured analysis text only |
+| Reader B | fresh-context subagent | characters/worldbuilding lens; reads the assigned chapter file only; returns structured analysis text only |
 
-## Current state
+Fresh-context dispatch follows `docs/process/subagent-fleet.md` (roles,
+isolation, orchestration shapes); per-harness bindings are in its appendix.
+The two readers run in parallel per chapter. Analysis that contradicts the
+source is adjudicated by the orchestrator re-reading the chapter.
 
-### `src/weaver/corpus/tools.py:77-83` — build_novel_packet (corrected)
+## Knowledge base structure
 
-```python
-build_novel_packet(novel_id, chapters: list[int])  # sorts, dedups, validates
+```
+.weaver/knowledge/shadow-slave/
+  README.md            map + conventions + reading status
+  lore-graph.jsonl     canonical graph records: entities + edges + threads
+  chapters/0001.md     per-chapter analysis (one file per chapter)
+  threads.md           narrative threads ledger (setups, mysteries, payoffs)
+  timeline.md          event timeline with chapter references
+  method.md            fictional-understanding research notes
 ```
 
-Assembles validated chapters into a private ordered Markdown reading packet
-under `.weaver/corpus/shadow-slave/packets/`. `export_novel` writes **one
-private file** (txt/md/epub) under state exports (`service.py:380-390`) — it
-does not "export the library to a directory".
-
-### `src/weaver/experiment.py:550-560` — the real experiment pattern (corrected)
-
-```python
-run_model_smoke(model_layer, *, flash_model, pro_model, mode, receipt_root,
-                secrets, timeout_seconds) -> ExperimentResult
-```
-
-There is **no registry**: `cli.py:161-197` dispatches experiment names via
-if/else and constructs the provider from `--fake|--live`. `run_direct_reading`
-must follow this signature pattern. Note: `timeout_seconds` is written to the
-manifest only — no `asyncio.wait_for` bounds the calls (`experiment.py:336-341,589-595`).
-
-### `src/weaver/model_layer/deepseek.py` — DeepSeek provider
-
-`DEEPSEEK_KEY` from the process environment only (config never auto-loads
-`.env`). Models: `deepseek-v4-flash`, `deepseek-v4-pro`. Errors surface as
-terminal events with `error_category` (`deepseek.py:311-334`); `reasoning_content`
-is ephemeral (REASONING_DELTA only, sanitized at receipts).
-
-Known edge cases from the audit (repaired in Slice 0):
-
-- `_status_category` (`deepseek.py:398-407`) maps 401→authentication,
-  402→balance, 429→rate_limit, 400/422→invalid_request — **403 falls into the
-  generic "provider" bucket**.
-- A stream ending `finish_reason="tool_calls"` with no tool deltas produces
-  `TOOL_USE` with **zero tool calls** (`deepseek.py:221-231`), unguarded.
-- Cancellation/early-exit paths skip stream cleanup: `except CancelledError`
-  awaits inside the handler (sticky cancellation) and there is no `finally`
-  around the chunk loop (`deepseek.py:124-215,151-157`).
-
-### `src/weaver/receipts.py:33-44` — sanitize()
-
-Redaction is **key-name based** (`_SENSITIVE_KEYS` incl. `reasoning_content`,
-api keys, bearer regex). It cannot and does not block arbitrary prose. The
-same holds for `CorpusStore._assert_metadata_only` (`storage.py:615-633`,
-`_FORBIDDEN_METADATA_KEYS` incl. `chapter_text`, `prose`). **Guaranteeing no
-chapter text in receipts is the experiment's job, not the sanitizer's.**
-
-### `src/weaver/corpus/service.py:858-866` — fetch ordering (corrected)
-
-`_fetch_one` calls `commit_chapter` **before** `ensure_url_recorded`. If the
-URL list has a structural error, the chapter file lands on disk without a URL
-entry, the fetch reports failure, and the orphaned file is invisible to
-`update` (its repair scan is bounded by the URL list) and reported VALID by
-`inspect` (missing = expected − raw paths). Repaired in Slice 0.
-
-### `src/weaver/model_layer/fake.py` — FakeModelProvider
-
-Dual-mode experiments use scripted fake responses for the dry run
-(`--fake`) and live responses for the real run (`--live`).
-
-### Verified baseline (2026-07-31)
-
-- `uv run pytest -q` → 166 passed; `uv run ruff check src/weaver tests` → clean.
-- `uv run weaver experiment model-smoke --fake` works (existing dry-run path).
-
-## Contract to prove
-
-### 1. Prerequisite repairs (Slice 0)
-
-Provider (`src/weaver/model_layer/deepseek.py`) — each with a regression test
-in `tests/test_deepseek_provider.py`:
-
-1. **403 → `authentication`** in `_status_category` (`deepseek.py:398-407`).
-2. **TOOL_USE with zero tool calls → provider error** (raise
-   `ModelProtocolError` or emit `ERROR` with `invalid_request`-style
-   category) at `deepseek.py:221-231`.
-3. **Stream cleanup on every exit path**: wrap the chunk loop in
-   `try/finally` that closes the SDK stream; never `await` inside a
-   `CancelledError` handler (sticky cancellation); emit the ABORTED terminal
-   only where it can actually be delivered (or accept CancelledError
-   propagation as the documented contract — pick one and pin it in the code).
-
-Library (`src/weaver/corpus/service.py`, `storage.py`):
-
-4. **`ensure_url_recorded` before `commit_chapter`** in `_fetch_one`
-   (`service.py:858-866`), so a URL without a file is the normal
-   inspectable "missing" state and a file without a URL can never be
-   created. Regression test: malformed `urls.md` → fetch fails and no
-   chapter file exists on disk.
-
-### 2. Packet and chapter selection
-
-- Packet built via `build_novel_packet(novel_id, chapters=[...])` with an
-  explicit chapter list — the list is a learning-gate decision (Slice 1).
-- The packet text exists only in memory and in the private packet file. It
-  must never be serialized into receipts, results, logs, or committed
-  files. Receipt payloads contain only: packet id + chapter list + hashes,
-  per-model answers, token counts, error categories, comparison matrix.
-- Post-run assertion: scan every receipt/results file for a sample of
-  packet sentences and for the `_FORBIDDEN_METADATA_KEYS` names; fail the
-  experiment if any appear.
-
-### 3. Blind protocol
-
-- Each model call is constructed independently: same packet text, same
-  questions, isolated prompt. Neither model sees the other's answer or any
-  expected answer.
-- Fixed order (flash, then pro); comparison happens offline after both
-  calls settle.
-- If a call fails, record the failure (`error_category`, http status) as
-  evidence and continue to the other model — no silent retry, no silent
-  skip.
-
-### 4. Timeout enforcement
-
-- Every model call is wrapped in `asyncio.wait_for(..., timeout=timeout_seconds)`
-  with `timeout_seconds` from the manifest (default 30.0 per
-  `config.DEFAULT_TIMEOUT_SECONDS`).
-- A timeout is recorded as a failed call with `error_category="timeout"`
-  and reported — never retried silently. This closes the audit gap
-  (`experiment.py` accepted `timeout_seconds` but never enforced it).
-
-### 5. Comparison methodology
-
-Per question, classify: **agree** (same entities/events), **partial**
-(overlapping but divergent details), **disagree** (contradictory claims),
-**unverifiable** (citation not found in packet). Hallucination check: any
-cited passage must substring-match the packet; mismatches are recorded as
-citations-not-found. The matrix plus both raw answers land in
-`deliverables/012-direct-reading-baseline/results.md`.
-
-### 6. Live discipline
-
-- Dry run (`--fake`) must pass before any live run; deterministic tests
-  before live calls (AGENTS.md Experiments).
-- Live run requires `DEEPSEEK_KEY` (absent → exit 2, no call, no receipt).
-- `reasoning_effort`: `max` is confirmed valid for V4-Flash-0731; **`high`
-  must be verified on the first live call** — if rejected, retry with
-  `max` and record the difference (STOP condition if both fail).
-- Stated semantics: the smoke experiment stops at the first failed call;
-  this experiment continues across models (matches
-  `run_provider_tool_contract`) — the asymmetry is deliberate and recorded.
-
-### 7. Scope fence
-
-No changes to `conversation/` or `agent/`. `model_layer/` and `corpus/`
-change only in Slice 0 repairs.
+Conventions: entities are tagged `@id` (e.g. `@sunny`), chapters are
+referenced `[[0001]]`, relations are stored on the source entity with a
+target, relation type, and chapter evidence. Entity ids are stable from
+first appearance.
 
 ## Scope
 
 ### In scope
 
-- `src/weaver/model_layer/deepseek.py` + `tests/test_deepseek_provider.py`
-  (Slice 0 repairs 1-3)
-- `src/weaver/corpus/service.py`, `src/weaver/corpus/storage.py` + corpus
-  tests (Slice 0 repair 4)
-- `src/weaver/experiment.py` (`run_direct_reading`)
-- `src/weaver/cli.py` (`direct-reading` experiment name)
-- `src/weaver/model_layer/fake.py` only if a scripted direct-reading
-  response set is needed (additive only)
-- Plan 012 deliverables and `plans/README.md`
+- Reading chapters 1-100 (pilot approved; batches continue).
+- Per-chapter analysis files, entity/edge graph records, threads and
+  timeline ledgers.
+- Web research on fictional understanding / lore graphs → `method.md`.
+- Plan 012 deliverables (learning.md, results.md, decision.md) and
+  `plans/README.md`.
 
 ### Out of scope
 
-- `conversation/`, `agent/`
-- compiled memory, retrieval, LangGraph, wiki generation (Plan 014+)
-- multi-packet reading; packet text in receipts; `.env` loading
+- Weaver codebase changes (`src/weaver/`, `conversation/`, `agent/`,
+  `model_layer/`, `corpus/`).
+- Real model API arms: the flash/Terra comparison becomes subordinate
+  opinions inside the fleet; a GPT-5.6 Terra/Codex reader may join later.
+  No API keys are needed or used by this plan.
+- Vector database (Qdrant), RAG, retrieval, compiled memory.
+- Committing any knowledge base content.
+
+## Steps
+
+### Slice 0: Pilot (done, approved 2026-08-03)
+
+Chapter 1 read with three eyes (orchestrator + two readers) and merged into
+the graph. Owner approved the format and the loop with the two binding rules
+above. Lesson recorded: readers must be fresh-context subagents (not
+session-inheriting processes) and must never write files — the orchestrator
+merges.
+
+### Slice 1: Method research (done)
+
+Fictional-understanding research recorded in
+`.weaver/knowledge/shadow-slave/method.md` (Narrative World Model, ReadAgent,
+STAGE, ReverieMem, story-bible tools). No novel text in that file.
+
+### Slice 2: Main run, chapters 1-100
+
+- Read in batches (e.g. 10 chapters per pass). Per chapter: orchestrator
+  reads it, dispatches Reader A (plot/causality) and Reader B
+  (characters/worldbuilding) in parallel with the exact chapter file path
+  and the analysis template; both return analysis text only.
+- Orchestrator merges its own read with both analyses into
+  `chapters/NNNN.md` and updates the graph, threads, and timeline.
+- Each batch starts from the accumulated graph (passed to the orchestrator's
+  own context), so analyses build on each other.
+- Track entity continuity: same entity across chapters keeps one id;
+  aliases recorded; state changes appended to the entity record.
+- Verify the orchestration once per batch: confirm the readers returned
+  analysis (not file writes) and that no KB file changed except by the
+  orchestrator.
+
+### Slice 3: Review and decision
+
+- Independent review of graph consistency: entity continuity, thread
+  tracking, no contradictions with the source chapters (spot-check by
+  re-reading sampled chapters), format quality.
+- Owner records the final decision in `decision.md`; results recorded in
+  `results.md`.
 
 ## Commands
 
 | Purpose | Command | Expected result |
 | --- | --- | --- |
-| Dry run | `uv run weaver experiment direct-reading --fake` | Structured output; receipts contain no packet text |
-| Provider repair tests | `uv run pytest -q tests/test_deepseek_provider.py` | All pass (incl. new 403/TOOL_USE-empty/cleanup tests) |
-| Corpus repair tests | `uv run pytest -q tests/test_corpus*.py` (or the corpus test module name) | All pass (incl. fetch-ordering regression) |
-| Full suite | `uv run pytest -q` | All pass (166 baseline; expect 173+) |
-| Lint | `uv run ruff check src/weaver/experiment.py src/weaver/cli.py src/weaver/model_layer/deepseek.py src/weaver/corpus tests` | Exit 0 |
-| Receipt scan | post-run assertion (Contract §2) | No packet sentences, no blacklist keys |
-
-## Steps
-
-### Slice 0: Prerequisite repairs
-
-Apply Contract §1 repairs 1-4 with their regression tests. Each repair lands
-as its own commit (`repair: deepseek 403 category`, `repair: TOOL_USE empty
-guard`, `repair: stream cleanup on exit`, `repair: url recorded before
-chapter commit`).
-
-**Verify:** the four new regression tests pass; full suite green; no
-behavior change observed in existing provider/corpus tests.
-
-### Slice 1: Confirm the learning gate
-
-Answer five questions in `deliverables/012-direct-reading-baseline/learning.md`:
-
-1. Packet selection: which chapters from Shadow Slave form the reading
-   packet, and what makes them a good test (standalone arc, known
-   characters, clear events)? Express it as a chapter list for
-   `build_novel_packet(novel_id, chapters=[...])`.
-2. Question design: which comprehension questions cover literal recall,
-   character state, causal reasoning, and thematic interpretation?
-3. Comparison methodology: what constitutes agree vs. partial vs. disagree,
-   and how is the matrix structured (Contract §5)?
-4. Token budget: do the chapters fit in a single context window for both
-   Flash and Pro (verify the actual limit on the first live call; the 128K
-   claim is unverified), and what happens if they don't?
-5. Blind protocol: how is each model call isolated (Contract §3)?
-
-Re-verify every cited line in the drafted 2026-07-30 answers (the packet
-signature claim there is stale).
-
-Commit: `plan 012: learning gate answers`
-
-### Slice 2: Build the reading experiment
-
-Add `run_direct_reading` to `src/weaver/experiment.py` following the
-`run_model_smoke` signature pattern (model_layer, models, mode,
-receipt_root, secrets, timeout_seconds → `ExperimentResult`), and
-`"direct-reading"` to the CLI if/else dispatch (`cli.py:161-197`).
-
-Steps:
-
-1. `build_novel_packet(novel_id, chapters=...)` → packet (id, chapter list,
-   hash).
-2. System prompt: "Read the following chapters and answer the questions.
-   Cite specific passages."
-3. Per model (flash, pro), in fixed order: `asyncio.wait_for(model_layer.complete(...), timeout=timeout_seconds)` (Contract §4).
-4. Parse answers; build the comparison matrix offline (Contract §5).
-5. Receipt payload: packet metadata + hashes + answers + token counts +
-   error categories only (Contract §2). Post-run receipt scan (Contract §2).
-
-Commit: `plan 012: direct-reading experiment`
-
-### Slice 3: Fake-model dry run
-
-Scripted fake responses (additive `fake.py` set) simulate two models giving
-slightly different answers, producing a realistic comparison matrix.
-
-```bash
-uv run weaver experiment direct-reading --fake
-```
-
-The dry run must complete without a key and produce the same receipt
-structure as the live run.
-
-Commit: `plan 012: fake dry-run for direct reading`
-
-### Slice 4: Live run and evidence
-
-With `DEEPSEEK_KEY` set:
-
-```bash
-uv run weaver experiment direct-reading --live
-```
-
-Record: raw answers, token counts, the comparison matrix, refusals,
-hallucinations (citations-not-found), and error categories. Write results to
-`deliverables/012-direct-reading-baseline/results.md`: answer text and
-metadata only, no chapter text. Verify `reasoning_effort: high` on the first
-call (Contract §6).
-
-Commit: `plan 012: live direct-reading evidence`
-
-## Test plan
-
-1. Provider repairs: 403 → authentication; TOOL_USE-empty → provider error;
-   stream closed on cancel and on early exit (deterministic via events, no
-   sleeps).
-2. Fetch ordering: malformed `urls.md` → fetch fails, no chapter file on
-   disk; normal fetch still records URL + file.
-3. Dry run determinism: `--fake` produces the same receipt structure twice;
-   no key needed; no live client constructed.
-4. Timeout: a scripted slow provider + small `timeout_seconds` → recorded
-   `timeout` failure, no retry, other model still runs.
-5. Receipt scan: packet sentences and blacklist key names absent from every
-   receipt produced by the dry run.
-6. CLI: `experiment direct-reading --fake` exit 0; `--live` without key
-   exits 2 before any call.
-
-## Independent review
-
-1. Reviewer 1 (pipeline/leakage): blind protocol, timeout enforcement,
-   receipts contain no chapter text (scan evidence), failure recording
-   (no silent retry).
-2. Reviewer 2 (methodology/scope): comparison matrix definitions,
-   hallucination check, question design, no `conversation/`/`agent/`
-   changes, Slice 0 repairs minimal.
-3. One repair pass is allowed.
-4. Both reviewers recheck the repaired candidate.
+| Full-suite guard | `uv run pytest -q` | Unchanged suite passes (no repo code changed) |
+| Lint guard | `uv run ruff check src/weaver tests` | Clean (unchanged) |
 
 ## Done criteria
 
-- [ ] Owner confirmed Plan 012 learning gate (chapter list, questions,
-  methodology).
-- [x] Plan 011 is accepted.
-- [ ] Slice 0 repairs merged with their regression tests.
-- [ ] `run_direct_reading` exists with fake and live modes; timeout enforced.
-- [ ] `weaver experiment direct-reading --fake` produces a structured
-  output with no packet text in receipts.
-- [ ] Live run evidence recorded in results.md with no chapter text;
-  `reasoning_effort` verified.
-- [ ] Full tests and lint pass.
-- [ ] No changes to `conversation/` or `agent/`.
-- [ ] Two independent reviews have no open blocker.
+- [ ] Pilot approved by owner (format + loop) — done 2026-08-03.
+- [ ] All 100 chapters read with three eyes; `chapters/` complete.
+- [ ] `lore-graph.jsonl` holds stable entity/edge/thread records built
+  cumulatively; threads ledger tracks setups and payoffs.
+- [ ] Method research recorded in `method.md`.
+- [ ] Independent review of graph consistency has no open blocker.
+- [ ] No novel file modified; no knowledge base content committed; no
+  reader subagent wrote files.
 - [ ] Owner records Plan 012 final decision.
 
 ## STOP conditions
 
 Stop and report if:
 
-- The selected chapters exceed the verified context window for either model;
-- a model refuses to answer or answers from "general knowledge" of Shadow
-  Slave rather than the provided text (record it; do not silently accept);
-- `DEEPSEEK_KEY` is absent during the live run;
-- chapter text enters receipts, logs, or committed files (the post-run
-  scan fails);
-- a model call exceeds the enforced timeout and the failure is not recorded
-  as evidence;
-- both `reasoning_effort` values fail on live calls;
-- private prose, credentials, or raw reasoning enter evidence.
-
-## Maintenance notes
-
-- The metadata-only guards (`sanitize`, `_assert_metadata_only`) are
-  key-name based conventions, not content filters — every future experiment
-  that handles novel text must guarantee by construction that prose never
-  reaches receipt writers (this plan's receipt-scan pattern is the template).
-- This baseline is the control group for compiled-memory experiments
-  (Plan 014+); keep the packet selection and question set stable so later
-  results are comparable.
-- The smoke-vs-contract stop-on-first-failure asymmetry is deliberate
-  (Contract §6); if it ever changes, both experiments must be updated
-  together.
-- The three provider repairs (403, TOOL_USE-empty, stream cleanup) harden
-  the same code the TUI (Plan 010) and the conversation loop (Plan 008)
-  depend on — the tests added here are their regression suite.
+- The owner changes the chapter scope (e.g. extends past 100);
+- a reader subagent writes a file, touches the KB, or opens anything other
+  than its assigned chapter file (revert any stray writes, report, re-run
+  that chapter);
+- a reader's analysis contradicts the source (orchestrator re-reads the
+  chapter to adjudicate);
+- a novel file is accidentally modified (restore from git, report);
+- knowledge base content risks entering a commit;
+- the batch verification shows readers are not fresh-context (session
+  inheritance leaks).
 
 ## Deferred work
 
-- Compiled-memory experiments (Plan 014+): use this baseline as the control
-  group.
-- Multi-packet reading (chapters across multiple context windows).
-- Tool-based retrieval (lookup_passage tool during conversation).
-- Karpathy-style wiki generation from reading sessions.
+- GPT-5.6 Terra/Codex reader joining the fleet (272K window noted).
+- Retrieval over the graph: Qdrant, RAG, or other machinery (later plan).
+- Weaver gaining its own subagents/orchestration/read tools to do this
+  itself (later milestone).
