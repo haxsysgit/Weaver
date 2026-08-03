@@ -65,7 +65,42 @@ These are hypotheses, not accepted literary-memory architecture.
 - Git required as the wiki's source of version truth;
 - a public project vision file used as private live memory.
 
+## 2026-08-03 recheck against Plan 012 (pi run)
+
+Owner asked: research Karpathy's LLM wiki and say whether it helps the
+aggressive 20-chapters-per-turn re-read, before reading starts.
+
+**Verdict: yes for the process, no new data layer needed.** Plan 012's
+private notebook already implements the core of the pattern (immutable
+novel sources, agent-written interlinked pages, contradiction lint via
+`scripts/check_story_notebook.py`). The wiki idea adds nothing we lack as
+a store. What it does add, and what this run adopts:
+
+- **index.md as the first read of every turn.** Instead of re-scanning all
+  prior records, the coordinator reads one living index of entities,
+  locations, items, factions, and open threads, then drifts into the pages
+  it needs. This is the continuity mechanism for a 20-chapter turn: the
+  index is the memory handoff that survives context loss.
+- **log.md as append-only journal.** One line per turn (date, chapters,
+  entities touched, threads advanced, open questions). Cheap to write,
+  greppable, and the second continuity anchor.
+- **Update-in-place over append-only.** A new chapter updates existing
+  entity pages and relationships rather than only adding records; the
+  checker still guarantees every claim stays source-linked.
+- **Skip, with reason:** qmd search, Obsidian graph view, Marp slides,
+  Dataview, image pipeline. The notebook is agent-facing, not
+  human-browsed, and search is explicitly deferred by the plan.
+
+So: beneficial as a working method for the re-run, not as a new storage
+architecture. The 006 handoff note already pointed here ("index and log
+pages may work before heavier search"). The Plan 012 notebook is that
+prediction, realized.
+
 ## Handoff
 
 Plan 007 does not build a wiki. The compiled Markdown experiment belongs to
 Plan 009, after direct reading has a baseline and source-linked records exist.
+
+The Plan 012 pi-run notebook (`.weaver/knowledge/shadow-slave/`) is the
+first real, source-linked implementation of this pattern and the ground
+for later memory plans.

@@ -3,10 +3,11 @@
 ## Status
 
 Plan wording locked by the owner 2026-08-03 (plain-language revision). The
-method research gate, deterministic checker slice, private chapters 1-100
-notebook, and independent ten-group source review are complete. The old
-chapter 1 attempt is quarantined to a private `old-attempts` folder. Final
-owner decision is pending.
+method research gate and deterministic checker slice are complete. A
+second, owner-directed rich read by pi (`shadow-slave-pi/`) is in progress:
+chapters 1-20 done, 21-100 remaining. The codex-built notebook
+(`shadow-slave/`) is complete through 100. Final owner decision is pending
+until the pi run finishes and both runs are compared.
 
 ## Timeline
 
@@ -54,14 +55,37 @@ owner decision is pending.
   no later-knowledge leaks or structural mismatches remain.
 - The source-grounded checker passes the rebuilt notebook with zero problems.
 
+### 2026-08-03: pi run, batch 1 (chapters 1-20)
+
+- Owner directed pi to redo Plan 012 itself, aggressively (20 chapters per
+turn) with max continuity, so the two runs can be compared.
+- Karpathy LLM wiki research done first (see
+  `deliverables/006-durable-conversation-architecture/research-karpathy-llm-wiki.md`);
+  adopted index.md (read first every turn) and log.md (append-only journal)
+  as the continuity mechanism.
+- Read chapters 1-20 in full with line numbers; wrote 20 master records
+  (88 statements, 4-6 per chapter vs codex's 2), 20 chapter notes, 33
+  entity pages, 180 connections, timeline, mysteries, relationships,
+  interpretations, and the continuity index/log.
+- Checker passes with zero problems: `uv run python
+  scripts/check_story_notebook.py --root .weaver/knowledge/shadow-slave-pi
+  --through 20 --novel-dir novels/shadow-slave`.
+- Notebook lives at `.weaver/knowledge/shadow-slave-pi/` (separate from
+  codex's `.weaver/knowledge/shadow-slave/`); dirs 700, files 600, never
+  committed.
+
 ## Checks run
 
 - `uv run pytest -q tests/test_story_notebook_checker.py` passed.
 - `uv run ruff check scripts/check_story_notebook.py tests/test_story_notebook_checker.py`
   passed.
 - `uv run python scripts/check_story_notebook.py --root
-  .weaver/knowledge/shadow-slave --through 100` passed: 100 chapters, 200
-  statements, 924 connections, 0 problems.
+  .weaver/knowledge/shadow-slave --through 100` passed (codex run): 100
+  chapters, 200 statements, 924 connections, 0 problems.
+- `uv run python scripts/check_story_notebook.py --root
+  .weaver/knowledge/shadow-slave-pi --through 20 --novel-dir novels/shadow-slave`
+  passed (pi run): 20 chapters, 88 statements, 180 connections, 0
+  problems.
 - The independent ten-chapter review passed all 200 statements after the
   evidence repairs.
 - `uv run pytest -q` passed.
