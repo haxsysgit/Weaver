@@ -870,8 +870,8 @@ def check_notebook(
     if not root.is_dir():
         add_issue(result, root, "notebook root is missing")
         return result
-    if not isinstance(through, int) or not 1 <= through <= 100:
-        add_issue(result, root, "requested range must be between chapters 1 and 100")
+    if not isinstance(through, int) or not 1 <= through <= 500:
+        add_issue(result, root, "requested range must be between chapters 1 and 500")
         return result
 
     repo_root = find_repo_root(root)
