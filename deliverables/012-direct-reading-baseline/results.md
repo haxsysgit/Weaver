@@ -3,8 +3,10 @@
 ## Status
 
 Plan wording locked by the owner 2026-08-03 (plain-language revision). The
-old chapter 1 attempt is quarantined to a private `old-attempts` folder.
-Reading has not started. Final owner decision pending.
+method research gate and deterministic checker slice are complete. The old
+chapter 1 attempt is quarantined to a private `old-attempts` folder.
+Chapters have not been read yet: the three-reader run starts after the
+owner names the reader agents. Final owner decision pending.
 
 ## Timeline
 
@@ -22,11 +24,29 @@ Reading has not started. Final owner decision pending.
   contract) is candidate evidence only, never accepted output. Its verified
   content will not be reused in the new run.
 
+### 2026-08-03: Method research and checker slice
+
+- Rechecked the primary arXiv pages for Narrative World Model,
+  ReadAgent, and Shadow-Loom. The public method note records only the
+  resulting record-shape decisions; it contains no story knowledge.
+- Added `scripts/check_story_notebook.py` and synthetic tests. The checker
+  validates source hashes and locations, resumable chapter order, evidence
+  labels, links, reader/reconciliation/review gates, private permissions,
+  copied-prose rejection, and Git exposure without printing saved story
+  text.
+- `uv run pytest -q tests/test_story_notebook_checker.py` passed (29 tests).
+- `uv run ruff check scripts/check_story_notebook.py tests/test_story_notebook_checker.py`
+  passed.
+- Moved the old pilot into the private `old-attempts/20260803-pilot/`
+  quarantine. Chapter 1 will be written again from zero.
+
 ## Checks run
 
-- None yet for the main reading. The notebook checker
-  (`scripts/check_story_notebook.py`) is built on synthetic data before
-  chapter 1 is re-read.
+- `uv run pytest -q tests/test_story_notebook_checker.py` passed.
+- `uv run ruff check scripts/check_story_notebook.py tests/test_story_notebook_checker.py`
+  passed.
+- The full private notebook check and independent ten-chapter review remain
+  pending until the chapter run finishes.
 
 ## Outcomes
 

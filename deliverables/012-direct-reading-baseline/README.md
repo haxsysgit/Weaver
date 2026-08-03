@@ -26,11 +26,11 @@ plan.
 | --- | --- | --- |
 | `plan.md` | Pointer to the canonical implementation plan | Active |
 | `learning.md` | Plain-language understanding and owner gate | Confirmed 2026-08-03 |
-| `results.md` | Observations and executed commands | Plan revision locked; reading not started |
+| `results.md` | Observations and executed commands | Research gate and checker tests complete; reading awaits owner's reader-agent pick |
 | `rubric.md` | Acceptance checklist | Updated to plain plan |
 | `review-ledger.md` | Findings, repairs, and rechecks | Plan revision recorded; post-run review pending |
 | `decision.md` | Owner's final accept or reject record | Final pending |
-| `fictional-understanding-research.md` | Sanitized cited method research | Pending before main run |
+| `fictional-understanding-research.md` | Sanitized cited method research | Complete 2026-08-03; primary paper pages rechecked |
 
 No novel prose, chats, credentials, private receipts, story-derived
 knowledge, or raw model reasoning belong here.
