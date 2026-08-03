@@ -2,19 +2,18 @@
 
 ## Status
 
-Gate 1 appraisal is complete and accepted by the owner 2026-08-02: the
-design reference was produced from the owner's captures and a dev-style
-extraction of the signed-in profile, and the behaviour decisions are
-recorded in decision.md. Browser implementation is admitted and in
-progress (shared runtime extracted; server and page next).
+Gate 1 appraisal is complete and accepted by the owner. Gate 2 is implemented,
+inspected at desktop and phone widths, independently reviewed, and repaired
+after a follow-up audit. The owner accepted Plan 011 on 2026-08-03.
 
 ## Recorded transition
 
 - Plan 010 is accepted and closed as Weaver's developer and debugging console.
 - The existing direct-reading plan moved intact to Plan 012.
 - Plan 011 now holds the local browser chat proof and its learning gate.
-- No authenticated browser call, live model call, server, API, or browser
-  runtime code was created. Appraisal research tooling was built.
+- Gate 1 research preceded the shared runtime, local server, API, and browser
+  implementation. No live model call was needed for deterministic Gate 2
+  verification.
 
 ## Gate 1 tooling (2026-08-02)
 
@@ -58,10 +57,12 @@ progress (shared runtime extracted; server and page next).
   2026-08-02; raw captures stay owner-only under
   `.weaver/research/chatgpt-ui/` (never committed).
 
-## Pending
+## Gate 1 decision
 
-- Owner decision on adopted behaviours (the adopt/skip list at the end of
-  the design reference); only then is Gate 2 admitted.
+- The owner accepted the adopt/skip list and admitted Gate 2 on 2026-08-02.
+- On 2026-08-03 the owner clarified that observed layout, ordinary UI text,
+  spacing, and palette values are allowed. OpenAI trademarks, logos, icons,
+  and brand assets remain excluded from Weaver.
 
 ## Gate 2 build (2026-08-02)
 
@@ -110,3 +111,66 @@ All findings fixed and covered by tests:
 - Dead TURN_TIMEOUT_SECONDS constant removed; the module comment no longer
   claims a timeout ceiling that did not exist (the provider's own timeout
   bounds each request).
+
+## Follow-up audit repair (2026-08-03)
+
+The owner-directed repair covers seven findings:
+
+- Stop now calls the cooperative cancel route and an interrupted turn renders
+  explicit Start new chat and Choose another chat actions.
+- Disconnect and shutdown use the same cancel event and await the owned model
+  task without a ten-second escape hatch.
+- Mutating routes require an exact loopback Host and a matching Origin when an
+  Origin header is present.
+- Page privacy text is mode-aware: fake mode states that no model request is
+  sent; live mode states that messages go to DeepSeek.
+- Interrupted SSE now includes `code: interrupted` and a safe recovery message.
+- A web test inserts private assistant, tool-call argument, and tool-result
+  canaries into SQLite, then proves they stay out of HTML, JSON, SSE,
+  JavaScript, and captured logs.
+- The plan, analysis, hypotheses, rubric, results, README, index, learning note,
+  and owner decision now agree on the current gate and design boundary.
+
+Red evidence: five focused tests failed before the first implementation change.
+The cross-surface canary test passed immediately because Plan 010's typed
+transcript filter already enforced that privacy boundary. The fresh critic then
+found Host grammar and missing-Origin gaps; four malformed-Host cases and one
+missing-Origin test failed before the second repair. The critic recheck passed.
+
+### Repair verification floor
+
+- `uv run pytest -q`: 284 passed in 57.11 seconds.
+- `uv run pytest -q tests/test_chat_runtime.py tests/test_web.py
+  tests/test_web_server.py`: 37 passed in 13.43 seconds.
+- `uv run ruff check src tests`: passed.
+- `uv lock --check`: passed, 79 packages resolved.
+- `uv pip check`: passed, 78 installed packages compatible.
+- `git diff --check`: passed.
+- Worktree diff scans: no `novels/` files, credential values, or chapter-like
+  private text; browser source uses `textContent`, no `innerHTML`, `eval`, or
+  `document.write`; local storage is limited to the active conversation ID;
+  shipped Weaver source contains no OpenAI or ChatGPT branding.
+- A committed ephemeral Uvicorn test creates a conversation over a real socket,
+  receives `delta` before `completed`, reads the filtered transcript, shuts the
+  server down, opens a fresh runtime, and proves the owner/Weaver transcript has
+  no duplicates.
+
+Two command failures are retained as evidence:
+
+- `uv run ruff check .` entered bundled `.agents/skills/drawio-skill` helper
+  scripts and found five pre-existing E731 warnings. Weaver's documented
+  `src tests` Ruff scope passed; unrelated skill files were not changed.
+- The first combined privacy-scan shell command had an unmatched quote and
+  exited before scanning. It was split into simpler commands and all scans
+  passed as listed above.
+- A follow-up shell-driven Uvicorn probe did not return a reliable completion
+  result through the command harness and left its temporary server processes
+  running. The exact processes were stopped and the temporary state was
+  removed. This run is not counted as evidence; the earlier recorded real
+  Uvicorn proof and the deterministic suite remain the accepted server proof.
+
+## Final owner decision (2026-08-03)
+
+Accepted. Plan 011 proved the local browser conversation boundary and is
+closed. Plan 012 may enter its learning gate; its implementation remains
+unadmitted until the owner confirms that gate.

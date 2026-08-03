@@ -21,12 +21,20 @@
   52 px rail was not dev-measured; the fixed-state probe list was
   superseded by the owner's captures and the extractor pass (recorded in
   learning.md).
+- Boundary clarification, 2026-08-03: the owner permits the observed layout,
+  ordinary interface text, spacing, and palette values. Weaver must not ship
+  OpenAI trademarks, logos, icons, or brand assets. Naming ChatGPT inside the
+  research reference is allowed; the product surface remains Weaver-branded.
 
 ## Final experiment gate
 
-- Owner choice: pending
-- Date: pending
-- Reason: pending
+- Owner choice: accepted
+- Date: 2026-08-03
+- Reason: The local browser proof demonstrated streaming, cooperative
+  cancellation and recovery, SQLite reload without duplicates, exact local
+  Host and Origin controls, mode-aware privacy copy, private-record filtering,
+  desktop and phone usability, and a passing independent recheck. Plan 012 may
+  enter its learning gate.
 
-Passing code does not accept Plan 011. Both decisions must be recorded at
-their proper gates.
+Both owner decisions are now recorded at their proper gates. Plan 011 is
+accepted.

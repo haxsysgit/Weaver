@@ -2,4 +2,4 @@
 
 ## Status
 
-Not started.
+Learning gate active. Implementation has not started.

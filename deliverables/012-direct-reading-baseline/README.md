@@ -3,6 +3,9 @@
 This folder holds public, content-free evidence for the direct-reading
 baseline: the first time Weaver reads a novel.
 
+Plan 012 is active at its learning gate. Implementation remains unadmitted
+until the owner selects the chapter range and approves the question set.
+
 ## Architecture
 
 ![Plan 012 architecture](architecture.svg)
@@ -17,8 +20,8 @@ written to disk in results.
 
 | File | Purpose | Current state |
 | --- | --- | --- |
-| `plan.md` | Pointer to the canonical implementation plan | Planned 2026-07-30 |
-| `learning.md` | Plain-language understanding and owner gate | Pending confirmation |
+| `plan.md` | Pointer to the canonical implementation plan | Active at learning gate |
+| `learning.md` | Plain-language understanding and owner gate | Awaiting owner selection |
 | `architecture.drawio` | Editable reading-pipeline architecture | Pending |
 | `architecture.svg` | Rendered architecture preview | Pending |
 | `results.md` | Deterministic observations and executed commands | Pending implementation |

@@ -3,7 +3,7 @@
 | Requirement | State | Evidence |
 | --- | --- | --- |
 | Owner confirmed `learning.md` (including chapter selection and questions) | Pending | Confirmation pending |
-| Plans 010 and 011 are accepted | Pending | Plan 011 owner decision |
+| Plans 010 and 011 are accepted | Passed | Plan 010 and Plan 011 decision records |
 | `run_direct_reading` experiment exists in `src/weaver/experiment.py` | Not built | |
 | Experiment sends identical chapter packet to Flash and Pro | Not built | |
 | Blind protocol: neither model sees the other's answer | Not built | |

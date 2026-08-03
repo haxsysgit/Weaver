@@ -25,14 +25,13 @@ from weaver.agent.turn import TurnExitReason
 from weaver.chat_runtime import ChatRuntime
 
 MAX_MESSAGE_CHARS = 32_000
-SETTLE_TIMEOUT_SECONDS = 10.0
 
 STATIC_DIR = __file__.rsplit("/", 1)[0] + "/static"
 TEMPLATE_DIR = __file__.rsplit("/", 1)[0] + "/templates"
 
 EVENT_HEADERS = {
     "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
+    "Cache-Control": "no-store",
     "Connection": "keep-alive",
     "X-Accel-Buffering": "no",
 }
@@ -50,12 +49,38 @@ def _reject_blank(message: str) -> None:
 
 
 def _check_local(request: Request) -> None:
-    """Loopback-only host and origin guard for mutating routes."""
-    host = request.headers.get("host") or ""
-    if host and not any(host.startswith(h) for h in LOCAL_HOSTS):
+    """Require an exact loopback host and a matching origin when supplied."""
+    host = request.headers.get("host", "").lower()
+    try:
+        parsed_host = urlparse(f"//{host}")
+        hostname = parsed_host.hostname
+        port = parsed_host.port
+    except ValueError:
+        raise HTTPException(status_code=403, detail="host not allowed") from None
+
+    if hostname not in LOCAL_HOSTS:
         raise HTTPException(status_code=403, detail="host not allowed")
+    if (
+        parsed_host.path
+        or parsed_host.params
+        or parsed_host.query
+        or parsed_host.fragment
+    ):
+        raise HTTPException(status_code=403, detail="host not allowed")
+    if parsed_host.username is not None or parsed_host.password is not None:
+        raise HTTPException(status_code=403, detail="host not allowed")
+
+    expected_host = hostname
+    if port is not None:
+        expected_host = f"{hostname}:{port}"
+    if host != expected_host:
+        raise HTTPException(status_code=403, detail="host not allowed")
+
     origin = request.headers.get("origin")
-    if origin and urlparse(origin).hostname not in LOCAL_HOSTS:
+    if not origin:
+        raise HTTPException(status_code=403, detail="origin required")
+    expected_origin = f"{request.url.scheme}://{host}"
+    if origin.rstrip("/").lower() != expected_origin:
         raise HTTPException(status_code=403, detail="origin not allowed")
 
 
@@ -87,12 +112,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
             return
         stream.cancel_event.set()
         if stream.task is not None:
-            try:
-                await asyncio.wait_for(
-                    asyncio.shield(stream.task), timeout=SETTLE_TIMEOUT_SECONDS
-                )
-            except asyncio.TimeoutError:
-                pass  # ponytail: shield+timeout; kill via event only, never task.cancel
+            await asyncio.shield(stream.task)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
@@ -120,7 +140,9 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
             for row in rows
         ]
 
-    @app.post("/api/conversations", status_code=201, dependencies=[Depends(_check_local)])
+    @app.post(
+        "/api/conversations", status_code=201, dependencies=[Depends(_check_local)]
+    )
     async def create_conversation() -> dict:
         conversation_id = await runtime.session.start_conversation("")
         return {"conversation_id": conversation_id}
@@ -170,7 +192,10 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 await stream.queue.put(
                     _sse(
                         "interrupted",
-                        {"message": result.safe_failure or safe_error("interrupted")},
+                        {
+                            "code": "interrupted",
+                            "message": result.safe_failure or safe_error("interrupted"),
+                        },
                     )
                 )
             else:
@@ -216,16 +241,20 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         queue: asyncio.Queue[str] = asyncio.Queue()
         stream = TurnStream(conversation_id, queue)
         active[conversation_id] = stream
-        stream.task = asyncio.create_task(_run_turn(conversation_id, body.message, stream))
+        stream.task = asyncio.create_task(
+            _run_turn(conversation_id, body.message, stream)
+        )
 
         async def generator():
             try:
                 while True:
                     chunk = await stream.queue.get()
                     yield chunk
-                    if chunk.startswith("event: completed") or chunk.startswith(
-                        "event: interrupted"
-                    ) or chunk.startswith("event: failed"):
+                    if (
+                        chunk.startswith("event: completed")
+                        or chunk.startswith("event: interrupted")
+                        or chunk.startswith("event: failed")
+                    ):
                         break
             finally:
                 # Client disconnect or normal end: settle the owned task.
@@ -244,20 +273,27 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         if stream is None:
             return Response(status_code=200, content="idle")
         stream.cancel_event.set()
-        await _settle(conversation_id)
         return Response(status_code=202, content="cancelling")
 
     @app.get("/")
     async def index() -> HTMLResponse:
         html = open(TEMPLATE_DIR + "/index.html", encoding="utf-8").read()
         html = html.replace("{{MODE_LABEL}}", runtime.mode_label)
+        if runtime.live:
+            privacy_label = (
+                "Weaver runs locally. Messages are sent to DeepSeek for replies."
+            )
+        else:
+            privacy_label = "Fake mode stays on this machine. No model request is sent."
+        html = html.replace("{{PRIVACY_LABEL}}", privacy_label)
         return HTMLResponse(
             html,
             headers={
+                "Cache-Control": "no-store",
                 "Content-Security-Policy": (
                     "default-src 'self'; script-src 'self'; "
                     "style-src 'self'; img-src 'self' data:; connect-src 'self'"
-                )
+                ),
             },
         )
 

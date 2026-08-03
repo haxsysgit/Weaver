@@ -12,10 +12,13 @@ Private canaries must never appear in any response body.
 
 import asyncio
 import json
+import logging
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+import weaver.web.app as web_app
+from weaver.agent.turn import TurnExitReason, TurnResult
 from weaver.chat_runtime import open_chat_runtime
 from weaver.web.app import create_app
 
@@ -26,13 +29,19 @@ CANARIES = [
     "reasoning",
 ]
 
+SAME_ORIGIN_HEADERS = {"Origin": "http://127.0.0.1"}
+
 
 @pytest.fixture
 async def client(tmp_path):
     runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
     app = create_app(runtime)
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://127.0.0.1") as c:
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://127.0.0.1",
+        headers=SAME_ORIGIN_HEADERS,
+    ) as c:
         yield c
     await runtime.close()
 
@@ -76,7 +85,9 @@ async def test_unknown_conversation_404(client) -> None:
 async def test_empty_messages_rejected_422(client) -> None:
     conv = (await client.post("/api/conversations")).json()["conversation_id"]
     for bad in ("", "   ", "\n\t"):
-        resp = await client.post(f"/api/conversations/{conv}/turns", json={"message": bad})
+        resp = await client.post(
+            f"/api/conversations/{conv}/turns", json={"message": bad}
+        )
         assert resp.status_code == 422, repr(bad)
 
 
@@ -162,7 +173,11 @@ async def test_concurrent_turn_409(tmp_path) -> None:
     runtime.session.send = gated_send  # type: ignore[method-assign]
     app = create_app(runtime)
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://127.0.0.1") as client:
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://127.0.0.1",
+        headers=SAME_ORIGIN_HEADERS,
+    ) as client:
         conv = (await client.post("/api/conversations")).json()["conversation_id"]
 
         async def hold_stream():
@@ -191,7 +206,9 @@ async def test_cancel_active_turn_returns_202_and_interrupted_event(tmp_path) ->
     runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
     entered = asyncio.Event()
 
-    async def cancel_aware_send(conversation_id, text, cancel_event=None, on_delta=None):
+    async def cancel_aware_send(
+        conversation_id, text, cancel_event=None, on_delta=None
+    ):
         from weaver.agent.errors import safe_error
         from weaver.agent.turn import TurnExitReason
 
@@ -216,11 +233,16 @@ async def test_cancel_active_turn_returns_202_and_interrupted_event(tmp_path) ->
     runtime.session.send = cancel_aware_send  # type: ignore[method-assign]
     app = create_app(runtime)
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://127.0.0.1") as client:
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://127.0.0.1",
+        headers=SAME_ORIGIN_HEADERS,
+    ) as client:
         conv = (await client.post("/api/conversations")).json()["conversation_id"]
 
         async def hold_stream():
             events = []
+            payloads = []
             async with client.stream(
                 "POST",
                 f"/api/conversations/{conv}/turns",
@@ -230,15 +252,19 @@ async def test_cancel_active_turn_returns_202_and_interrupted_event(tmp_path) ->
                 async for line in resp.aiter_lines():
                     if line.startswith("event:"):
                         events.append(line.split(":", 1)[1].strip())
-            return events
+                    elif line.startswith("data:"):
+                        payloads.append(json.loads(line.split(":", 1)[1].strip()))
+            return events, payloads
 
         task = asyncio.create_task(hold_stream())
         await entered.wait()
         cancel = await client.post(f"/api/conversations/{conv}/cancel")
         assert cancel.status_code == 202
-        events = await task
+        events, payloads = await task
         assert "interrupted" in events
         assert "completed" not in events
+        assert payloads[-1]["code"] == "interrupted"
+        assert payloads[-1]["message"]
     await runtime.close()
     runtime.session.send = original_send  # type: ignore[method-assign]
 
@@ -266,7 +292,11 @@ async def test_failed_exit_reason_emits_failed_event(tmp_path) -> None:
     runtime.session.send = failing_send  # type: ignore[method-assign]
     app = create_app(runtime)
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://127.0.0.1") as client:
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://127.0.0.1",
+        headers=SAME_ORIGIN_HEADERS,
+    ) as client:
         conv = (await client.post("/api/conversations")).json()["conversation_id"]
         events = []
         payloads = []
@@ -299,7 +329,11 @@ async def test_turn_settles_before_next_turn(tmp_path) -> None:
     runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
     app = create_app(runtime)
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://127.0.0.1") as client:
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://127.0.0.1",
+        headers=SAME_ORIGIN_HEADERS,
+    ) as client:
         conv = (await client.post("/api/conversations")).json()["conversation_id"]
         async with client.stream(
             "POST",
@@ -322,7 +356,11 @@ async def test_index_has_csp_and_live_mode_label(tmp_path) -> None:
     runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
     app = create_app(runtime)
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://127.0.0.1") as client:
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://127.0.0.1",
+        headers=SAME_ORIGIN_HEADERS,
+    ) as client:
         resp = await client.get("/")
         assert resp.status_code == 200
         assert "Content-Security-Policy" in resp.headers
@@ -337,7 +375,11 @@ async def test_mutating_routes_reject_nonlocal_origin(tmp_path) -> None:
     runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
     app = create_app(runtime)
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://127.0.0.1") as client:
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://127.0.0.1",
+        headers=SAME_ORIGIN_HEADERS,
+    ) as client:
         resp = await client.post(
             "/api/conversations",
             headers={"Origin": "https://evil.example"},
@@ -357,4 +399,241 @@ async def test_mutating_routes_reject_nonlocal_origin(tmp_path) -> None:
             headers={"Origin": "http://127.0.0.1"},
         )
         assert resp.status_code == 200
+    await runtime.close()
+
+
+async def test_mutating_routes_reject_missing_origin(tmp_path) -> None:
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    app = create_app(runtime)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://127.0.0.1",
+    ) as client:
+        response = await client.post("/api/conversations")
+        assert response.status_code == 403
+    await runtime.close()
+
+
+async def test_mutating_routes_require_exact_local_host_and_same_origin(
+    tmp_path,
+) -> None:
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    app = create_app(runtime)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://127.0.0.1",
+        headers=SAME_ORIGIN_HEADERS,
+    ) as client:
+        hostile_host = await client.post(
+            "/api/conversations",
+            headers={"Host": "localhost.evil.example"},
+        )
+        assert hostile_host.status_code == 403
+
+        cross_origin = await client.post(
+            "/api/conversations",
+            headers={
+                "Host": "127.0.0.1",
+                "Origin": "http://localhost",
+            },
+        )
+        assert cross_origin.status_code == 403
+    await runtime.close()
+
+
+@pytest.mark.parametrize(
+    "malformed_host",
+    (
+        "127.0.0.1/path",
+        "127.0.0.1?evil",
+        "localhost:evil",
+        "127.0.0.1:99999",
+    ),
+)
+async def test_mutating_routes_reject_malformed_local_host(
+    tmp_path,
+    malformed_host,
+) -> None:
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    app = create_app(runtime)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://127.0.0.1",
+        headers=SAME_ORIGIN_HEADERS,
+    ) as client:
+        response = await client.post(
+            "/api/conversations",
+            headers={"Host": malformed_host},
+        )
+        assert response.status_code == 403
+    await runtime.close()
+
+
+async def test_shutdown_waits_until_cooperative_turn_settles(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    entered = asyncio.Event()
+    release = asyncio.Event()
+    settled = asyncio.Event()
+
+    async def slow_settling_send(
+        conversation_id,
+        text,
+        cancel_event=None,
+        on_delta=None,
+    ):
+        entered.set()
+        assert cancel_event is not None
+        await cancel_event.wait()
+        await release.wait()
+        settled.set()
+        return TurnResult(
+            turn_id="turn-1",
+            exit_reason=TurnExitReason.INTERRUPTED,
+            safe_failure="Turn interrupted.",
+        )
+
+    runtime.session.send = slow_settling_send  # type: ignore[method-assign]
+    monkeypatch.setattr(web_app, "SETTLE_TIMEOUT_SECONDS", 0.01, raising=False)
+    app = create_app(runtime)
+    lifespan = app.router.lifespan_context(app)
+    await lifespan.__aenter__()
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://127.0.0.1",
+        headers=SAME_ORIGIN_HEADERS,
+    ) as client:
+        conversation_id = (await client.post("/api/conversations")).json()[
+            "conversation_id"
+        ]
+        turn_request = asyncio.create_task(
+            client.post(
+                f"/api/conversations/{conversation_id}/turns",
+                json={"message": "wait for shutdown"},
+            )
+        )
+        await entered.wait()
+
+        shutdown = asyncio.create_task(lifespan.__aexit__(None, None, None))
+        await asyncio.sleep(0.03)
+        assert not shutdown.done()
+        assert not settled.is_set()
+
+        release.set()
+        await shutdown
+        await turn_request
+        assert settled.is_set()
+    await runtime.close()
+
+
+async def test_page_stop_uses_cancel_route_and_explicit_recovery(client) -> None:
+    script = await client.get("/static/weaver.js")
+    assert script.status_code == 200
+    assert "requestStop" in script.text
+    assert "/cancel" in script.text
+    assert "showRecovery" in script.text
+    assert "Start new chat" in script.text
+    assert "Choose another chat" in script.text
+
+
+async def test_page_privacy_copy_matches_runtime_mode(tmp_path) -> None:
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    try:
+        app = create_app(runtime)
+        transport = ASGITransport(app=app)
+        async with AsyncClient(
+            transport=transport,
+            base_url="http://127.0.0.1",
+            headers=SAME_ORIGIN_HEADERS,
+        ) as client:
+            fake_page = await client.get("/")
+            assert "No model request is sent" in fake_page.text
+
+        runtime.live = True
+        live_app = create_app(runtime)
+        live_transport = ASGITransport(app=live_app)
+        async with AsyncClient(
+            transport=live_transport,
+            base_url="http://127.0.0.1",
+            headers=SAME_ORIGIN_HEADERS,
+        ) as client:
+            live_page = await client.get("/")
+            assert "Messages are sent to DeepSeek" in live_page.text
+            assert "Nothing leaves this machine" not in live_page.text
+    finally:
+        await runtime.close()
+
+
+async def test_private_protocol_canaries_never_reach_web_surfaces(
+    tmp_path,
+    caplog,
+) -> None:
+    caplog.set_level(logging.INFO)
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    conversation_id = await runtime.session.start_conversation("")
+    opener_items = await runtime.session.repo.load_items(conversation_id)
+    opener_runs = await runtime.session.repo.load_runs(conversation_id)
+    opener = opener_items[0]
+    opener_run = opener_runs[0]
+
+    await runtime.session.coordinator.insert_assistant_item(
+        conversation_id,
+        opener_run.id,
+        opener.turn_id,
+        "PRIVATE_ASSISTANT_CANARY",
+        tool_calls=[
+            {
+                "id": "private-call",
+                "name": "echo",
+                "arguments": json.dumps({"message": "PRIVATE_ARGUMENT_CANARY"}),
+            }
+        ],
+    )
+    await runtime.session.coordinator.settle_tool(
+        conversation_id,
+        opener_run.id,
+        opener.turn_id,
+        "private-call",
+        "echo",
+        json.dumps({"message": "PRIVATE_ARGUMENT_CANARY"}),
+        "PRIVATE_RESULT_CANARY",
+    )
+    await runtime.session.coordinator.complete_run(
+        conversation_id,
+        opener_run.id,
+        opener.turn_id,
+        "Visible Weaver reply",
+    )
+
+    app = create_app(runtime)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://127.0.0.1",
+        headers=SAME_ORIGIN_HEADERS,
+    ) as client:
+        responses = [
+            await client.get("/"),
+            await client.get("/static/weaver.js"),
+            await client.get("/api/conversations"),
+            await client.get(f"/api/conversations/{conversation_id}/messages"),
+        ]
+        turn_response = await client.post(
+            f"/api/conversations/{conversation_id}/turns",
+            json={"message": "visible owner message"},
+        )
+        responses.append(turn_response)
+
+    public_text = "\n".join(response.text for response in responses)
+    public_text += "\n" + caplog.text
+    assert "PRIVATE_ASSISTANT_CANARY" not in public_text
+    assert "PRIVATE_ARGUMENT_CANARY" not in public_text
+    assert "PRIVATE_RESULT_CANARY" not in public_text
     await runtime.close()

@@ -2,11 +2,13 @@
 
 ## Gate status
 
-**Unadmitted. Owner confirmation required before implementation.**
+**Active at the learning gate. Owner confirmation is required before
+implementation.**
 
-Plans 010 and 011 must be accepted first. This confirmation admits Plan 012
-implementation. It does not accept the future implementation. The final owner
-decision remains pending after tests, inspection, and independent review.
+Plans 010 and 011 are accepted. The remaining gate is the owner's chapter
+selection and question approval. That confirmation admits Plan 012
+implementation; it does not accept the future implementation. The final owner
+decision will still follow tests, inspection, and independent review.
 
 ## Tiny model
 

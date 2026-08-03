@@ -17,8 +17,8 @@ evidence, review, and human decision gates must also be complete.
 | [008 - Wire the conversation loop](008-wire-conversation-loop.md) | Accepted 2026-07-31 | Plan 007 accepted | Zip conversation/ and agent/ into one working conversation: SessionWeave.send() calls run_turn() |
 | [009 - Context assembler](009-context-assembler.md) | Accepted 2026-07-31 | Plan 008 accepted | Give run_turn() a context window it can't exceed: token budget, truncation, pinned owner message |
 | [010 - TUI entrypoint](010-tui-entrypoint.md) | Accepted and closed 2026-08-02 | Plan 009 accepted | Weaver's developer and debugging console; maintenance fixes only, no further product polish |
-| [011 - Local browser chat entrypoint](011-web-chat-entrypoint.md) | Planned; appraisal learning gate required | Plan 010 closed; checkpoint 001-010 complete | Appraise current ChatGPT behaviour, then prove one private local browser conversation |
-| [012 - Direct-reading baseline](012-direct-reading-baseline.md) | Planned; learning gate required | Plan 011 accepted | Compare Flash and Pro reading the same novel packet blind: the first time Weaver reads a novel |
+| [011 - Local browser chat entrypoint](011-web-chat-entrypoint.md) | Accepted 2026-08-03 | Plan 010 closed; checkpoint 001-010 complete | Appraise current ChatGPT behaviour, then prove one private local browser conversation |
+| [012 - Direct-reading baseline](012-direct-reading-baseline.md) | Active at learning gate; implementation not admitted | Plan 011 accepted | Compare Flash and Pro reading the same novel packet blind: the first time Weaver reads a novel |
 | [013 - Responsive interface and installable PWA](013-responsive-interface-pwa.md) | Deferred | Plan 012 accepted | Build the polished responsive Weaver interface (sidebar, settings, Markdown, PWA) from the Plan 011 deferrals |
 | 014+ - Compiled-memory experiments | Deferred | Plan 013 accepted | Compare bounded compiled memory with direct rereading |
 
@@ -49,8 +49,8 @@ Plan 010 is **Accepted and closed** (2026-08-02); its decision is recorded in
 and debugging console. Maintenance bug fixes are allowed, but it receives no
 further product polish and is no longer a product surface.
 
-Plan 011 is admitted for implementation (Gate 1 appraisal accepted
-2026-08-02; behaviour decisions in `deliverables/011-web-chat-entrypoint/decision.md`).
-The shared runtime is extracted; the server and browser interface are in
-implementation. Plan 012 remains gated behind Plan 011. Do not begin Plan 013
+Plan 011 is **Accepted** (2026-08-03); both owner decisions are recorded in
+`deliverables/011-web-chat-entrypoint/decision.md`. Plan 012 is now active at
+its learning gate. Its implementation remains unadmitted until the owner
+selects the chapter range and approves the question set. Do not begin Plan 013
 automatically.

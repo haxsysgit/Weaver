@@ -6,14 +6,14 @@
 
 ## Status
 
-- **State:** Admitted for implementation; Gate 1 accepted by owner 2026-08-02
+- **State:** Accepted 2026-08-03
 - **Admitted implementation:** Yes (Gate 1 behaviour decisions confirmed)
 - **Depends on:** Plan 010 accepted and closed; checkpoint 001 to 010 complete
 - **Priority:** P2
 - **Effort:** L
 - **Risk:** Medium, first browser surface and long-lived streamed requests
 - **Learning gate:** `deliverables/011-web-chat-entrypoint/learning.md`
-- **Final decision:** pending
+- **Final decision:** accepted 2026-08-03
 
 ## Outcome
 
@@ -37,7 +37,7 @@ limitation.
 
 The first Plan 011 slice is research, not implementation.
 
-### Research dependency and command
+### Completed appraisal path
 
 - The appraisal tooling was retired 2026-08-02 after the design reference
   was produced (see learning.md): the staged probe checklist guessed the
@@ -49,31 +49,19 @@ The first Plan 011 slice is research, not implementation.
   deliverable is the design reference
   (`deliverables/011-web-chat-entrypoint/chatgpt-ui-design-reference.md`)
   and the owner's adopt/skip decision on it.
-- Open a visible browser. The owner signs in personally.
-- Never accept, export, print, log, or commit cookies or credentials.
-- Prefer accessibility roles and accessible names. Fail visibly when a state
-  cannot be reached.
-- Before the command is built, verify the current Playwright contracts for
-  persistent contexts, accessibility-role queries, and viewport control
-  against its official documentation.
+- The owner signed in personally through a visible browser. Cookies and
+  credentials were never exported, printed, logged, or committed.
+- The attempted role-based probe failed visibly because its assumed roles did
+  not match the live page. That failure is recorded in `learning.md` and the
+  retired tooling is not an executor command.
 
-### Fixed appraisal scope
+### Appraisal evidence used
 
-Inspect both 1440 x 900 desktop and 390 x 844 mobile states:
-
-- signed-out entry;
-- signed-in blank or new chat;
-- sidebar open and collapsed;
-- empty, focused, multiline, disabled, and sending composer;
-- streaming response and stop behaviour;
-- completed response and message actions;
-- menus reached from chat;
-- settings reached from chat without changing settings;
-- a controlled offline or error state;
-- mobile navigation and composer behaviour.
-
-Use one fixed harmless synthetic prompt in a temporary chat. Do not inspect
-personal conversations, sidebar titles, or novel-related text.
+The accepted design reference came from six owner-captured signed-in states
+plus a live style and layout extraction. The original fixed probe list was
+superseded at the owner gate. Unproven responsive behaviour is recorded in
+`learning.md`; Weaver's own 1440 x 900 and 390 x 844 implementation states are
+recorded in `results.md`.
 
 ### Private and committed evidence
 
@@ -83,28 +71,30 @@ Authenticated screenshots and raw captures stay owner-only under:
 .weaver/research/chatgpt-ui/<timestamp>/
 ```
 
-Commit only:
+Committed Gate 1 evidence contains:
 
 - a sanitized observation matrix;
 - an adopt-now, Plan-013, or reject decision table;
 - original Weaver wireframes and state diagrams;
 - checked date, viewport, account tier, and any unproven states.
 
-Do not commit ChatGPT screenshots, OpenAI branding, icons, copy, assets,
-personal sidebar titles, credentials, or raw model reasoning.
+Owner clarification, 2026-08-03: the research reference may name ChatGPT and
+record observed layout, ordinary interface text, spacing, and palette values.
+Weaver itself must not ship OpenAI trademarks, logos, icons, or brand assets.
+Never commit personal sidebar titles, credentials, authenticated screenshots,
+or raw model reasoning.
 
 ### Learning output
 
-Write observations as facts, hypotheses as hypotheses, and proposed Weaver
-behaviour as decisions awaiting the owner. After the appraisal, stop. The
-owner must confirm the Weaver behaviour decisions before browser code begins.
+Observations, hypotheses, and accepted Weaver decisions are separated in the
+deliverables. The owner accepted Gate 1 on 2026-08-02 before browser code began.
 
 After approval, show the exact private profile and capture locations and offer
 cleanup. Do not delete either automatically.
 
-## Hypotheses to test
+## Gate 1 hypotheses tested
 
-These are not accepted decisions yet.
+The outcomes are recorded in `hypothesis.md` and accepted in `decision.md`.
 
 1. A single centred conversation column is enough for the proof.
 2. The composer should grow, send, stop, and recover in the same basic states
@@ -276,8 +266,9 @@ The final deliverables require:
 ## Excluded
 
 Authentication, accounts, hosted access, sync, sharing, dashboards, a full
-sidebar, message actions, Markdown rendering, PWA installation, native apps,
-and library access are outside Plan 011.
+sidebar, server-backed message actions such as regenerate, Markdown rendering,
+PWA installation, native apps, and library access are outside Plan 011. Local
+Copy is admitted as a browser-only action.
 
 ## Executor corrections (Gate 1 accepted 2026-08-02)
 
@@ -302,8 +293,14 @@ and library access are outside Plan 011.
   action. "Choose another chat" after cancellation needs the conversation
   list, so the API contract gains `GET /api/conversations`. All deferred
   UI behaviours move to Plan 013. Recorded in decision.md.
+- Owner clarification (2026-08-03): ChatGPT-inspired layout, ordinary UI
+  wording, spacing, and palette values are allowed. Weaver must not present
+  OpenAI trademarks, logos, icons, or brand assets as its own. The research
+  reference remains valid evidence under this boundary.
 
 ## Current stop
 
-**Resolved 2026-08-02: owner confirmed the behaviour decisions and directed
-implementation to start.** Build order below is now executable.
+**Resolved.** The owner accepted Plan 011 on 2026-08-03 after Gate 2, the
+follow-up repairs, the full verification floor, and the independent recheck.
+Plan 012 may enter its learning gate. Do not admit Plan 012 implementation
+until its owner confirmation is recorded.

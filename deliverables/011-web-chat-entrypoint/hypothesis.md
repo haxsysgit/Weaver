@@ -1,17 +1,19 @@
 # Hypotheses: Local browser chat entrypoint
 
-These are hypotheses, not observations or accepted decisions.
+## Status
 
-1. One centred responsive column is enough for the proof.
-2. Streaming and stop behaviour should be consistent at desktop and phone
-   widths.
-3. SQLite should remain canonical, with only the active conversation ID in
-   local storage.
-4. Plain text via `textContent` is the correct rendering boundary for this
-   slice.
-5. The web profile should expose no library tools or library claims.
-6. Recovery after cancellation should offer new-chat and choose-chat routes,
-   not fake continuation.
+Tested. Gate 1 decisions were accepted on 2026-08-02 and the implementation
+evidence confirmed the admitted outcomes.
 
-The appraisal may confirm, correct, or reject each item. Record the evidence
-before changing the canonical plan.
+1. **Confirmed:** one centred responsive column is enough for the proof.
+2. **Confirmed:** streaming, Stop, and recovery use the same controls at
+   desktop and phone widths.
+3. **Confirmed:** SQLite remains canonical and local storage holds only the
+   active conversation ID.
+4. **Confirmed:** plain text via `textContent` is the rendering boundary for
+   this slice.
+5. **Confirmed:** the web profile exposes no library tools or library claims.
+6. **Confirmed after repair:** cancellation shows Start new chat and Choose
+   another chat. It does not offer fake continuation.
+
+Evidence lives in `results.md`; accepted choices live in `decision.md`.

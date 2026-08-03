@@ -13,7 +13,6 @@ const els = {
 
 let conversationId = null;
 let turnActive = false;
-let abort = null; // AbortController for the SSE turn stream
 
 /* --- rendering: textContent only, never innerHTML with model text --- */
 
@@ -53,6 +52,38 @@ function setStatus(text, cls) {
   els.transcript.scrollTop = els.transcript.scrollHeight;
 }
 
+function clearRecovery() {
+  const recovery = document.getElementById("recovery");
+  if (recovery) recovery.remove();
+}
+
+function showRecovery(message) {
+  clearRecovery();
+
+  const recovery = document.createElement("div");
+  recovery.id = "recovery";
+  recovery.className = "recovery";
+
+  const explanation = document.createElement("p");
+  explanation.textContent = message;
+  recovery.appendChild(explanation);
+
+  const newChat = document.createElement("button");
+  newChat.type = "button";
+  newChat.textContent = "Start new chat";
+  newChat.addEventListener("click", startNewChat);
+  recovery.appendChild(newChat);
+
+  const chooseChat = document.createElement("button");
+  chooseChat.type = "button";
+  chooseChat.textContent = "Choose another chat";
+  chooseChat.addEventListener("click", () => els.picker.focus());
+  recovery.appendChild(chooseChat);
+
+  els.transcript.appendChild(recovery);
+  recovery.scrollIntoView({ block: "nearest" });
+}
+
 /* --- conversation lifecycle --- */
 
 async function createConversation() {
@@ -63,6 +94,7 @@ async function createConversation() {
 }
 
 async function startNewChat() {
+  clearRecovery();
   await createConversation();
   els.transcript.replaceChildren();
   els.input.focus();
@@ -90,6 +122,7 @@ els.picker.addEventListener("change", async () => {
   const id = els.picker.value;
   if (!id) return;
   els.transcript.replaceChildren();
+  clearRecovery();
   if (await loadConversation(id)) {
     conversationId = id;
     localStorage.setItem("weaver.conversation", id);
@@ -121,10 +154,10 @@ async function bootstrap() {
 /* --- streaming a turn --- */
 
 async function sendTurn(text) {
+  clearRecovery();
   turnActive = true;
   els.send.hidden = true;
   els.stop.hidden = false;
-  abort = new AbortController();
 
   addMessage("owner", text);
   els.input.value = "";
@@ -140,7 +173,6 @@ async function sendTurn(text) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: text }),
-      signal: abort.signal,
     });
 
     if (resp.status === 409) {
@@ -167,10 +199,8 @@ async function sendTurn(text) {
         handleEvent(raw, streamWrap, (t) => (preview = t));
       }
     }
-  } catch (err) {
-    if (err.name !== "AbortError") {
-      setStatus("Connection lost.", "error-line");
-    }
+  } catch {
+    showRecovery("Connection lost. The interrupted chat cannot resume.");
   } finally {
     turnActive = false;
     els.send.hidden = false;
@@ -196,7 +226,7 @@ function handleEvent(raw, streamWrap, setPreview) {
     streamWrap.textContent = data.text;
     setPreview(data.text);
   } else if (event === "interrupted") {
-    setStatus((data.message || "Turn interrupted.") + " Start a new chat or choose another.", "error-line");
+    showRecovery(data.message || "Turn interrupted. The interrupted chat cannot resume.");
   } else if (event === "failed") {
     setStatus(data.message || "Turn failed.", "error-line");
   }
@@ -218,7 +248,26 @@ els.input.addEventListener("keydown", (e) => {
 });
 
 els.send.addEventListener("click", submit);
-els.stop.addEventListener("click", () => abort && abort.abort());
+els.stop.addEventListener("click", requestStop);
+
+async function requestStop() {
+  if (!turnActive || !conversationId) return;
+
+  els.stop.disabled = true;
+  try {
+    const response = await fetch(
+      `/api/conversations/${conversationId}/cancel`,
+      { method: "POST" },
+    );
+    if (response.status !== 202 && response.status !== 200) {
+      showRecovery("Weaver could not confirm cancellation. Start a new chat or choose another.");
+    }
+  } catch {
+    showRecovery("Weaver could not confirm cancellation. Start a new chat or choose another.");
+  } finally {
+    els.stop.disabled = false;
+  }
+}
 
 function submit() {
   const text = els.input.value.trim();

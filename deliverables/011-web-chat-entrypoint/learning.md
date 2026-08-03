@@ -2,8 +2,9 @@
 
 ## Gate status
 
-**Admitted for implementation. Owner confirmed the behaviour decisions on
-2026-08-02.** The appraisal ran against the owner's signed-in ChatGPT Plus
+**Plan 011 was accepted on 2026-08-03 after implementation, verification, and
+both independent reviews.** The owner confirmed the behaviour decisions on
+2026-08-02. The appraisal ran against the owner's signed-in ChatGPT Plus
 profile (dark theme): screenshots plus a live dev-style extraction
 produced the design reference
 (`deliverables/011-web-chat-entrypoint/chatgpt-ui-design-reference.md`)
@@ -61,9 +62,10 @@ Plan 013.
 
 1. Which ChatGPT behaviours should Weaver adopt in Plan 011?
    **Answered by the adopt/skip list in the design reference (accepted
-   2026-08-02):** sidebar + centered 768 px column + black canvas, capsule
-   composer with a send arrow, user bubble, bare assistant text, action
-   rows, hairlines, cards only for file-like results, palette verbatim.
+   2026-08-02):** centered 768 px column + black canvas, capsule composer
+   with a send arrow, user bubble, bare assistant text, local Copy, hairlines,
+   cards only for file-like results, and the measured palette. The sidebar
+   moved to Plan 013 during independent review.
 2. Which useful behaviours belong in Plan 013 instead?
    **Voice/mic/dictation, the intelligence selector, hosted-service
    settings rows, PWA polish.** The framework decision also lands at 013.
@@ -84,5 +86,12 @@ Plan 013.
 
 **Given on 2026-08-02: the owner confirmed the adopt/skip list, the vanilla
 HTML/CSS/JS boundary, and directed the build to start.** That decision admits
-browser implementation. The final owner gate after implementation, tests,
-and independent review remains outstanding.
+browser implementation. The owner accepted the finished experiment on
+2026-08-03 after implementation, tests, inspection, and independent review.
+
+## Design-reference boundary clarification (owner-approved 2026-08-03)
+
+The owner permits Weaver to use the observed layout, ordinary interface text,
+spacing, and palette values. Weaver must not ship OpenAI trademarks, logos,
+icons, or brand assets. The reference can name ChatGPT as the measured source;
+the shipped browser surface remains Weaver-branded.

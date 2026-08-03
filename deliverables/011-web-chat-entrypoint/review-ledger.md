@@ -5,8 +5,9 @@
 Both required independent reviews ran 2026-08-02 after Gate 2 evidence was
 complete (server, SSE, cancellation, diagrams, width evidence). Runtime/API
 review: FIX (two majors, both fixed and tested). Browser/UX review: PASS
-(two mediums, both fixed). One repair commit `adf680a`. Final owner
-decision pending.
+(two mediums, both fixed). A fresh follow-up critic returned FIX, then PASS
+after its four findings were repaired. The owner accepted Plan 011 on
+2026-08-03.
 
 ## Required reviews
 
@@ -70,3 +71,32 @@ files, SVG→PNG conversion, innerHTML/eval grep clean, web tests 14/14.
 
 - `adf680a` plan 011: review repairs - failed events, settle-before-remove,
   csp, mode, new chat (6 files, +298/-46; full suite 273 passed).
+
+## Follow-up audit and fresh critic (2026-08-03)
+
+The owner directed seven repairs after a read-only audit: explicit Stop
+recovery, unbounded cooperative shutdown settlement, exact Host/Origin checks,
+honest mode-aware privacy text, an interrupted SSE code, private-record canary
+proof, and consistent gate records.
+
+Initial critic verdict: **FIX**.
+
+1. Major: parsing only `.hostname` allowed malformed Host values such as
+   `127.0.0.1/path`, `localhost:evil`, and an out-of-range port. Missing Origin
+   was also accepted. Fixed: validate the complete Host grammar, require an
+   exact loopback host and valid port, require Origin, and match it exactly to
+   the request origin. Four malformed-Host cases plus missing-Origin are pinned.
+2. Moderate: the canary test captured only pytest's default log level. Fixed:
+   capture INFO logs before inserting private assistant, tool-argument, and
+   tool-result canaries.
+3. Minor: a CSS source comment contained the ChatGPT name. Fixed: shipped
+   browser source is Weaver-only; ChatGPT remains named only in research
+   evidence under the owner's accepted boundary.
+4. Minor: `learning.md` still said implementation was merely admitted. Fixed:
+   it recorded implementation and both reviews complete before the final
+   owner decision.
+
+Critic recheck verdict: **PASS**. Focused Host/Origin/privacy tests passed and
+Ruff passed. Final mechanical floor: 284 tests passed; 37 focused runtime/web
+tests passed; Ruff, format check for changed Python, lock check, package check,
+diff check, and private-source scans passed.

@@ -1,21 +1,23 @@
 # Plan 012: Direct-reading baseline
 
-> **Executor instructions:** Execute only after Plan 010 is accepted. Read this
-> plan, the accepted Plan 010 results, and every file in "Current state" before
-> editing. Run each verification gate and record failures. Slice 0 repairs
-> three provider edge cases and one library-integrity ordering bug before the
-> experiment is built — do not skip it.
+> **Executor instructions:** Plan 011 is accepted, so learning-gate work may
+> begin. Read this plan, the accepted Plan 011 results, and every file in
+> "Current state" before editing. Do not read novel content, make source edits,
+> or run live calls until the owner confirms the learning gate. After that,
+> run each verification gate and record failures. Slice 0 repairs three
+> provider edge cases and one library-integrity ordering bug before the
+> experiment is built. Do not skip it.
 
 ## Status
 
 - **Tooling:** All work in this plan uses `uv`: `uv run` for every command,
   `uv add` for dependencies (updates `uv.lock`), `uv sync`/`uv lock --check`
   for the environment. No pip or poetry anywhere.
-- **State:** Planned; learning gate required
+- **State:** Active at learning gate; implementation not admitted
 - **Priority:** P2
 - **Effort:** L
 - **Risk:** Medium (first novel-content test, live model calls required)
-- **Depends on:** Plan 010 accepted
+- **Depends on:** Plan 011 accepted 2026-08-03
 - **Category:** Experiment and comprehension
 - **Planned at:** commit `e523383`, 2026-07-30
 - **Audited at:** 2026-07-31 — current-state claims corrected (real packet
@@ -23,6 +25,12 @@
   edge cases and the timeout gap pinned as prerequisite repairs
 - **Learning gate:** `deliverables/012-direct-reading-baseline/learning.md`
 - **Final decision:** pending
+
+## Current stop
+
+The owner must select the chapter range and approve the question set in
+`deliverables/012-direct-reading-baseline/learning.md`. No novel content,
+source implementation, or live model call is admitted before that decision.
 
 ## Goal
 
@@ -363,7 +371,7 @@ Commit: `plan 012: live direct-reading evidence`
 
 - [ ] Owner confirmed Plan 012 learning gate (chapter list, questions,
   methodology).
-- [ ] Plan 010 is accepted.
+- [x] Plan 011 is accepted.
 - [ ] Slice 0 repairs merged with their regression tests.
 - [ ] `run_direct_reading` exists with fake and live modes; timeout enforced.
 - [ ] `weaver experiment direct-reading --fake` produces a structured

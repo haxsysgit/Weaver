@@ -114,10 +114,12 @@ class ChatRuntime:
         *,
         surface: Surface,
         mode_label: str,
+        live: bool,
     ) -> None:
         self.session = session
         self.surface = surface
         self.mode_label = mode_label
+        self.live = live
 
     async def close(self) -> None:
         await self.session.close()
@@ -197,4 +199,9 @@ async def open_chat_runtime(
         execution_policy=execution_policy,
     )
     await sw.open()
-    return ChatRuntime(sw, surface=surface, mode_label=mode_label)
+    return ChatRuntime(
+        sw,
+        surface=surface,
+        mode_label=mode_label,
+        live=live,
+    )

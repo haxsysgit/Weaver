@@ -1,4 +1,4 @@
-/* Weaver local chat: ChatGPT-inspired dark palette, no external assets. */
+/* Weaver local chat: measured dark palette, no external assets. */
 
 :root {
   --bg: #000;
@@ -170,3 +170,27 @@ html, body {
 }
 
 .error-line { color: #ff6b6b; }
+
+.recovery {
+  margin: 16px 0;
+  padding: 12px;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  color: var(--text-2);
+}
+
+.recovery p { margin: 0 0 10px; }
+
+.recovery button {
+  margin-right: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.recovery button:focus {
+  outline: 1px solid var(--accent);
+}
