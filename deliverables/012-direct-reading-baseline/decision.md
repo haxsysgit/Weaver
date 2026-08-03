@@ -28,5 +28,8 @@ notebook, the checker, and the independent review.
 
 ## Final record
 
-- Date: pending
-- Reason: pending
+- Date: pending owner action
+- Evidence ready: private chapters 1-100 notebook, checker pass, and
+  independent ten-group review pass (200/200 statements)
+- Reason: Plan 012 is ready for the owner's accept/reject decision; the
+  implementation does not mark itself accepted automatically.

@@ -3,10 +3,10 @@
 ## Status
 
 Plan wording locked by the owner 2026-08-03 (plain-language revision). The
-method research gate and deterministic checker slice are complete. The old
-chapter 1 attempt is quarantined to a private `old-attempts` folder.
-Chapters have not been read yet: the three-reader run starts after the
-owner names the reader agents. Final owner decision pending.
+method research gate, deterministic checker slice, private chapters 1-100
+notebook, and independent ten-group source review are complete. The old
+chapter 1 attempt is quarantined to a private `old-attempts` folder. Final
+owner decision is pending.
 
 ## Timeline
 
@@ -40,16 +40,40 @@ owner names the reader agents. Final owner decision pending.
 - Moved the old pilot into the private `old-attempts/20260803-pilot/`
   quarantine. Chapter 1 will be written again from zero.
 
+### 2026-08-03: Private reading and independent review
+
+- Three independent reader roles were run for chapters 1-100: lead, plot
+  and cause checker, and character and world checker. The coordinator
+  reconciled each chapter and reopened its source before saving it.
+- The private notebook contains 100 readable chapter notes, 100 matching
+  JSON master records, 44 entity pages, 924 connections, and a complete
+  progress record. JSON and connection files store locations, not copied
+  novel prose.
+- An independent reviewer checked all ten chapter groups. All 200 saved
+  statements passed their named chapter ranges after source-location repairs;
+  no later-knowledge leaks or structural mismatches remain.
+- The source-grounded checker passes the rebuilt notebook with zero problems.
+
 ## Checks run
 
 - `uv run pytest -q tests/test_story_notebook_checker.py` passed.
 - `uv run ruff check scripts/check_story_notebook.py tests/test_story_notebook_checker.py`
   passed.
-- The full private notebook check and independent ten-chapter review remain
-  pending until the chapter run finishes.
+- `uv run python scripts/check_story_notebook.py --root
+  .weaver/knowledge/shadow-slave --through 100` passed: 100 chapters, 200
+  statements, 924 connections, 0 problems.
+- The independent ten-chapter review passed all 200 statements after the
+  evidence repairs.
+- `uv run pytest -q` passed.
+- `uv pip check` passed.
+- Staged scans found no staged files, tracked novel files, tracked private
+  notebook files, credentials, or private-text matches.
 
 ## Outcomes
 
 - No novel file modified.
-- No knowledge base content committed.
+- No private story knowledge committed; the private notebook remains ignored
+  under `.weaver/`.
+- Weaver application code unchanged.
+- Owner acceptance remains pending in `decision.md`.
 - No private story knowledge in committed files.

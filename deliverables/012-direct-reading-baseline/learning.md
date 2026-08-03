@@ -3,8 +3,9 @@
 ## Gate status
 
 **Confirmed by owner 2026-08-03.** The owner reviewed the plain-language
-revision of Plan 012 and locked the choices below. Reading starts after the
-owner names the agents for the three reader jobs.
+revision of Plan 012 and locked the choices below. The three reader roles
+have now completed the private 1-100 run; final acceptance is still an owner
+decision.
 
 ## What this plan is
 
@@ -60,3 +61,5 @@ code is unchanged. The novel files stay the final source of truth.
 - Corrections or added constraints: reader-positioned knowledge (owner);
   quarantined old attempt; excerpt policy limited to private chapter notes;
   no diagrams created or updated
+- Execution record: three independent reader roles completed chapters 1-100;
+  the independent ten-group source review passed all 200 saved statements.

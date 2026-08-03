@@ -3,8 +3,9 @@
 ## Status
 
 Review 1 (plan wording revision, 2026-08-03) complete; the owner confirmed
-the plain-language plan and locked choices. Post-run Review 2 (story
-notebook vs named chapter locations, ten-chapter groups) pending.
+the plain-language plan and locked choices. Review 2 (story notebook versus
+named chapter locations, ten-chapter groups) is complete. Final owner
+decision remains pending.
 
 ## Review 1: Plain-language plan revision (2026-08-03)
 
@@ -25,9 +26,14 @@ zero. Findings from the earlier contract repair carried forward:
 5. **Excerpt policy.** Short exact lines allowed only inside private
    readable chapter notes; JSON and connections store locations only.
 
-## Review 2: Story notebook consistency (post-run, pending)
+## Review 2: Story notebook consistency (post-run, complete 2026-08-03)
 
-- Reviewer: pending
-- Frozen candidate: pending
-- Findings: pending
-- Verdict: pending
+- Reviewer: independent `notebook_reviewer` agent, read-only
+- Frozen candidate: regenerated private notebook after source-location
+  repairs; checker passed before review close
+- Scope: groups 0001-0010, 0011-0020, 0021-0030, 0031-0040,
+  0041-0050, 0051-0060, 0061-0070, 0071-0080, 0081-0090, and 0091-0100
+- Findings: all 200 statements have valid IDs, own-chapter evidence, and
+  source-supported paraphrases; no later-knowledge leaks or structural
+  mismatches remain
+- Verdict: pass; owner acceptance is still a separate human decision

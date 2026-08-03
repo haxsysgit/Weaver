@@ -11,8 +11,8 @@
 - **Tooling:** repo commands via `uv` (pytest, ruff, pip check); reading
   uses the harness's native tools.
 - **State:** Plan wording locked 2026-08-03 (owner-confirmed revision);
-  research gate, notebook checker, and quarantine complete; reading starts
-  after the owner picks the three reader jobs.
+  research gate, notebook checker, private reading, quarantine, and
+  independent review complete; final owner decision pending.
 - **Priority:** P2
 - **Effort:** L (100 chapters, three independent reads each)
 - **Risk:** Medium (private source material; long careful build)
