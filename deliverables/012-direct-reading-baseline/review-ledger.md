@@ -3,7 +3,7 @@
 ## Status
 
 Review 1 (independent doc/contract review by Codex) complete 2026-08-03;
-all findings fixed in commit `…` (docs). Post-run Review 2 (graph
+all findings fixed in commit `98ee0ef` (docs). Post-run Review 2 (graph
 consistency) pending.
 
 ## Review 1: Plan and contract review (2026-08-03, Codex)
