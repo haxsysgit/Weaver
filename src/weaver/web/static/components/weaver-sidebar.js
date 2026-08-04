@@ -72,6 +72,8 @@ template.innerHTML = `
       background: var(--accent-dim);
       color: var(--text);
     }
+    .row.chrome-row { opacity: 0.55; cursor: default; }
+    .row.chrome-row:hover { background: transparent; color: var(--text-2); }
     .row .ico { width: 20px; flex: none; text-align: center; font-size: 15px; }
     .row .label { overflow: hidden; text-overflow: ellipsis; }
     .section {
@@ -123,6 +125,12 @@ template.innerHTML = `
     <div class="chrome" id="chrome">
       <button class="row" data-action="new" title="New chat"><span class="ico">&#9998;</span><span class="label">New chat</span></button>
       <button class="row" data-action="settings" title="Settings"><span class="ico">&#9881;</span><span class="label">Settings</span></button>
+      <div class="section">Chrome</div>
+      <button class="row chrome-row" type="button" disabled title="Coming later"><span class="ico">&#9636;</span><span class="label">Library</span></button>
+      <button class="row chrome-row" type="button" disabled title="Coming later"><span class="ico">&#9881;</span><span class="label">Projects</span></button>
+      <button class="row chrome-row" type="button" disabled title="Coming later"><span class="ico">&#9201;</span><span class="label">Scheduled</span></button>
+      <button class="row chrome-row" type="button" disabled title="Coming later"><span class="ico">&#9881;</span><span class="label">Plugins</span></button>
+      <button class="row chrome-row" type="button" disabled title="Coming later"><span class="ico">&#8943;</span><span class="label">More</span></button>
       <div class="section">Chats</div>
       <div id="picker"></div>
     </div>
