@@ -66,9 +66,11 @@ or wanted — there is nothing to sanitize.
 
 - `node --test 'tests/web_js/*.test.mjs'` — pure JS logic (markdown parser,
   theme token contract), zero dependencies.
-- DOM behavior is proven live against a real server with headless Chromium
-  (see `tests/test_web.py` for the API contract and `scripts/` for the
-  live-proof recipe used during Plan 013).
+- DOM behavior is proven live against a real server with headless Chromium:
+  `uv run python scripts/web_live_proof.py` drives the page over CDP
+  (component mount, SSE turn, regenerate, settings, collapse, mobile
+  drawer, PWA installability) and prints the results. See
+  `tests/test_web.py` for the API contract.
 
 ## CSP
 

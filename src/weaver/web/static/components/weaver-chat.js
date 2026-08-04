@@ -240,6 +240,7 @@ class WeaverChat extends HTMLElement {
     this.shadowRoot.appendChild(template.content.cloneNode(true));
     this._conversationId = null;
     this._turnActive = false;
+    this._lastOwnerText = null;
     this._el = {
       sidebar: this.shadowRoot.querySelector("#sidebar"),
       transcript: this.shadowRoot.querySelector("#transcript"),
@@ -285,8 +286,10 @@ class WeaverChat extends HTMLElement {
   async startNewChat() {
     this._clearRecovery();
     await this._createConversation();
+    this._lastOwnerText = null;
     this._el.transcript.replaceChildren();
     this._renderEmpty();
+    await this._el.sidebar.refresh(this._conversationId);
     this._el.composer.focusInput();
   }
 
@@ -355,7 +358,7 @@ class WeaverChat extends HTMLElement {
     this._el.transcript.appendChild(el);
   }
 
-  _addMessage(role, content) {
+  _addMessage(role, content, withRegenerate = false) {
     const wrap = document.createElement("div");
     wrap.className = "msg " + role;
     if (role === "owner") {
@@ -369,14 +372,14 @@ class WeaverChat extends HTMLElement {
       body.className = "body";
       renderMarkdown(body, content);
       wrap.appendChild(body);
-      wrap.appendChild(this._actionRow(content));
+      wrap.appendChild(this._actionRow(content, withRegenerate));
     }
     this._el.transcript.appendChild(wrap);
     this._scrollBottom();
     return wrap;
   }
 
-  _actionRow(content) {
+  _actionRow(content, withRegenerate = false) {
     const row = document.createElement("div");
     row.className = "actions";
     const copy = document.createElement("button");
@@ -384,7 +387,7 @@ class WeaverChat extends HTMLElement {
     copy.textContent = "Copy";
     copy.addEventListener("click", () => navigator.clipboard.writeText(content));
     row.appendChild(copy);
-    if (this._lastOwnerText !== null) {
+    if (withRegenerate) {
       const regen = document.createElement("button");
       regen.type = "button";
       regen.textContent = "Regenerate";
@@ -442,6 +445,7 @@ class WeaverChat extends HTMLElement {
     this._clearRecovery();
     if (await this._loadConversation(id)) {
       this._conversationId = id;
+      this._lastOwnerText = null; // regenerate never crosses conversations
       localStorage.setItem(STORAGE_KEY, id);
       this._el.composer.focusInput();
     }
@@ -516,6 +520,9 @@ class WeaverChat extends HTMLElement {
       this._el.composer.setBusy(false);
       body.replaceChildren();
       renderMarkdown(body, preview || body.textContent);
+      // The live turn's reply carries the Regenerate action; history-loaded
+      // messages never do, so regenerate can never cross conversations.
+      streamWrap.appendChild(this._actionRow(preview || body.textContent, true));
       this._el.composer.focusInput();
     }
   }

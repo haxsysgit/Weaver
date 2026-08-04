@@ -90,6 +90,10 @@ template.innerHTML = `
           <div class="value">Shadows</div>
         </div>
         <div class="row">
+          <div><div class="label">Personalization</div><div class="desc">Model replies render as Markdown; speaker labels are kept minimal</div></div>
+          <div class="value">Minimal</div>
+        </div>
+        <div class="row">
           <div><div class="label">Storage</div><div class="desc">Conversations persist locally in the Weaver SQLite notebook</div></div>
           <div class="value">Local only</div>
         </div>
