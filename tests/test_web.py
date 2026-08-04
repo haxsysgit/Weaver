@@ -13,6 +13,7 @@ Private canaries must never appear in any response body.
 import asyncio
 import json
 import logging
+import re
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -29,7 +30,31 @@ CANARIES = [
     "reasoning",
 ]
 
+FRONTEND_DIST = web_app.FRONTEND_DIST
+
 SAME_ORIGIN_HEADERS = {"Origin": "http://127.0.0.1"}
+
+
+def test_production_frontend_assets_exist() -> None:
+    expected_assets = (
+        "index.html",
+        "manifest.webmanifest",
+        "weaver-mark.svg",
+        "sw.js",
+    )
+    for relative_path in expected_assets:
+        assert (FRONTEND_DIST / relative_path).is_file(), relative_path
+    assert list((FRONTEND_DIST / "assets").glob("weaver-*.js"))
+    assert list((FRONTEND_DIST / "assets").glob("weaver-*.css"))
+
+
+def built_asset_paths() -> tuple[str, str]:
+    html = (FRONTEND_DIST / "index.html").read_text(encoding="utf-8")
+    script_path = re.search(r'src="(/assets/weaver-[^"]+\.js)"', html)
+    style_path = re.search(r'href="(/assets/weaver-[^"]+\.css)"', html)
+    assert script_path is not None
+    assert style_path is not None
+    return script_path.group(1), style_path.group(1)
 
 
 @pytest.fixture
@@ -368,32 +393,38 @@ async def test_index_has_csp_and_live_mode_label(tmp_path) -> None:
         assert "fake" in resp.text  # mode label injected from the runtime
         assert "{{MODE_LABEL}}" not in resp.text
         assert "sk-test-secret" not in resp.text
-        # Plan 013: the page mounts the reusable <weaver-chat> component and
-        # no longer ships the old monolithic weaver.js/weaver.css.
-        assert "<weaver-chat" in resp.text
-        assert "/static/components/weaver-chat.js" in resp.text
-        assert "/static/theme.css" in resp.text
+        assert '<div id="root"></div>' in resp.text
+        script_path, style_path = built_asset_paths()
+        assert script_path in resp.text
+        assert style_path in resp.text
+        assert "style-src 'self'" in resp.headers["Content-Security-Policy"]
+        assert "unsafe-inline" not in resp.headers["Content-Security-Policy"]
     await runtime.close()
 
 
-async def test_old_monolithic_assets_are_gone(client) -> None:
-    old = await client.get("/static/weaver.js")
-    assert old.status_code == 404
-    old_css = await client.get("/static/weaver.css")
-    assert old_css.status_code == 404
+@pytest.mark.parametrize(
+    "path",
+    (
+        "/static/weaver.js",
+        "/static/weaver.css",
+        "/static/components/weaver-chat.js",
+        "/static/theme.css",
+        "/static/manifest.webmanifest",
+        "/static/sw.js",
+    ),
+)
+async def test_old_frontend_assets_are_gone(client, path) -> None:
+    response = await client.get(path)
+    assert response.status_code == 404
 
 
 async def test_new_static_assets_serve(client) -> None:
+    script_path, style_path = built_asset_paths()
     for path in [
-        "/static/theme.css",
-        "/static/components/weaver-chat.js",
-        "/static/components/weaver-sidebar.js",
-        "/static/components/weaver-composer.js",
-        "/static/components/weaver-settings.js",
-        "/static/components/weaver-markdown.js",
-        "/static/manifest.webmanifest",
-        "/static/icon.svg",
-        "/static/sw.js",
+        style_path,
+        script_path,
+        "/manifest.webmanifest",
+        "/weaver-mark.svg",
         "/sw.js",
     ]:
         resp = await client.get(path)
@@ -411,6 +442,15 @@ async def test_service_worker_served_at_root_scope(client) -> None:
     assert resp.status_code == 200
     assert resp.headers.get("service-worker-allowed", "").strip() == "/"
     assert "caches.open" in resp.text
+    assert 'request.mode === "navigate"' in resp.text
+    assert "await fetch(request)" in resp.text
+    assert 'requestUrl.pathname.startsWith("/api/")' in resp.text
+    assert 'requestUrl.pathname.startsWith("/assets/")' in resp.text
+    assert "shellHtml.matchAll" in resp.text
+    assert "versionedAssets.length < 2" in resp.text
+    assert "const openClients = await self.clients.matchAll" in resp.text
+    assert "includeUncontrolled: true" in resp.text
+    assert "client.navigate(client.url)" in resp.text
 
 
 async def test_mutating_routes_reject_nonlocal_origin(tmp_path) -> None:
@@ -575,13 +615,13 @@ async def test_shutdown_waits_until_cooperative_turn_settles(
     await runtime.close()
 
 
-async def test_page_stop_uses_cancel_route_and_explicit_recovery(client) -> None:
-    script = await client.get("/static/components/weaver-chat.js")
+async def test_page_bundle_uses_cancel_route_and_explicit_recovery(client) -> None:
+    script_path, _ = built_asset_paths()
+    script = await client.get(script_path)
     assert script.status_code == 200
     assert "/cancel" in script.text
-    assert "_showRecovery" in script.text
-    assert "Start new chat" in script.text
-    assert "Choose another chat" in script.text
+    assert "Start a new weave" in script.text
+    assert "Choose another thread" in script.text
 
 
 async def test_page_privacy_copy_matches_runtime_mode(tmp_path) -> None:
@@ -662,7 +702,7 @@ async def test_private_protocol_canaries_never_reach_web_surfaces(
     ) as client:
         responses = [
             await client.get("/"),
-            await client.get("/static/components/weaver-chat.js"),
+            await client.get(built_asset_paths()[0]),
             await client.get("/api/conversations"),
             await client.get(f"/api/conversations/{conversation_id}/messages"),
         ]

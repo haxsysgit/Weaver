@@ -1,9 +1,8 @@
 """Plan 011 Gate 2: shared chat runtime profile tests.
 
-The runtime is extracted from cli.py so `weaver chat` (developer) and
-`weaver web` (web) share one construction path. Opening the runtime must
-not create a conversation, and the two surfaces must carry their exact
-tool and policy profiles.
+The runtime keeps separate developer and web profiles. Opening the runtime
+must not create a conversation, and both profiles keep their exact tool and
+policy boundaries even though the old terminal entrypoint is gone.
 """
 
 import pytest

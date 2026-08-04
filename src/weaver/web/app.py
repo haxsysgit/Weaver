@@ -12,11 +12,12 @@ checks on every mutating route.
 import asyncio
 import json
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -26,8 +27,7 @@ from weaver.chat_runtime import ChatRuntime
 
 MAX_MESSAGE_CHARS = 32_000
 
-STATIC_DIR = __file__.rsplit("/", 1)[0] + "/static"
-TEMPLATE_DIR = __file__.rsplit("/", 1)[0] + "/templates"
+FRONTEND_DIST = Path(__file__).with_name("dist")
 
 EVENT_HEADERS = {
     "Content-Type": "text/event-stream",
@@ -275,20 +275,28 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         stream.cancel_event.set()
         return Response(status_code=202, content="cancelling")
 
-    @app.get("/static/sw.js")
     @app.get("/sw.js")
     async def service_worker() -> Response:
-        # Served from the root path so the worker's default scope covers the
-        # whole app (a worker at /static/sw.js would only control /static/*).
-        return Response(
-            open(STATIC_DIR + "/sw.js", encoding="utf-8").read(),
-            media_type="application/javascript",
+        return FileResponse(
+            FRONTEND_DIST / "sw.js",
+            media_type="text/javascript",
             headers={"Service-Worker-Allowed": "/"},
         )
 
+    @app.get("/manifest.webmanifest")
+    async def web_manifest() -> Response:
+        return FileResponse(
+            FRONTEND_DIST / "manifest.webmanifest",
+            media_type="application/manifest+json",
+        )
+
+    @app.get("/weaver-mark.svg")
+    async def weaver_mark() -> Response:
+        return FileResponse(FRONTEND_DIST / "weaver-mark.svg", media_type="image/svg+xml")
+
     @app.get("/")
     async def index() -> HTMLResponse:
-        html = open(TEMPLATE_DIR + "/index.html", encoding="utf-8").read()
+        html = (FRONTEND_DIST / "index.html").read_text(encoding="utf-8")
         html = html.replace("{{MODE_LABEL}}", runtime.mode_label)
         if runtime.live:
             privacy_label = (
@@ -303,13 +311,15 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 "Cache-Control": "no-store",
                 "Content-Security-Policy": (
                     "default-src 'self'; script-src 'self'; "
-                    # Shadow-DOM components style themselves with inline
-                    # <style>; web components require style 'unsafe-inline'.
-                    "style-src 'self' 'unsafe-inline'; "
-                    "img-src 'self' data:; connect-src 'self'"
+                    "style-src 'self'; img-src 'self' data:; "
+                    "connect-src 'self'; manifest-src 'self'; worker-src 'self'"
                 ),
             },
         )
 
-    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+    app.mount(
+        "/assets",
+        StaticFiles(directory=FRONTEND_DIST / "assets", check_dir=False),
+        name="frontend-assets",
+    )
     return app

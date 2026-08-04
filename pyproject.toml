@@ -16,7 +16,6 @@ dependencies = [
     "openai>=2.11.0",
     "pydantic>=2.13.4",
     "python-dotenv>=1.1.1",
-    "textual>=2.0.0",
     "tiktoken>=0.13.0",
     "uvicorn>=0.30",
 ]
@@ -36,6 +35,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/weaver"]
+artifacts = ["src/weaver/web/dist"]
 
 [tool.pytest.ini_options]
 addopts = "-ra"

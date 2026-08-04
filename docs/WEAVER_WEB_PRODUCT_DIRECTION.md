@@ -1,8 +1,7 @@
 # Weaver Web Direction: Companion, Not Reader
 
-> Status: product-direction note, owner-confirmed 2026-07-31. Not an
-> accepted plan yet. The web spike and UI stack choice are open decisions
-> at the bottom.
+> Status: product direction confirmed. Plan 011 proved the backend and Plan
+> 013 chose React 19, Vite, and TypeScript for the product UI.
 
 ## What Weaver is
 
@@ -27,11 +26,11 @@ want to read, Weaver gives them a link. Reading lives outside the product.
 
 ## Why the pivot
 
-The target audience is novel readers, and no novel reader opens a
-terminal. The TUI was always a development surface (Plan 010's own goal:
-"give the owner a working chat window during development"). So:
+The target audience is novel readers, and no novel reader opens a terminal.
+Plan 013 retired the old development TUI after the browser backend worked.
+So:
 
-- TUI is demoted to a dev/debug console. No more polish budget.
+- The browser is Weaver's only chat surface.
 - Product surfaces in order: web UI, web app, mobile (PWA first, native
   later).
 - The agent core, conversation loop, model layer, receipts, and corpus
@@ -41,7 +40,7 @@ terminal. The TUI was always a development surface (Plan 010's own goal:
 This also resolves the TUI research: gptme, Elia, and OpenCode were all
 answers to the wrong question. None is needed for the product.
 
-## First spike: protocol, not UI
+## First spike: protocol, not UI (completed by Plan 011)
 
 Goal: prove `SessionWeave` works over the web with streaming and
 cooperative cancel. Minimal on purpose.
@@ -64,7 +63,7 @@ Scope:
 Out of scope: real UI, auth, multi-user, memory panels, spoiler-free
 mode, hosting.
 
-## UI stack (open decision)
+## UI stack decision
 
 The spike deliberately does not choose one. Options for the real build:
 
@@ -76,9 +75,8 @@ The spike deliberately does not choose one. Options for the real build:
 | FastAPI + static HTML/JS | Spike only | Proves the protocol, not the product |
 | Textual Web | Not for product | Reuses the TUI in a browser tab, dev preview at best |
 
-Recommendation: validate the protocol with the stack-free spike, then
-build the real UI on FastAPI + Vite React + Tailwind, with PWA as the
-mobile step.
+Plan 013 now uses FastAPI + Vite React + TypeScript, with plain CSS tokens and
+no Tailwind dependency. The responsive PWA is the mobile surface.
 
 ## Evaluated agent chat UI options (checked 2026-07-31)
 
@@ -107,9 +105,7 @@ the least ownership. CopilotKit earns its weight if we want agents to render
 live React UI or rich HITL approval flows. Full apps are rejected because
 they would own the loop and the data model.
 
-## Open decisions (owner gates)
+## Later owner gates
 
-- UI stack choice (recommended: React after the spike).
-- Whether the spike runs now.
 - Later: auth and multi-user, memory panel design, spoiler-free mode,
   chapter-link integration, hosting.

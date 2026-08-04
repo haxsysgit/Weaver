@@ -7,10 +7,7 @@ from typing import Sequence
 
 from pydantic import ValidationError
 
-from .chat_runtime import (
-    _developer_tool_registry,
-    open_chat_runtime,
-)
+from .chat_runtime import open_chat_runtime
 from .config import DEFAULT_TIMEOUT_SECONDS, load_startup_config
 from .corpus.errors import CorpusError, safe_error_message
 from .corpus.tools import (
@@ -34,9 +31,6 @@ from .model_layer import (
     FakeModelProvider,
     ModelLayer,
 )
-from .agent.tools import ToolRegistry
-from .conversation.session import SessionWeave
-from .tui import WeaverChat
 from .web import serve_web
 
 # NOTE: the developer surface's system prompt and fake responses live in
@@ -86,16 +80,6 @@ def _parser() -> argparse.ArgumentParser:
     library = subcommands.add_parser(
         "library",
         help="Browse and manage Weaver's novel library.",
-    )
-
-    chat = subcommands.add_parser(
-        "chat",
-        help="Open the Weaver chat window (live DeepSeek by default).",
-    )
-    chat.add_argument(
-        "--fake",
-        action="store_true",
-        help="Use deterministic fake mode; default is live DeepSeek.",
     )
 
     web = subcommands.add_parser(
@@ -148,63 +132,6 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _chat_tool_registry() -> ToolRegistry:
-    """Echo + library inspection tools only (Plan 010 Contract §2).
-
-    Thin adapter over the shared developer registry so existing tests
-    keep importing the cli seam.
-    """
-    return _developer_tool_registry()
-
-
-async def _build_chat_session(
-    state_dir: Path,
-    *,
-    live: bool,
-) -> tuple[SessionWeave, str, str]:
-    """Build the exact chat session the TUI runs (test seam).
-
-    Returns (sw, conversation_id, mode_label) with the session open and a
-    fresh conversation started. _run_chat runs the app on top; tests use
-    this builder to exercise the same code path without a terminal.
-    """
-    runtime = await open_chat_runtime(
-        state_dir,
-        live=live,
-        surface="developer",
-    )
-    try:
-        conv_id = await runtime.session.start_conversation("")
-        return runtime.session, conv_id, runtime.mode_label
-    except Exception:
-        await runtime.close()
-        raise
-
-
-async def _run_chat(state_dir: Path, *, live: bool) -> int:
-    """Open the session and run the TUI on the same event loop."""
-    if live and not os.environ.get("DEEPSEEK_KEY"):
-        print(
-            "ERROR live chat requires DEEPSEEK_KEY; set it, add it to "
-            ".weaver/config.toml ([api] key), or pass --fake for a scripted "
-            "session. No call was made."
-        )
-        return 2
-    sw, conv_id, mode_label = await _build_chat_session(
-        state_dir,
-        live=live,
-    )
-    app = WeaverChat(sw, conv_id, mode_label=mode_label)
-    try:
-        await app.run_async()
-    finally:
-        await sw.close()
-    # pi prints its resume line at exit; resume lands in Phase C, so the
-    # line names the notebook path the conversation lives in today.
-    print(f"session saved: {conv_id} -> {state_dir / 'weaver.sqlite3'}")
-    return 0
-
-
 async def _run_web(state_dir: Path, *, live: bool, port: int) -> int:
     """Serve the local browser chat on 127.0.0.1.
 
@@ -235,9 +162,6 @@ def run(argv: Sequence[str] | None = None) -> int:
     # .env and .weaver/config.toml feed os.environ (owner-directed 2026-07-31).
     load_startup_config()
     state_root = _state_root()
-
-    if args.command == "chat":
-        return asyncio.run(_run_chat(_chat_state_dir(), live=not args.fake))
 
     if args.command == "web":
         return asyncio.run(_run_web(_chat_state_dir(), live=not args.fake, port=args.port))

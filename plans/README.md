@@ -16,10 +16,10 @@ evidence, review, and human decision gates must also be complete.
 | [007.5 - Audit repair](007.5-audit-repair.md) | Implemented | Plan 007 complete | Retry method, tool-call uniqueness constraint, single-tx start, dedup, repo tests, stale docs |
 | [008 - Wire the conversation loop](008-wire-conversation-loop.md) | Accepted 2026-07-31 | Plan 007 accepted | Zip conversation/ and agent/ into one working conversation: SessionWeave.send() calls run_turn() |
 | [009 - Context assembler](009-context-assembler.md) | Accepted 2026-07-31 | Plan 008 accepted | Give run_turn() a context window it can't exceed: token budget, truncation, pinned owner message |
-| [010 - TUI entrypoint](010-tui-entrypoint.md) | Accepted and closed 2026-08-02 | Plan 009 accepted | Weaver's developer and debugging console; maintenance fixes only, no further product polish |
+| [010 - TUI entrypoint](010-tui-entrypoint.md) | Accepted and closed 2026-08-02; surface retired by Plan 013 | Plan 009 accepted | Historical terminal experiment, later removed when the browser became the single product surface |
 | [011 - Local browser chat entrypoint](011-web-chat-entrypoint.md) | Accepted 2026-08-03 | Plan 010 closed; checkpoint 001-010 complete | Appraise current ChatGPT behaviour, then prove one private local browser conversation |
-| [012 - Lore graph build (Shadow Slave 1-100)](012-direct-reading-baseline.md) | Accepted 2026-08-04 | Plan 011 accepted | The executing agent reads chapters 1-100 directly with three independent reader roles per chapter and builds the private interconnected notebook from pure reading (no vector DB / RAG) |
-| [013 - Responsive interface and installable PWA](013-responsive-interface-pwa.md) | Admitted 2026-08-04; in implementation | Plan 012 accepted | Build the polished responsive Weaver interface (sidebar, settings, Markdown, PWA) from the Plan 011 deferrals; vanilla Web Components, Shadow Slave dark-fantasy theme |
+| [012 - Direct reading baseline](012-direct-reading-baseline.md) | Accepted 2026-08-04 | Plan 011 accepted | Private chapter-evidenced notebook and connection map completed through chapter 1000, without retrieval changing the reading method |
+| [013 - Responsive interface and installable PWA](013-responsive-interface-pwa.md) | React repair implemented; independent review passed; owner decision pending | Plan 012 accepted | One responsive React chat surface with the Shadow Slave theme, real conversation controls, safe Markdown, and PWA |
 | 014+ - Compiled-memory experiments | Deferred | Plan 013 accepted | Compare bounded compiled memory with direct rereading |
 
 ## Execution order
@@ -30,10 +30,8 @@ recorded in `docs/process/checkpoint-001-010.md`. The next sequence is:
 1. **011**: appraise chat behaviour, stop at the owner gate, then prove one
    local browser conversation.
 2. **012**: run the private notebook build (chapters 1-100), then record the owner decision.
-3. **013**: turn the accepted proof into a polished responsive PWA; its scope
-   is the behaviour deferred from Plan 011 (sidebar, message actions,
-   settings, Markdown, responsive collapse, PWA, framework decision),
-   detailed in `plans/013-responsive-interface-pwa.md`.
+3. **013**: replace the redundant terminal and vanilla browser surfaces with
+   one responsive React chat and keep the accepted FastAPI and SSE backend.
 4. **014+**: begin compiled-memory experiments.
 
 Native Android and iOS remain deferred until Plan 013 proves a concrete PWA
@@ -45,11 +43,11 @@ Plan 008's final owner decision is recorded as **Accepted** in
 Plan 009 is **Accepted** (2026-07-31); its decision is recorded in
 `deliverables/009-context-assembler/decision.md`.
 Plan 010 is **Accepted and closed** (2026-08-02); its decision is recorded in
-`deliverables/010-tui-entrypoint/decision.md`. It remains Weaver's developer
-and debugging console. Maintenance bug fixes are allowed, but it receives no
-further product polish and is no longer a product surface.
+`deliverables/010-tui-entrypoint/decision.md`. Plan 013 later retired and
+deleted that terminal surface when the browser became Weaver's only chat UI.
 
 Plan 011 is **Accepted** (2026-08-03); both owner decisions are recorded in
 `deliverables/011-web-chat-entrypoint/decision.md`. Plan 012 is **Accepted**
 (2026-08-04); its notebook build, review, and final owner decision are all
-complete. Plan 013 is next and gated on its learning gate.
+complete. Plan 013's React repair is implemented and awaiting review and the
+owner's final decision.

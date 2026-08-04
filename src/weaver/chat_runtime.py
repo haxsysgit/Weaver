@@ -1,12 +1,11 @@
-"""Shared chat runtime for `weaver chat` and `weaver web`.
+"""Shared runtime construction for Weaver conversation surfaces.
 
 Extracted from cli.py (Plan 011 Gate 2): provider, prompt, model, tool
 profile, and SessionWeave construction now live here. Opening the runtime
 never creates a conversation; callers start one.
 
 Surface profiles:
-- "developer": the Plan 010 tool set (echo + library inspect tools under
-  the maintenance policy), used by `weaver chat`.
+- "developer": the Plan 010 tool set kept for direct development tests.
 - "web": an empty tool registry, no active tools, a read-only policy, and
   a prompt that does not claim library access. The browser surface has no
   tools until a later owner-approved plan.

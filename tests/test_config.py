@@ -117,48 +117,38 @@ def test_cli_run_loads_startup_config(tmp_path, monkeypatch, capsys) -> None:
         lambda: calls.append("loaded") or {},
     )
 
-    exit_code = cli.run(["chat"])
+    exit_code = cli.run(["web"])
 
     assert calls == ["loaded"]
     assert exit_code == 2
     assert not (tmp_path / "state").exists()
 
 
-async def test_build_chat_session_uses_configured_model(tmp_path, monkeypatch) -> None:
-    """[chat] model drives the live session's model id and mode label."""
+async def test_web_runtime_uses_configured_model(tmp_path, monkeypatch) -> None:
+    """[chat] model still drives the web runtime after the TUI is removed."""
     monkeypatch.setenv("DEEPSEEK_KEY", "sk-test")
     monkeypatch.setenv("WEAVER_CHAT_MODEL", "deepseek-v4-pro")
 
-    from weaver import cli
+    from weaver.chat_runtime import open_chat_runtime
 
-    sw, _conv_id, mode_label = await cli._build_chat_session(
-        tmp_path / "state",
-        live=True,
-    )
+    runtime = await open_chat_runtime(tmp_path / "state", live=True, surface="web")
     try:
-        assert mode_label == "live deepseek-v4-pro"
-        # The label is derived from the same env var as the model, so pin
-        # the wiring itself: the session really runs the pro spec.
-        assert sw._runner._model.model_id == "deepseek-v4-pro"
+        assert runtime.mode_label == "live deepseek-v4-pro"
+        assert runtime.session._runner._model.model_id == "deepseek-v4-pro"
     finally:
-        await sw.close()
+        await runtime.close()
 
 
-async def test_fake_chat_works_with_configured_pro_model(tmp_path, monkeypatch):
-    """Checkpoint audit fix: [chat] model = pro must not break --fake mode
-    (the scripted response used to fail model matching every turn)."""
-    monkeypatch.chdir(tmp_path)
+async def test_fake_web_works_with_configured_pro_model(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("WEAVER_CHAT_MODEL", "deepseek-v4-pro")
     monkeypatch.delenv("DEEPSEEK_KEY", raising=False)
 
-    from weaver import cli
+    from weaver.chat_runtime import open_chat_runtime
 
-    sw, conv_id, _mode_label = await cli._build_chat_session(
-        tmp_path / "state",
-        live=False,
-    )
+    runtime = await open_chat_runtime(tmp_path / "state", live=False, surface="web")
     try:
-        result = await sw.send(conv_id, "hi")
+        conversation_id = await runtime.session.start_conversation("")
+        result = await runtime.session.send(conversation_id, "hi")
         assert result.exit_reason == "completed"
     finally:
-        await sw.close()
+        await runtime.close()

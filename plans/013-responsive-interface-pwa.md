@@ -1,117 +1,86 @@
-# Plan 013: Responsive interface and installable PWA
-
-> **Executor instructions:** Plan 011 must be accepted (final gate) and
-> Plan 012 accepted before this plan starts. Every behaviour below was
-> explicitly deferred from Plan 011 in
-> `deliverables/011-web-chat-entrypoint/decision.md` (2026-08-02) and the
-> design reference's adopt/skip list; the details here are taken from
-> those records, not invented at admission time.
+# Plan 013: Responsive Weaver interface and installable PWA
 
 ## Status
 
-- **State:** Admitted 2026-08-04; in implementation
-- **Admitted implementation:** Yes — learning gate confirmed by owner 2026-08-04
-- **Depends on:** Plan 011 accepted (final gate) and Plan 012 accepted
-- **Priority:** P2
-- **Effort:** M
-- **Risk:** Medium (first responsive + installability work)
-- **Learning gate:** `deliverables/013-responsive-interface-pwa/learning.md`
+- **State:** Repair implementation complete; verification and independent review passed
+- **Admitted implementation:** Yes, owner redirected the frontend repair on 2026-08-04
+- **Depends on:** Plans 011 and 012 accepted
 - **Final decision:** pending
 
-## Learning-gate decisions (2026-08-04, owner-confirmed)
+## Owner direction
 
-- **Framework: vanilla Web Components.** The chat UI is built as native
-  custom elements (`<weaver-chat>`, `<weaver-sidebar>`, …) so HaxJobs can
-  mount and re-theme the same UI via CSS custom properties. No React/Vue/
-  shadcn, no Node build step. React stays an option later without a rewrite.
-- **Theme: Shadow Slave dark-fantasy aesthetic.** Layered near-black
-  background, bone-white/silver text, blood-crimson accent (Weaver's eye),
-  spider-web / thread-of-fate motifs, mask-inspired mark. Not the generic
-  ChatGPT look.
-- **Font:** system stack. **"Worked for Ns":** dropped. **Voice/
-  intelligence selector/dictation:** skipped (future personality plan may
-  lean into the Weaver persona).
-- **Markdown:** parse-to-nodes (DOM via createElement/textContent), no
-  sanitizer dependency.
-- **Regenerate:** real send/cancel on the same conversation, never a fake
-  resume.
+Keep the accepted FastAPI and SSE backend. Delete both redundant frontend
+surfaces: the Textual terminal UI and the vanilla web-component app. Rebuild
+one browser product with React 19, Vite, and TypeScript.
 
-## Outcome
+The ChatGPT appraisal from Plan 011 supplies measured interaction patterns:
+a focused reading column, quiet message hierarchy, a pinned composer, clear
+streaming controls, and a mobile conversation drawer. The shipped product has
+Weaver's own words, mark, layout details, and Shadow Slave theme.
 
-Turn the accepted Plan 011 one-column web chat into the polished
-responsive Weaver interface: sidebar with conversation chrome, message
-actions, a local settings modal, Markdown rendering of replies, the
-responsive collapse below 768 px, and a tested installable PWA. Design
-language stays the ChatGPT reference from Plan 011; the framework
-decision (vanilla vs React/Vite) is made here, at the learning gate, and
-was explicitly deferred out of Plan 011 by the owner on 2026-08-02.
+## Product shape
 
-This is still a local single-owner app, not a hosted service. CDN, CORS,
-and third-party assets stay forbidden. Native Android and iOS remain
-deferred until this plan proves a concrete PWA limitation.
+The visible app contains working behavior only:
 
-## Deferred from Plan 011 (source of truth)
+- conversation list, picker, and new weave;
+- owner and Weaver transcript with safe Markdown;
+- Enter to send and Shift+Enter for a newline;
+- live SSE replies, cooperative stop, and explicit recovery;
+- regenerate on the current live reply only;
+- fixed viewport with transcript-only scrolling;
+- desktop conversation rail toggle using Weaver's fate-thread sigil;
+- mobile conversation drawer below 768px;
+- installable PWA with shell-only caching.
 
-The following were recorded as Plan 013 deferrals in the Plan 011
-decision.md (2026-08-02) and the design reference
-(`chatgpt-ui-design-reference.md` section 10):
+No Library, Projects, Scheduled, Plugins, settings, voice, model picker, or
+other dead rows appear before their backend behavior exists.
 
-### In scope (deferred behaviour to build)
+## Weaver identity
 
-- **Sidebar** — the 260 px sidebar (measured; the earlier 250 px was a
-  screenshot estimate) with its chrome: Library, Projects, Scheduled,
-  Plugins, More, and the account footer; plus the 52 px collapsed rail
-  and the collapse/expand toggle.
-- **Regenerate and broader message actions** — regenerate (new
-  send/cancel path on the same conversation, consistent with Weaver's
-  cancellation contract), and the message action row under replies
-  beyond the Plan 011 copy button.
-- **Settings modal** — local-only rows: General, Appearance,
-  Personalization, Storage, Safety. The hosted-service rows (Plugins,
-  Billing, Usage, Cloud browser, Parental controls, Trusted contact) are
-  explicitly out of scope and never shown.
-- **Markdown rendering of replies** — render assistant replies as
-  Markdown in the browser; the plain-text `textContent` boundary stays
-  for all rendering, Markdown is parsed client-side and rendered into
-  text nodes (no innerHTML from model text without a sanitizer decision
-  at the learning gate).
-- **Responsive collapse below 768 px** — the sub-768 px behaviour was
-  only partially measured in Plan 011 (the 52 px rail is confirmed); the
-  phone-width layout and breakpoints are designed and proven here.
-- **PWA installation** — manifest, service worker scope, installability
-  test on this machine; prove or disprove the concrete PWA limitation
-  before any native Android/iOS work.
-- **Framework decision** — vanilla HTML/CSS/JS (Plan 011 default) or
-  React/Vite; decided at the learning gate with the owner, recorded
-  there, and only then admitted. No Node build step enters the repo
-  without that decision.
+- Layered near-black surfaces suggest depth in shadow.
+- Bone-white and pale-silver text carry the porcelain and fate-thread notes.
+- Blood crimson marks focus, sending, and the mask's eye.
+- Obsidian hairlines, restrained thread geometry, and a mask mark carry the
+  Demon of Fate reference.
+- Product words include "New weave," "Recent threads," and the footer line
+  "the eighth lineage, still weaving..."
 
-### Decisions deferred to this plan (design-reference open questions)
+## Future-fit boundary
 
-- Font: system stack vs bundling the "Circle"-style webfont (recommended:
-  system stack, matching Plan 011).
-- The `Worked for Ns` status line under long replies: adopt as a quiet
-  status line from run receipts or drop.
-- Voice, the intelligence selector, and dictation: the design
-  reference's skip list argues for skipping (Weaver picks its model once;
-  the meter belongs in a status line), but the decision.md records them
-  as deferred here — they are decided at this plan's learning gate,
-  default to skip.
+Today remains a small chat app. The source is separated into five parts that
+future Weaver work can extend without rewriting the conversation loop:
 
-### Out of scope (rejected in Plan 011, stays rejected)
+1. Backend adapter: conversations, messages, SSE turns, and cancellation.
+2. Chat state: active conversation, streamed reply, recovery, and regenerate.
+3. Presentation components: rail, transcript, messages, composer, and mark.
+4. Product configuration: visible names, prompts, footer, and storage key.
+5. Theme tokens: product colors, widths, radii, and motion.
 
-- Everything implying a hosted multi-owner service.
-- CDN, CORS, or third-party assets.
-- Pretending an interrupted turn can resume.
-- New capability beyond UI polish; the backend HTTP + SSE API surface
-  from Plan 011 is consumed as-is unless a plan-level change is admitted.
+Future chapter sources, spoiler position, remembered reader takes, Weaver
+opinions, theories, reading links, and generated scene visuals get their own
+components when their backend contracts exist. HaxJobs can copy the chat
+components and replace product configuration, API adapter, mark, and tokens.
 
-## Roadmap position
+## Backend boundary
 
-1. Plan 011: local browser chat proof (one-column).
-2. Plan 012: direct-reading baseline.
-3. Plan 013: this plan — polished responsive interface and PWA.
-4. Plan 014 and later: compiled-memory experiments.
+The Plan 011 HTTP and SSE contract stays unchanged. SQLite is canonical.
+`localStorage` contains only the active conversation id. Model text is rendered
+as React nodes from a pure Markdown parser and never inserted as HTML.
 
-Native Android and iOS remain deferred until Plan 013 proves a concrete
-PWA limitation.
+## Verification floor
+
+Run in this order:
+
+```sh
+npm install && npm run build
+uv run pytest -q
+npx vitest run
+uv run ruff check src/weaver tests
+uv pip check
+```
+
+Then run `uv run python scripts/web_live_proof.py` against the built fake-mode
+app, followed by its `--offline-shell` and `--mode-switch` proofs. Build and
+inspect a wheel to prove the React distribution is packaged. Audit the staged
+diff for credentials, private story text, chats, and generated private state
+before committing.

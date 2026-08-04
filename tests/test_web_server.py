@@ -17,6 +17,13 @@ from weaver.chat_runtime import open_chat_runtime
 from weaver.web.app import create_app
 
 
+def test_terminal_chat_command_is_removed() -> None:
+    with pytest.raises(SystemExit) as error:
+        cli.run(["chat"])
+
+    assert error.value.code == 2
+
+
 def test_web_live_missing_credential_exits_2_without_state(
     tmp_path, monkeypatch, capsys
 ) -> None:

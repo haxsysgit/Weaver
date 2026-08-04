@@ -1,46 +1,73 @@
-# Plan 013: review-ledger
+# Plan 013 review ledger
 
 ## Status
 
-Both independent reviews returned PASS with findings. All findings fixed;
-repair pass complete.
+All independent findings repaired. Fresh-context reviewer verdict: **PASS**.
 
-## Review 1: runtime/API/security — PASS with findings
+## Findings and repairs
 
-- Reviewer: independent `reviewer` agent, fresh context, read-only
-- Verdict: PASS. SSE contract consumption, textContent rendering
-  boundary, CSP (style inline for shadow DOM, scripts 'self'), root-scope
-  service worker, and private-text hygiene all verified correct.
-- **MAJOR (fixed):** Regenerate crossed conversation boundaries —
-  `_lastOwnerText` was never reset on conversation switch, so picking
-  another chat could re-send the previous chat's last message into it.
-  Fix: initialize `_lastOwnerText = null`, reset it in `startNewChat()`
-  and `_onPick()`, and show the Regenerate action only on the live turn's
-  reply (never on history-loaded messages). Verified live: a picked
-  conversation renders 0 regenerate buttons; a fresh turn renders exactly
-  1 on the reply.
-- MINORs (fixed): `startNewChat` now refreshes the sidebar picker so the
-  new conversation appears immediately.
-- Notes (accepted): no client-side watchdog for a wedged stream; unbounded
-  SSE queue — both acceptable for a local single-user app.
+### Built frontend missing from packaged installs
 
-## Review 2: scope/design/reuse — PASS with findings
+**Finding:** the backend served only `src/weaver/web/dist/`, but the directory
+was ignored and absent from built wheels.
 
-- Reviewer: independent `reviewer` agent, fresh context, read-only
-- Verdict: PASS. All eight deferred behaviours implemented; framework
-  decision, Shadow Slave theme, HaxJobs reuse contract verified.
-- MINORs (fixed): settings modal gained the missing Personalization row;
-  the README now points at the real `scripts/web_live_proof.py` instead
-  of a nonexistent artifact.
-- Note (accepted): regenerate appends a fresh reply rather than replacing
-  in place — matches the design reference and the plan's "new send/cancel
-  path" wording.
+**Repair:** the production build is tracked, Hatch includes it as a wheel
+artifact, Python asserts that the production assets exist, and a temporary
+wheel build/install confirmed index, manifest, mark, worker, and hashed JS/CSS.
 
-## Repair pass
+### Service worker could show the wrong privacy mode
 
-- Commits: (review fixes) — regenerated live-proof driver
-  `scripts/web_live_proof.py` (reproducible CDP proof, 0 installability
-  errors, mobile drawer verified), Personalization row, README fix,
-  Regenerate cross-conversation fix.
-- Verification: 322 pytest, 19 node tests, ruff clean, uv pip check
-  clean, full live proof green.
+**Finding:** cache-first `/` could retain fake-mode copy after the same origin
+restarted in live mode. Fixed JS/CSS names could also pin an old bundle.
+
+**Repair:** Vite emits hashed assets. The worker discovers and precaches the
+exact hashes during first install, treats navigation as network-first with an
+offline fallback, and never responds to `/api/`. Browser proofs cover both a
+server-off reload and fake-to-live restart under an installed worker.
+
+### Reuse boundary still mixed behavior and Weaver presentation
+
+**Finding:** `ChatApp` owned transport/state behavior and hardcoded Weaver copy
+and marks despite the documented HaxJobs reuse claim.
+
+**Repair:** `useChatController` owns conversation and streaming behavior.
+`ChatApp` composes the presentation. Product configuration supplies visible
+words, the brand mark is an injected component, and a Career Guide product
+test proves the boundary without Weaver or Shadow Slave copy.
+
+### Browser proof cleanup race
+
+**Finding:** a process could exit between `poll()` and `killpg()`, and one
+cleanup exception could skip server shutdown.
+
+**Repair:** `ProcessLookupError` is handled and nested `finally` blocks always
+attempt page, browser, and server cleanup independently.
+
+## Verification evidence
+
+- Required build, Python, React, lint, and package compatibility floor passed.
+- Fake and explicit live browser conversations passed in temporary state.
+- Offline shell and fake-to-live privacy proofs passed under a controlling
+  service worker.
+- The staged privacy and credential audit remains the last pre-commit gate.
+
+## Verdict
+
+PASS. The reviewer reran the 41-module build, 289 Python tests, 8 React tests,
+Ruff, dependency compatibility, packaging inspection, offline shell, privacy
+mode switch, diff check, and private-data scan. No unresolved finding remains.
+
+## Owner inspection after review
+
+**Observation:** the owner still saw the deleted shell. Server logs showed the
+legacy document requesting deleted `/static/` modules, followed by the new
+worker fetching `/`, the manifest, mark, and hashed React assets.
+
+**Cause:** worker v3 replaced the legacy cache and claimed the open tab, but a
+claim does not replace HTML that has already rendered. The React shell would
+appear on the next navigation.
+
+**Repair:** worker v4 records whether it removed an older cache. When it did,
+it claims and navigates every open same-scope window once. A fresh install has
+no older cache and does not reload. The web test went red before this behavior
+was added, then passed after the production bundle was rebuilt.
