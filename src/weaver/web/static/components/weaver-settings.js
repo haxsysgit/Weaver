@@ -121,6 +121,9 @@ class WeaverSettings extends HTMLElement {
     this._el.backdrop.addEventListener("click", (e) => {
       if (e.target === this._el.backdrop) this.close();
     });
+    this._el.backdrop.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") this.close();
+    });
   }
 
   static get observedAttributes() { return ["model-label", "privacy-label"]; }
@@ -132,6 +135,7 @@ class WeaverSettings extends HTMLElement {
 
   open() {
     this.setAttribute("open", "");
+    this._el.close.focus();
   }
 
   close() {

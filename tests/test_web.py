@@ -394,6 +394,7 @@ async def test_new_static_assets_serve(client) -> None:
         "/static/manifest.webmanifest",
         "/static/icon.svg",
         "/static/sw.js",
+        "/sw.js",
     ]:
         resp = await client.get(path)
         assert resp.status_code == 200, path
@@ -401,6 +402,15 @@ async def test_new_static_assets_serve(client) -> None:
         assert (
             "text" in ct or "svg" in ct or "manifest+json" in ct or "javascript" in ct
         ), path
+
+
+async def test_service_worker_served_at_root_scope(client) -> None:
+    # A worker at /static/sw.js would only control /static/*, so the shell
+    # could never be served offline. The root path is the PWA contract.
+    resp = await client.get("/sw.js")
+    assert resp.status_code == 200
+    assert resp.headers.get("service-worker-allowed", "").strip() == "/"
+    assert "caches.open" in resp.text
 
 
 async def test_mutating_routes_reject_nonlocal_origin(tmp_path) -> None:

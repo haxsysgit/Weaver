@@ -275,6 +275,17 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         stream.cancel_event.set()
         return Response(status_code=202, content="cancelling")
 
+    @app.get("/static/sw.js")
+    @app.get("/sw.js")
+    async def service_worker() -> Response:
+        # Served from the root path so the worker's default scope covers the
+        # whole app (a worker at /static/sw.js would only control /static/*).
+        return Response(
+            open(STATIC_DIR + "/sw.js", encoding="utf-8").read(),
+            media_type="application/javascript",
+            headers={"Service-Worker-Allowed": "/"},
+        )
+
     @app.get("/")
     async def index() -> HTMLResponse:
         html = open(TEMPLATE_DIR + "/index.html", encoding="utf-8").read()

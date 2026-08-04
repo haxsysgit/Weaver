@@ -185,13 +185,43 @@ template.innerHTML = `
       font-size: 22px;
       color: var(--accent);
     }
+    .mobile-bar {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--hairline);
+    }
+    .mobile-bar button {
+      width: 34px;
+      height: 34px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-2);
+      font-size: 17px;
+      cursor: pointer;
+    }
+    .mobile-bar button:hover { background: var(--surface-2); color: var(--text); }
+    .mobile-bar .title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .mobile-bar .spacer { flex: 1; }
     @media (max-width: 768px) {
       .transcript { padding: 16px 10px 10px; }
+      .mobile-bar { display: flex; }
     }
   </style>
   <div class="shell">
     <weaver-sidebar id="sidebar"></weaver-sidebar>
     <main class="main" part="main">
+      <div class="mobile-bar">
+        <button id="drawer-btn" type="button" aria-label="Open conversations" title="Conversations">&#9776;</button>
+        <span class="title">Weaver</span>
+        <span class="spacer"></span>
+      </div>
       <section class="transcript" id="transcript" aria-live="polite"></section>
       <weaver-composer id="composer"></weaver-composer>
     </main>
@@ -215,6 +245,7 @@ class WeaverChat extends HTMLElement {
       transcript: this.shadowRoot.querySelector("#transcript"),
       composer: this.shadowRoot.querySelector("#composer"),
       settings: this.shadowRoot.querySelector("#settings"),
+      drawerBtn: this.shadowRoot.querySelector("#drawer-btn"),
     };
   }
 
@@ -224,6 +255,7 @@ class WeaverChat extends HTMLElement {
     this._el.sidebar.addEventListener("pick", (e) => this._onPick(e.detail.id));
     this._el.sidebar.addEventListener("new-chat", () => this.startNewChat());
     this._el.sidebar.addEventListener("settings", () => this.openSettings());
+    this._el.drawerBtn.addEventListener("click", () => this._toggleDrawer());
     this._bindBoot();
   }
 
@@ -254,11 +286,21 @@ class WeaverChat extends HTMLElement {
     this._clearRecovery();
     await this._createConversation();
     this._el.transcript.replaceChildren();
+    this._renderEmpty();
     this._el.composer.focusInput();
   }
 
   openSettings() {
     this._el.settings.open();
+  }
+
+  _toggleDrawer() {
+    const sb = this._el.sidebar;
+    if (sb.hasAttribute("open")) {
+      sb.removeAttribute("open");
+    } else {
+      sb.setAttribute("open", "");
+    }
   }
 
   /* --- internals --- */
@@ -290,10 +332,27 @@ class WeaverChat extends HTMLElement {
     if (!resp.ok) return false;
     const messages = await resp.json();
     this._el.transcript.replaceChildren();
+    if (messages.length === 0) {
+      this._renderEmpty();
+      return true;
+    }
     for (const m of messages) {
       this._addMessage(m.role === "owner" ? "owner" : "weaver", m.content);
     }
     return true;
+  }
+
+  _renderEmpty() {
+    const el = document.createElement("div");
+    el.className = "empty";
+    const mark = document.createElement("div");
+    mark.className = "mark";
+    mark.textContent = "\u2726"; // weaver-star
+    const line = document.createElement("div");
+    line.textContent = "The threads of fate are silent. Ask Weaver something.";
+    el.appendChild(mark);
+    el.appendChild(line);
+    this._el.transcript.appendChild(el);
   }
 
   _addMessage(role, content) {
@@ -375,6 +434,10 @@ class WeaverChat extends HTMLElement {
 
   async _onPick(id) {
     if (!id) return;
+    // Close the mobile drawer if it is open.
+    if (this._el.sidebar.hasAttribute("open")) {
+      this._el.sidebar.removeAttribute("open");
+    }
     this._el.transcript.replaceChildren();
     this._clearRecovery();
     if (await this._loadConversation(id)) {
@@ -494,6 +557,6 @@ if (!customElements.get("weaver-chat")) {
 // an inline script.
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/static/sw.js").catch(() => {});
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
   });
 }
