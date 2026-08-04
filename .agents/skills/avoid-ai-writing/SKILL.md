@@ -580,6 +580,8 @@ Each profile is a set of concrete targets, not a vibe:
 
 **`casual`** — Contractions throughout; their absence reads stiff. Short sentences (aim for ≤14 words on average); fragments allowed. At least one first-person or concrete-anecdote touch. Near-zero jargon. Keep warm hedges ("honestly," "I think") but cut corporate ones ("it's worth noting"). *Blog posts, social, community.*
 
+**`genz-social`** — The community-post register: lowercase casual (keep caps on proper nouns and in-group terms), contractions everywhere, "cos/ofc/meh/lmao/anyways" fine, emoji allowed. In-group fandom vocabulary carries the message ("takes", "canon", "the goat"). Self-deprecating asides and jokes mid-thought are signals of human authorship, keep them. Run-ons acceptable, but keep at least one short punchy line per paragraph for rhythm. Never "not X but Y" contrast framing; state the positive claim. Never let it read like a product pitch: no "we offer", no balanced feature bullets that sound like a spec sheet. *Reddit, Discord, X, community posts.*
+
 **`professional`** — Active voice for most sentences. Vary sentence length; avoid three in a row within a few words of each other. One concrete claim per paragraph (a number, a name, a date), never "experts say." Make the ask explicit. Low tolerance for hedging. *LinkedIn, investor email, sponsor pitches.*
 
 **`technical`** — Prefer plain copulatives ("X is Y") over inflated substitutes ("serves as," "stands as a testament to"). One idea per sentence; imperative mood for instructions. Jargon is fine, but define it on first use. Tables and lists only where the content is genuinely list-shaped, not for decoration. *Docs, technical blog.*
