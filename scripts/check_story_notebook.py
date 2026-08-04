@@ -435,6 +435,11 @@ def check_location(
         limit = context.source_paragraph_counts[location_chapter]
     if start < 1 or start > end or end > limit:
         add_issue(result, record_path, "chapter location does not exist")
+        return
+    if location_kind == "line" and start == 1:
+        # Line 1 of every chapter file is the chapter heading, never story
+        # text, so it can never be evidence for a statement.
+        add_issue(result, record_path, "line 1 is the chapter heading, not evidence")
 
 
 def check_evidence_list(
@@ -741,18 +746,23 @@ def check_notes(
 
         record = records[chapter_number][1]
         record_marker = NOTE_RECORD_MARKER_PATTERN.findall(note_contents)
-        if record_marker and f"chapter-{chapter_number:04d}" not in record_marker:
+        if not record_marker:
+            add_issue(result, relative_path(note_path, root), "notebook record marker is missing")
+        elif f"chapter-{chapter_number:04d}" not in record_marker:
             add_issue(result, relative_path(note_path, root), "notebook record marker is wrong")
         note_statement_ids = set(STATEMENT_MARKER_PATTERN.findall(note_contents))
-        if note_statement_ids:
-            entries = record.get("statements", record.get("entries"))
-            record_ids = {
+        entries = record.get("statements", record.get("entries"))
+        record_ids = (
+            {
                 entry.get("id")
                 for entry in entries
                 if isinstance(entry, dict) and isinstance(entry.get("id"), str)
-            } if isinstance(entries, list) else set()
-            if note_statement_ids != record_ids:
-                add_issue(result, relative_path(note_path, root), "statement ids do not match JSON")
+            }
+            if isinstance(entries, list)
+            else set()
+        )
+        if note_statement_ids != record_ids:
+            add_issue(result, relative_path(note_path, root), "statement ids do not match JSON")
 
 
 def check_connections(

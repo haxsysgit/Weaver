@@ -77,7 +77,7 @@ def make_statement(
         "kind": kind,
         "statement": text,
         "evidence": (
-            [{"chapter": 1, "location": {"line_start": 1, "line_end": 2}}]
+            [{"chapter": 1, "location": {"line_start": 2, "line_end": 3}}]
             if evidence is None
             else evidence
         ),
@@ -237,7 +237,7 @@ def notebook(repo: Path) -> Path:
                 "target": "hero",
                 "relation": "appears in",
                 "first_known_chapter": 1,
-                "evidence": [{"chapter": 1, "location": {"line_start": 1, "line_end": 2}}],
+                "evidence": [{"chapter": 1, "location": {"line_start": 2, "line_end": 3}}],
                 "later_corrections": None,
             }
         ],
@@ -285,6 +285,55 @@ def test_evidence_location_that_does_not_exist(notebook: Path) -> None:
     assert "location does not exist" in result.stdout
 
 
+def test_evidence_starting_at_line_1_is_heading_not_evidence(notebook: Path) -> None:
+    # Line 1 of every chapter file is the heading, never story text.
+    bad = make_statement(
+        "statement:chapter-0001:bad",
+        evidence=[{"chapter": 1, "location": {"line_start": 1, "line_end": 1}}],
+    )
+    write_record(notebook, repo_of(notebook), 1, [bad])
+    result = check(notebook)
+    assert result.returncode == 1
+    assert "line 1 is the chapter heading" in result.stdout
+
+
+def test_evidence_range_including_line_1_is_rejected(notebook: Path) -> None:
+    # Ranges that start on the heading line are also invalid.
+    bad = make_statement(
+        "statement:chapter-0001:bad",
+        evidence=[{"chapter": 1, "location": {"line_start": 1, "line_end": 4}}],
+    )
+    write_record(notebook, repo_of(notebook), 1, [bad])
+    result = check(notebook)
+    assert result.returncode == 1
+    assert "line 1 is the chapter heading" in result.stdout
+
+
+def test_note_without_notebook_record_marker_fails(notebook: Path) -> None:
+    # Every chapter note must declare which record it mirrors.
+    (notebook / "chapters" / "0001.md").write_text(
+        "# Chapter 0001\n\nReadable notes.\n\n<!-- statement-id: statement:chapter-0001:hero -->\n",
+        encoding="utf-8",
+    )
+    result = check(notebook)
+    assert result.returncode == 1
+    assert "notebook record marker is missing" in result.stdout
+
+
+def test_note_statement_markers_must_match_json_exactly(notebook: Path) -> None:
+    # A note naming extra statements (or missing ones) must fail.
+    (notebook / "chapters" / "0001.md").write_text(
+        "# Chapter 0001\n\nReadable notes.\n\n"
+        "<!-- notebook-record: chapter-0001 -->\n"
+        "<!-- statement-id: statement:chapter-0001:hero -->\n"
+        "<!-- statement-id: statement:chapter-0001:ghost -->\n",
+        encoding="utf-8",
+    )
+    result = check(notebook)
+    assert result.returncode == 1
+    assert "statement ids do not match JSON" in result.stdout
+
+
 def test_duplicate_ids(notebook: Path) -> None:
     dup = make_statement("statement:chapter-0001:hero", text="A duplicate record.")
     write_record(notebook, repo_of(notebook), 1, [dup, dup.copy()])
@@ -315,7 +364,7 @@ def test_broken_connection_references(notebook: Path) -> None:
                 "target": "hero",
                 "relation": "appears in",
                 "first_known_chapter": 1,
-                "evidence": [{"chapter": 1, "location": {"line_start": 1, "line_end": 2}}],
+                "evidence": [{"chapter": 1, "location": {"line_start": 2, "line_end": 3}}],
                 "later_corrections": None,
             }
         ],
@@ -349,7 +398,7 @@ def test_alias_connection_source_target_resolve(notebook: Path) -> None:
                 "target": "hero-alias",
                 "relation": "appears in",
                 "first_known_chapter": 1,
-                "evidence": [{"chapter": 1, "location": {"line_start": 1, "line_end": 2}}],
+                "evidence": [{"chapter": 1, "location": {"line_start": 2, "line_end": 3}}],
                 "later_corrections": None,
             }
         ],
@@ -438,7 +487,7 @@ def test_copied_novel_prose_in_json(notebook: Path) -> None:
 
 
 def test_copied_novel_prose_in_connections(notebook: Path) -> None:
-    copied = chapter_line(1, 1)
+    copied = chapter_line(1, 3)
     write_connections(
         notebook,
         [
@@ -448,7 +497,7 @@ def test_copied_novel_prose_in_connections(notebook: Path) -> None:
                 "target": "hero",
                 "relation": copied,
                 "first_known_chapter": 1,
-                "evidence": [{"chapter": 1, "location": {"line_start": 1, "line_end": 2}}],
+                "evidence": [{"chapter": 1, "location": {"line_start": 2, "line_end": 3}}],
                 "later_corrections": None,
             }
         ],
@@ -567,7 +616,7 @@ def test_review_incomplete(notebook: Path) -> None:
 def test_evidence_leaks_later_chapter_knowledge(notebook: Path) -> None:
     bad = make_statement(
         "statement:chapter-0001:bad",
-        evidence=[{"chapter": 2, "location": {"line_start": 1, "line_end": 2}}],
+        evidence=[{"chapter": 2, "location": {"line_start": 2, "line_end": 3}}],
     )
     write_record(notebook, repo_of(notebook), 1, [bad])
     result = check(notebook)
