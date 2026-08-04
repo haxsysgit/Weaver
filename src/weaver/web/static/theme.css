@@ -1,0 +1,42 @@
+/* Weaver theme: Shadow Slave dark-fantasy palette.
+ * Design language from the novel (via the canon cross-check wiki):
+ *   - Weaver, the Demon of Fate: dark tattered mantle, black lacquered mask
+ *     with fangs and twisting horns, porcelain arm, "a voice like a thousand
+ *     hopeless prayers"; spiders and webs are sacred to his followers.
+ *   - Shadow God: the half-forgotten god; shadows are his essence.
+ *
+ * Layered near-blacks (Shadow Realm depth), bone-white + pale-silver text,
+ * blood-crimson accent (Weaver's eye / the Spell), obsidian hairlines.
+ * No external fonts or assets: system stack only, per the learning gate.
+ */
+
+:root {
+  /* Layered shadow backgrounds, deepest first. */
+  --bg-0: #07070a;   /* Shadow Realm depth */
+  --bg-1: #0c0c11;   /* main canvas */
+  --bg-2: #12121a;   /* raised surface */
+  --surface: #171720; /* sidebar, cards */
+  --surface-2: #1e1e2a; /* hover, composer, pressed */
+  --hairline: rgba(220, 215, 200, 0.08); /* obsidian sheen */
+
+  /* Text: bone-white -> dim silver. */
+  --text: #f2efe6;
+  --text-2: #c9c4b8;
+  --text-3: #8f8a80;
+  --text-4: #5c5850;
+
+  /* Accents: blood-crimson (Weaver's eye / the Spell's crimson) +
+     pale fate-silver (strings of fate). */
+  --accent: #b0342a;
+  --accent-hover: #c8453a;
+  --accent-dim: rgba(176, 52, 42, 0.18);
+  --silver: #a8a8b8;
+  --danger: #e0534a;
+
+  /* Structure. */
+  --radius-composer: 28px;
+  --radius-card: 14px;
+  --radius-modal: 16px;
+  --sidebar-w: 260px;
+  --rail-w: 52px;
+}

@@ -292,7 +292,10 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 "Cache-Control": "no-store",
                 "Content-Security-Policy": (
                     "default-src 'self'; script-src 'self'; "
-                    "style-src 'self'; img-src 'self' data:; connect-src 'self'"
+                    # Shadow-DOM components style themselves with inline
+                    # <style>; web components require style 'unsafe-inline'.
+                    "style-src 'self' 'unsafe-inline'; "
+                    "img-src 'self' data:; connect-src 'self'"
                 ),
             },
         )

@@ -368,7 +368,39 @@ async def test_index_has_csp_and_live_mode_label(tmp_path) -> None:
         assert "fake" in resp.text  # mode label injected from the runtime
         assert "{{MODE_LABEL}}" not in resp.text
         assert "sk-test-secret" not in resp.text
+        # Plan 013: the page mounts the reusable <weaver-chat> component and
+        # no longer ships the old monolithic weaver.js/weaver.css.
+        assert "<weaver-chat" in resp.text
+        assert "/static/components/weaver-chat.js" in resp.text
+        assert "/static/theme.css" in resp.text
     await runtime.close()
+
+
+async def test_old_monolithic_assets_are_gone(client) -> None:
+    old = await client.get("/static/weaver.js")
+    assert old.status_code == 404
+    old_css = await client.get("/static/weaver.css")
+    assert old_css.status_code == 404
+
+
+async def test_new_static_assets_serve(client) -> None:
+    for path in [
+        "/static/theme.css",
+        "/static/components/weaver-chat.js",
+        "/static/components/weaver-sidebar.js",
+        "/static/components/weaver-composer.js",
+        "/static/components/weaver-settings.js",
+        "/static/components/weaver-markdown.js",
+        "/static/manifest.webmanifest",
+        "/static/icon.svg",
+        "/static/sw.js",
+    ]:
+        resp = await client.get(path)
+        assert resp.status_code == 200, path
+        ct = resp.headers.get("content-type", "")
+        assert (
+            "text" in ct or "svg" in ct or "manifest+json" in ct or "javascript" in ct
+        ), path
 
 
 async def test_mutating_routes_reject_nonlocal_origin(tmp_path) -> None:
@@ -534,11 +566,10 @@ async def test_shutdown_waits_until_cooperative_turn_settles(
 
 
 async def test_page_stop_uses_cancel_route_and_explicit_recovery(client) -> None:
-    script = await client.get("/static/weaver.js")
+    script = await client.get("/static/components/weaver-chat.js")
     assert script.status_code == 200
-    assert "requestStop" in script.text
     assert "/cancel" in script.text
-    assert "showRecovery" in script.text
+    assert "_showRecovery" in script.text
     assert "Start new chat" in script.text
     assert "Choose another chat" in script.text
 
@@ -621,7 +652,7 @@ async def test_private_protocol_canaries_never_reach_web_surfaces(
     ) as client:
         responses = [
             await client.get("/"),
-            await client.get("/static/weaver.js"),
+            await client.get("/static/components/weaver-chat.js"),
             await client.get("/api/conversations"),
             await client.get(f"/api/conversations/{conversation_id}/messages"),
         ]
