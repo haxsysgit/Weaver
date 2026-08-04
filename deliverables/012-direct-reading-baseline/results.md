@@ -3,11 +3,11 @@
 ## Status
 
 Plan wording locked by the owner 2026-08-03 (plain-language revision). The
-method research gate and deterministic checker slice are complete. A
-second, owner-directed rich read by pi (`shadow-slave-pi/`) is in progress:
-chapters 1-20 done, 21-100 remaining. The codex-built notebook
-(`shadow-slave/`) is complete through 100. Final owner decision is pending
-until the pi run finishes and both runs are compared.
+method research gate and deterministic checker slice are complete. The
+owner-directed rich read by pi is complete through chapter 1000 and checker-
+verified (0 problems) at `.weaver/knowledge/shadow-slave/`. The parallel
+codex-built notebook was deleted by owner direction on 2026-08-04; the pi
+run is now the canonical notebook. Final owner decision is pending.
 
 ## Timeline
 
@@ -64,15 +64,16 @@ turn) with max continuity, so the two runs can be compared.
   adopted index.md (read first every turn) and log.md (append-only journal)
   as the continuity mechanism.
 - Read chapters 1-20 in full with line numbers; wrote 20 master records
-  (88 statements, 4-6 per chapter vs codex's 2), 20 chapter notes, 33
-  entity pages, 180 connections, timeline, mysteries, relationships,
-  interpretations, and the continuity index/log.
+  (88 statements, 4-6 per chapter), 20 chapter notes, 33 entity pages, 180
+  connections, timeline, mysteries, relationships, interpretations, and the
+  continuity index/log.
+- Reading continued to chapter 1000 across later batches (see log.md and
+  reading-progress.json); the notebook is checker-verified through 1000.
 - Checker passes with zero problems: `uv run python
-  scripts/check_story_notebook.py --root .weaver/knowledge/shadow-slave-pi
-  --through 20 --novel-dir novels/shadow-slave`.
-- Notebook lives at `.weaver/knowledge/shadow-slave-pi/` (separate from
-  codex's `.weaver/knowledge/shadow-slave/`); dirs 700, files 600, never
-  committed.
+  scripts/check_story_notebook.py --root .weaver/knowledge/shadow-slave
+  --through 1000 --novel-dir novels/shadow-slave`.
+- Notebook lives at `.weaver/knowledge/shadow-slave/`; dirs 700, files
+  600, never committed.
 
 ## Checks run
 
@@ -80,12 +81,9 @@ turn) with max continuity, so the two runs can be compared.
 - `uv run ruff check scripts/check_story_notebook.py tests/test_story_notebook_checker.py`
   passed.
 - `uv run python scripts/check_story_notebook.py --root
-  .weaver/knowledge/shadow-slave --through 100` passed (codex run): 100
-  chapters, 200 statements, 924 connections, 0 problems.
-- `uv run python scripts/check_story_notebook.py --root
-  .weaver/knowledge/shadow-slave-pi --through 20 --novel-dir novels/shadow-slave`
-  passed (pi run): 20 chapters, 88 statements, 180 connections, 0
-  problems.
+  .weaver/knowledge/shadow-slave --through 1000 --novel-dir
+  novels/shadow-slave` passed (canonical pi run): 1000 chapters, 2422
+  statements, 7334 connections, 0 problems.
 - The independent ten-chapter review passed all 200 statements after the
   evidence repairs.
 - `uv run pytest -q` passed.

@@ -6,6 +6,13 @@ and the richer Plan 012 shape.  In both cases it checks the same guarantees:
 every saved claim has source support, links resolve, source hashes still
 match, and private data stays out of Git.  Diagnostics contain paths and rule
 names only.  They never print notebook statements or novel prose.
+
+Entity pages may declare alias markers (<!-- alias: id -->) next to their
+canonical entity-id marker so one character with many names (Stone Saint /
+Marble Saint / Saint, Cassia / Cassie, Sunny / Mongrel) stays one entity.
+Links to an alias resolve to the canonical page; an alias that duplicates its
+own page's id, collides with a real entity id, or is claimed by two pages is
+an error.
 """
 
 from __future__ import annotations
@@ -43,6 +50,7 @@ CHAPTER_JSON_PATTERN = re.compile(r"^(\d{4})\.json$")
 CHAPTER_NOTE_PATTERN = re.compile(r"^(\d{4})\.md$")
 CHAPTER_HEADING_PATTERN = re.compile(r"^#\s+Chapter\s+(\d{1,4})\s*$")
 ENTITY_MARKER_PATTERN = re.compile(r"<!--\s*entity-id:\s*([^\s]+)\s*-->")
+ALIAS_MARKER_PATTERN = re.compile(r"<!--\s*alias:\s*([^\s]+)\s*-->")
 STATEMENT_MARKER_PATTERN = re.compile(
     r"<!--\s*statement-id:\s*([^\s]+)\s*-->"
 )
@@ -111,6 +119,7 @@ class NotebookContext:
     entity_ids: set[str] = field(default_factory=set)
     connection_ids: set[str] = field(default_factory=set)
     all_ids: set[str] = field(default_factory=set)
+    aliases: dict[str, str] = field(default_factory=dict)
     entries_by_id: dict[str, dict[str, Any]] = field(default_factory=dict)
     rich_records: bool = False
 
@@ -586,8 +595,17 @@ def collect_entries(
 
 
 def collect_page_ids(root: Path, context: NotebookContext, result: CheckResult) -> None:
-    """Collect explicit entity markers and legacy filename-based pages."""
+    """Collect explicit entity markers and legacy filename-based pages.
 
+    Alias markers (<!-- alias: X -->) declare other names for the same
+    entity; the canonical id is the page's entity-id marker (or its
+    filename-derived id). Every alias must be unambiguous: it may not
+    duplicate the page's own id, collide with a real entity id, or be
+    claimed by two different pages. Page ids are collected in a first
+    pass so an alias is validated against the complete id universe.
+    """
+
+    pages: list[tuple[Path, list[str], list[str]]] = []
     for entity_type, directory_name in PAGE_DIRS.items():
         directory = root / directory_name
         if not directory.is_dir():
@@ -604,11 +622,35 @@ def collect_page_ids(root: Path, context: NotebookContext, result: CheckResult) 
                 add_issue(result, relative_path(path, root), "entity id marker is missing")
                 continue
             ids = explicit_ids or [f"{entity_type}:{page_id}"]
+            pages.append((path, ids, ALIAS_MARKER_PATTERN.findall(contents)))
             for entity_id in ids:
                 if entity_id in context.all_ids:
                     add_issue(result, relative_path(path, root), "duplicate id")
                 context.entity_ids.add(entity_id)
                 context.all_ids.add(entity_id)
+    for path, ids, aliases in pages:
+        canonical = ids[0]
+        for alias in aliases:
+            if alias == canonical or alias in ids:
+                add_issue(
+                    result, relative_path(path, root), "alias duplicates the page's own id"
+                )
+                continue
+            if alias in context.aliases:
+                add_issue(
+                    result,
+                    relative_path(path, root),
+                    f"alias {alias} is claimed by more than one page",
+                )
+                continue
+            if alias in context.all_ids:
+                add_issue(
+                    result,
+                    relative_path(path, root),
+                    f"alias {alias} collides with an existing entity id",
+                )
+                continue
+            context.aliases[alias] = canonical
 
 
 def check_entity_pages(root: Path, context: NotebookContext, result: CheckResult) -> None:
@@ -661,7 +703,7 @@ def check_entries(
                 add_issue(result, record_path, "entry links are malformed")
             else:
                 for link in links:
-                    if link not in context.all_ids:
+                    if link not in context.all_ids and link not in context.aliases:
                         add_issue(result, record_path, "unknown linked id (broken link)")
             first_known = entry.get("first_known_chapter", entry.get("first_known"))
             if not isinstance(first_known, int) or not 1 <= first_known <= chapter_number:
@@ -751,9 +793,13 @@ def check_connections(
     for line_number, connection in connections:
         source = connection.get("source")
         target = connection.get("target")
-        if not isinstance(source, str) or source not in context.all_ids:
+        if not isinstance(source, str) or (
+            source not in context.all_ids and source not in context.aliases
+        ):
             add_issue(result, f"connections.jsonl:{line_number}", "unknown connection source")
-        if not isinstance(target, str) or target not in context.all_ids:
+        if not isinstance(target, str) or (
+            target not in context.all_ids and target not in context.aliases
+        ):
             add_issue(result, f"connections.jsonl:{line_number}", "unknown connection target")
         predicate = connection.get("predicate", connection.get("relation"))
         if not isinstance(predicate, str) or not predicate.strip():
@@ -870,8 +916,8 @@ def check_notebook(
     if not root.is_dir():
         add_issue(result, root, "notebook root is missing")
         return result
-    if not isinstance(through, int) or not 1 <= through <= 500:
-        add_issue(result, root, "requested range must be between chapters 1 and 500")
+    if not isinstance(through, int) or not 1 <= through <= 2000:
+        add_issue(result, root, "requested range must be between chapters 1 and 2000")
         return result
 
     repo_root = find_repo_root(root)
@@ -950,6 +996,9 @@ def check_notebook(
         "entities": len(context.entity_ids),
         "connections": connection_count,
     }
+    import sys
+    for issue in result.issues:
+        print("ISSUE:", issue, file=sys.stderr)
     return result
 
 

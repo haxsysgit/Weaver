@@ -164,6 +164,19 @@ def write_pages(root: Path, entity_ids: list[str]) -> None:
         )
 
 
+def write_alias_pages(root: Path, aliases_by_id: dict[str, list[str]]) -> None:
+    """Write entity pages that each carry alias markers for other names."""
+    for dirname in ("people", "places", "powers", "groups", "items"):
+        page_dir = root / dirname
+        page_dir.mkdir(parents=True, exist_ok=True)
+    for entity_id, aliases in aliases_by_id.items():
+        body = [f"# {entity_id}", "", f"<!-- entity-id: {entity_id} -->"]
+        body += [f"<!-- alias: {alias} -->" for alias in aliases]
+        page = root / "people" / f"{entity_id}.md"
+        page.write_text("\n".join(body) + "\n", encoding="utf-8")
+        page.chmod(0o600)
+
+
 def write_connections(root: Path, connections: list[dict]) -> None:
     with (root / "connections.jsonl").open("a", encoding="utf-8") as fh:
         for conn in connections:
@@ -310,6 +323,76 @@ def test_broken_connection_references(notebook: Path) -> None:
     result = check(notebook)
     assert result.returncode == 1
     assert "unknown connection source" in result.stdout
+
+
+def test_alias_links_resolve(notebook: Path) -> None:
+    write_alias_pages(notebook, {"hero": ["hero-alias"]})
+    bad = make_statement(
+        "statement:chapter-0001:alias-user",
+        text="Links through an alias.",
+        links=["hero-alias"],
+    )
+    write_record(notebook, repo_of(notebook), 1, [bad])
+    write_note(notebook, 1, ["statement:chapter-0001:alias-user"])
+    result = check(notebook)
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_alias_connection_source_target_resolve(notebook: Path) -> None:
+    write_alias_pages(notebook, {"hero": ["hero-alias"]})
+    write_connections(
+        notebook,
+        [
+            {
+                "id": "connection:alias-edge",
+                "source": "hero-alias",
+                "target": "hero-alias",
+                "relation": "appears in",
+                "first_known_chapter": 1,
+                "evidence": [{"chapter": 1, "location": {"line_start": 1, "line_end": 2}}],
+                "later_corrections": None,
+            }
+        ],
+    )
+    result = check(notebook)
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_alias_claimed_by_two_pages_fails(notebook: Path) -> None:
+    write_alias_pages(notebook, {"hero": ["shared-alias"], "side": ["shared-alias"]})
+    result = check(notebook)
+    assert result.returncode == 1
+    assert "alias" in result.stdout
+
+
+def test_alias_colliding_with_entity_id_fails(notebook: Path) -> None:
+    write_alias_pages(notebook, {"hero": ["side"]})
+    write_pages(notebook, ["side"])
+    (notebook / "people" / "side.md").chmod(0o600)
+    result = check(notebook)
+    assert result.returncode == 1
+    assert "alias" in result.stdout
+
+
+def test_alias_duplicating_own_id_fails(notebook: Path) -> None:
+    write_alias_pages(notebook, {"hero": ["hero"]})
+    result = check(notebook)
+    assert result.returncode == 1
+    assert "alias" in result.stdout
+
+
+def test_alias_typo_fails(notebook: Path) -> None:
+    write_alias_pages(notebook, {"hero": ["hero-alias"]})
+    bad = make_statement(
+        "statement:chapter-0001:typo",
+        text="Links a typo alias.",
+        links=["hero-aliass"],
+    )
+    write_record(notebook, repo_of(notebook), 1, [bad])
+    write_note(notebook, 1, ["statement:chapter-0001:typo"])
+    result = check(notebook)
+    assert result.returncode == 1
+    assert "unknown linked id" in result.stdout
 
 
 def test_missing_chapter_gap(repo: Path) -> None:
