@@ -19,7 +19,7 @@ evidence, review, and human decision gates must also be complete.
 | [010 - TUI entrypoint](010-tui-entrypoint.md) | Accepted and closed 2026-08-02 | Plan 009 accepted | Weaver's developer and debugging console; maintenance fixes only, no further product polish |
 | [011 - Local browser chat entrypoint](011-web-chat-entrypoint.md) | Accepted 2026-08-03 | Plan 010 closed; checkpoint 001-010 complete | Appraise current ChatGPT behaviour, then prove one private local browser conversation |
 | [012 - Lore graph build (Shadow Slave 1-100)](012-direct-reading-baseline.md) | Accepted 2026-08-04 | Plan 011 accepted | The executing agent reads chapters 1-100 directly with three independent reader roles per chapter and builds the private interconnected notebook from pure reading (no vector DB / RAG) |
-| [013 - Responsive interface and installable PWA](013-responsive-interface-pwa.md) | Planned; learning gate required | Plan 012 accepted | Build the polished responsive Weaver interface (sidebar, settings, Markdown, PWA) from the Plan 011 deferrals |
+| [013 - Responsive interface and installable PWA](013-responsive-interface-pwa.md) | Admitted 2026-08-04; in implementation | Plan 012 accepted | Build the polished responsive Weaver interface (sidebar, settings, Markdown, PWA) from the Plan 011 deferrals; vanilla Web Components, Shadow Slave dark-fantasy theme |
 | 014+ - Compiled-memory experiments | Deferred | Plan 013 accepted | Compare bounded compiled memory with direct rereading |
 
 ## Execution order

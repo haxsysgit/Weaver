@@ -2,54 +2,85 @@
 
 ## Gate status
 
-**Unadmitted. Owner confirmation required before implementation.**
+**Confirmed by owner 2026-08-04. Admitted for implementation.**
 
-The scope of this plan is the behaviour explicitly deferred from Plan 011
-in `deliverables/011-web-chat-entrypoint/decision.md` (2026-08-02) and
-the design reference's adopt/skip list. The plan file records the full
-deferral list; this note keeps the learning-gate facts that will need
-owner confirmation before admission.
+All Plan 011 deferrals, the design-reference open questions, and the
+framework decision were resolved with the owner at this gate. Details
+below.
 
-## What Plan 011 deferred here (source of truth)
+## Framework decision: vanilla Web Components (owner-confirmed 2026-08-04)
 
-- The sidebar: 260 px wide (dev-measured; the 250 px figure was a
-  screenshot estimate) with its chrome — Library, Projects, Scheduled,
-  Plugins, More, account footer — and the 52 px collapsed rail.
-- Regenerate and broader message actions (regenerate is a new
-  send/cancel path on the same conversation under Weaver's cooperative
-  cancellation contract, never a fake resume).
-- Settings modal with local-only rows: General, Appearance,
-  Personalization, Storage, Safety. Hosted-service rows (Plugins,
-  Billing, Usage, Cloud browser, Parental controls, Trusted contact) are
-  explicitly excluded.
-- Markdown rendering of assistant replies, client-side, preserving the
-  `textContent` rendering boundary (no innerHTML from model text without
-  a sanitizer decision at the learning gate).
-- Responsive collapse below 768 px: Plan 011 only confirmed the 52 px
-  rail; the phone-width layout and breakpoints are designed and proven
-  here.
-- PWA installation: manifest, service worker scope, installability proof
-  on this machine, and a concrete-PWA-limitation verdict before any
-  native Android/iOS work.
-- The framework decision (vanilla HTML/CSS/JS vs React/Vite) — made at
-  this plan's learning gate with the owner; no Node build step enters
-  the repo without it.
+- **Decision:** vanilla HTML/CSS/JS, built as native **Web Components**
+  (custom elements: `<weaver-chat>`, `<weaver-sidebar>`, etc.). No React,
+  no Vue, no shadcn, no Node build step.
+- **Why the owner wants widgets:** the chat UI will be reused for HaxJobs —
+  copy Weaver's UI, edit and extend it, never recreate a chat UI.
+- **Why Web Components:** the browser's native component standard. A
+  `<weaver-chat>` element works in any page and any framework (including a
+  future React app) without a wrapper. Framework components (React/Vue)
+  do not cross framework boundaries, so the reuse goal is natively served
+  by web components.
+- **Why not React/Vue/shadcn (decision record):** the frontend is a thin
+  consumer of the documented HTTP+SSE API (~6 components of state, no
+  framework payoff); a Node build step adds a toolchain and version churn
+  for a local single-owner app with no CDN/third-party assets; shadcn is
+  copy-paste source on Radix + Tailwind — heavy third-party surface for
+  buttons and a textarea; and framework components can't be dropped into
+  HaxJobs if it chooses a different framework.
+- **Open door:** if a future plan grows heavy client state (dashboard,
+  charts, collaboration) or HaxJobs becomes a large product, React can be
+  adopted then — web components embed inside React with no rewrite.
+- **Scope of the component library:** the chat surface splits into
+  reusable custom elements so HaxJobs can mount `<weaver-chat>` and
+  theme it via CSS custom properties and attributes.
 
-## Open questions carried from the design reference
+## Theme decision: Shadow Slave dark-fantasy aesthetic (owner-directed 2026-08-04)
 
-- Font: system stack (recommended, matching Plan 011) vs bundling the
-  Circle-style webfont.
-- `Worked for Ns` status line under long replies: adopt from run
-  receipts as a quiet status line or drop.
-- Voice, the intelligence selector, dictation: recorded as deferred in
-  decision.md; the design reference's skip list argues for skipping —
-  default is skip, decided at the learning gate.
+Owner: "i want you to see the theme of shadow slave and make it that way,
+buttons, theme and other stuff even bg colors, i dont want a generic chat
+app like chatgpt. theme with element of shadows, fantasy, scary stuff, or
+find the description of weaver, or weaver fan arts in reddit."
+
+Research (wiki pages quoting the novel): **Weaver**, the Demon of Fate — a
+tall nebulous figure in a dark tattered mantle, a fearsome black lacquered
+wood mask with vicious fangs and twisting horns, eight nimble arms (one
+porcelain-crafted), a voice "like a thousand hopeless prayers"; spiders and
+webs are sacred to his followers; strings of fate connect all beings.
+**Shadow God** — the half-forgotten god of peace, death, solace, and
+mysteries; shadows are his essence; inseparable from his domain.
+
+Design language:
+- **Palette:** layered near-blacks (Shadow Realm depth, not flat black),
+  bone-white and pale-silver text (the porcelain arm / moonlight), a
+  blood-crimson accent (Weaver's eye / the Spell's crimson) for the send
+  button, active states, and focus rings, with pale-silver as the
+  secondary accent (strings of fate). Hairlines in dark obsidian grey.
+- **Motifs:** subtle spider-web / thread-of-fate textures on the sidebar
+  and background; mask-inspired mark for the app logo/avatar; a "weave"
+  line in the footer.
+- **Personality hook (future):** the assistant's future personality plan
+  (owner note, point 4) aligns with this theme — the "thousand hopeless
+  prayers" voice, fate-weaver persona. Not built now, only the theme.
+
+## Other gate decisions (owner-confirmed)
+
+- **Font:** system font stack (matching Plan 011). No bundled webfont.
+- **"Worked for Ns" status line:** dropped (no real timings yet; add as a
+  one-liner later if wanted).
+- **Voice, intelligence selector, dictation:** skipped. Confirmed; the
+  model is picked once, the context meter lives in a status line.
+- **Markdown rendering:** parse-to-nodes (build DOM elements via
+  createElement/textContent from a client-side Markdown parser). No
+  sanitizer dependency — with parse-to-nodes there is nothing to
+  sanitize; model text can never be interpreted as HTML.
+- **Regenerate:** real new send/cancel on the same conversation under
+  Weaver's cooperative cancellation contract, never a fake resume.
 
 ## Hard rules carried from Plan 011
 
 - Still a local single-owner app: no hosted multi-owner service, no CDN,
   no CORS, no third-party assets.
-- Design language is the ChatGPT reference; this plan adds no new
-  capability beyond the backend HTTP + SSE API from Plan 011.
+- Backend HTTP + SSE API from Plan 011 is consumed as-is unless a
+  plan-level change is admitted.
 - Private sources stay private: nothing from novels, chats, credentials,
   receipts, or raw model reasoning in any deliverable.

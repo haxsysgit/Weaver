@@ -9,14 +9,32 @@
 
 ## Status
 
-- **State:** Planned; learning gate required
-- **Admitted implementation:** No
+- **State:** Admitted 2026-08-04; in implementation
+- **Admitted implementation:** Yes — learning gate confirmed by owner 2026-08-04
 - **Depends on:** Plan 011 accepted (final gate) and Plan 012 accepted
 - **Priority:** P2
 - **Effort:** M
 - **Risk:** Medium (first responsive + installability work)
 - **Learning gate:** `deliverables/013-responsive-interface-pwa/learning.md`
 - **Final decision:** pending
+
+## Learning-gate decisions (2026-08-04, owner-confirmed)
+
+- **Framework: vanilla Web Components.** The chat UI is built as native
+  custom elements (`<weaver-chat>`, `<weaver-sidebar>`, …) so HaxJobs can
+  mount and re-theme the same UI via CSS custom properties. No React/Vue/
+  shadcn, no Node build step. React stays an option later without a rewrite.
+- **Theme: Shadow Slave dark-fantasy aesthetic.** Layered near-black
+  background, bone-white/silver text, blood-crimson accent (Weaver's eye),
+  spider-web / thread-of-fate motifs, mask-inspired mark. Not the generic
+  ChatGPT look.
+- **Font:** system stack. **"Worked for Ns":** dropped. **Voice/
+  intelligence selector/dictation:** skipped (future personality plan may
+  lean into the Weaver persona).
+- **Markdown:** parse-to-nodes (DOM via createElement/textContent), no
+  sanitizer dependency.
+- **Regenerate:** real send/cancel on the same conversation, never a fake
+  resume.
 
 ## Outcome
 
