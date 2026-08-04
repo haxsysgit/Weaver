@@ -4,8 +4,8 @@
 
 Review 1 (plan wording revision, 2026-08-03) complete; the owner confirmed
 the plain-language plan and locked choices. Review 2 (story notebook versus
-named chapter locations, ten-chapter groups) is complete. Final owner
-decision remains pending.
+named chapter locations, ten-chapter groups) is complete. The final owner
+decision is recorded: Accepted 2026-08-04.
 
 ## Review 1: Plain-language plan revision (2026-08-03)
 

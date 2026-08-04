@@ -18,8 +18,8 @@ evidence, review, and human decision gates must also be complete.
 | [009 - Context assembler](009-context-assembler.md) | Accepted 2026-07-31 | Plan 008 accepted | Give run_turn() a context window it can't exceed: token budget, truncation, pinned owner message |
 | [010 - TUI entrypoint](010-tui-entrypoint.md) | Accepted and closed 2026-08-02 | Plan 009 accepted | Weaver's developer and debugging console; maintenance fixes only, no further product polish |
 | [011 - Local browser chat entrypoint](011-web-chat-entrypoint.md) | Accepted 2026-08-03 | Plan 010 closed; checkpoint 001-010 complete | Appraise current ChatGPT behaviour, then prove one private local browser conversation |
-| [012 - Lore graph build (Shadow Slave 1-100)](012-direct-reading-baseline.md) | Ready for final owner decision; private reading and ten-group review complete | Plan 011 accepted | The executing agent reads chapters 1-100 directly with three independent reader roles per chapter and builds the private interconnected notebook from pure reading (no vector DB / RAG) |
-| [013 - Responsive interface and installable PWA](013-responsive-interface-pwa.md) | Deferred | Plan 012 accepted | Build the polished responsive Weaver interface (sidebar, settings, Markdown, PWA) from the Plan 011 deferrals |
+| [012 - Lore graph build (Shadow Slave 1-100)](012-direct-reading-baseline.md) | Accepted 2026-08-04 | Plan 011 accepted | The executing agent reads chapters 1-100 directly with three independent reader roles per chapter and builds the private interconnected notebook from pure reading (no vector DB / RAG) |
+| [013 - Responsive interface and installable PWA](013-responsive-interface-pwa.md) | Planned; learning gate required | Plan 012 accepted | Build the polished responsive Weaver interface (sidebar, settings, Markdown, PWA) from the Plan 011 deferrals |
 | 014+ - Compiled-memory experiments | Deferred | Plan 013 accepted | Compare bounded compiled memory with direct rereading |
 
 ## Execution order
@@ -50,6 +50,6 @@ and debugging console. Maintenance bug fixes are allowed, but it receives no
 further product polish and is no longer a product surface.
 
 Plan 011 is **Accepted** (2026-08-03); both owner decisions are recorded in
-`deliverables/011-web-chat-entrypoint/decision.md`. Plan 012 has completed its
-private notebook build and independent review; its final owner decision is
-still pending. Plan 013 stays gated until Plan 012's final decision.
+`deliverables/011-web-chat-entrypoint/decision.md`. Plan 012 is **Accepted**
+(2026-08-04); its notebook build, review, and final owner decision are all
+complete. Plan 013 is next and gated on its learning gate.

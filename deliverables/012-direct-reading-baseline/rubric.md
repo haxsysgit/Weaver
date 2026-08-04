@@ -16,4 +16,4 @@
 | Independent reviewer checks every statement against its named chapter, in ten-chapter groups | Done | `review-ledger.md`; fleet verification at the 200/300/400/500/600/700/800/900/1000 milestones |
 | No novel file modified | Passed so far | `git ls-files novels/` = 0; results.md |
 | No private story knowledge committed | Passed so far | commit audits |
-| Owner records final decision | Pending | `decision.md` |
+| Owner records final decision | Done | `decision.md` (Accepted 2026-08-04) |

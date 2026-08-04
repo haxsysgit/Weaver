@@ -7,7 +7,9 @@ method research gate and deterministic checker slice are complete. The
 owner-directed rich read by pi is complete through chapter 1000 and checker-
 verified (0 problems) at `.weaver/knowledge/shadow-slave/`. The parallel
 codex-built notebook was deleted by owner direction on 2026-08-04; the pi
-run is now the canonical notebook. Final owner decision is pending.
+run is now the canonical notebook. The fandom wiki was added as a standing
+canon cross-check source (volume boundaries source-verified and arcs.md
+corrected). Owner accepted the plan on 2026-08-04.
 
 ## Timeline
 
@@ -97,5 +99,5 @@ turn) with max continuity, so the two runs can be compared.
 - No private story knowledge committed; the private notebook remains ignored
   under `.weaver/`.
 - Weaver application code unchanged.
-- Owner acceptance remains pending in `decision.md`.
+- Owner acceptance recorded in `decision.md` (Accepted, 2026-08-04).
 - No private story knowledge in committed files.

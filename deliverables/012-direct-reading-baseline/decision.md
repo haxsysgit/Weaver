@@ -28,8 +28,11 @@ notebook, the checker, and the independent review.
 
 ## Final record
 
-- Date: pending owner action
-- Evidence ready: private chapters 1-100 notebook, checker pass, and
-  independent ten-group review pass (200/200 statements)
-- Reason: Plan 012 is ready for the owner's accept/reject decision; the
-  implementation does not mark itself accepted automatically.
+- Date: 2026-08-04
+- Decision: Accepted
+- Evidence: private chapters 1-1000 notebook, checker PASS (2422 statements,
+  7334 connections, 0 problems), independent ten-group review pass, and the
+  fandom-wiki cross-check (volume boundaries source-verified, wiki added as
+  a standing canon cross-check source per owner direction)
+- Reason: the notebook is complete through chapter 1000 and checker-verified;
+  the owner accepted on close-out.

@@ -24,12 +24,12 @@ plan.
 
 | File | Purpose | Current state |
 | --- | --- | --- |
-| `plan.md` | Pointer to the canonical implementation plan | Ready for final owner decision |
+| `plan.md` | Pointer to the canonical implementation plan | Accepted 2026-08-04 |
 | `learning.md` | Plain-language understanding and owner gate | Confirmed 2026-08-03 |
-| `results.md` | Observations and executed commands | Private reading and independent review complete; final owner decision pending |
-| `rubric.md` | Acceptance checklist | Updated to plain plan |
+| `results.md` | Observations and executed commands | Private reading and independent review complete; owner accepted 2026-08-04 |
+| `rubric.md` | Acceptance checklist | Updated to plain plan; owner decision recorded |
 | `review-ledger.md` | Findings, repairs, and rechecks | Ten-group source review complete; no open findings |
-| `decision.md` | Owner's final accept or reject record | Final pending |
+| `decision.md` | Owner's final accept or reject record | Accepted 2026-08-04 |
 | `fictional-understanding-research.md` | Sanitized cited method research | Complete 2026-08-03; primary paper pages rechecked |
 
 No novel prose, chats, credentials, private receipts, story-derived

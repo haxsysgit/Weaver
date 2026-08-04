@@ -10,16 +10,18 @@
 
 - **Tooling:** repo commands via `uv` (pytest, ruff, pip check); reading
   uses the harness's native tools.
-- **State:** Plan wording locked 2026-08-03 (owner-confirmed revision);
-  research gate and checker complete; owner-directed pi re-read in progress
-  (chapters 1-20 of 100 done); codex run complete through 100.
+- **State:** Completed and owner-accepted 2026-08-04. Notebook complete
+  through chapter 1000 and checker-PASS verified (2422 statements, 7334
+  connections, 0 problems); fandom-wiki cross-check recorded (volume
+  boundaries source-verified; wiki is now a standing canon cross-check
+  source).
 - **Priority:** P2
 - **Effort:** L (100 chapters, three independent reads each)
 - **Risk:** Medium (private source material; long careful build)
 - **Depends on:** Plan 011 accepted 2026-08-03
 - **Category:** Private story knowledge build
 - **Learning gate:** `deliverables/012-direct-reading-baseline/learning.md`
-- **Final decision:** pending
+- **Final decision:** Accepted 2026-08-04
 
 ## Summary
 
