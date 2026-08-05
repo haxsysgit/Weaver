@@ -162,10 +162,14 @@ local mode so the comparison measures the production engine:
 Fusion is an evaluated choice, not a default. The Qdrant docs say to
 use weighted RRF when an eval set exists (ours does: the labeled
 question set), DBSF when raw scores are trusted without an eval set,
-and plain RRF otherwise. The experiment measures all three on the same
-question set and picks with data. The sparse arm is also a variable:
-hand-rolled BM25 (`modifier=IDF`) vs a fastembed sparse neural encoder
-(SPLADE or miniCOIL), decided on the same question set.
+and plain RRF otherwise. The experiment measures RRF and DBSF on the
+same question set and picks with data (both tied at 0.35 hit@5 on 20
+questions, so plain RRF stays the default). The sparse arm is also a
+variable: hand-rolled BM25 (`modifier=IDF`) vs a fastembed sparse neural
+encoder (SPLADE or miniCOIL), decided on the same question set. Measured
+result: SPLADE costs ~0.4s per text on this CPU (a full 7579-chunk index
+would take ~50 minutes), so BM25 is the chosen sparse arm; SPLADE stays
+a documented alternative for smaller corpora.
 
 The experiment reports which method finds the right evidence, and where
 each method misses. Paraphrased questions that share no words with the

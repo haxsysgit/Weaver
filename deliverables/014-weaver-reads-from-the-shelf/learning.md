@@ -102,7 +102,13 @@ Consequences for this plan:
    indexes, it does not replace the graph.
 
    Qdrant facts verified 2026-08-04 against the official docs and a
-   throwaway venv (Python 3.11.13, `qdrant-client` 1.19.0, fastembed
+ 
+
+Embedding source decision (2026-08-05, from Slice 2 data): local
+fastembed all-MiniLM-L6-v2 wins over an API embedder. No embedding API
+is configured in the repo (the DeepSeek key is chat-only), local is
+zero cost and works offline after the model cache, and the model's
+256-token window just fixes the chunk size (15 lines, measured).  throwaway venv (Python 3.11.13, `qdrant-client` 1.19.0, fastembed
    0.8.0; venv deleted after the test):
 
    - Points live in named collections with id, vector, and payload
