@@ -425,6 +425,7 @@ async def test_new_static_assets_serve(client) -> None:
         script_path,
         "/manifest.webmanifest",
         "/weaver-mark.svg",
+        "/assets/font-awesome-license.txt",
         "/sw.js",
     ]:
         resp = await client.get(path)
@@ -434,6 +435,9 @@ async def test_new_static_assets_serve(client) -> None:
             "text" in ct or "svg" in ct or "manifest+json" in ct or "javascript" in ct
         ), path
 
+    license_response = await client.get("/assets/font-awesome-license.txt")
+    assert "Creative Commons Attribution 4.0" in license_response.text
+
 
 async def test_service_worker_served_at_root_scope(client) -> None:
     # A worker at /static/sw.js would only control /static/*, so the shell
@@ -442,6 +446,7 @@ async def test_service_worker_served_at_root_scope(client) -> None:
     assert resp.status_code == 200
     assert resp.headers.get("service-worker-allowed", "").strip() == "/"
     assert "caches.open" in resp.text
+    assert 'const CACHE_NAME = "weaver-shell-v5"' in resp.text
     assert 'request.mode === "navigate"' in resp.text
     assert "await fetch(request)" in resp.text
     assert 'requestUrl.pathname.startsWith("/api/")' in resp.text

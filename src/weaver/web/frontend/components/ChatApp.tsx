@@ -5,7 +5,7 @@ import type { ChatApi } from "../lib/chatApi";
 import { weaverProduct, type ChatProduct } from "../lib/product";
 import { Composer } from "./Composer";
 import { ConversationRail } from "./ConversationRail";
-import { FateThreadGateIcon } from "./Icons";
+import { RailOpenIcon } from "./Icons";
 import { Message } from "./Message";
 import { RecoveryPanel } from "./RecoveryPanel";
 import { WeaverMark, type WeaverMarkProps } from "./WeaverMark";
@@ -28,7 +28,29 @@ export function ChatApp({
   const chat = useChatController(api, product);
   const [desktopRailCollapsed, setDesktopRailCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [mobileLayout, setMobileLayout] = useState(() => window.innerWidth < 768);
+  const returnFocusToRailToggle = useRef(false);
+  const railToggleRef = useRef<HTMLButtonElement>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
+  const railInteractionHidden = mobileLayout ? !drawerOpen : desktopRailCollapsed;
+  const mainInteractionHidden = mobileLayout && drawerOpen;
+
+  useEffect(() => {
+    function updateLayout() {
+      setMobileLayout(window.innerWidth < 768);
+    }
+
+    window.addEventListener("resize", updateLayout);
+    return () => window.removeEventListener("resize", updateLayout);
+  }, []);
+
+  useEffect(() => {
+    if (!railInteractionHidden || !returnFocusToRailToggle.current) {
+      return;
+    }
+    railToggleRef.current?.focus();
+    returnFocusToRailToggle.current = false;
+  }, [railInteractionHidden]);
 
   useEffect(() => {
     const transcript = transcriptRef.current;
@@ -49,7 +71,7 @@ export function ChatApp({
   }
 
   function openConversationRail() {
-    if (window.innerWidth < 768) {
+    if (mobileLayout) {
       setDrawerOpen(true);
       return;
     }
@@ -57,7 +79,8 @@ export function ChatApp({
   }
 
   function closeConversationRail() {
-    if (window.innerWidth < 768) {
+    returnFocusToRailToggle.current = true;
+    if (mobileLayout) {
       setDrawerOpen(false);
       return;
     }
@@ -74,6 +97,8 @@ export function ChatApp({
         conversations={chat.conversations}
         desktopCollapsed={desktopRailCollapsed}
         disabled={chat.turnActive}
+        interactionHidden={railInteractionHidden}
+        mobileLayout={mobileLayout}
         mobileOpen={drawerOpen}
         onClose={closeConversationRail}
         onCreate={() => void createConversation()}
@@ -81,15 +106,22 @@ export function ChatApp({
         product={product}
       />
 
-      <main className="chat-main">
+      <main
+        aria-hidden={mainInteractionHidden}
+        className="chat-main"
+        inert={mainInteractionHidden}
+      >
         <header className="chat-header">
           <button
+            aria-controls="conversation-rail"
+            aria-expanded={!railInteractionHidden}
             aria-label={product.openRailLabel}
             className="icon-button rail-toggle-main"
             onClick={openConversationRail}
+            ref={railToggleRef}
             type="button"
           >
-            <FateThreadGateIcon open={false} />
+            <RailOpenIcon />
           </button>
           <div className="active-thread">
             <span className="active-thread-kicker">
@@ -108,9 +140,11 @@ export function ChatApp({
                 <div className="empty-mark-wrap">
                   <Mark className="empty-mark" />
                 </div>
-                <p className="empty-eyebrow">{product.emptyEyebrow}</p>
-                <h1>{product.emptyTitle}</h1>
-                <p>{product.emptyHint}</p>
+                <div className="empty-copy">
+                  <p className="empty-eyebrow">{product.emptyEyebrow}</p>
+                  <h1>{product.emptyTitle}</h1>
+                  <p>{product.emptyHint}</p>
+                </div>
               </section>
             )}
             {chat.messages.map((message) => (
@@ -132,7 +166,7 @@ export function ChatApp({
                 chooseLabel={product.recoveryChooseLabel}
                 createLabel={product.recoveryCreateLabel}
                 message={chat.recoveryMessage}
-                onChooseConversation={() => setDrawerOpen(true)}
+                onChooseConversation={openConversationRail}
                 onCreateConversation={() => void createConversation()}
                 title={product.recoveryTitle}
               />

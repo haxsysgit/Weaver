@@ -56,31 +56,39 @@ function createApi(stream: AsyncIterable<StreamEvent>): ChatApi {
 }
 
 describe("ChatApp", () => {
-  it("toggles the desktop conversation rail with a fate-thread control", async () => {
+  it("toggles the desktop conversation rail with clear Font Awesome controls", async () => {
     const api = createApi((async function* () {})());
     render(<ChatApp api={api} modeLabel="fake" privacyLabel="Local fake mode" />);
 
     await screen.findByText("What thread are we pulling?");
     const conversationRail = screen.getByRole("complementary");
     const closeRail = within(conversationRail).getByRole("button", {
-      name: "Seal conversation rail",
+      name: "Close conversation rail",
     });
-    expect(closeRail.querySelector(".fate-thread-gate-icon")).not.toBeNull();
+    expect(closeRail.querySelector('[data-icon="chevron-left"]')).not.toBeNull();
 
     fireEvent.click(closeRail);
     expect(document.querySelector(".conversation-rail")).toHaveClass(
       "conversation-rail-collapsed",
     );
+    expect(conversationRail).toHaveAttribute("aria-hidden", "true");
+    expect(conversationRail).toHaveAttribute("inert");
 
     const openRail = screen.getByRole("button", {
-      name: "Unseal conversation rail",
+      name: "Open conversation rail",
     });
-    expect(openRail.querySelector(".fate-thread-gate-icon")).not.toBeNull();
+    expect(openRail).toHaveAttribute("aria-controls", "conversation-rail");
+    expect(openRail).toHaveAttribute("aria-expanded", "false");
+    expect(openRail.querySelector('[data-icon="bars-staggered"]')).not.toBeNull();
+    await waitFor(() => expect(openRail).toHaveFocus());
     fireEvent.click(openRail);
 
     expect(document.querySelector(".conversation-rail")).not.toHaveClass(
       "conversation-rail-collapsed",
     );
+    expect(conversationRail).toHaveAttribute("aria-hidden", "false");
+    expect(conversationRail).not.toHaveAttribute("inert");
+    expect(openRail).toHaveAttribute("aria-expanded", "true");
   });
 
   it("takes product copy and the brand mark from its reusable boundary", async () => {
@@ -183,7 +191,20 @@ describe("ChatApp", () => {
 
     expect(await screen.findByText("The weave was cut.")).toBeVisible();
     expect(screen.getByRole("button", { name: "Start a new weave" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Choose another thread" })).toBeVisible();
+    const chooseAnother = screen.getByRole("button", {
+      name: "Choose another thread",
+    });
+    expect(chooseAnother).toBeVisible();
     expect(screen.getByRole("button", { name: "Send message" })).toBeVisible();
+
+    const conversationRail = screen.getByRole("complementary");
+    fireEvent.click(
+      within(conversationRail).getByRole("button", {
+        name: "Close conversation rail",
+      }),
+    );
+    expect(conversationRail).toHaveClass("conversation-rail-collapsed");
+    fireEvent.click(chooseAnother);
+    expect(conversationRail).not.toHaveClass("conversation-rail-collapsed");
   });
 });

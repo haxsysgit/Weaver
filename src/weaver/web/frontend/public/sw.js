@@ -1,4 +1,4 @@
-const CACHE_NAME = "weaver-shell-v4";
+const CACHE_NAME = "weaver-shell-v5";
 const SHELL_FILES = ["/manifest.webmanifest", "/weaver-mark.svg"];
 
 async function cacheShell() {

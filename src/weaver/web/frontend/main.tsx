@@ -1,9 +1,13 @@
+import { config } from "@fortawesome/fontawesome-svg-core";
+import "@fortawesome/fontawesome-svg-core/styles.css";
 import { createRoot } from "react-dom/client";
 
 import { ChatApp } from "./components/ChatApp";
 import { createHttpChatApi } from "./lib/chatApi";
 import "./styles/tokens.css";
 import "./styles/app.css";
+
+config.autoAddCss = false;
 
 function metaContent(name: string): string {
   return document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`)?.content ?? "";

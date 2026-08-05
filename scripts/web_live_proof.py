@@ -41,7 +41,13 @@ class BrowserPage:
     def close(self) -> None:
         self.socket.close()
 
-    def command(self, method: str, params: dict | None = None) -> dict:
+    def command(
+        self,
+        method: str,
+        params: dict | None = None,
+        *,
+        timeout: float = 60,
+    ) -> dict:
         self.message_id += 1
         expected_id = self.message_id
         self.socket.send(
@@ -53,12 +59,29 @@ class BrowserPage:
                 }
             )
         )
+        deadline = time.monotonic() + timeout
         while True:
-            message = json.loads(self.socket.recv(timeout=60))
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError(f"timed out in {timeout:.1f}s")
+            # Chrome streams Page.* events during navigation, so a fresh
+            # per-recv timeout would never fire while events keep
+            # arriving. Bound the whole command instead.
+            message = json.loads(self.socket.recv(timeout=remaining))
             if message.get("id") == expected_id:
+                if "error" in message:
+                    raise RuntimeError(
+                        f"CDP {method} failed: {message['error'].get('message', '')}"
+                    )
                 return message.get("result", {})
 
-    def evaluate(self, expression: str, *, await_promise: bool = False):
+    def evaluate(
+        self,
+        expression: str,
+        *,
+        await_promise: bool = False,
+        timeout: float = 60,
+    ):
         result = self.command(
             "Runtime.evaluate",
             {
@@ -66,6 +89,7 @@ class BrowserPage:
                 "returnByValue": True,
                 "awaitPromise": await_promise,
             },
+            timeout=timeout,
         )
         if "exceptionDetails" in result:
             details = json.dumps(result["exceptionDetails"])
@@ -93,7 +117,7 @@ def wait_for_browser(cdp_port: int, base_url: str) -> dict:
                 )
             )
             for tab in tabs:
-                if tab["url"].startswith(base_url):
+                if tab.get("type") == "page" and tab["url"].startswith(base_url):
                     return tab
         except Exception:
             time.sleep(0.5)
@@ -136,7 +160,15 @@ def stop_process(process: subprocess.Popen | None) -> None:
         os.killpg(process.pid, signal.SIGTERM)
     except ProcessLookupError:
         pass
-    process.wait(timeout=10)
+    try:
+        process.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        # Headless Chrome can ignore SIGTERM; do not leak it.
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        process.wait(timeout=10)
 
 
 def wait_for_service_worker(page: BrowserPage) -> bool:
@@ -215,6 +247,154 @@ def run_offline_shell_check(
     }
 
 
+def run_worker_upgrade_check(
+    page: BrowserPage,
+    base_url: str,
+    cdp_port: int,
+) -> dict[str, object]:
+    """Prove the v5 worker replaces a seeded v4 cache and reloads the tab.
+
+    The upgrade path is the sw.js activate handler: it deletes legacy
+    caches, claims the origin, and navigates every open client to its own
+    URL. The proof stays on one tab: block registration on first load,
+    seed a legacy v4 cache, then register the real v5 worker.
+
+    Headless quirk: the worker-initiated client.navigate() wedges the
+    headless renderer (in a real browser it reloads the tab normally).
+    The proof therefore recovers with a fresh CDP session and a manual
+    reload, then verifies the upgrade facts: v4 gone, v5 cache serving
+    the new spider mark, the load counter incremented by the reload, and
+    the app remounted. Registration-activated plus the ready promise is
+    the control proof here; the offline-shell check proves real SW
+    control separately.
+    """
+    page.command("Page.enable")
+    page.command(
+        "Page.addScriptToEvaluateOnNewDocument",
+        {
+            "source": """
+              window.__weaverOriginalRegister =
+                navigator.serviceWorker.register.bind(navigator.serviceWorker);
+              Object.defineProperty(navigator.serviceWorker, 'register', {
+                configurable: true,
+                value: () => Promise.reject(new Error('upgrade proof hold')),
+              });
+              const upgradeLoads =
+                Number(localStorage.getItem('weaver-upgrade-proof-loads') || '0') + 1;
+              localStorage.setItem('weaver-upgrade-proof-loads', String(upgradeLoads));
+              window.__weaverUpgradeLoads = upgradeLoads;
+            """,
+        },
+    )
+    page.command("Page.navigate", {"url": base_url + "/"})
+    wait_for_app(page)
+    seeded_cache_names = page.evaluate(
+        """
+        (async () => {
+          const legacyCache = await caches.open('weaver-shell-v4');
+          await legacyCache.put(
+            '/weaver-mark.svg',
+            new Response('<svg data-legacy-mark="mask-eye"></svg>', {
+              headers: { 'Content-Type': 'image/svg+xml' },
+            }),
+          );
+          return caches.keys();
+        })()
+        """,
+        await_promise=True,
+    )
+    page.evaluate("window.__weaverOriginalRegister('/sw.js'); true")
+
+    # Let v5 install, delete the v4 cache, activate, and claim. The
+    # worker's client.navigate then wedges the headless renderer, so a
+    # fresh session plus a manual reload recovers the tab.
+    time.sleep(6)
+    # The worker's client.navigate wedges the original CDP session, but a
+    # fresh session on the same target recovers: a manual reload creates
+    # a new document whose load counter increments (the injection is
+    # target-scoped and survives), and that reloaded page must serve the
+    # v5 shell.
+    fresh = None
+    for _ in range(20):
+        try:
+            all_tabs = json.load(urllib.request.urlopen(
+                f"http://127.0.0.1:{cdp_port}/json", timeout=2))
+            fresh = next(
+                t for t in all_tabs
+                if t.get("type") == "page" and t["url"].startswith(base_url)
+            )
+            break
+        except Exception:
+            time.sleep(0.5)
+    if fresh is None:
+        raise SystemExit("tab disappeared after service worker upgrade")
+    upgraded_page = BrowserPage(fresh["webSocketDebuggerUrl"])
+    try:
+        upgraded_page.command("Page.reload", {"ignoreCache": True}, timeout=5)
+    except Exception:
+        pass
+    time.sleep(3)
+
+    state: dict[str, object] = {}
+    for _ in range(40):
+        try:
+            state = upgraded_page.evaluate(
+                """
+                (async () => {
+                  const cacheNames = await caches.keys();
+                  const currentCache = await caches.open('weaver-shell-v5');
+                  const markResponse = await currentCache.match('/weaver-mark.svg');
+                  const mark = markResponse ? await markResponse.text() : '';
+                  let ready = false;
+                  try {
+                    await navigator.serviceWorker.ready;
+                    ready = true;
+                  } catch (error) {
+                    ready = false;
+                  }
+                  return {
+                    cacheNames,
+                    legacyMarkAbsent: !mark.includes('data-legacy-mark'),
+                    loadCount: Number(
+                      localStorage.getItem('weaver-upgrade-proof-loads') || '0'
+                    ),
+                    mounted: !!document.querySelector('.chat-app'),
+                    newSpiderMark: mark.includes('Font Awesome Free 7.3.1 spider'),
+                    ready,
+                  };
+                })()
+                """,
+                await_promise=True,
+                timeout=5,
+            )
+        except (RuntimeError, TimeoutError):
+            time.sleep(0.25)
+            continue
+        if (
+            state.get("cacheNames") == ["weaver-shell-v5"]
+            and state.get("mounted")
+            and state.get("newSpiderMark")
+            and state.get("ready")
+            and isinstance(state.get("loadCount"), int)
+            and state["loadCount"] >= 2
+        ):
+            break
+        time.sleep(0.25)
+
+    return {
+        "legacy v4 cache seeded": seeded_cache_names == ["weaver-shell-v4"],
+        "v5 registration activated": bool(state.get("ready")),
+        "v5 cache replaced v4": state.get("cacheNames")
+        == ["weaver-shell-v5"],
+        "upgrade reloaded page": bool(
+            isinstance(state.get("loadCount"), int) and state["loadCount"] >= 2
+        ),
+        "new spider mark cached": bool(state.get("newSpiderMark")),
+        "legacy mark absent": bool(state.get("legacyMarkAbsent")),
+        "React shell remounted": bool(state.get("mounted")),
+    }
+
+
 def run_browser_checks(page: BrowserPage) -> dict[str, object]:
     results: dict[str, object] = {}
     wait_for_app(page)
@@ -222,6 +402,9 @@ def run_browser_checks(page: BrowserPage) -> dict[str, object]:
 
     results["react app mounted"] = page.evaluate(
         "!!document.querySelector('.chat-app')"
+    )
+    results["inline style tags"] = page.evaluate(
+        "document.querySelectorAll('style').length"
     )
     results["shadow theme"] = page.evaluate(
         "getComputedStyle(document.documentElement)"
@@ -310,14 +493,32 @@ def run_browser_checks(page: BrowserPage) -> dict[str, object]:
           await new Promise((resolve) => setTimeout(resolve, 350));
           const openControl = document.querySelector('.rail-toggle-main');
           const collapsed = rail.classList.contains('conversation-rail-collapsed');
-          const customSigil = !!openControl.querySelector('.fate-thread-gate-icon');
+          const fontAwesomeIcon = !!openControl.querySelector(
+            '[data-icon="bars-staggered"]',
+          );
+          const legacySigilAbsent = !openControl.querySelector(
+            '.fate-thread-gate-icon',
+          );
           const openControlVisible = getComputedStyle(openControl).display !== 'none';
+          const hiddenFromAssistiveTech = rail.getAttribute('aria-hidden') === 'true';
+          const inertWhileHidden = rail.inert;
+          closeControl.focus();
+          const hiddenControlFocusBlocked = document.activeElement !== closeControl;
+          const openerCollapsed = openControl.getAttribute('aria-expanded') === 'false';
+          const focusReturned = document.activeElement === openControl;
           openControl.click();
           await new Promise((resolve) => setTimeout(resolve, 350));
           return {
             collapsed,
-            customSigil,
+            focusReturned,
+            fontAwesomeIcon,
+            hiddenControlFocusBlocked,
+            hiddenFromAssistiveTech,
+            inertWhileHidden,
+            legacySigilAbsent,
+            openerCollapsed,
             openControlVisible,
+            openerRestored: openControl.getAttribute('aria-expanded') === 'true',
             restored: !rail.classList.contains('conversation-rail-collapsed'),
           };
         })()
@@ -349,6 +550,8 @@ def run_browser_checks(page: BrowserPage) -> dict[str, object]:
         """
     )
 
+    page.evaluate("document.querySelector('.rail-close').click(); true")
+    time.sleep(0.35)
     page.command(
         "Emulation.setDeviceMetricsOverride",
         {
@@ -363,12 +566,41 @@ def run_browser_checks(page: BrowserPage) -> dict[str, object]:
         """
         (async () => {
           const menu = document.querySelector('.rail-toggle-main');
+          const rail = document.querySelector('.conversation-rail');
+          const hiddenBefore = rail.getAttribute('aria-hidden') === 'true';
+          const inertBefore = rail.inert;
+          const openerCollapsed = menu.getAttribute('aria-expanded') === 'false';
           menu.click();
           await new Promise((resolve) => setTimeout(resolve, 50));
-          const rail = document.querySelector('.conversation-rail');
+          const closeControl = rail.querySelector('.rail-close');
+          const drawerOpened = rail.classList.contains('conversation-rail-open');
+          const focusMovedInside = document.activeElement === closeControl;
+          const interactiveWhileOpen = !rail.inert;
+          const main = document.querySelector('.chat-main');
+          const mainInertWhileOpen = main.inert;
+          const modalWhileOpen = rail.getAttribute('aria-modal') === 'true';
+          const openerExpanded = menu.getAttribute('aria-expanded') === 'true';
+          const visibleToAssistiveTech = rail.getAttribute('aria-hidden') === 'false';
+          closeControl.click();
+          await new Promise((resolve) => setTimeout(resolve, 50));
           return {
+            closedAgain: !rail.classList.contains('conversation-rail-open'),
+            drawerOpened,
+            focusMovedInside,
+            focusReturned: document.activeElement === menu,
+            hiddenAfter: rail.getAttribute('aria-hidden') === 'true',
+            hiddenBefore,
+            inertAfter: rail.inert,
+            inertBefore,
+            interactiveWhileOpen,
+            mainInertAfter: main.inert,
+            mainInertWhileOpen,
             menuVisible: getComputedStyle(menu).display !== 'none',
-            drawerOpen: rail.classList.contains('conversation-rail-open'),
+            modalWhileOpen,
+            openerCollapsed,
+            openerCollapsedAgain: menu.getAttribute('aria-expanded') === 'false',
+            openerExpanded,
+            visibleToAssistiveTech,
           };
         })()
         """,
@@ -394,7 +626,8 @@ def results_pass(results: dict[str, object]) -> bool:
 
     return bool(
         results["react app mounted"]
-        and results["shadow theme"] == "#ba3c35"
+        and results["inline style tags"] == 0
+        and results["shadow theme"] == "#b63a33"
         and isinstance(turn, dict)
         and turn["during"] == {"send": False, "stop": True}
         and turn["replyReceived"]
@@ -410,15 +643,37 @@ def results_pass(results: dict[str, object]) -> bool:
         and results["reload kept active conversation"]
         and isinstance(desktop_toggle, dict)
         and desktop_toggle["collapsed"]
-        and desktop_toggle["customSigil"]
+        and desktop_toggle["focusReturned"]
+        and desktop_toggle["fontAwesomeIcon"]
+        and desktop_toggle["hiddenControlFocusBlocked"]
+        and desktop_toggle["hiddenFromAssistiveTech"]
+        and desktop_toggle["inertWhileHidden"]
+        and desktop_toggle["legacySigilAbsent"]
+        and desktop_toggle["openerCollapsed"]
         and desktop_toggle["openControlVisible"]
+        and desktop_toggle["openerRestored"]
         and desktop_toggle["restored"]
         and isinstance(viewport, dict)
         and viewport["pageHeight"] == viewport["viewportHeight"]
         and viewport["transcriptScrolls"]
         and isinstance(mobile, dict)
+        and mobile["closedAgain"]
+        and mobile["drawerOpened"]
+        and mobile["focusMovedInside"]
+        and mobile["focusReturned"]
+        and mobile["hiddenAfter"]
+        and mobile["hiddenBefore"]
+        and mobile["inertAfter"]
+        and mobile["inertBefore"]
+        and mobile["interactiveWhileOpen"]
+        and not mobile["mainInertAfter"]
+        and mobile["mainInertWhileOpen"]
         and mobile["menuVisible"]
-        and mobile["drawerOpen"]
+        and mobile["modalWhileOpen"]
+        and mobile["openerCollapsed"]
+        and mobile["openerCollapsedAgain"]
+        and mobile["openerExpanded"]
+        and mobile["visibleToAssistiveTech"]
         and results["pwa installability errors"] == 0
     )
 
@@ -441,6 +696,11 @@ def main() -> int:
         action="store_true",
         help="Prove a first-visit install reloads after the server stops.",
     )
+    parser.add_argument(
+        "--worker-upgrade",
+        action="store_true",
+        help="Prove worker v5 replaces a seeded v4 cache and legacy mark.",
+    )
     args = parser.parse_args()
     base_url = f"http://127.0.0.1:{args.port}"
     cdp_port = args.port + 1000
@@ -449,7 +709,12 @@ def main() -> int:
         server = start_server(
             args.port,
             state_directory,
-            live=args.live and not args.mode_switch and not args.offline_shell,
+            live=(
+                args.live
+                and not args.mode_switch
+                and not args.offline_shell
+                and not args.worker_upgrade
+            ),
         )
         chrome = None
         page = None
@@ -465,14 +730,26 @@ def main() -> int:
                     f"--remote-debugging-port={cdp_port}",
                     "--remote-allow-origins=*",
                     f"--user-data-dir={state_directory}/chrome",
-                    base_url + "/",
+                    (
+                        base_url + "/assets/font-awesome-license.txt"
+                        if args.worker_upgrade
+                        else base_url + "/"
+                    ),
                 ],
                 start_new_session=True,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
-            tab = wait_for_browser(cdp_port, base_url)
+            tab = wait_for_browser(
+                cdp_port,
+                base_url,
+            )
             page = BrowserPage(tab["webSocketDebuggerUrl"])
+            if args.worker_upgrade:
+                results = run_worker_upgrade_check(page, base_url, cdp_port)
+                for name, value in results.items():
+                    print(f"{name}: {json.dumps(value, sort_keys=True)}")
+                return 0 if all(results.values()) else 1
             if args.offline_shell:
                 results = run_offline_shell_check(page, server)
                 server = None

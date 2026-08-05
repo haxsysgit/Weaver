@@ -3,36 +3,39 @@
 
   --shadow-void: #050608;
   --shadow-deep: #08090c;
-  --shadow-canvas: #0c0d11;
-  --shadow-raised: #121319;
-  --shadow-surface: #17181f;
-  --shadow-hover: #202129;
-  --shadow-pressed: #292a33;
+  --shadow-canvas: #0b0c10;
+  --shadow-raised: #111218;
+  --shadow-surface: #16171d;
+  --shadow-hover: #1e2027;
+  --shadow-pressed: #282a32;
 
-  --bone-white: #f1eee5;
-  --fate-silver: #c8c4ba;
-  --dim-silver: #918e88;
-  --ash: #65635f;
+  --bone-white: #f4f0e6;
+  --fate-silver: #cbc6ba;
+  --dim-silver: #98938a;
+  --ash: #6c6963;
 
-  --accent-crimson: #ba3c35;
-  --accent-bright: #df5a4f;
-  --accent-deep: #6f211f;
+  --accent-crimson: #b63a33;
+  --accent-bright: #e06155;
+  --accent-deep: #651d1b;
   --accent-wash: rgba(186, 60, 53, 0.14);
   --accent-glow: rgba(202, 62, 53, 0.2);
   --fate-line: rgba(212, 208, 197, 0.09);
   --fate-line-bright: rgba(212, 208, 197, 0.17);
   --danger: #ed746b;
 
-  --rail-width: 276px;
-  --reading-width: 800px;
-  --composer-radius: 24px;
+  --rail-width: 296px;
+  --reading-width: 860px;
+  --composer-radius: 18px;
   --panel-radius: 16px;
   --motion-fast: 140ms;
   --motion-smooth: 240ms;
   --ease-weave: cubic-bezier(0.22, 1, 0.36, 1);
 
-  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
+  --font-display: "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --font-ui: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
+
+  font-family: var(--font-ui);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }

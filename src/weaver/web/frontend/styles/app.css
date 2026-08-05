@@ -41,8 +41,9 @@ a:focus-visible {
   isolation: isolate;
   overflow: hidden;
   background:
-    radial-gradient(circle at 70% -15%, rgba(151, 39, 35, 0.12), transparent 36rem),
-    linear-gradient(125deg, var(--shadow-deep), var(--shadow-canvas) 55%, #090a0e);
+    radial-gradient(circle at 72% -10%, rgba(182, 58, 51, 0.16), transparent 32rem),
+    radial-gradient(circle at 52% 118%, rgba(58, 60, 73, 0.13), transparent 34rem),
+    linear-gradient(128deg, var(--shadow-deep), var(--shadow-canvas) 56%, #08090d);
 }
 
 .chat-app::before {
@@ -50,11 +51,31 @@ a:focus-visible {
   z-index: -1;
   inset: 0;
   background-image:
-    linear-gradient(115deg, transparent 49.8%, rgba(210, 206, 195, 0.025) 50%, transparent 50.2%),
-    linear-gradient(65deg, transparent 49.8%, rgba(210, 206, 195, 0.018) 50%, transparent 50.2%);
-  background-size: 180px 180px, 240px 240px;
+    repeating-radial-gradient(
+      circle at 72% 44%,
+      transparent 0 82px,
+      rgba(203, 198, 186, 0.027) 83px 84px,
+      transparent 85px 164px
+    ),
+    repeating-conic-gradient(
+      from 4deg at 72% 44%,
+      transparent 0 14.8deg,
+      rgba(203, 198, 186, 0.025) 15deg 15.2deg,
+      transparent 15.4deg 30deg
+    );
   content: "";
-  mask-image: linear-gradient(to right, transparent 15%, black 70%, transparent);
+  mask-image: radial-gradient(circle at 72% 44%, black, transparent 64%);
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.chat-app::after {
+  position: absolute;
+  z-index: 30;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 5%, var(--accent-deep), transparent 72%);
+  content: "";
   pointer-events: none;
 }
 
@@ -68,9 +89,9 @@ a:focus-visible {
   height: 100%;
   border-right: 1px solid var(--fate-line);
   background:
-    radial-gradient(circle at 0 0, rgba(186, 60, 53, 0.09), transparent 18rem),
-    linear-gradient(180deg, rgba(20, 21, 27, 0.98), rgba(8, 9, 12, 0.99));
-  box-shadow: 16px 0 50px rgba(0, 0, 0, 0.18);
+    radial-gradient(circle at 8% 0, rgba(182, 58, 51, 0.14), transparent 18rem),
+    linear-gradient(180deg, rgba(18, 19, 25, 0.99), rgba(7, 8, 11, 0.995));
+  box-shadow: 18px 0 60px rgba(0, 0, 0, 0.24);
   overflow: hidden;
   opacity: 1;
   transition:
@@ -102,8 +123,8 @@ a:focus-visible {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 74px;
-  padding: 15px 17px;
+  min-height: 82px;
+  padding: 17px 16px 17px 18px;
 }
 
 .brand-lockup {
@@ -120,10 +141,10 @@ a:focus-visible {
 
 .brand-lockup strong {
   color: var(--bone-white);
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 17px;
+  font-family: var(--font-display);
+  font-size: 18px;
   font-weight: 600;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.11em;
   text-transform: uppercase;
 }
 
@@ -135,11 +156,41 @@ a:focus-visible {
   text-transform: uppercase;
 }
 
+.brand-mark-seal {
+  position: relative;
+  display: grid;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid var(--fate-line-bright);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(224, 97, 85, 0.13), transparent 52%),
+    var(--shadow-deep);
+  box-shadow:
+    inset 0 0 0 4px rgba(255, 255, 255, 0.014),
+    0 0 22px rgba(182, 58, 51, 0.11);
+}
+
+.brand-mark-seal::after {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 5px;
+  height: 5px;
+  border: 2px solid var(--shadow-deep);
+  border-radius: 50%;
+  background: var(--accent-bright);
+  box-shadow: 0 0 8px var(--accent-crimson);
+  content: "";
+}
+
 .brand-mark {
-  width: 34px;
-  height: 34px;
+  width: 24px;
+  height: 24px;
   color: var(--fate-silver);
-  filter: drop-shadow(0 0 10px var(--accent-glow));
+  filter: drop-shadow(0 0 8px var(--accent-glow));
 }
 
 .icon-button {
@@ -175,36 +226,18 @@ a:focus-visible {
   flex: 0 0 auto;
 }
 
-.fate-thread-gate-icon {
-  overflow: visible;
-  transition: transform var(--motion-smooth) var(--ease-weave);
-}
-
-.fate-thread-gate-icon-closed {
-  transform: scaleX(-1);
-}
-
-.fate-thread-gate-knot {
-  fill: var(--accent-crimson);
-  filter: drop-shadow(0 0 4px var(--accent-glow));
-}
-
-.fate-thread-gate-eye {
-  opacity: 0.72;
-}
-
 .new-weave-button {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 44px;
-  margin: 16px 14px 18px;
-  padding: 0 14px;
-  border: 1px solid rgba(203, 72, 62, 0.34);
-  border-radius: 12px;
+  min-height: 46px;
+  margin: 18px 14px 22px;
+  padding: 0 15px;
+  border: 1px solid rgba(224, 97, 85, 0.37);
+  border-radius: 10px;
   background:
-    linear-gradient(180deg, rgba(186, 60, 53, 0.2), rgba(111, 33, 31, 0.11)),
-    var(--shadow-surface);
+    linear-gradient(105deg, rgba(182, 58, 51, 0.24), transparent 74%),
+    var(--shadow-raised);
   color: var(--bone-white);
   cursor: pointer;
   font-size: 13px;
@@ -275,9 +308,9 @@ a:focus-visible {
   align-items: center;
   gap: 10px;
   width: 100%;
-  min-height: 42px;
-  margin: 2px 0;
-  padding: 0 11px;
+  min-height: 44px;
+  margin: 3px 0;
+  padding: 0 12px;
   overflow: hidden;
   border: 1px solid transparent;
   border-radius: 10px;
@@ -297,10 +330,10 @@ a:focus-visible {
 }
 
 .conversation-item-active {
-  border-color: var(--fate-line);
+  border-color: rgba(224, 97, 85, 0.18);
   background:
-    linear-gradient(90deg, var(--accent-wash), transparent 85%),
-    rgba(255, 255, 255, 0.025);
+    linear-gradient(90deg, rgba(182, 58, 51, 0.19), transparent 88%),
+    rgba(255, 255, 255, 0.03);
   color: var(--bone-white);
 }
 
@@ -320,7 +353,13 @@ a:focus-visible {
   flex: 0 0 17px;
   width: 17px;
   height: 17px;
-  opacity: 0.68;
+  color: var(--ash);
+  opacity: 0.72;
+}
+
+.conversation-item-active svg {
+  color: var(--accent-bright);
+  opacity: 0.9;
 }
 
 .conversation-item span {
@@ -373,15 +412,26 @@ a:focus-visible {
 }
 
 .chat-header {
+  position: relative;
   display: flex;
-  flex: 0 0 66px;
+  flex: 0 0 70px;
   align-items: center;
   gap: 14px;
   min-width: 0;
   padding: 0 clamp(18px, 3vw, 42px);
-  border-bottom: 1px solid var(--fate-line);
-  background: rgba(8, 9, 12, 0.72);
-  backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba(203, 198, 186, 0.075);
+  background: rgba(7, 8, 11, 0.76);
+  backdrop-filter: blur(22px);
+}
+
+.chat-header::after {
+  position: absolute;
+  right: 8%;
+  bottom: -1px;
+  left: 8%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(182, 58, 51, 0.3), transparent);
+  content: "";
 }
 
 .active-thread {
@@ -403,8 +453,8 @@ a:focus-visible {
   margin-top: 3px;
   overflow: hidden;
   color: var(--fate-silver);
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 15px;
+  font-family: var(--font-display);
+  font-size: 16px;
   font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -416,8 +466,10 @@ a:focus-visible {
   min-height: 26px;
   padding: 0 10px;
   border: 1px solid var(--fate-line-bright);
-  border-radius: 99px;
-  background: rgba(255, 255, 255, 0.025);
+  border-radius: 7px;
+  background:
+    linear-gradient(90deg, rgba(182, 58, 51, 0.08), transparent),
+    rgba(255, 255, 255, 0.022);
   color: var(--dim-silver);
   font-size: 10px;
   letter-spacing: 0.08em;
@@ -445,25 +497,39 @@ a:focus-visible {
   width: min(100%, var(--reading-width));
   min-height: 100%;
   margin: 0 auto;
-  padding: 44px 24px 36px;
+  padding: 52px 30px 40px;
 }
 
 .empty-weave {
-  display: flex;
+  position: relative;
+  display: grid;
+  grid-template-columns: 152px minmax(0, 1fr);
+  column-gap: 38px;
   min-height: calc(100% - 24px);
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding-bottom: 8vh;
-  text-align: center;
+  width: min(100%, 720px);
+  margin: 0 auto;
+  padding: 0 18px 8vh;
+  text-align: left;
+}
+
+.empty-weave::after {
+  position: absolute;
+  top: 50%;
+  left: 170px;
+  width: 1px;
+  height: 180px;
+  background: linear-gradient(transparent, var(--accent-deep), transparent);
+  content: "";
+  transform: translateY(-50%);
 }
 
 .empty-mark-wrap {
   position: relative;
   display: grid;
-  width: 116px;
-  height: 116px;
-  margin-bottom: 24px;
+  width: 132px;
+  height: 132px;
+  margin: 0;
   place-items: center;
 }
 
@@ -477,7 +543,10 @@ a:focus-visible {
 
 .empty-mark-wrap::before {
   inset: 0;
-  box-shadow: 0 0 60px rgba(186, 60, 53, 0.08);
+  border-color: rgba(203, 198, 186, 0.13);
+  box-shadow:
+    0 0 72px rgba(182, 58, 51, 0.11),
+    inset 0 0 34px rgba(0, 0, 0, 0.48);
 }
 
 .empty-mark-wrap::after {
@@ -486,10 +555,14 @@ a:focus-visible {
 }
 
 .empty-mark {
-  width: 86px;
-  height: 86px;
+  width: 72px;
+  height: 72px;
   color: var(--fate-silver);
-  filter: drop-shadow(0 0 16px rgba(186, 60, 53, 0.22));
+  filter: drop-shadow(0 0 18px rgba(182, 58, 51, 0.26));
+}
+
+.empty-copy {
+  padding-left: 24px;
 }
 
 .empty-eyebrow {
@@ -504,18 +577,19 @@ a:focus-visible {
 .empty-weave h1 {
   margin: 0;
   color: var(--bone-white);
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(26px, 4vw, 38px);
+  font-family: var(--font-display);
+  font-size: clamp(34px, 4.4vw, 49px);
   font-weight: 500;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.035em;
+  line-height: 1.03;
 }
 
-.empty-weave > p:last-child {
+.empty-copy > p:last-child {
   max-width: 460px;
   margin: 13px 0 0;
   color: var(--dim-silver);
-  font-size: 14px;
-  line-height: 1.65;
+  font-size: 14.5px;
+  line-height: 1.7;
 }
 
 .message {
@@ -525,7 +599,7 @@ a:focus-visible {
 }
 
 .message + .message {
-  margin-top: 34px;
+  margin-top: 40px;
 }
 
 .message-owner {
@@ -544,10 +618,10 @@ a:focus-visible {
   max-width: 100%;
   padding: 12px 16px;
   border: 1px solid var(--fate-line);
-  border-radius: 18px 18px 4px 18px;
+  border-radius: 16px 16px 3px 16px;
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.035), transparent),
-    var(--shadow-hover);
+    var(--shadow-raised);
   color: var(--bone-white);
   font-size: 15px;
   line-height: 1.62;
@@ -563,6 +637,20 @@ a:focus-visible {
   padding-right: 5%;
 }
 
+.message-weaver::before {
+  position: absolute;
+  top: 39px;
+  bottom: -31px;
+  left: 16px;
+  width: 1px;
+  background: linear-gradient(var(--accent-deep), rgba(203, 198, 186, 0.035), transparent);
+  content: "";
+}
+
+.message-weaver:last-child::before {
+  display: none;
+}
+
 .weaver-avatar {
   display: grid;
   flex: 0 0 34px;
@@ -571,15 +659,19 @@ a:focus-visible {
   margin-top: 2px;
   place-items: center;
   border: 1px solid var(--fate-line-bright);
-  border-radius: 10px;
-  background: linear-gradient(145deg, var(--shadow-hover), var(--shadow-deep));
-  color: var(--fate-silver);
-  box-shadow: 0 0 20px rgba(186, 60, 53, 0.08);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(224, 97, 85, 0.14), transparent 56%),
+    var(--shadow-deep);
+  color: var(--accent-bright);
+  box-shadow:
+    inset 0 0 0 3px rgba(255, 255, 255, 0.014),
+    0 0 22px rgba(182, 58, 51, 0.11);
 }
 
 .weaver-avatar svg {
-  width: 25px;
-  height: 25px;
+  width: 19px;
+  height: 19px;
 }
 
 .weaver-message-content {
@@ -590,7 +682,7 @@ a:focus-visible {
 .message-role {
   margin-bottom: 8px;
   color: var(--accent-bright);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-display);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -600,7 +692,7 @@ a:focus-visible {
 .markdown-body {
   color: var(--fate-silver);
   font-size: 15.5px;
-  line-height: 1.72;
+  line-height: 1.76;
   overflow-wrap: anywhere;
 }
 
@@ -615,7 +707,7 @@ a:focus-visible {
 .markdown-body :is(h1, h2, h3, h4, h5, h6) {
   margin: 25px 0 10px;
   color: var(--bone-white);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-display);
   font-weight: 600;
   line-height: 1.3;
 }
@@ -833,8 +925,8 @@ a:focus-visible {
 
 .composer-dock {
   flex: 0 0 auto;
-  padding: 0 24px calc(14px + env(safe-area-inset-bottom));
-  background: linear-gradient(180deg, transparent, rgba(8, 9, 12, 0.92) 28%);
+  padding: 0 24px calc(16px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, transparent, rgba(7, 8, 11, 0.96) 26%);
 }
 
 .composer-wrap {
@@ -847,15 +939,15 @@ a:focus-visible {
   display: flex;
   align-items: flex-end;
   gap: 10px;
-  padding: 7px 8px 7px 17px;
+  padding: 8px 9px 8px 18px;
   border: 1px solid var(--fate-line-bright);
   border-radius: var(--composer-radius);
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.035), transparent 55%),
-    var(--shadow-surface);
+    var(--shadow-raised);
   box-shadow:
-    0 18px 55px rgba(0, 0, 0, 0.34),
-    inset 0 1px rgba(255, 255, 255, 0.025);
+    0 20px 60px rgba(0, 0, 0, 0.4),
+    inset 0 1px rgba(255, 255, 255, 0.035);
   transition:
     border-color var(--motion-fast),
     box-shadow var(--motion-fast);
@@ -908,7 +1000,7 @@ a:focus-visible {
   height: 40px;
   padding: 10px;
   place-items: center;
-  border-radius: 50%;
+  border-radius: 11px;
   cursor: pointer;
   transition:
     transform var(--motion-fast) var(--ease-weave),
@@ -1054,7 +1146,20 @@ a:focus-visible {
   }
 
   .empty-weave {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    row-gap: 26px;
     padding-bottom: 4vh;
+    text-align: center;
+  }
+
+  .empty-weave::after {
+    top: 126px;
+    left: 50%;
+    width: 154px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-deep), transparent);
+    transform: translateX(-50%);
   }
 
   .empty-mark-wrap {
@@ -1063,8 +1168,21 @@ a:focus-visible {
   }
 
   .empty-mark {
-    width: 72px;
-    height: 72px;
+    width: 54px;
+    height: 54px;
+  }
+
+  .empty-copy {
+    padding-left: 0;
+  }
+
+  .empty-weave h1 {
+    font-size: clamp(32px, 10vw, 42px);
+  }
+
+  .empty-copy > p:last-child {
+    margin-right: auto;
+    margin-left: auto;
   }
 
   .message-owner {

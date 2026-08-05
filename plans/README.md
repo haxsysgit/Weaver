@@ -19,8 +19,13 @@ evidence, review, and human decision gates must also be complete.
 | [010 - TUI entrypoint](010-tui-entrypoint.md) | Accepted and closed 2026-08-02; surface retired by Plan 013 | Plan 009 accepted | Historical terminal experiment, later removed when the browser became the single product surface |
 | [011 - Local browser chat entrypoint](011-web-chat-entrypoint.md) | Accepted 2026-08-03 | Plan 010 closed; checkpoint 001-010 complete | Appraise current ChatGPT behaviour, then prove one private local browser conversation |
 | [012 - Direct reading baseline](012-direct-reading-baseline.md) | Accepted 2026-08-04 | Plan 011 accepted | Private chapter-evidenced notebook and connection map completed through chapter 1000, without retrieval changing the reading method |
-| [013 - Responsive interface and installable PWA](013-responsive-interface-pwa.md) | React repair implemented; independent review passed; owner decision pending | Plan 012 accepted | One responsive React chat surface with the Shadow Slave theme, real conversation controls, safe Markdown, and PWA |
-| 014+ - Compiled-memory experiments | Deferred | Plan 013 accepted | Compare bounded compiled memory with direct rereading |
+| [013 - Responsive interface and installable PWA](013-responsive-interface-pwa.md) | Accepted and closed 2026-08-05 | Plan 012 accepted | One responsive React chat surface with the Shadow Slave theme, real conversation controls, safe Markdown, and PWA |
+| [014 - Reading tools and the 1-1000 retrieval experiment](014-weaver-reads-from-the-shelf.md) | Drafted 2026-08-04; learning gate required | Plan 013 accepted | Split tool results into temporary and durable forms, run the 1-1000 retrieval experiment on Qdrant (exact, notebook, vector, hybrid, connections), then build search_library and open_chapters around the winner |
+| [015 - Reader capability conversations (1-1000)](015-reader-trials-1-1000.md) | Drafted 2026-08-04; learning gate required | Plan 014 accepted | Three owner-worded capability conversations inside chapters 1-1000: canon reconstruction, time-aware comparison, state versus environment |
+| [016 - Refresh the shelf safely](016-refresh-the-shelf-safely.md) | Drafted 2026-08-04; learning gate required | Plan 014 accepted | Preview-first, owner-confirmed fetch/update/export wired into the web profile with clear effect classification, progress, and cancellation |
+| Later - Reading continuation 1001-3200 | Not yet drafted | Plan 015 accepted | Extend the notebook and retrieval coverage toward the founding Reader Trials (AGENTS.md) |
+| Later - Founding Reader Trials | Not yet drafted | Reading continuation | The finished-product bar: Ariel and the Unholy Titan, Sunny 3120+ versus Azarax, Anvil versus Azarax what-if |
+| Later - Durable reader memory | Not yet drafted | Founding trials | Reader opinions, favorites, theories, and unresolved disagreements kept separately from canon |
 
 ## Execution order
 
@@ -31,8 +36,15 @@ recorded in `docs/process/checkpoint-001-010.md`. The next sequence is:
    local browser conversation.
 2. **012**: run the private notebook build (chapters 1-100), then record the owner decision.
 3. **013**: replace the redundant terminal and vanilla browser surfaces with
-   one responsive React chat and keep the accepted FastAPI and SSE backend.
-4. **014+**: begin compiled-memory experiments.
+   one responsive React chat and keep the accepted FastAPI and SSE backend;
+   quick identity repair, then the owner browser check.
+4. **014**: split tool results into temporary and durable forms, run the
+   1-1000 retrieval experiment, then build the reading tools around the
+   winner.
+5. **015**: run the three owner-worded 1-1000 capability conversations.
+6. **016**: refresh the shelf safely with preview and confirmation.
+7. **Later**: reading continuation 1001-3200, then the founding Reader
+   Trials, then durable reader memory.
 
 Native Android and iOS remain deferred until Plan 013 proves a concrete PWA
 limitation.
@@ -49,5 +61,5 @@ deleted that terminal surface when the browser became Weaver's only chat UI.
 Plan 011 is **Accepted** (2026-08-03); both owner decisions are recorded in
 `deliverables/011-web-chat-entrypoint/decision.md`. Plan 012 is **Accepted**
 (2026-08-04); its notebook build, review, and final owner decision are all
-complete. Plan 013's React repair is implemented and awaiting review and the
-owner's final decision.
+complete. Plan 013's React repair is implemented, independent review
+returned PASS, and the owner accepted and closed the plan on 2026-08-05.

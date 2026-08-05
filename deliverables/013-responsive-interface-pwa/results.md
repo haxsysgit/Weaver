@@ -3,8 +3,8 @@
 ## Status
 
 React repair implemented and the mechanical gate passed. Independent review
-found four issues, verified all four repairs, and returned PASS. The owner's
-final decision remains pending.
+found four issues, verified all four repairs, and returned PASS. The owner
+accepted and closed Plan 013 on 2026-08-05.
 
 Owner browser inspection then exposed one migration gap: a tab still controlled
 by the deleted vanilla worker could render its cached HTML for one visit. Its
@@ -38,9 +38,16 @@ turned green after the controller/product boundary and PWA repair.
   Markdown, presentation components, brand-mark slot, and theme tokens for
   later Weaver and HaxJobs work.
 - Replaced generic ChatGPT skeleton rows with actual conversations only.
-- Replaced the generic hamburger and close marks with a custom fate-thread
-  gate sigil that toggles the rail on desktop and the drawer on mobile.
-- Kept the Plan 013 Shadow Slave palette and created a new mask-and-eye mark.
+- Replaced the rejected custom fate-thread symbol and hand-drawn functional
+  icons with locally bundled Font Awesome Free icons. Staggered bars open the
+  rail and a left chevron closes it. A packaged attribution file preserves the
+  icon license without a runtime request.
+- Kept the Plan 013 Shadow Slave palette and replaced the unclear mask mark
+  with a spider inside a restrained bone, obsidian, and crimson seal. The PWA
+  mark now uses the same identity.
+- Sharpened the rail, selected thread, header, empty state, message hierarchy,
+  composer, and restrained web geometry without adding fake chapter evidence
+  or search activity.
 - Restored strict `style-src 'self'`; the React app uses built CSS and no
   inline style exception.
 - Rewrote the live browser proof to use temporary state instead of the
@@ -52,15 +59,17 @@ turned green after the controller/product boundary and PWA repair.
 
 ## Browser observations
 
-The built fake-mode app was inspected at 1440 by 900 and 390 by 844. The
-desktop view can seal or unseal the conversation rail, centers the reading
-column, and pins the composer. The phone view hides the rail behind the same
-fate-thread control.
+The repaired built fake-mode app was inspected at 1440 by 900 and 390 by 844.
+The desktop view collapses and restores the conversation rail, centers the
+reading column, and pins the composer. The phone view uses the staggered-bars
+control to reveal a full-height drawer with a clear left-chevron close action.
+The empty and populated transcript states were both inspected. The page stayed
+fixed while the composer remained pinned.
 
 The live proof confirmed:
 
 - React mounted from the production bundle;
-- the crimson theme token resolved to `#ba3c35`;
+- the crimson theme token resolved to `#b63a33`;
 - send disappeared exactly while stop was visible;
 - the fake SSE reply completed and returned to send;
 - regenerate appeared on the live reply and disappeared after a new weave;
@@ -108,6 +117,35 @@ The required commands ran in order on 2026-08-04:
   dependency compatibility, offline first-install reload, and fake-to-live
   worker switching all passed again. The running server returned
   `weaver-shell-v4`.
-- Sidebar follow-up: the new component test and fake browser proof confirmed
-  desktop collapse/restore, the custom sigil, the 390px drawer, fixed viewport,
-  one browser-storage key, and zero PWA installability errors.
+- Final identity repair on 2026-08-05: the 45-module production build passed;
+  9 React tests and 289 Python tests passed; Ruff and the 78-package
+  compatibility check were clean. The fake browser proof confirmed desktop
+  collapse/restore with the Font Awesome controls, the 390px drawer, fixed
+  viewport, transcript scrolling, one browser-storage key, and zero PWA
+  installability errors. The installed-worker offline proof also passed.
+- The first identity-repair browser-proof run printed the correct rail state
+  but returned nonzero because its pass conditions still required both the
+  deleted custom sigil and the previous crimson token. Independent review
+  caught the stale assertion. The proof now requires Font Awesome's
+  `bars-staggered` icon, rejects the legacy class, checks `#b63a33`, and
+  confirms that Font Awesome injects no inline style tag under the strict
+  content security policy. The corrected proof passed.
+- Independent review also found that the visually closed rail remained
+  keyboard-focusable and that the initial Font Awesome notice path was not
+  served. The rail is now inert and hidden from assistive technology while
+  closed, exposes expansion/control state, gives the mobile drawer dialog and
+  focus behavior, and returns focus to its opener. The attribution notice now
+  builds under the existing `/assets/` mount and has a backend asset test.
+- Independent review found that leaving the worker at v4 would strand the old
+  cache-first mark in installed clients. The repaired shell uses
+  `weaver-shell-v5`; the upgrade proof seeds a v4 cache and confirms activation
+  removes it and caches the new spider mark.
+- The first upgrade-proof attempt did not isolate automatic registration, so
+  v5 installed before the v4 cache was seeded and the proof correctly failed.
+  The corrected proof holds registration before the app loads, seeds only v4,
+  then releases v5 registration and observes the real activation upgrade.
+- During the separate screenshot session, deliberately interrupting the
+  temporary fake server with Ctrl+C emitted an `asyncio.CancelledError` while
+  closing SQLite. The automated browser proofs shut down cleanly, no owner data
+  was used, and this shutdown-path observation is outside the bounded identity
+  repair rather than hidden or retried.

@@ -71,3 +71,56 @@ appear on the next navigation.
 it claims and navigates every open same-scope window once. A fresh install has
 no older cache and does not reload. The web test went red before this behavior
 was added, then passed after the production bundle was rebuilt.
+
+## Final identity repair
+
+**Owner feedback:** the React shell worked but remained crude and too close to
+a normal chat. The custom fate-thread control had no clear meaning, and the
+mask-style mark did not fit Weaver.
+
+**Repair:** the bounded repair instruction was rewritten around that feedback.
+The custom control and hand-drawn icon set were removed. Locally bundled Font
+Awesome Free icons now provide the functional language, with staggered bars to
+open the rail, a left chevron to close it, and a spider used consistently in
+the brand seal, message avatar, favicon, and PWA mark. The rail, empty state,
+message hierarchy, composer, depth, and restrained web geometry were sharpened.
+No chapter evidence, canon labels, source locations, or search activity were
+invented before the real reading tools exist.
+
+**Inspection:** the built app was visually inspected at 1440 by 900 and 390 by
+844 in empty, drawer-open, and populated-transcript states. The browser proof
+also exercised the desktop toggle, mobile drawer, long transcript, stream,
+send/stop control state, regeneration scope, persistence, and installability.
+
+**Evidence:** the production build, 9 React tests, 289 Python tests, Ruff,
+dependency compatibility, fake browser proof, and offline-shell proof passed
+on 2026-08-05.
+
+**Independent review finding:** the browser proof still required the deleted
+custom sigil and the previous crimson token, so its otherwise-correct printed
+observations ended in a nonzero exit. The assertions now require Font Awesome's
+staggered-bars icon, reject the legacy sigil, and check the current token. The
+same proof now confirms that no runtime style tag is injected under the strict
+content security policy. The corrected proof passed.
+
+**Independent review accessibility finding:** the closed desktop and mobile
+rails remained keyboard-focusable off screen. The rail is now inert and hidden
+from assistive technology whenever closed, the opener exposes
+`aria-controls`/`aria-expanded`, the mobile drawer receives dialog semantics
+and focus, and focus returns to the opener after closing. Component and live
+browser checks cover the repaired behavior.
+
+**Independent review attribution finding:** the packaged Font Awesome notice
+was initially copied to an unserved root path. It now builds under the existing
+`/assets/` mount, the SVG points to that served location, and a backend asset
+test verifies both the response and attribution text without adding a route.
+
+**Independent review PWA finding:** the identity repair initially left the
+worker and cache at v4, which would let an installed client retain the old
+cache-first mark. The worker now uses `weaver-shell-v5`. A browser upgrade
+proof starts with a seeded v4 cache and verifies that v5 removes it, controls
+the page, and caches the new spider mark.
+
+**Gate:** implementation and inspection are complete, independent review
+returned PASS after the four repairs, and the owner accepted and closed
+Plan 013 on 2026-08-05.

@@ -2,10 +2,10 @@
 
 ## Status
 
-- **State:** Repair implementation complete; verification and independent review passed
+- **State:** Completed and owner-accepted 2026-08-05
 - **Admitted implementation:** Yes, owner redirected the frontend repair on 2026-08-04
 - **Depends on:** Plans 011 and 012 accepted
-- **Final decision:** pending
+- **Final decision:** Accepted 2026-08-05 (owner closed the plan)
 
 ## Owner direction
 

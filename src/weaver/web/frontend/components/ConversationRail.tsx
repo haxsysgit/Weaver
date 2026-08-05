@@ -1,8 +1,8 @@
-import type { ComponentType } from "react";
+import { useEffect, useRef, type ComponentType } from "react";
 
 import type { ConversationSummary } from "../lib/chatApi";
 import type { ChatProduct } from "../lib/product";
-import { FateThreadGateIcon, PlusIcon, ThreadIcon } from "./Icons";
+import { PlusIcon, RailCloseIcon, ThreadIcon } from "./Icons";
 import type { WeaverMarkProps } from "./WeaverMark";
 
 interface ConversationRailProps {
@@ -11,6 +11,8 @@ interface ConversationRailProps {
   conversations: ConversationSummary[];
   desktopCollapsed: boolean;
   disabled: boolean;
+  interactionHidden: boolean;
+  mobileLayout: boolean;
   mobileOpen: boolean;
   onClose: () => void;
   onCreate: () => void;
@@ -24,22 +26,36 @@ export function ConversationRail({
   conversations,
   desktopCollapsed,
   disabled,
+  interactionHidden,
+  mobileLayout,
   mobileOpen,
   onClose,
   onCreate,
   onSelect,
   product,
 }: ConversationRailProps) {
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (mobileOpen) {
+      closeButtonRef.current?.focus();
+    }
+  }, [mobileOpen]);
+
   return (
     <>
       <button
+        aria-hidden="true"
         aria-label={product.closeRailLabel}
         className={`drawer-scrim ${mobileOpen ? "drawer-scrim-open" : ""}`}
         onClick={onClose}
-        tabIndex={mobileOpen ? 0 : -1}
+        tabIndex={-1}
         type="button"
       />
       <aside
+        aria-hidden={interactionHidden}
+        aria-label={mobileLayout ? product.navigationLabel : undefined}
+        aria-modal={mobileLayout && mobileOpen ? true : undefined}
         className={[
           "conversation-rail",
           desktopCollapsed ? "conversation-rail-collapsed" : "",
@@ -47,10 +63,15 @@ export function ConversationRail({
         ]
           .filter(Boolean)
           .join(" ")}
+        id="conversation-rail"
+        inert={interactionHidden}
+        role={mobileLayout ? "dialog" : undefined}
       >
         <header className="rail-brand">
           <div className="brand-lockup">
-            <Mark className="brand-mark" compact />
+            <div className="brand-mark-seal">
+              <Mark className="brand-mark" compact />
+            </div>
             <div>
               <strong>{product.assistantName}</strong>
               <span>{product.brandLine}</span>
@@ -60,9 +81,10 @@ export function ConversationRail({
             aria-label={product.closeRailLabel}
             className="icon-button rail-close"
             onClick={onClose}
+            ref={closeButtonRef}
             type="button"
           >
-            <FateThreadGateIcon open />
+            <RailCloseIcon />
           </button>
         </header>
 
