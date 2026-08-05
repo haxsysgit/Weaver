@@ -1131,3 +1131,164 @@ async def test_send_persist_failure_marks_run_interrupted():
         finally:
             runner_module.ConversationRunner._persist_callback = real_callback
             await sw.close()
+
+
+async def test_tool_result_private_material_persists_evidence_only():
+    """Plan 014 slice 1: a tool result carrying private material under the
+    reserved key persists only the durable evidence record. The prose is
+    temporary model material for the current turn and must never reach the
+    conversation DB."""
+    from weaver.agent.messages import ToolResultMessage
+    from weaver.conversation.items import (
+        DURABLE_EVIDENCE_KEY,
+        items_to_messages,
+        message_to_item,
+    )
+
+    result = {
+        DURABLE_EVIDENCE_KEY: {
+            "source_kind": "novel",
+            "chapter": 98,
+            "line_start": 10,
+            "line_end": 20,
+            "source_hash": "sha256:abc",
+            "passage_handle": "novel:98:10-20",
+        },
+        # Private material: what the model reads this turn, never persisted.
+        "passages": ["the black knight slaughtered the hunting party..."],
+    }
+    original = ToolResultMessage(
+        message_id="m1",
+        call_id="call-x",
+        tool_name="open_chapters",
+        ok=True,
+        result=result,
+    )
+    item = message_to_item(
+        original,
+        conversation_id="c1",
+        run_id="r1",
+        turn_id="t1",
+        sequence=1,
+        created_at="2026-08-05T00:00:00",
+    )
+    body = __import__("json").loads(item.body)
+    assert body["result"] == result[DURABLE_EVIDENCE_KEY]
+    assert "passages" not in body["result"]
+
+    [replay] = items_to_messages([item])
+    assert replay.ok is True
+    assert replay.result == result[DURABLE_EVIDENCE_KEY]
+    assert replay.result["passage_handle"] == "novel:98:10-20"
+    assert "black knight slaughtered" not in __import__("json").dumps(
+        replay.result
+    )
+
+
+async def test_tool_result_without_private_marker_unchanged():
+    """Plan 014 slice 1 backward compatibility: results without the
+    reserved key persist verbatim exactly as before the split."""
+    from weaver.agent.messages import ToolResultMessage
+    from weaver.conversation.items import items_to_messages, message_to_item
+
+    original = ToolResultMessage(
+        message_id="m2",
+        call_id="call-y",
+        tool_name="echo",
+        ok=True,
+        result={"echo": "hello"},
+    )
+    item = message_to_item(
+        original,
+        conversation_id="c1",
+        run_id="r1",
+        turn_id="t1",
+        sequence=1,
+        created_at="2026-08-05T00:00:00",
+    )
+    body = __import__("json").loads(item.body)
+    assert body["result"] == {"echo": "hello"}
+    [replay] = items_to_messages([item])
+    assert replay.result == {"echo": "hello"}
+
+
+async def test_send_tool_private_material_never_reaches_db():
+    """Plan 014 slice 1 end to end: a full wired turn whose tool returns
+    private material leaves no prose in the conversation items; only the
+    durable evidence record persists."""
+    from weaver.agent.tools import (
+        EffectKind,
+        ToolDefinition,
+        ToolExecutionPolicy,
+        ToolRegistry,
+    )
+    from weaver.conversation.items import DURABLE_EVIDENCE_KEY
+
+    async def reading_handler(arguments: dict, context) -> dict:
+        return {
+            DURABLE_EVIDENCE_KEY: {
+                "source_kind": "novel",
+                "chapter": 98,
+                "line_start": 10,
+                "line_end": 20,
+                "source_hash": "sha256:abc",
+                "passage_handle": "novel:98:10-20",
+            },
+            "passages": [
+                "secret prose: the black knight slaughtered the hunting party"
+            ],
+        }
+
+    registry = ToolRegistry()
+    registry.register(
+        ToolDefinition(
+            name="open_chapters",
+            description="Open chapters",
+            parameters={"type": "object", "properties": {}},
+            handler=reading_handler,
+            effect_kind=EffectKind.READ,
+        )
+    )
+
+    with tempfile.TemporaryDirectory() as tmp:
+        layer, model, provider = _fake_layer(
+            ModelResponse(
+                assistant_message=ModelMessage(
+                    role="assistant",
+                    content="",
+                    tool_calls=(
+                        ModelToolCall(
+                            call_id="call-r",
+                            name="open_chapters",
+                            arguments_json="{}",
+                        ),
+                    ),
+                ),
+                provider_id="test-provider",
+                model_id="test-reader",
+                stop_reason=ModelStopReason.TOOL_USE,
+                raw_stop_reason="tool_calls",
+            ),
+            _stop_response("I read chapter 98."),
+        )
+        sw = SessionWeave(
+            Path(tmp) / ".weaver" / "state",
+            model_layer=layer,
+            model=model,
+            system_prompt="You are Weaver.",
+            tool_registry=registry,
+            active_tools=("open_chapters",),
+            execution_policy=ToolExecutionPolicy.read_only(),
+        )
+        await sw.open()
+        try:
+            conv_id = await sw.start_conversation("")
+            await sw.send(conv_id, "what happened in chapter 98?")
+            items = await sw._repo.load_items(conv_id)
+            bodies = " ".join(i.body for i in items)
+            assert "secret prose" not in bodies
+            assert "black knight slaughtered" not in bodies
+            assert "novel:98:10-20" in bodies
+            assert "sha256:abc" in bodies
+        finally:
+            await sw.close()

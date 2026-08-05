@@ -3,6 +3,14 @@
 Plan 009 contract §3: the pinned mapping table from Plan 008, extracted
 from `runner.py` into a shared module so the assembler, the runner, and
 future plans use one source of truth. Behavior is unchanged.
+
+Plan 014 slice 1: tool results may carry private reading material under
+the reserved `DURABLE_EVIDENCE_KEY`. The key's value is the durable
+evidence record (chapter, line range, source hash, source kind, passage
+handle); everything else in the result is temporary model material for
+the current turn and is dropped at persistence. The in-memory message
+keeps the full dict so the model reads the passage this turn; the
+conversation DB only ever holds the evidence record.
 """
 
 from __future__ import annotations
@@ -20,6 +28,30 @@ from weaver.model_layer import ModelToolCall
 
 from .common import uid
 from .repository import ItemRecord
+
+# Reserved key inside a tool result dict. The value is the durable
+# evidence record that survives persistence; all other keys are private
+# material that must never reach the conversation DB (Plan 014 slice 1).
+DURABLE_EVIDENCE_KEY = "durable_evidence"
+
+
+def _durable_result(result: dict) -> dict:
+    """Return the durable part of a tool result for persistence.
+
+    A result without the reserved key is persisted verbatim (Plan 008
+    behavior). A result with the key persists only the evidence record;
+    the private material is dropped here and stays in the in-memory
+    message for the current turn only.
+    """
+    if DURABLE_EVIDENCE_KEY not in result:
+        return result
+    evidence = result[DURABLE_EVIDENCE_KEY]
+    if not isinstance(evidence, dict):
+        raise ValueError(
+            f"tool result {DURABLE_EVIDENCE_KEY!r} must be a dict, "
+            f"got {type(evidence).__name__}"
+        )
+    return evidence
 
 
 def items_to_messages(items: list[ItemRecord]) -> list[ConversationMessage]:
@@ -158,7 +190,9 @@ def message_to_item(
         body = {
             "tool_call_id": message.call_id,
             "name": message.tool_name,
-            "result": message.result,
+            "result": _durable_result(message.result)
+            if isinstance(message.result, dict)
+            else message.result,
         }
         # Checkpoint audit fix: record failures so they survive the durable
         # round trip. Clean successes stay minimal (ok absent = True on read)
