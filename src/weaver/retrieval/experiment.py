@@ -17,7 +17,6 @@ records keep only chapter references, line ranges, and hashes.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import re
 from dataclasses import dataclass, field
@@ -25,10 +24,12 @@ from pathlib import Path
 
 from qdrant_client import QdrantClient, models
 
+from weaver.retrieval.chunker import Chunk as NovelChunk
+from weaver.retrieval.chunker import chunk_chapter  # noqa: F401  re-export for callers
+
 NOVEL_COLLECTION = "novel_chunks"
 NOTEBOOK_COLLECTION = "notebook_statements"
-DENSE_SIZE = 384  # all-MiniLM-L6-v2
-CHUNK_LINES = 15  # ~170 words, inside all-MiniLM's 256-token window
+DENSE_SIZE = 384  # default; real models set their own dims
 
 
 # ---------------------------------------------------------------------------
@@ -67,36 +68,44 @@ def load_questions(path: Path) -> list[Question]:
 # Novel chunking
 # ---------------------------------------------------------------------------
 
-@dataclass
-class NovelChunk:
-    """A line range of one chapter, with its text and source hash."""
+# ---------------------------------------------------------------------------
+# Dense embedders: local fastembed or OpenAI API, same interface
+# ---------------------------------------------------------------------------
 
-    chapter: int
-    line_start: int
-    line_end: int
-    text: str
-    source_hash: str
+class OpenAiEmbedder:
+    """OpenAI text-embedding API adapter (batch, sync).
 
+    Key read from the OPENAI_API_KEY env var (loaded from .env by
+    load_startup_config). The API dimension is fetched lazily on first
+    embed so callers do not need to know the model's dimension.
+    """
 
-def chunk_chapter(chapter: int, text: str, chunk_lines: int = CHUNK_LINES) -> list[NovelChunk]:
-    """Split a chapter into fixed-size line chunks. Line 1 is the title
-    heading, never story text, so chunks start at line 2."""
-    lines = text.splitlines()
-    body_start = 2 if len(lines) > 1 else 1
-    source_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
-    chunks: list[NovelChunk] = []
-    for start in range(body_start, len(lines) + 1, chunk_lines):
-        end = min(start + chunk_lines - 1, len(lines))
-        chunks.append(
-            NovelChunk(
-                chapter=chapter,
-                line_start=start,
-                line_end=end,
-                text="\n".join(lines[start - 1:end]),
-                source_hash=source_hash,
-            )
-        )
-    return chunks
+    def __init__(self, model: str = "text-embedding-3-large", batch_size: int = 64):
+        self.model = model
+        self.batch_size = batch_size
+        self._dim: int | None = None
+
+    def embed(self, texts: list[str]):
+        from openai import OpenAI
+
+        client = OpenAI()  # key from OPENAI_API_KEY env
+        out: list[list[float]] = []
+        for i in range(0, len(texts), self.batch_size):
+            batch = texts[i : i + self.batch_size]
+            resp = client.embeddings.create(model=self.model, input=batch)
+            # order is preserved by the API; sort defensively by index
+            by_index = {d.index: d.embedding for d in resp.data}
+            for idx in range(len(batch)):
+                out.append(by_index[idx])
+        if self._dim is None:
+            self._dim = len(out[0])
+        return out
+
+    @property
+    def dim(self) -> int:
+        if self._dim is None:
+            list(self.embed(["probe"]))
+        return self._dim  # type: ignore[return-value]
 
 
 # ---------------------------------------------------------------------------
@@ -187,28 +196,54 @@ def create_novel_collection(
         },
     )
     if embedder is not None:
-        texts = [c.text for c in chunks]
-        dense = [list(v) for v in embedder.embed(texts)]
+        # Embed in batches and upsert progressively: the full dense list
+        # for 2000+ chunks spikes RAM (bge-large alone holds ~10GB when
+        # everything is materialized at once on a 15GB machine).
+        batch_size = 64
+        for i in range(0, len(chunks), batch_size):
+            batch = chunks[i : i + batch_size]
+            dense = [list(v) for v in embedder.embed([c.text for c in batch])]
+            client.upsert(
+                NOVEL_COLLECTION,
+                [
+                    models.PointStruct(
+                        id=_point_id(f"{c.chapter}:{c.line_start}"),
+                        vector={
+                            "dense": dense[j],
+                            "bm25": sparse_encoder(c.text),
+                        },
+                        payload={
+                            "chapter": c.chapter,
+                            "line_start": c.line_start,
+                            "line_end": c.line_end,
+                            "source_hash": c.source_hash,
+                            "source_kind": "novel",
+                        },
+                    )
+                    for j, c in enumerate(batch)
+                ],
+            )
     else:
-        dense = [[0.0] * dense_size for _ in chunks]
-    points = [
-        models.PointStruct(
-            id=_point_id(f"{c.chapter}:{c.line_start}"),
-            vector={
-                "dense": dense[i],
-                "bm25": sparse_encoder(c.text),
-            },
-            payload={
-                "chapter": c.chapter,
-                "line_start": c.line_start,
-                "line_end": c.line_end,
-                "source_hash": c.source_hash,
-                "source_kind": "novel",
-            },
-        )
-        for i, c in enumerate(chunks)
-    ]
-    client.upsert(NOVEL_COLLECTION, points)
+        for c in chunks:
+            client.upsert(
+                NOVEL_COLLECTION,
+                [
+                    models.PointStruct(
+                        id=_point_id(f"{c.chapter}:{c.line_start}"),
+                        vector={
+                            "dense": [0.0] * dense_size,
+                            "bm25": sparse_encoder(c.text),
+                        },
+                        payload={
+                            "chapter": c.chapter,
+                            "line_start": c.line_start,
+                            "line_end": c.line_end,
+                            "source_hash": c.source_hash,
+                            "source_kind": "novel",
+                        },
+                    )
+                ],
+            )
 
 
 def create_notebook_collection(

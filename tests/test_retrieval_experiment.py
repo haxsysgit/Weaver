@@ -14,7 +14,6 @@ import pytest
 from qdrant_client import QdrantClient, models
 
 from weaver.retrieval.experiment import (
-    CHUNK_LINES,
     ArmResult,
     arm_dense_novel,
     arm_exact_novel,
@@ -109,11 +108,13 @@ def test_chunk_chapter_starts_at_line_2():
 
 
 def test_chunk_chapter_splits_into_multiple_chunks():
-    text = "Title\n" + "\n".join(f"body {i}" for i in range(1, 200))
-    chunks = chunk_chapter(1, text, chunk_lines=60)
-    assert len(chunks) == 4  # lines 2-61, 62-121, 122-181, 182-200
-    assert chunks[0].line_start == 2 and chunks[0].line_end == 61
-    assert chunks[-1].line_start == 182 and chunks[-1].line_end == 200
+    # 199 one-line paragraphs separated by blank lines
+    text = "Title\n" + "\n\n".join(f"body {i}" for i in range(1, 200))
+    chunks = chunk_chapter(1, text, target_lines=60, overlap_lines=0)
+    assert len(chunks) == 4
+    assert chunks[0].line_start == 2  # line 1 is the title
+    assert chunks[0].line_end == 120  # 60 paragraphs, blank separators between
+    assert chunks[-1].line_end == 398
 
 
 def test_bm25_sparse_vector_is_deterministic():

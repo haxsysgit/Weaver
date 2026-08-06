@@ -43,27 +43,31 @@ async def test_developer_profile_keeps_plan_010_tool_set(tmp_path) -> None:
         await runtime.close()
 
 
-async def test_web_profile_has_no_tools_and_read_only_policy(tmp_path) -> None:
+async def test_web_profile_has_reading_tools_and_read_only_policy(tmp_path) -> None:
     runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
     try:
         assert runtime.surface == "web"
-        assert runtime.session._active_tools == ()
-        assert runtime.session._tool_registry is not None
-        assert not runtime.session._tool_registry.has("echo")
+        assert runtime.session._active_tools == (
+            "search_library",
+            "open_chapters",
+        )
+        registry = runtime.session._tool_registry
+        assert registry.has("search_library")
+        assert registry.has("open_chapters")
+        assert not registry.has("echo")
         policy = runtime.session._execution_policy
         assert policy == ToolExecutionPolicy.read_only()
     finally:
         await runtime.close()
 
 
-async def test_web_prompt_makes_no_library_claim(tmp_path) -> None:
+async def test_web_prompt_makes_library_claim_with_truth_rule(tmp_path) -> None:
     runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
     try:
         prompt = runtime.session._system_prompt
-        assert "library" not in prompt
-        assert "inspect" not in prompt
-        assert "packet" not in prompt
-        assert "export" not in prompt
+        assert "search_library" in prompt
+        assert "open_chapters" in prompt
+        assert "source of truth" in prompt
     finally:
         await runtime.close()
 

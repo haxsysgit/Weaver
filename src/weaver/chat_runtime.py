@@ -46,14 +46,21 @@ DEVELOPER_SYSTEM_PROMPT = (
     "library from chat."
 )
 
-# Web surface system prompt: no library claim, no tools.
+# Web surface system prompt: two reading tools, novel is truth.
 WEB_SYSTEM_PROMPT = (
-    "You are Weaver, a plain and honest writing companion. Keep replies "
-    "short and direct. This surface has no tools; answer from your own "
-    "knowledge only."
+    "You are Weaver, a plain and honest reading companion for Shadow Slave. "
+    "Answer from the library when you can: search_library finds passages in "
+    "the novel and statements in the story notebook, open_chapters reads the "
+    "actual novel text. The novel is the source of truth; the notebook is a "
+    "summary map that can be wrong. When a question needs a fact, search "
+    "first, open the passage, then answer with chapter references. Keep "
+    "replies short and direct. You cannot modify the library."
 )
 
-WEB_ACTIVE_TOOLS: tuple[str, ...] = ()
+WEB_ACTIVE_TOOLS: tuple[str, ...] = (
+    "search_library",
+    "open_chapters",
+)
 
 # Scripted fake-mode reply: friendly, non-streamed, honest about being fake.
 # Surface-neutral text: it must not advertise a command that only one of
@@ -100,8 +107,45 @@ def _developer_tool_registry() -> ToolRegistry:
 
 
 def _web_tool_registry() -> ToolRegistry:
-    """Empty registry: the web surface has no tools (Plan 011 contract)."""
-    return ToolRegistry()
+    """The two reading tools (Plan 014): search_library + open_chapters.
+
+    The web surface is where a reader talks to Weaver; the reading tools
+    are READ-only and never touch the library. The registry is built
+    lazily per runtime so tests can point at synthetic data. The Qdrant
+    index is loaded from .weaver/retrieval/index when present (built by
+    scripts/build_library_index.py); without it the tools register but
+    searches return empty until the index is built.
+    """
+    registry = ToolRegistry()
+    from .retrieval.tools import LibraryService, register_reading_tools
+
+    project_root = Path(os.environ.get("WEAVER_PROJECT_ROOT", Path.cwd()))
+    novel_dir = project_root / "novels" / "shadow-slave"
+    notebook_dir = project_root / ".weaver" / "knowledge" / "shadow-slave"
+    if not novel_dir.exists():
+        return registry  # no library on this machine: tools stay unregistered
+    index_dir = project_root / ".weaver" / "retrieval" / "index"
+    client = None
+    sparse_encoder = None
+    if index_dir.exists():
+        from fastembed import SparseTextEmbedding
+        from qdrant_client import QdrantClient
+
+        from .retrieval.experiment import splade_encoder
+
+        client = QdrantClient(path=str(index_dir))
+        sparse_encoder = splade_encoder(
+            SparseTextEmbedding("Qdrant/bm42-all-minilm-l6-v2-attentions")
+        )
+    service = LibraryService(
+        novel_dir=novel_dir,
+        notebook_dir=notebook_dir,
+        client=client,
+        embedder=None,  # dense search needs the embedder; sparse-only for now
+        sparse_encoder=sparse_encoder,
+    )
+    register_reading_tools(registry, service)
+    return registry
 
 
 class ChatRuntime:

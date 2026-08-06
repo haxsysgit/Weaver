@@ -221,6 +221,7 @@ async def run_turn(
     persist_message: PersistCallback | None = None,
     on_delta: DeltaCallback | None = None,
     max_model_steps: int = 5,
+    reader_ceiling: int | None = None,
 ) -> TurnResult:
     max_steps = min(max(max_model_steps, 1), _MAX_MODEL_STEPS)
     new_messages: list[ConversationMessage] = []
@@ -402,6 +403,7 @@ async def run_turn(
                     turn_id=turn_id,
                     call_id=tool_call.call_id,
                     cancel_event=cancel_event,
+                    reader_ceiling=reader_ceiling,
                 )
                 tool_result = await tool_registry.dispatch(
                     tool_call.name,

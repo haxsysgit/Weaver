@@ -59,6 +59,7 @@ class ConversationRunner:
         active_tools: tuple[str, ...],
         execution_policy: ToolExecutionPolicy,
         token_budget: int | None = None,
+        reader_ceiling: int | None = None,
     ) -> None:
         self._repo = repo
         self._coordinator = coordinator
@@ -72,6 +73,9 @@ class ConversationRunner:
         # Plan 010 Phase D: the assembler always runs; a None budget means
         # count-only (no truncation) so the TUI gets a token meter for free.
         self._assembler = ContextAssembler(system_prompt, token_budget)
+        # Plan 014: the reader position (spoiler ceiling) is conversation
+        # state threaded to tool contexts; never a model argument.
+        self._reader_ceiling = reader_ceiling
 
     def _persist_callback(
         self,
@@ -141,6 +145,7 @@ class ConversationRunner:
                 turn_id,
             ),
             on_delta=on_delta,
+            reader_ceiling=self._reader_ceiling,
         )
 
         # Plan 010 Phase D: surface the context meter on the result so the

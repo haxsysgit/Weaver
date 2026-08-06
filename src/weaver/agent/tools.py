@@ -86,6 +86,8 @@ class ToolExecutionContext:
     turn_id: str
     call_id: str
     cancel_event: asyncio.Event
+    reader_ceiling: int | None = None
+    conversation_id: str = ""
 
     def raise_if_cancelled(self) -> None:
         """Stop at a cooperative handler checkpoint.
