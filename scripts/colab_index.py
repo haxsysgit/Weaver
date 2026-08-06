@@ -284,14 +284,34 @@ def providers() -> list[str] | None:
     return None
 
 
+def _active_providers(model) -> list[str]:
+    """Which providers the model session actually uses (not just installed)."""
+    sess = getattr(model, "model", None)
+    if sess is None:
+        return []
+    return list(sess.get_providers())
+
+
+def _check_gpu(model, name: str) -> None:
+    used = _active_providers(model)
+    print(f"{name} providers: {used}")
+    if "CUDAExecutionProvider" not in used:
+        print("WARNING: CUDA NOT ACTIVE - embedding runs on CPU and will take hours.")
+        print("Fix: Runtime -> Change runtime type -> T4 GPU -> Save, then Runtime -> Restart session.")
+        print("     If the runtime is already GPU: pip uninstall -y onnxruntime && pip install -q onnxruntime-gpu")
+        print("     then Runtime -> Restart session and re-run from cell 3.")
+
+
 def make_embedder(dense_model: str):
     from fastembed import TextEmbedding
 
     prov = providers()
     try:
-        return TextEmbedding(dense_model, threads=4, providers=prov) if prov else TextEmbedding(dense_model, threads=4)
+        embedder = TextEmbedding(dense_model, threads=4, providers=prov) if prov else TextEmbedding(dense_model, threads=4)
     except TypeError:
-        return TextEmbedding(dense_model, threads=4)
+        embedder = TextEmbedding(dense_model, threads=4)
+    _check_gpu(embedder, "dense")
+    return embedder
 
 
 def make_sparse(sparse_model: str):
@@ -302,6 +322,7 @@ def make_sparse(sparse_model: str):
         model = SparseTextEmbedding(sparse_model, providers=prov) if prov else SparseTextEmbedding(sparse_model)
     except TypeError:
         model = SparseTextEmbedding(sparse_model)
+    _check_gpu(model, "sparse")
     return splade_encoder(model)
 
 
