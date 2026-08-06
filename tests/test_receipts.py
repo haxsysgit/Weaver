@@ -9,7 +9,6 @@ from weaver.experiment import (
     run_provider_tool_contract,
 )
 from weaver import (
-    DEEPSEEK_FLASH,
     DEEPSEEK_MODELS,
     DEEPSEEK_FLASH,
     FakeModelProvider,

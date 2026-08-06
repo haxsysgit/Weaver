@@ -6,7 +6,6 @@ import pytest
 from openai import AsyncOpenAI
 
 from weaver import (
-    DEEPSEEK_FLASH,
     DEEPSEEK_MODELS,
     DEEPSEEK_FLASH,
     DeepSeekProvider,

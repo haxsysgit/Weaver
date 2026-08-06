@@ -71,19 +71,33 @@ class OpenChaptersInput(BaseModel):
 
 @dataclass
 class LibraryService:
-    """Owns the deterministic machinery shared by the reading tools."""
+    """Owns the deterministic machinery shared by the reading tools.
+
+    The Qdrant client is opened lazily on first search: registry
+    construction must never touch the index (an index build in progress
+    holds the lock, and eager open fails with AlreadyLocked).
+    """
 
     novel_dir: Any  # pathlib.Path
     notebook_dir: Any
     client: Any = None  # qdrant client; None disables vector search
     embedder: Any = None  # dense embedder; None disables dense/hybrid
     sparse_encoder: Any = None
+    index_dir: Any = None  # when set, the client opens lazily from here
 
     def __post_init__(self) -> None:
         self.index = lib.ChapterIndex(self.novel_dir)
         self.entities = lib.EntityMap(self.notebook_dir)
         self.graph = lib.ConnectionGraph(self.notebook_dir)
         self.notebook = lib.NotebookReader(self.notebook_dir)
+
+    def _client(self):
+        """Lazy client: open once on first use, never at construction."""
+        if self.client is None and self.index_dir is not None and self.index_dir.exists():
+            from qdrant_client import QdrantClient
+
+            self.client = QdrantClient(path=str(self.index_dir))
+        return self.client
 
     # ------------------------------------------------------------------
     # search_library
@@ -153,7 +167,8 @@ class LibraryService:
         range are payload filters built here, never model arguments."""
         from qdrant_client import models
 
-        if self.client is None:
+        client = self._client()
+        if client is None:
             return []
         filters: list[Any] = []
         if ceiling is not None:
@@ -166,7 +181,7 @@ class LibraryService:
 
         hits: list[lib.CanonicalHit] = []
         if self.sparse_encoder is not None:
-            res = self.client.query_points(
+            res = client.query_points(
                 "novel_chunks",
                 query=self.sparse_encoder(query),
                 using="bm25",
@@ -177,7 +192,7 @@ class LibraryService:
             hits = [self._canonical_from_point(p) for p in res.points]
         if not hits and self.embedder is not None:
             vector = list(self.embedder.embed([query]))[0]
-            res = self.client.query_points(
+            res = client.query_points(
                 "novel_chunks",
                 query=vector,
                 using="dense",
@@ -212,7 +227,8 @@ class LibraryService:
     ) -> list[dict[str, Any]]:
         from qdrant_client import models
 
-        if self.client is None or self.sparse_encoder is None:
+        client = self._client()
+        if client is None or self.sparse_encoder is None:
             return []
         filters: list[Any] = []
         if ceiling is not None:
@@ -222,7 +238,7 @@ class LibraryService:
         if chapter_to is not None:
             filters.append(models.FieldCondition(key="chapter", range=models.Range(lte=chapter_to)))
         qfilter = models.Filter(must=filters) if filters else None
-        res = self.client.query_points(
+        res = client.query_points(
             "notebook_statements",
             query=self.sparse_encoder(query),
             using="bm25",

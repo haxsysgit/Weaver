@@ -22,7 +22,7 @@
   ONNX is the Qdrant-documented pairing with DeepSeek; an API embedder
   is the alternative). A vector database is **in scope by owner
   decision**: Qdrant.
-- **State:** Admitted 2026-08-05; in implementation (Slice 1)
+- **State:** Admitted 2026-08-05; Slices 1-3 done, Slice 4 proof green, live trial awaiting owner permission
 - **Depends on:** Plan 013 accepted and closed (the tools wire into the
   web profile, and the reader conversations run in the web chat).
 - **Priority:** P1

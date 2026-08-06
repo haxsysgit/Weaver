@@ -125,24 +125,22 @@ def _web_tool_registry() -> ToolRegistry:
     if not novel_dir.exists():
         return registry  # no library on this machine: tools stay unregistered
     index_dir = project_root / ".weaver" / "retrieval" / "index"
-    client = None
     sparse_encoder = None
     if index_dir.exists():
         from fastembed import SparseTextEmbedding
-        from qdrant_client import QdrantClient
 
         from .retrieval.experiment import splade_encoder
 
-        client = QdrantClient(path=str(index_dir))
         sparse_encoder = splade_encoder(
             SparseTextEmbedding("Qdrant/bm42-all-minilm-l6-v2-attentions")
         )
     service = LibraryService(
         novel_dir=novel_dir,
         notebook_dir=notebook_dir,
-        client=client,
+        client=None,  # opened lazily from index_dir on first search
         embedder=None,  # dense search needs the embedder; sparse-only for now
         sparse_encoder=sparse_encoder,
+        index_dir=index_dir,
     )
     register_reading_tools(registry, service)
     return registry
