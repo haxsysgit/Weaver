@@ -25,9 +25,14 @@ def main() -> int:
     ap.add_argument("--notebook-dir", type=Path, default=Path(".weaver/knowledge/shadow-slave"))
     ap.add_argument("--out", type=Path, default=Path(".weaver/retrieval/index"))
     ap.add_argument("--ceiling", type=int, default=DEFAULT_CEILING)
-    ap.add_argument("--dense", default="BAAI/bge-large-en-v1.5")
+    ap.add_argument("--dense", default="BAAI/bge-large-en-v1.5",
+                    help="dense embedder: a fastembed model id, or 'openai' for the API")
     ap.add_argument("--sparse", default="Qdrant/bm42-all-minilm-l6-v2-attentions")
     args = ap.parse_args()
+
+    from weaver.config import load_startup_config
+
+    load_startup_config()  # .env wins over the shell env (owner decision)
 
     summary = build_library_index(
         args.novel_dir,

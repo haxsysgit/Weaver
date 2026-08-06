@@ -363,7 +363,12 @@ def build_library_index(
 
     from fastembed import SparseTextEmbedding, TextEmbedding
 
-    embedder = TextEmbedding(dense_model, threads=4)
+    if dense_model == "openai":
+        from weaver.retrieval.experiment import OpenAiEmbedder
+
+        embedder = OpenAiEmbedder("text-embedding-3-large")
+    else:
+        embedder = TextEmbedding(dense_model, threads=4)
     sparse = splade_encoder(SparseTextEmbedding(sparse_model))
     out_dir.mkdir(parents=True, exist_ok=True)
     client = QdrantClient(path=str(out_dir))
