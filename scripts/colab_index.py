@@ -285,11 +285,26 @@ def providers() -> list[str] | None:
 
 
 def _active_providers(model) -> list[str]:
-    """Which providers the model session actually uses (not just installed)."""
-    sess = getattr(model, "model", None)
-    if sess is None:
-        return []
-    return list(sess.get_providers())
+    """Which providers the model session actually uses (not just installed).
+
+    fastembed wraps the onnx InferenceSession in one or two wrapper layers
+    (TextEmbedding -> OnnxTextEmbedding -> InferenceSession), so walk down
+    .model a few levels and only call get_providers on something that has
+    it. Never crash here: this is the diagnostic path.
+    """
+    inner = model
+    for _ in range(3):
+        sess = getattr(inner, "model", None)
+        if sess is None or sess is inner:
+            break
+        inner = sess
+    getter = getattr(inner, "get_providers", None)
+    if callable(getter):
+        try:
+            return list(getter())
+        except Exception:
+            return []
+    return []
 
 
 def _check_gpu(model, name: str) -> None:
@@ -297,8 +312,8 @@ def _check_gpu(model, name: str) -> None:
     print(f"{name} providers: {used}")
     if "CUDAExecutionProvider" not in used:
         print("WARNING: CUDA NOT ACTIVE - embedding runs on CPU and will take hours.")
-        print("Fix: Runtime -> Change runtime type -> T4 GPU -> Save, then Runtime -> Restart session.")
-        print("     If the runtime is already GPU: pip uninstall -y onnxruntime && pip install -q onnxruntime-gpu")
+        print("Fix (Colab, CUDA 12): pip uninstall -y onnxruntime && pip install -q onnxruntime-gpu \\")
+        print("     --extra-index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/")
         print("     then Runtime -> Restart session and re-run from cell 3.")
 
 
