@@ -6,7 +6,7 @@ import openai
 import pytest
 
 from weaver import (
-    DEEPSEEK_PRO,
+    DEEPSEEK_FLASH,
     DeepSeekProvider,
     ModelLayer,
     ModelMessage,
@@ -151,12 +151,12 @@ async def test_payload_conversion_and_exact_tool_json() -> None:
     )
 
     response = await layer.complete(
-        DEEPSEEK_PRO,
+        DEEPSEEK_FLASH,
         request,
         asyncio.Event(),
     )
 
-    assert completions.payload["model"] == "deepseek-v4-pro"
+    assert completions.payload["model"] == "deepseek-v4-flash"
     assert completions.payload["max_tokens"] == 321
     assert completions.payload["messages"][0]["tool_calls"][0]["function"] == {
         "name": "synthetic_tool",
@@ -193,7 +193,7 @@ async def test_structured_arguments_become_stable_json() -> None:
     layer.register_provider(provider)
 
     response = await layer.complete(
-        DEEPSEEK_PRO,
+        DEEPSEEK_FLASH,
         ModelRequest(messages=(ModelMessage(role="user", content="synthetic"),)),
         asyncio.Event(),
     )
@@ -226,7 +226,7 @@ async def test_stop_reason_mapping(raw_reason, expected) -> None:
     layer.register_provider(provider)
 
     response = await layer.complete(
-        DEEPSEEK_PRO,
+        DEEPSEEK_FLASH,
         ModelRequest(messages=(ModelMessage(role="user", content="synthetic"),)),
         asyncio.Event(),
     )
@@ -250,7 +250,7 @@ async def test_cancellation_is_aborted_before_sdk_start() -> None:
     cancel_event.set()
 
     response = await layer.complete(
-        DEEPSEEK_PRO,
+        DEEPSEEK_FLASH,
         ModelRequest(messages=(ModelMessage(role="user", content="synthetic"),)),
         cancel_event,
     )
@@ -288,7 +288,7 @@ async def test_usage_is_normalized_and_reasoning_text_stays_ephemeral() -> None:
     events = [
         event
         async for event in layer.stream(
-            DEEPSEEK_PRO,
+            DEEPSEEK_FLASH,
             ModelRequest(messages=(ModelMessage(role="user", content="synthetic"),)),
             asyncio.Event(),
         )
@@ -383,7 +383,7 @@ async def test_provider_failures_are_safely_classified(
     layer.register_provider(provider)
 
     response = await layer.complete(
-        DEEPSEEK_PRO,
+        DEEPSEEK_FLASH,
         ModelRequest(messages=(ModelMessage(role="user", content="synthetic"),)),
         asyncio.Event(),
     )
@@ -411,7 +411,7 @@ async def test_mid_stream_cancel_closes_sdk_stream() -> None:
     layer.register_provider(provider)
 
     response = await layer.complete(
-        DEEPSEEK_PRO,
+        DEEPSEEK_FLASH,
         ModelRequest(messages=(ModelMessage(role="user", content="synthetic"),)),
         cancel_event,
     )
@@ -439,7 +439,7 @@ async def test_task_cancel_closes_sdk_stream() -> None:
 
     task = asyncio.create_task(
         layer.complete(
-            DEEPSEEK_PRO,
+            DEEPSEEK_FLASH,
             ModelRequest(messages=(ModelMessage(role="user", content="synthetic"),)),
             asyncio.Event(),
         )

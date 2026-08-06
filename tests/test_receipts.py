@@ -11,7 +11,7 @@ from weaver.experiment import (
 from weaver import (
     DEEPSEEK_FLASH,
     DEEPSEEK_MODELS,
-    DEEPSEEK_PRO,
+    DEEPSEEK_FLASH,
     FakeModelProvider,
     ModelLayer,
 )
@@ -95,8 +95,7 @@ async def test_fake_smoke_writes_complete_safe_receipt(tmp_path) -> None:
     )
     result = await run_model_smoke(
         model_layer,
-        flash_model=DEEPSEEK_FLASH,
-        pro_model=DEEPSEEK_PRO,
+        model=DEEPSEEK_FLASH,
         mode="fake",
         receipt_root=tmp_path / "runs",
     )
@@ -114,7 +113,7 @@ async def test_fake_smoke_writes_complete_safe_receipt(tmp_path) -> None:
     assert manifest["outcome"] == "passed"
     assert len(manifest["calls"]) == 3
     assert responses[0]["model_id"] == "deepseek-v4-flash"
-    assert responses[2]["model_id"] == "deepseek-v4-pro"
+    assert responses[2]["model_id"] == "deepseek-v4-flash"
     # Note: reasoning redaction itself is owned by
     # test_sensitive_values_and_reasoning_are_redacted; fake responses
     # never contain reasoning_content, so asserting its absence here
@@ -132,14 +131,14 @@ async def test_provider_contract_receipt_is_private_and_metadata_only(
             "deepseek",
             models=DEEPSEEK_MODELS,
             responses=provider_tool_contract_fake_responses(
-                (DEEPSEEK_FLASH, DEEPSEEK_PRO)
+                (DEEPSEEK_FLASH,)
             ),
         )
     )
 
     result = await run_provider_tool_contract(
         model_layer,
-        (DEEPSEEK_FLASH, DEEPSEEK_PRO),
+        (DEEPSEEK_FLASH,),
         mode="fake",
         receipt_root=tmp_path / "runs",
         secrets=(secret,),
@@ -154,10 +153,9 @@ async def test_provider_contract_receipt_is_private_and_metadata_only(
     assert manifest["experiment"] == "provider-tool-contract"
     assert manifest["settings"]["thinking_enabled"] is False
     assert manifest["settings"]["max_retries"] == 0
-    assert manifest["settings"]["maximum_api_requests"] == 4
+    assert manifest["settings"]["maximum_api_requests"] == 2
     assert [model["model_id"] for model in manifest["models"]] == [
         "deepseek-v4-flash",
-        "deepseek-v4-pro",
     ]
     for model in manifest["models"]:
         assert model["outcome"] == "passed"

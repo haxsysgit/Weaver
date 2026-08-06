@@ -74,10 +74,9 @@ def test_provider_contract_fake_cli_runs_four_scripted_requests(
     response_path = run_dirs[0] / "response.json"
     response_text = response_path.read_text()
     assert "deepseek-v4-flash" in response_text
-    assert "deepseek-v4-pro" in response_text
-    # The name promises four scripted requests; pin the manifest count.
+    # The name promises two scripted requests per model; pin the manifest count.
     manifest = json.loads((run_dirs[0] / "manifest.json").read_text())
-    assert manifest["settings"]["maximum_api_requests"] == 4
+    assert manifest["settings"]["maximum_api_requests"] == 2
 
 
 def test_provider_contract_live_cli_checks_key_before_client_or_receipt(

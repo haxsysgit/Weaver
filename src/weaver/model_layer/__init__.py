@@ -1,7 +1,6 @@
 from .deepseek import (
     DEEPSEEK_FLASH,
     DEEPSEEK_MODELS,
-    DEEPSEEK_PRO,
     DeepSeekProvider,
 )
 from .fake import FakeModelCall, FakeModelProvider
@@ -31,7 +30,6 @@ from .types import (
 __all__ = [
     "DEEPSEEK_FLASH",
     "DEEPSEEK_MODELS",
-    "DEEPSEEK_PRO",
     "DeepSeekProvider",
     "DuplicateProviderError",
     "FakeModelCall",

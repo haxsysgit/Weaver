@@ -3,7 +3,6 @@
 from .model_layer import (
     DEEPSEEK_FLASH,
     DEEPSEEK_MODELS,
-    DEEPSEEK_PRO,
     DeepSeekProvider,
     DuplicateProviderError,
     FakeModelCall,
@@ -29,7 +28,6 @@ from .model_layer import (
 __all__ = [
     "DEEPSEEK_FLASH",
     "DEEPSEEK_MODELS",
-    "DEEPSEEK_PRO",
     "DeepSeekProvider",
     "DuplicateProviderError",
     "FakeModelCall",

@@ -15,7 +15,12 @@ Two layered sources, loaded from the current working directory:
      [chat]
      model = "flash"    # alias or full id; default deepseek-v4-flash
 
-Precedence (first wins): real environment > `.env` > `.weaver/config.toml`.
+Precedence (first wins): `.env` > real environment > `.weaver/config.toml`.
+
+The `.env` file is the project's own configuration and wins over values
+inherited from the shell, so a stale export (say, an old key in
+``~/.zshrc``) can never shadow a fresh key in `.env`. The config file is
+the last-resort source.
 
 Loaded values are injected into ``os.environ`` so existing readers
 (cli, doctor) keep working unchanged.
@@ -32,7 +37,6 @@ from .errors import InvalidModelAliasError
 MODEL_ALIASES = MappingProxyType(
     {
         "flash": "deepseek-v4-flash",
-        "pro": "deepseek-v4-pro",
     }
 )
 
@@ -86,14 +90,16 @@ def _resolve_chat_model(model: str) -> str:
 def load_startup_config() -> Mapping[str, Any]:
     """Load `.env` then `.weaver/config.toml` from the current directory.
 
-    Injects discovered values into os.environ (DEEPSEEK_KEY,
-    WEAVER_CHAT_MODEL) without overriding anything already set. Returns the
-    parsed config table (empty mapping when the file is absent).
+    Precedence (first wins): `.env` > real environment >
+    `.weaver/config.toml`. `.env` values override anything already in
+    the environment (the project file is authoritative); the config
+    file only fills values that are still missing. Returns the parsed
+    config table (empty mapping when the file is absent).
     """
     dotenv_path = Path.cwd() / DOTENV_FILE
     if dotenv_path.is_file():
         for key, value in _parse_dotenv(dotenv_path).items():
-            os.environ.setdefault(key, value)
+            os.environ[key] = value
 
     config_path = Path.cwd() / CONFIG_FILE
     if not config_path.is_file():
@@ -111,5 +117,9 @@ def load_startup_config() -> Mapping[str, Any]:
     if chat_model is not None:
         if not isinstance(chat_model, str):
             raise ValueError(f"{config_path}: [chat] model must be a string")
-        os.environ.setdefault(CHAT_MODEL_ENV, _resolve_chat_model(chat_model))
+        # Only validate when the value will actually be used: an
+        # invalid config model must not raise when a valid model is
+        # already set by .env or the environment.
+        if CHAT_MODEL_ENV not in os.environ:
+            os.environ[CHAT_MODEL_ENV] = _resolve_chat_model(chat_model)
     return table

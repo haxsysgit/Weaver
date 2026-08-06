@@ -28,14 +28,7 @@ DEEPSEEK_FLASH = ModelSpec(
     default_output_tokens=4096,
     supports_reasoning=True,
 )
-DEEPSEEK_PRO = ModelSpec(
-    provider_id="deepseek",
-    model_id="deepseek-v4-pro",
-    api_family="openai-chat-completions",
-    default_output_tokens=4096,
-    supports_reasoning=True,
-)
-DEEPSEEK_MODELS = (DEEPSEEK_FLASH, DEEPSEEK_PRO)
+DEEPSEEK_MODELS = (DEEPSEEK_FLASH,)
 
 
 def _field(value: Any, name: str, default: Any = None) -> Any:

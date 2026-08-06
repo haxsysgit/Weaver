@@ -26,7 +26,6 @@ from .experiment import (
 from .model_layer import (
     DEEPSEEK_FLASH,
     DEEPSEEK_MODELS,
-    DEEPSEEK_PRO,
     DeepSeekProvider,
     FakeModelProvider,
     ModelLayer,
@@ -260,15 +259,11 @@ def run(argv: Sequence[str] | None = None) -> int:
         DEEPSEEK_FLASH.provider_id,
         DEEPSEEK_FLASH.model_id,
     )
-    pro_model = model_layer.get_model(
-        DEEPSEEK_PRO.provider_id,
-        DEEPSEEK_PRO.model_id,
-    )
     if args.name == "provider-tool-contract":
         result = asyncio.run(
             run_provider_tool_contract(
                 model_layer,
-                (flash_model, pro_model),
+                (flash_model,),
                 mode=mode,
                 receipt_root=state_root,
                 secrets=secrets,
@@ -279,8 +274,7 @@ def run(argv: Sequence[str] | None = None) -> int:
         result = asyncio.run(
             run_model_smoke(
                 model_layer,
-                flash_model=flash_model,
-                pro_model=pro_model,
+                model=flash_model,
                 mode=mode,
                 receipt_root=state_root,
                 secrets=secrets,

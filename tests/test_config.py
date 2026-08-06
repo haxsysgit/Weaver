@@ -42,28 +42,30 @@ def test_dotenv_sets_key(tmp_path, monkeypatch) -> None:
     assert os.environ["DEEPSEEK_KEY"] == "sk-test"
 
 
-def test_dotenv_does_not_override_real_env(tmp_path, monkeypatch) -> None:
+def test_dotenv_overrides_real_env(tmp_path, monkeypatch) -> None:
+    """The project .env wins over a stale export (e.g. an old key in
+    ~/.zshrc): a fresh key in .env must never be shadowed."""
     monkeypatch.setenv("DEEPSEEK_KEY", "sk-real")
     _write(tmp_path, ".env", 'DEEPSEEK_KEY="sk-dotenv"\n')
     monkeypatch.chdir(tmp_path)
 
     config.load_startup_config()
 
-    assert os.environ["DEEPSEEK_KEY"] == "sk-real"
+    assert os.environ["DEEPSEEK_KEY"] == "sk-dotenv"
 
 
 def test_config_toml_key_and_model(tmp_path, monkeypatch) -> None:
     _write(
         tmp_path,
         ".weaver/config.toml",
-        '[api]\nkey = "sk-cfg"\n\n[chat]\nmodel = "pro"\n',
+        '[api]\nkey = "sk-cfg"\n\n[chat]\nmodel = "flash"\n',
     )
     monkeypatch.chdir(tmp_path)
 
     table = config.load_startup_config()
 
     assert os.environ["DEEPSEEK_KEY"] == "sk-cfg"
-    assert os.environ["WEAVER_CHAT_MODEL"] == "deepseek-v4-pro"
+    assert os.environ["WEAVER_CHAT_MODEL"] == "deepseek-v4-flash"
     assert table["api"]["key"] == "sk-cfg"
 
 
@@ -75,6 +77,30 @@ def test_env_wins_over_config_file(tmp_path, monkeypatch) -> None:
     config.load_startup_config()
 
     assert os.environ["DEEPSEEK_KEY"] == "sk-real"
+
+
+def test_dotenv_wins_over_config_file(tmp_path, monkeypatch) -> None:
+    """Precedence: .env > environment > config.toml."""
+    monkeypatch.setenv("DEEPSEEK_KEY", "sk-real")
+    _write(tmp_path, ".env", 'DEEPSEEK_KEY="sk-dotenv"\n')
+    _write(tmp_path, ".weaver/config.toml", '[api]\nkey = "sk-cfg"\n')
+    monkeypatch.chdir(tmp_path)
+
+    config.load_startup_config()
+
+    assert os.environ["DEEPSEEK_KEY"] == "sk-dotenv"
+
+
+def test_invalid_config_model_ignored_when_model_already_set(tmp_path, monkeypatch) -> None:
+    """A bogus [chat] model in config.toml must not raise when a valid
+    model is already set by .env or the environment."""
+    monkeypatch.setenv("WEAVER_CHAT_MODEL", "deepseek-v4-flash")
+    _write(tmp_path, ".weaver/config.toml", '[chat]\nmodel = "bogus"\n')
+    monkeypatch.chdir(tmp_path)
+
+    config.load_startup_config()
+
+    assert os.environ["WEAVER_CHAT_MODEL"] == "deepseek-v4-flash"
 
 
 def test_invalid_chat_model_rejected(tmp_path, monkeypatch) -> None:
@@ -127,20 +153,20 @@ def test_cli_run_loads_startup_config(tmp_path, monkeypatch, capsys) -> None:
 async def test_web_runtime_uses_configured_model(tmp_path, monkeypatch) -> None:
     """[chat] model still drives the web runtime after the TUI is removed."""
     monkeypatch.setenv("DEEPSEEK_KEY", "sk-test")
-    monkeypatch.setenv("WEAVER_CHAT_MODEL", "deepseek-v4-pro")
+    monkeypatch.setenv("WEAVER_CHAT_MODEL", "deepseek-v4-flash")
 
     from weaver.chat_runtime import open_chat_runtime
 
     runtime = await open_chat_runtime(tmp_path / "state", live=True, surface="web")
     try:
-        assert runtime.mode_label == "live deepseek-v4-pro"
-        assert runtime.session._runner._model.model_id == "deepseek-v4-pro"
+        assert runtime.mode_label == "live deepseek-v4-flash"
+        assert runtime.session._runner._model.model_id == "deepseek-v4-flash"
     finally:
         await runtime.close()
 
 
-async def test_fake_web_works_with_configured_pro_model(tmp_path, monkeypatch) -> None:
-    monkeypatch.setenv("WEAVER_CHAT_MODEL", "deepseek-v4-pro")
+async def test_fake_web_works_with_configured_model(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("WEAVER_CHAT_MODEL", "deepseek-v4-flash")
     monkeypatch.delenv("DEEPSEEK_KEY", raising=False)
 
     from weaver.chat_runtime import open_chat_runtime

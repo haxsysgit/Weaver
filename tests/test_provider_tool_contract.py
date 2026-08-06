@@ -8,7 +8,7 @@ from openai import AsyncOpenAI
 from weaver import (
     DEEPSEEK_FLASH,
     DEEPSEEK_MODELS,
-    DEEPSEEK_PRO,
+    DEEPSEEK_FLASH,
     DeepSeekProvider,
     FakeModelProvider,
     ModelLayer,
@@ -280,14 +280,12 @@ async def test_runner_preserves_linked_payload_and_stable_model_order(
         (
             tool_response(DEEPSEEK_FLASH),
             final_response(DEEPSEEK_FLASH),
-            tool_response(DEEPSEEK_PRO),
-            final_response(DEEPSEEK_PRO),
         )
     )
 
     result = await run_provider_tool_contract(
         model_layer,
-        (DEEPSEEK_FLASH, DEEPSEEK_PRO),
+        (DEEPSEEK_FLASH,),
         mode="fake",
         receipt_root=tmp_path / "runs",
     )
@@ -296,40 +294,34 @@ async def test_runner_preserves_linked_payload_and_stable_model_order(
     assert [call.model.model_id for call in provider.calls] == [
         "deepseek-v4-flash",
         "deepseek-v4-flash",
-        "deepseek-v4-pro",
-        "deepseek-v4-pro",
     ]
-    for first_call, second_call in (
-        provider.calls[:2],
-        provider.calls[2:],
-    ):
-        first_request = first_call.request
-        second_request = second_call.request
-        assert first_request.tool_choice == "synthetic_lookup"
-        assert first_request.reasoning.enabled is False
-        assert second_request.tool_choice is None
-        assert second_request.reasoning.enabled is False
-        assert second_request.tools == first_request.tools
-        assert second_request.messages[:2] == first_request.messages
+    first_call, second_call = provider.calls
+    assert first_call.request.tool_choice == "synthetic_lookup"
+    assert first_call.request.reasoning.enabled is False
+    assert second_call.request.tool_choice is None
+    second_request = second_call.request
+    assert second_request.reasoning.enabled is False
+    assert second_request.tools == first_call.request.tools
+    assert second_request.messages[:2] == first_call.request.messages
 
-        assistant = second_request.messages[2]
-        tool_result = second_request.messages[3]
-        assert assistant == ModelMessage(
-            role="assistant",
-            content=None,
-            tool_calls=(
-                ModelToolCall(
-                    call_id="call-synthetic-001",
-                    name="synthetic_lookup",
-                    arguments_json=RAW_ARGUMENTS,
-                ),
+    assistant = second_request.messages[2]
+    tool_result = second_request.messages[3]
+    assert assistant == ModelMessage(
+        role="assistant",
+        content=None,
+        tool_calls=(
+            ModelToolCall(
+                call_id="call-synthetic-001",
+                name="synthetic_lookup",
+                arguments_json=RAW_ARGUMENTS,
             ),
-        )
-        assert tool_result == ModelMessage(
-            role="tool",
-            content='{"status":"ok"}',
-            tool_call_id="call-synthetic-001",
-        )
+        ),
+    )
+    assert tool_result == ModelMessage(
+        role="tool",
+        content='{"status":"ok"}',
+        tool_call_id="call-synthetic-001",
+    )
 
 
 @pytest.mark.asyncio
@@ -417,18 +409,16 @@ async def test_non_final_second_response_never_starts_a_third_request(
 
 
 @pytest.mark.asyncio
-async def test_failure_in_flash_does_not_skip_pro(tmp_path: Path) -> None:
+async def test_failure_in_first_contract_call_fails_the_model(tmp_path: Path) -> None:
     model_layer, provider = layer_with(
         (
             tool_response(DEEPSEEK_FLASH, call_id=""),
-            tool_response(DEEPSEEK_PRO),
-            final_response(DEEPSEEK_PRO),
         )
     )
 
     result = await run_provider_tool_contract(
         model_layer,
-        (DEEPSEEK_FLASH, DEEPSEEK_PRO),
+        (DEEPSEEK_FLASH,),
         mode="fake",
         receipt_root=tmp_path / "runs",
     )
@@ -436,11 +426,9 @@ async def test_failure_in_flash_does_not_skip_pro(tmp_path: Path) -> None:
     assert result.outcome == "failed"
     assert [call.model.model_id for call in provider.calls] == [
         "deepseek-v4-flash",
-        "deepseek-v4-pro",
-        "deepseek-v4-pro",
     ]
     records = json.loads((result.run_dir / "response.json").read_text())
-    assert [record["outcome"] for record in records] == ["failed", "passed"]
+    assert [record["outcome"] for record in records] == ["failed"]
 
 
 @pytest.mark.asyncio
@@ -479,7 +467,7 @@ async def test_receipt_keeps_only_safe_contract_metadata(tmp_path: Path) -> None
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("model", [DEEPSEEK_FLASH, DEEPSEEK_PRO])
+@pytest.mark.parametrize("model", [DEEPSEEK_FLASH])
 async def test_real_sdk_serializes_and_parses_complete_tool_contract(
     tmp_path: Path,
     model,

@@ -422,8 +422,7 @@ async def run_provider_tool_contract(
 
 
 def _requests(
-    flash_model: ModelSpec,
-    pro_model: ModelSpec,
+    model: ModelSpec,
 ) -> list[tuple[str, ModelSpec, ModelRequest]]:
     flash_request = ModelRequest(
         messages=(
@@ -456,7 +455,7 @@ def _requests(
             "additionalProperties": False,
         },
     )
-    pro_request = ModelRequest(
+    forced_tool_request = ModelRequest(
         messages=(
             ModelMessage(role="system", content=_SYSTEM_PREFIX),
             ModelMessage(
@@ -472,9 +471,9 @@ def _requests(
         tool_choice=tool.name,
     )
     return [
-        ("flash-json", flash_model, flash_request),
-        ("flash-json-repeat", flash_model, flash_request),
-        ("pro-forced-tool", pro_model, pro_request),
+        ("flash-json", model, flash_request),
+        ("flash-json-repeat", model, flash_request),
+        ("flash-forced-tool", model, forced_tool_request),
     ]
 
 
@@ -535,27 +534,27 @@ def _validate(label: str, response: ModelResponse) -> None:
 
     if response.stop_reason != ModelStopReason.TOOL_USE:
         raise ExperimentValidationError(
-            "pro-forced-tool did not finish with tool use."
+            "flash-forced-tool did not finish with tool use."
         )
     tool_calls = response.assistant_message.tool_calls
     if len(tool_calls) != 1:
         raise ExperimentValidationError(
-            "pro-forced-tool did not return exactly one normalized tool call."
+            "flash-forced-tool did not return exactly one normalized tool call."
         )
     call = tool_calls[0]
     if call.name != "record_synthetic_marker":
         raise ExperimentValidationError(
-            "pro-forced-tool returned the wrong function name."
+            "flash-forced-tool returned the wrong function name."
         )
     try:
         arguments = json.loads(call.arguments_json)
     except json.JSONDecodeError as exc:
         raise ExperimentValidationError(
-            "pro-forced-tool returned invalid argument JSON."
+            "flash-forced-tool returned invalid argument JSON."
         ) from exc
     if arguments != {"label": "foundation", "count": 1}:
         raise ExperimentValidationError(
-            "pro-forced-tool returned unexpected arguments."
+            "flash-forced-tool returned unexpected arguments."
         )
 
 
@@ -573,8 +572,7 @@ def _failed_response(
 async def run_model_smoke(
     model_layer: ModelLayer,
     *,
-    flash_model: ModelSpec,
-    pro_model: ModelSpec,
+    model: ModelSpec,
     mode: str,
     receipt_root: Path,
     secrets: tuple[str, ...] = (),
@@ -586,7 +584,7 @@ async def run_model_smoke(
         secrets=secrets,
     )
     started_at = utc_now()
-    requests = _requests(flash_model, pro_model)
+    requests = _requests(model)
     writer.write_json(
         "request.json",
         [
