@@ -59,8 +59,6 @@ Findings:
   window made it worse).
 - SPLADE measured at ~0.4s/text (too slow to index the novel); BM42 is
   the chosen sparse encoder.
-- bge-large on this CPU (900MHz powersave governor under load) takes
-  hours to index; the comparison runs on a 1-200 slice.
 
 ## Slice 3: machinery + the two reading tools
 
@@ -83,8 +81,36 @@ Findings:
 Verification: full suite 332 green (was 305), ruff clean, both commits
 pushed (0e1bd5e, 2effb6e).
 
+## The embedding-model comparison: bge-large vs OpenAI
+
+Same 16 questions (chapters 1-200 slice), same chunks, same ceiling, same
+BM42 sparse. bge-large wins every arm (hit@5):
+
+| arm | OpenAI h5 | OpenAI MRR | bge h5 | bge MRR |
+|---|---|---|---|---|
+| 1-exact-novel-bm25 | 0.38 | 0.25 | 0.56 | 0.38 |
+| 2-exact-notebook-bm25 | 0.75 | 0.53 | 0.88 | 0.62 |
+| 3-dense-novel | 0.44 | 0.27 | 0.56 | 0.38 |
+| 4-hybrid-rrf | 0.44 | 0.31 | 0.75 | 0.49 |
+| 4-hybrid-dbsf | 0.44 | 0.33 | 0.62 | 0.50 |
+| 5-notebook-connections | 0.69 | 0.51 | 0.75 | 0.58 |
+
+Takeaway: local bge-large (BAAI/bge-large-en-v1.5, 1024 dims, free, ~1.3GB)
+outperforms the paid OpenAI text-embedding-3-large on this novel-retrieval
+task. The owner's instinct to test both was right; the numbers pick bge.
+Cost note: bge is slow on this CPU (hours for the full corpus at 900MHz
+powersave), which is a one-time index cost, not a per-query one.
+
+## Slice 4 status
+
+Deterministic proof written and passing (test_retrieval_proof.py): scripted
+fake-model turn runs search_library -> open_chapters -> cited answer; no
+novel prose in the durable store; ceiling blocks the model from widening.
+Live trial awaits the owner's permission.
+
 Deferred:
 - Weighted RRF (20 questions too small for a train/val split; the 35-set
   from r/ShadowSlave makes a future split plausible).
-- bge-large full-corpus comparison (slice runs on the 1-200 set).
+- bge-large full-corpus comparison (slice runs on the 1-200 set; the
+  per-arm gap is consistent enough to trust the slice).
 - Dense search in the web tools (embedder not wired; sparse-only).
