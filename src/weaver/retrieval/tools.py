@@ -162,9 +162,11 @@ class LibraryService:
         chapter_from: int | None,
         chapter_to: int | None,
     ) -> list[dict[str, Any]]:
-        """Exact-first, dense fallback. Sparse BM25 needs no embedder;
-        dense/hybrid arms are used when the embedder exists. Ceiling and
-        range are payload filters built here, never model arguments."""
+        """Dense-first, sparse fallback (measured at the Plan 014 sweep:
+        bge-large dense hit@5 0.57 beats BM42 0.40 at 40-line chunks, so
+        dense is the primary arm and sparse is the backup for keyword
+        queries the embedder smears). Ceiling and range are payload
+        filters built here, never model arguments."""
         from qdrant_client import models
 
         client = self._client()
@@ -180,22 +182,22 @@ class LibraryService:
         qfilter = models.Filter(must=filters) if filters else None
 
         hits: list[lib.CanonicalHit] = []
-        if self.sparse_encoder is not None:
-            res = client.query_points(
-                "novel_chunks",
-                query=self.sparse_encoder(query),
-                using="bm25",
-                query_filter=qfilter,
-                limit=MAX_CANONICAL_HITS,
-                with_payload=True,
-            )
-            hits = [self._canonical_from_point(p) for p in res.points]
-        if not hits and self.embedder is not None:
+        if self.embedder is not None:
             vector = list(self.embedder.embed([query]))[0]
             res = client.query_points(
                 "novel_chunks",
                 query=vector,
                 using="dense",
+                query_filter=qfilter,
+                limit=MAX_CANONICAL_HITS,
+                with_payload=True,
+            )
+            hits = [self._canonical_from_point(p) for p in res.points]
+        if not hits and self.sparse_encoder is not None:
+            res = client.query_points(
+                "novel_chunks",
+                query=self.sparse_encoder(query),
+                using="bm25",
                 query_filter=qfilter,
                 limit=MAX_CANONICAL_HITS,
                 with_payload=True,

@@ -182,3 +182,28 @@ def test_registration(service: LibraryService):
     schemas = reg.active_schemas(("search_library", "open_chapters"))
     assert [s.name for s in schemas] == ["search_library", "open_chapters"]
     assert reg._tools["search_library"].effect_kind is EffectKind.READ
+
+
+class _EmptySparse:
+    """Sparse that never matches: canonical hits can then only come from
+    the dense arm (the notebook arm still runs sparse - BM42 at runtime -
+    so a raising spy would explode there, not in the novel arm)."""
+
+    def __call__(self, text):
+        return models.SparseVector(indices=[], values=[])
+
+
+@pytest.mark.asyncio
+async def test_dense_first_when_embedder_present(service: LibraryService):
+    svc = LibraryService(
+        service.novel_dir,
+        service.notebook_dir,
+        client=service.client,
+        embedder=FakeEmbedder(),
+        sparse_encoder=_EmptySparse(),
+    )
+    res = await svc.search_library({"query": "who killed the hunting party leader"}, ctx(ceiling=100))
+    assert res["ok"] is True
+    hits = res["result"]["canonical_hits"]
+    assert hits, "novel hits must come from the dense arm when sparse never matches"
+    assert hits[0]["chapter"] == 98

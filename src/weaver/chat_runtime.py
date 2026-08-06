@@ -109,6 +109,26 @@ def _developer_tool_registry() -> ToolRegistry:
     return registry
 
 
+class _LazyDenseEmbedder:
+    """bge-large loads ~1.3GB and takes seconds; construct on first search.
+
+    The embedder is the same model the Colab index build used
+    (BAAI/bge-large-en-v1.5, 1024-dim), so runtime query vectors match
+    the stored chunk vectors. threads=4 caps onnxruntime RAM.
+    """
+
+    def __init__(self, model: str = "BAAI/bge-large-en-v1.5") -> None:
+        self._model = model
+        self._inner = None
+
+    def embed(self, texts):
+        if self._inner is None:
+            from fastembed import TextEmbedding
+
+            self._inner = TextEmbedding(self._model, threads=4)
+        return self._inner.embed(texts)
+
+
 def _web_tool_registry() -> ToolRegistry:
     """The two reading tools (Plan 014): search_library + open_chapters.
 
@@ -141,7 +161,7 @@ def _web_tool_registry() -> ToolRegistry:
         novel_dir=novel_dir,
         notebook_dir=notebook_dir,
         client=None,  # opened lazily from index_dir on first search
-        embedder=None,  # dense search needs the embedder; sparse-only for now
+        embedder=_LazyDenseEmbedder(),  # dense-first search (Plan 014 sweep: dense 0.57 > sparse 0.40)
         sparse_encoder=sparse_encoder,
         index_dir=index_dir,
     )
