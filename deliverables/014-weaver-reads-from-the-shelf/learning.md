@@ -183,3 +183,44 @@ zero cost and works offline after the model cache, and the model's
   removing unneeded scripts. The plan doc and learning note now cite
   the official Qdrant docs (quickstart, edge-quickstart, hybrid-queries,
   filtering, collections, fastembed) for the engine facts.
+
+## Locked decision (2026-08-06, owner directive)
+
+- **Never answer from pure knowledge.** The model must never answer any user
+  prompt from its trained knowledge alone. Trained knowledge is only a
+  hypothesis generator ("I think there is a bird battle around chapter 3000,
+  let me find it"), never the answer source. Every factual claim must trace
+  to the novel text (canon) or a notebook statement (the map, which points
+  at novel locations). Root cause: trained knowledge is where fan
+  misinformation lives (the "Ariel one-shotted the Unholy Titan" claim, the
+  "seven gods" belief — canon says six, ch372).
+- **The novel is canon, always.** The Vile Thieving Bird vs Sunny battle is
+  chapter 2976 "Confluence of Fates" (Sunny kills it in Onyx Serpent form in
+  the Great River); the notebook (chapters 1-1000) has no record of it. The
+  ch80-81 spawn and stolen-eye lore is origin, not the battle. When the
+  notebook and the novel disagree or the notebook is silent, the novel wins
+  and the notebook gets patched.
+- **Other ways to find answers, not just meaning-search.** Retrieval is not
+  the only finder: exact phrase search, chapter-range browsing, entity
+  lookup, connection traversal, and direct chapter opens (open_chapters by
+  handle) are all legitimate machinery paths. The tools expose them; the
+  model never fabricates a citation.
+
+## Locked decision (2026-08-06, owner correction: spoiler semantics)
+
+- **Weaver knows the whole novel; answers are calibrated to the reader.**
+  The reader-position ceiling is NOT a retrieval limit. Weaver's index and
+  knowledge span the full novel; a question like "who is the Vile Thieving
+  Bird and how strong must Sunny be to beat it" (reader at ch1000, answer
+  at ch2976) gets answered using full-novel knowledge, framed so the
+  surprise survives: "a Supreme cannot beat a Cursed being alone, the gap
+  is too much, he'd need help from other Supremes... don't be too curious,
+  keep reading."
+- **Spoiler knob.** There is a spoiler/no-spoiler toggle (conversation
+  state, user-controlled, and the user can explicitly say "disregard
+  spoilers"). Default: spoilers respected. Knob off: full answers.
+- **Machinery change implied:** search_library's ceiling becomes an
+  answer-framing input, not a hard retrieval filter; explicit as-of-N
+  narrowing stays available for questions that genuinely ask "as of
+  chapter N". Retrieval defaults to the full index. The knob and framing
+  rules land with the full-novel index work.
