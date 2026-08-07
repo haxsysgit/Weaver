@@ -15,6 +15,66 @@
 - Label hypotheses, observations, and accepted decisions separately.
 - Record failures as evidence. Do not hide them with silent retries.
 
+## Foundational Reader Trials
+
+These three private, fresh-session conversations are Weaver's founding product
+trials. Build retrieval, reading, memory, reasoning, and conversation work
+toward them without hard-coding their answers, adding prompt-specific branches,
+or placing their answers in the system prompt.
+
+1. **Canon reconstruction and discussion**
+
+   > hey weaver, people online keep saying Ariel one-shotted an Unholy Titan
+   > like it was nothing, but I remember clearly that Ariel and the Unholy
+   > Titan were tied for days. Then, to break the stalemate, Ariel whispered
+   > something to it, killed it, and used its soul cores, blood, and flesh to
+   > build the Tomb of Ariel. Can you remind me of the chapter, narrate it to
+   > me, or tell me what you think?
+
+   Weaver must verify the user's memory against the novel, find and read the
+   relevant chapters, investigate what Unholy Titans are and how their strength
+   is shown elsewhere, connect the fight to the Tomb of Ariel, separate canon
+   from interpretation and speculation, give an evidence-grounded take, and
+   continue the discussion naturally when challenged or asked follow-ups.
+
+2. **Time-aware power comparison**
+
+   > hey weaver, do you think the current Sunny of chapter 3120+ would be able
+   > to comfortably beat Azarax in his prime before the cure of Shadow God?
+
+   Weaver must reconstruct the requested versions of both characters, retrieve
+   their relevant feats, abilities, limits, counters, and circumstances from
+   the novel, respect the requested point in the timeline, explain uncertainty,
+   argue a position from evidence, and keep discussing alternative win
+   conditions when the owner pushes back.
+
+3. **Canon-grounded what-if**
+
+   > hey weaver, can you come up with a what-if scenario where Anvil of Valor
+   > went against Azarax of Effie's Fourth Nightmare?
+
+   Weaver must retrieve the relevant versions of the characters and setting,
+   preserve established powers, motives, personalities, and world rules, mark
+   invented events as speculation, build a believable branch from canon, and
+   continue changing or defending the scenario as the conversation develops.
+
+The working retrieval hypothesis includes retrieval-augmented answering,
+embeddings, a vector database, exact search, and direct rereading of larger
+chapter passages. `read`, `grep`, and `glob` are rudimentary tools and
+baselines; an agent must not claim they are sufficient for these trials without
+evidence from the trials.
+
+The first evidence is recorded: exact phrase and vocative finding on the raw
+chapters (the Weaver-voice trace, 2026-08-07) is a core agentic capability,
+not a convenience. See `docs/reading-finders.md`.
+
+Only the owner can decide whether Weaver has passed a Reader Trial. Pytest,
+retrieval scores, validators, checkers, reviewers, and other agents may collect
+evidence and identify failures, but they cannot accept a trial or declare
+Weaver complete. A first answer is not the whole trial: the owner must be able
+to hold the expected follow-up conversation in a fresh session. Weaver is
+fully complete only when the owner personally accepts all three trials.
+
 ## Pushback
 
 - Push back on the owner, plainly and early, whenever a plan, decision, tool,

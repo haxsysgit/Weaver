@@ -81,3 +81,22 @@ the source of any claim.
   the finder never re-ranks by meaning.
 - Meaning search answers "what is this about". Exact search answers
   "where is this thing". They are complements, never substitutes.
+
+## Agentic capabilities (owner, 2026-08-07)
+
+The owner recognised what this trace is: agentic capability. Weaver will
+in the future need bash- and sed-grade finders and readers for real
+agentic RAG and search. That means a tool family shaped like this:
+
+- a grep-like finder (phrase seed in, every chapter and line out,
+  verbatim, ceiling-bounded)
+- a sed-like reader (open a chapter, read a line range, return the
+  text)
+- a chapter browser (walk a range, list titles, jump)
+- entity and connection traversal over the notebook
+
+Scoped to the library: the model gets these tools against `novels/` and
+the notebook, never raw operating-system access. Read-only, ceiling
+enforced by machinery, prose never persisted (temp-vs-durable split).
+The design principle stays: the model reasons and finds, deterministic
+machinery does the rest.
