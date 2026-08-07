@@ -57,7 +57,7 @@ export function ChatApp({
     if (transcript) {
       transcript.scrollTop = transcript.scrollHeight;
     }
-  }, [chat.messages, chat.recoveryMessage]);
+  }, [chat.messages, chat.recoveryMessage, chat.activity]);
 
   async function createConversation() {
     if (await chat.createConversation()) {
@@ -161,6 +161,17 @@ export function ChatApp({
                 regenerateLabel={product.regenerateLabel}
               />
             ))}
+            {chat.activity.length > 0 && (
+              <div aria-label="Library activity" className="tool-activity">
+                {chat.activity.map((entry, index) => (
+                  <p className="tool-activity-line" key={`${entry.name}-${index}`}>
+                    {entry.status === "done"
+                      ? `${entry.name} ${entry.detail || "done"}`
+                      : `${entry.name}\u2026`}
+                  </p>
+                ))}
+              </div>
+            )}
             {chat.recoveryMessage && (
               <RecoveryPanel
                 chooseLabel={product.recoveryChooseLabel}

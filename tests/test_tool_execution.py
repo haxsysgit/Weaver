@@ -447,3 +447,62 @@ class TestCooperativeCancellation:
         with pytest.raises(asyncio.CancelledError):
             await handler_task
         assert not committed.is_set()
+
+
+@pytest.mark.asyncio
+async def test_on_tool_event_reports_start_and_done_in_order() -> None:
+    """Plan 014 seam: dispatch forwards (name, status, detail) events so
+    the surface can render tool activity lines."""
+    registry = ToolRegistry()
+    register_tool(
+        registry,
+        name="probe_tool",
+        effect_kind=EffectKind.READ,
+        starts={},
+    )
+    events: list[tuple[str, str, str]] = []
+
+    async def on_tool_event(name: str, status: str, detail: str) -> None:
+        events.append((name, status, detail))
+
+    context = execution_context()
+    context.on_tool_event = on_tool_event
+    result = await registry.dispatch(
+        "probe_tool",
+        '{"count": 1}',
+        active_names=("probe_tool",),
+        policy=ToolExecutionPolicy.read_only(),
+        context=context,
+    )
+    assert result.ok is True
+    assert events == [
+        ("probe_tool", "start", ""),
+        ("probe_tool", "done", "ok"),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_on_tool_event_failure_never_fails_the_turn() -> None:
+    """Best-effort like deltas: a UI callback hiccup is logged and
+    swallowed, the tool result still lands."""
+    registry = ToolRegistry()
+    register_tool(
+        registry,
+        name="probe_tool",
+        effect_kind=EffectKind.READ,
+        starts={},
+    )
+
+    async def on_tool_event(name: str, status: str, detail: str) -> None:
+        raise RuntimeError("ui died")
+
+    context = execution_context()
+    context.on_tool_event = on_tool_event
+    result = await registry.dispatch(
+        "probe_tool",
+        '{"count": 1}',
+        active_names=("probe_tool",),
+        policy=ToolExecutionPolicy.read_only(),
+        context=context,
+    )
+    assert result.ok is True

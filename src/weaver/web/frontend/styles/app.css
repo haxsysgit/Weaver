@@ -873,6 +873,21 @@ a:focus-visible {
   color: var(--fate-silver);
 }
 
+.tool-activity {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 2px 0 10px 49px;
+}
+
+.tool-activity-line {
+  margin: 0;
+  color: var(--dim-silver);
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 11px;
+  font-style: italic;
+}
+
 .recovery-knot {
   flex: 0 0 10px;
   width: 10px;

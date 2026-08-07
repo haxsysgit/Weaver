@@ -15,7 +15,8 @@ export type StreamEvent =
   | { type: "delta"; text: string }
   | { type: "completed"; text: string; tokenCount?: number; tokenBudget?: number }
   | { type: "interrupted"; message: string }
-  | { type: "failed"; message: string; code?: string };
+  | { type: "failed"; message: string; code?: string }
+  | { type: "tool"; name: string; status: string; detail: string };
 
 export interface ChatApi {
   listConversations(): Promise<ConversationSummary[]>;
@@ -85,6 +86,14 @@ function toStreamEvent(rawEvent: RawStreamEvent): StreamEvent | null {
       type: "failed",
       message: message || "The reply failed.",
       code: typeof rawEvent.data.code === "string" ? rawEvent.data.code : undefined,
+    };
+  }
+  if (rawEvent.event === "tool") {
+    return {
+      type: "tool",
+      name: typeof rawEvent.data.name === "string" ? rawEvent.data.name : "tool",
+      status: typeof rawEvent.data.status === "string" ? rawEvent.data.status : "start",
+      detail: typeof rawEvent.data.detail === "string" ? rawEvent.data.detail : "",
     };
   }
   return null;

@@ -177,7 +177,9 @@ async def test_concurrent_turn_409(tmp_path) -> None:
     gate = asyncio.Event()
     entered = asyncio.Event()
 
-    async def gated_send(conversation_id, text, cancel_event=None, on_delta=None):
+    async def gated_send(
+        conversation_id, text, cancel_event=None, on_delta=None, on_tool_event=None
+    ):
         entered.set()
         await gate.wait()
         from weaver.agent.turn import TurnExitReason
@@ -232,7 +234,7 @@ async def test_cancel_active_turn_returns_202_and_interrupted_event(tmp_path) ->
     entered = asyncio.Event()
 
     async def cancel_aware_send(
-        conversation_id, text, cancel_event=None, on_delta=None
+        conversation_id, text, cancel_event=None, on_delta=None, on_tool_event=None
     ):
         from weaver.agent.errors import safe_error
         from weaver.agent.turn import TurnExitReason
@@ -297,7 +299,9 @@ async def test_cancel_active_turn_returns_202_and_interrupted_event(tmp_path) ->
 async def test_failed_exit_reason_emits_failed_event(tmp_path) -> None:
     runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
 
-    async def failing_send(conversation_id, text, cancel_event=None, on_delta=None):
+    async def failing_send(
+        conversation_id, text, cancel_event=None, on_delta=None, on_tool_event=None
+    ):
         from weaver.agent.turn import TurnExitReason
 
         return type(
@@ -573,6 +577,7 @@ async def test_shutdown_waits_until_cooperative_turn_settles(
         text,
         cancel_event=None,
         on_delta=None,
+        on_tool_event=None,
     ):
         entered.set()
         assert cancel_event is not None

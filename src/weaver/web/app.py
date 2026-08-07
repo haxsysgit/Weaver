@@ -169,12 +169,21 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         async def on_delta(text: str) -> None:
             stream.queue.put_nowait(_sse("delta", {"text": text}))
 
+        # Plan 014 live-trial seam: tool activity as SSE 'tool' events so
+        # the UI can render search/open lines. Backward compatible: the
+        # frontend parser ignores unknown events.
+        async def on_tool_event(name: str, status: str, detail: str) -> None:
+            stream.queue.put_nowait(
+                _sse("tool", {"name": name, "status": status, "detail": detail})
+            )
+
         try:
             result = await runtime.session.send(
                 conversation_id,
                 message,
                 cancel_event=stream.cancel_event,
                 on_delta=on_delta,
+                on_tool_event=on_tool_event,
             )
             reason = result.exit_reason
             if reason == TurnExitReason.COMPLETED:

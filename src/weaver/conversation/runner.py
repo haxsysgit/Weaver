@@ -15,6 +15,7 @@ import uuid
 from weaver.agent.messages import ConversationMessage
 from weaver.agent.turn import (
     DeltaCallback,
+    ToolEventCallback,
     PersistCallback,
     TurnExitReason,
     TurnResult,
@@ -108,6 +109,7 @@ class ConversationRunner:
         turn_id: str,
         cancel_event: asyncio.Event,
         on_delta: DeltaCallback | None = None,
+        on_tool_event: ToolEventCallback | None = None,
     ) -> TurnResult:
         """Run one bounded model/tool turn inside an existing run.
 
@@ -145,6 +147,7 @@ class ConversationRunner:
                 turn_id,
             ),
             on_delta=on_delta,
+            on_tool_event=on_tool_event,
             reader_ceiling=self._reader_ceiling,
         )
 

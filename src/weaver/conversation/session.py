@@ -12,7 +12,12 @@ from typing import Literal, TypedDict
 import aiosqlite
 
 from weaver.agent.tools import ToolExecutionPolicy, ToolRegistry
-from weaver.agent.turn import DeltaCallback, TurnExitReason, TurnResult
+from weaver.agent.turn import (
+    DeltaCallback,
+    ToolEventCallback,
+    TurnExitReason,
+    TurnResult,
+)
 from weaver.model_layer import ModelLayer, ModelSpec
 
 from .coordinator import RunCoordinator
@@ -127,6 +132,7 @@ class SessionWeave:
         user_text: str,
         cancel_event: asyncio.Event | None = None,
         on_delta: DeltaCallback | None = None,
+        on_tool_event: ToolEventCallback | None = None,
     ) -> TurnResult:
         """Run one full turn with the owner's input and return the result.
 
@@ -170,6 +176,7 @@ class SessionWeave:
             turn_id,
             cancel_event,
             on_delta=on_delta,
+            on_tool_event=on_tool_event,
         )
 
     async def start_conversation(self, owner_text: str) -> str:

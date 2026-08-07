@@ -52,6 +52,11 @@ PersistCallback = Callable[[ConversationMessage], Awaitable[None]]
 # swallowed so a UI hiccup can never fail a turn.
 DeltaCallback = Callable[[str], Awaitable[None]]
 
+# Plan 014 live-trial seam: the dispatch forwards tool activity
+# (name, status, detail) so the surface can render search/open lines
+# instead of the model narrating its steps. Best-effort like deltas.
+ToolEventCallback = Callable[[str, str, str], Awaitable[None]]
+
 
 async def _complete_streaming(
     model_layer: ModelLayer,
@@ -220,6 +225,7 @@ async def run_turn(
     cancel_event: asyncio.Event,
     persist_message: PersistCallback | None = None,
     on_delta: DeltaCallback | None = None,
+    on_tool_event: ToolEventCallback | None = None,
     max_model_steps: int = 5,
     reader_ceiling: int | None = None,
 ) -> TurnResult:
@@ -404,6 +410,7 @@ async def run_turn(
                     call_id=tool_call.call_id,
                     cancel_event=cancel_event,
                     reader_ceiling=reader_ceiling,
+                    on_tool_event=on_tool_event,
                 )
                 tool_result = await tool_registry.dispatch(
                     tool_call.name,

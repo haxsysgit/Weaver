@@ -11,6 +11,12 @@ import type { DisplayMessage } from "../lib/chatModel";
 
 export type TurnState = "idle" | "streaming" | "cancelling";
 
+export interface ToolActivity {
+  name: string;
+  status: string;
+  detail: string;
+}
+
 function localMessageId(prefix: string): string {
   const randomId =
     globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
@@ -63,6 +69,7 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
   const [lastOwnerText, setLastOwnerText] = useState<string | null>(null);
   const [recoveryMessage, setRecoveryMessage] = useState<string | null>(null);
   const [bootError, setBootError] = useState<string | null>(null);
+  const [activity, setActivity] = useState<ToolActivity[]>([]);
   const activeLoad = useRef(0);
 
   const activeTitle = useMemo(
@@ -175,6 +182,14 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
       return { text: event.text, terminal: true };
     }
 
+    if (event.type === "tool") {
+      setActivity((current) => [
+        ...current,
+        { name: event.name, status: event.status, detail: event.detail },
+      ]);
+      return { text: partialReply, terminal: false };
+    }
+
     setMessages((current) => updateReply(current, replyId, partialReply, false));
     setRecoveryMessage(event.message);
     return { text: partialReply, terminal: true };
@@ -190,6 +205,7 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
     setLastOwnerText(text);
     setLiveReplyId(null);
     setRecoveryMessage(null);
+    setActivity([]);
     setTurnState("streaming");
     setMessages((current) => [
       ...current,
@@ -254,6 +270,7 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
 
   return {
     activeTitle,
+    activity,
     bootError,
     cancelTurn,
     conversationId,

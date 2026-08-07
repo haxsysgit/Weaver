@@ -101,16 +101,38 @@ task. The owner's instinct to test both was right; the numbers pick bge.
 Cost note: bge is slow on this CPU (hours for the full corpus at 900MHz
 powersave), which is a one-time index cost, not a per-query one.
 
-## Slice 4 status
+## Slice 4: proof and the live trial
 
 Deterministic proof written and passing (test_retrieval_proof.py): scripted
 fake-model turn runs search_library -> open_chapters -> cited answer; no
 novel prose in the durable store; ceiling blocks the model from widening.
-Live trial awaits the owner's permission.
+
+Live trial ran 2026-08-07 against real `weaver web` (live deepseek-v4-flash,
+real bge-large index at `.weaver/retrieval/index`). One turn, one question
+("Who killed the leader of the hunting party in the dark city?"):
+- 8 SSE tool events streamed (search_library/open_chapters, start/done ok
+  x2 each) followed by 231 deltas and one completed event.
+- The answer was grounded and canon-correct: Sunny killed the party leader
+  with a thrown kunai, cited chapters 99 and 101, after opening both.
+- Durable store check: the 4 tool_result rows for that turn contain zero
+  novel prose. search_library rows keep hit metadata + passage handles;
+  open_chapters rows persist only the `durable_evidence` record
+  (source_kind/chapter/line range/source_hash/passage_handle).
+- Honest note: the dense arm ranked chapter 313 top for that query (the
+  Dark City arc spans ~90-350); the model still reached the right chapters
+  via the notebook hits and its second search. Ranking quality stays a
+  known weak spot, not a blocker for the seam.
+
+Seam shipped with the trial: `on_tool_event` (name/status/detail) threads
+from tools dispatch through run_turn/SessionWeave.send to the web SSE layer
+as `tool` events, and the React frontend renders them as dim activity lines
+("search_library ok") instead of the model narrating its steps. The web
+system prompt was tightened: never narrate steps, search at most twice,
+open 1-2 hits, answer in the same message.
 
 Deferred:
 - Weighted RRF (20 questions too small for a train/val split; the 35-set
   from r/ShadowSlave makes a future split plausible).
 - bge-large full-corpus comparison (slice runs on the 1-200 set; the
   per-arm gap is consistent enough to trust the slice).
-- Dense search in the web tools (embedder not wired; sparse-only).
+- Search ranking quality (dense ranked ch313 top for the trial question).

@@ -208,3 +208,67 @@ describe("ChatApp", () => {
     expect(conversationRail).not.toHaveClass("conversation-rail-collapsed");
   });
 });
+
+describe("ChatApp tool activity", () => {
+  it("renders search/open activity lines while a turn streams", async () => {
+    const api = createApi(
+      (async function* (): AsyncGenerator<StreamEvent> {
+        yield { type: "tool", name: "search_library", status: "start", detail: "" };
+        yield { type: "tool", name: "search_library", status: "done", detail: "ok" };
+        yield { type: "tool", name: "open_chapters", status: "start", detail: "" };
+        yield { type: "tool", name: "open_chapters", status: "done", detail: "ok" };
+        yield { type: "delta", text: "Sunny slew the leader with the kunai." };
+        yield { type: "completed", text: "Sunny slew the leader with the kunai." };
+      })(),
+    );
+
+    localStorage.setItem("weaver.active-conversation", "thread-1");
+    render(<ChatApp api={api} modeLabel="live" privacyLabel="local" />);
+
+    const composer = await screen.findByLabelText("Message Weaver");
+    fireEvent.change(composer, { target: { value: "who killed the leader" } });
+    fireEvent.keyDown(composer, { key: "Enter" });
+
+    const activity = await screen.findByLabelText("Library activity");
+    expect(within(activity).getByText("search_library…")).toBeTruthy();
+    expect(await within(activity).findByText("search_library ok")).toBeTruthy();
+    expect(within(activity).getByText("open_chapters…")).toBeTruthy();
+    expect(await within(activity).findByText("open_chapters ok")).toBeTruthy();
+    expect(
+      await screen.findByText("Sunny slew the leader with the kunai."),
+    ).toBeTruthy();
+  });
+
+  it("clears activity on the next turn", async () => {
+    const api = createApi(
+      (async function* (): AsyncGenerator<StreamEvent> {
+        yield { type: "tool", name: "search_library", status: "start", detail: "" };
+        yield { type: "tool", name: "search_library", status: "done", detail: "ok" };
+        yield { type: "completed", text: "First answer." };
+      })(),
+    );
+
+    localStorage.setItem("weaver.active-conversation", "thread-1");
+    render(<ChatApp api={api} modeLabel="live" privacyLabel="local" />);
+
+    const composer = await screen.findByLabelText("Message Weaver");
+    fireEvent.change(composer, { target: { value: "first" } });
+    fireEvent.keyDown(composer, { key: "Enter" });
+    await screen.findByText("First answer.");
+
+    const secondApi = createApi(
+      (async function* (): AsyncGenerator<StreamEvent> {
+        yield { type: "completed", text: "Second answer." };
+      })(),
+    );
+    const secondRender = render(
+      <ChatApp api={secondApi} modeLabel="live" privacyLabel="local" />,
+    );
+    const secondScreen = within(secondRender.container);
+    const composer2 = await secondScreen.findByLabelText("Message Weaver");
+    fireEvent.change(composer2, { target: { value: "second" } });
+    fireEvent.keyDown(composer2, { key: "Enter" });
+    await secondScreen.findByText("Second answer.");
+    expect(secondScreen.queryByLabelText("Library activity")).toBeNull();
+  });
+});

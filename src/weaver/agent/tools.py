@@ -11,7 +11,8 @@ import json
 import logging
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Coroutine
+from collections.abc import Awaitable, Callable
+from typing import Any, Coroutine
 
 from weaver.agent.errors import (
     CANCELLED,
@@ -27,6 +28,26 @@ from weaver.agent.errors import (
 from ..model_layer import ModelToolSchema
 
 logger = logging.getLogger(__name__)
+
+
+async def _emit_tool_event(
+    context: ToolExecutionContext,
+    tool_name: str,
+    status: str,
+    detail: str = "",
+) -> None:
+    """Forward tool activity to the surface callback (UI activity lines).
+
+    Best-effort like deltas (Phase B pattern): a failing callback is
+    logged and swallowed so a UI hiccup can never fail a turn.
+    """
+    callback = context.on_tool_event
+    if callback is None:
+        return
+    try:
+        await callback(tool_name, status, detail)
+    except Exception:
+        logger.warning("on_tool_event callback failed", exc_info=True)
 
 HandlerFunc = Callable[
     [Any, "ToolExecutionContext"],
@@ -88,6 +109,9 @@ class ToolExecutionContext:
     cancel_event: asyncio.Event
     reader_ceiling: int | None = None
     conversation_id: str = ""
+    # Plan 014 live-trial seam: async (name, status, detail) callback the
+    # surface uses to show tool activity lines. Best-effort like deltas.
+    on_tool_event: Callable[[str, str, str], Awaitable[None]] | None = None
 
     def raise_if_cancelled(self) -> None:
         """Stop at a cooperative handler checkpoint.
@@ -269,6 +293,7 @@ class ToolRegistry:
             ),
         )
 
+        await _emit_tool_event(context, tool_name, "start")
         try:
             await asyncio.wait(
                 {handler_task, cancellation_waiter},
@@ -282,6 +307,7 @@ class ToolRegistry:
                 try:
                     result = handler_task.result()
                 except asyncio.CancelledError:
+                    await _emit_tool_event(context, tool_name, "done", "cancelled")
                     return ToolResult(
                         ok=False,
                         error_code=CANCELLED,
@@ -295,16 +321,19 @@ class ToolRegistry:
                         exc,
                         exc_info=True,
                     )
+                    await _emit_tool_event(context, tool_name, "done", "failed")
                     return ToolResult(
                         ok=False,
                         error_code=TOOL_FAILED,
                         error="Tool execution failed.",
                         started=True,
                     )
+                await _emit_tool_event(context, tool_name, "done", "ok")
             else:
                 # Cancellation won the race.
                 handler_task.cancel()
                 await self._cancel_and_settle(handler_task)
+                await _emit_tool_event(context, tool_name, "done", "cancelled")
                 return ToolResult(
                     ok=False,
                     error_code=CANCELLED,
