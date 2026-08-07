@@ -112,18 +112,13 @@ def test_entity_map_resolves_aliases(notebook_dir: Path):
     assert not em.is_known("power:nonexistent")
 
 
-def test_connection_graph_bfs_and_ceiling(notebook_dir: Path):
+def test_connection_graph_bfs(notebook_dir: Path):
     g = ConnectionGraph(notebook_dir)
     reached = g.reachable(["statement:chapter-0098:05"], depth=2)
     assert "person:sunny" in reached
-    # ceiling below chapter 98 cuts everything
-    reached = g.reachable(["statement:chapter-0098:05"], depth=1, ceiling=50)
-    assert reached == []
 
 
-def test_notebook_reader_ceiling(notebook_dir: Path):
+def test_notebook_reader_loads_all_statements(notebook_dir: Path):
     r = NotebookReader(notebook_dir)
     assert len(r.statements) == 1
     assert r.statement_chapter("statement:chapter-0098:05") == 98
-    r2 = NotebookReader(notebook_dir, ceiling=50)
-    assert r2.statements == []

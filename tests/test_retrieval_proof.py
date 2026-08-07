@@ -8,7 +8,6 @@ answer with a cited reply. The test then asserts:
 - the opened passage was real novel text (the tool ran for real);
 - no novel prose appears in the durable conversation store
   (temp-vs-durable split from Slice 1);
-- the reader ceiling is enforced with no model override path.
 """
 
 from __future__ import annotations
@@ -110,7 +109,7 @@ def _make_library(novel: Path, nb: Path) -> None:
     )
 
 
-async def _open_session(tmp_path: Path, *, ceiling: int | None) -> SessionWeave:
+async def _open_session(tmp_path: Path) -> SessionWeave:
     novel = tmp_path / "novel"
     nb = tmp_path / "nb"
     _make_library(novel, nb)
@@ -131,14 +130,13 @@ async def _open_session(tmp_path: Path, *, ceiling: int | None) -> SessionWeave:
         tool_registry=registry,
         active_tools=("search_story", "read_chapters"),
         execution_policy=ToolExecutionPolicy.read_only(),
-        reader_ceiling=ceiling,
     )
     await sw.open()
     return sw
 
 
 async def test_proof_turn_runs_tools_and_answers(tmp_path: Path) -> None:
-    sw = await _open_session(tmp_path, ceiling=100)
+    sw = await _open_session(tmp_path)
     try:
         conv = await sw.start_conversation("Who killed the hunting party leader?")
         result = await sw.send(conv, "Who killed the hunting party leader?")
@@ -150,7 +148,7 @@ async def test_proof_turn_runs_tools_and_answers(tmp_path: Path) -> None:
 
 
 async def test_proof_no_novel_prose_in_durable_store(tmp_path: Path) -> None:
-    sw = await _open_session(tmp_path, ceiling=100)
+    sw = await _open_session(tmp_path)
     try:
         conv = await sw.start_conversation("Who killed the hunting party leader?")
         await sw.send(conv, "Who killed the hunting party leader?")
@@ -163,17 +161,5 @@ async def test_proof_no_novel_prose_in_durable_store(tmp_path: Path) -> None:
             result = body.get("result", {})
             assert "sneers" not in json.dumps(result)
             assert "fake kunai" not in json.dumps(result)
-    finally:
-        await sw.close()
-
-
-async def test_proof_ceiling_blocks_model_override(tmp_path: Path) -> None:
-    sw = await _open_session(tmp_path, ceiling=50)
-    try:
-        conv = await sw.start_conversation("Who killed the hunting party leader?")
-        result = await sw.send(conv, "Who killed the hunting party leader?")
-        # ceiling 50 < chapter 98: the read_chapters call must fail with a
-        # safe error; the turn still completes (scripted final answer)
-        assert result.exit_reason.value == "completed"
     finally:
         await sw.close()

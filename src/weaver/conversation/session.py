@@ -54,7 +54,6 @@ class SessionWeave:
         active_tools: tuple[str, ...] = (),
         execution_policy: ToolExecutionPolicy | None = None,
         token_budget: int | None = None,
-        reader_ceiling: int | None = None,
     ) -> None:
         self._state_dir = state_dir
         self._db: aiosqlite.Connection | None = None
@@ -69,7 +68,6 @@ class SessionWeave:
         self._active_tools = active_tools
         self._execution_policy = execution_policy
         self._token_budget = token_budget
-        self._reader_ceiling = reader_ceiling
 
         provided = [
             model_layer is not None,
@@ -114,7 +112,6 @@ class SessionWeave:
                 active_tools=self._active_tools,
                 execution_policy=self._execution_policy,
                 token_budget=self._token_budget,
-                reader_ceiling=self._reader_ceiling,
             )
 
         # Enforce owner-only file permissions

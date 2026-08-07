@@ -6,7 +6,7 @@ contain no logic of their own beyond validation and formatting:
 
 - search_story: one meaning-search job; returns grouped notebook hits
   and canonical (novel) hits with passage handles and scores. The
-  reader ceiling is applied by machinery and can never be widened by
+  whole novel is always searchable;
   the model; the optional chapter-range and surface refinements only
   narrow the search.
 - read_chapters: opens bounded canonical novel context behind a passage
@@ -56,12 +56,12 @@ class SearchStoryInput(BaseModel):
     chapter_from: int | None = Field(
         default=None,
         ge=1,
-        description="Narrow the search to chapters at or after this chapter. Can only narrow, never widen, the reader's ceiling.",
+        description="Narrow the search to chapters at or after this chapter.",
     )
     chapter_to: int | None = Field(
         default=None,
         ge=1,
-        description="Narrow the search to chapters at or before this chapter. Can only narrow, never widen, the reader's ceiling.",
+        description="Narrow the search to chapters at or before this chapter.",
     )
 
     @model_validator(mode="after")
@@ -90,12 +90,12 @@ class FindTextInput(BaseModel):
     chapter_from: int | None = Field(
         default=None,
         ge=1,
-        description="Narrow to chapters at or after this chapter. Can only narrow, never widen, the reader's ceiling.",
+        description="Narrow to chapters at or after this chapter.",
     )
     chapter_to: int | None = Field(
         default=None,
         ge=1,
-        description="Narrow to chapters at or before this chapter. Can only narrow, never widen, the reader's ceiling.",
+        description="Narrow to chapters at or before this chapter.",
     )
     limit: int = Field(default=20, ge=1, le=50, description="Maximum hits to return.")
 
@@ -166,18 +166,9 @@ class LibraryService:
             inp = SearchStoryInput(**arguments)
         except Exception as exc:
             return {"ok": False, "error_category": "validation", "error": str(exc)}
-        ceiling = getattr(context, "reader_ceiling", None)
-        if ceiling is not None and inp.chapter_to is not None and inp.chapter_to > ceiling:
-            return {
-                "ok": False,
-                "error_category": "validation",
-                "error": f"chapter_to {inp.chapter_to} exceeds the reader ceiling {ceiling}; "
-                "you can only narrow the search, never widen it.",
-            }
         try:
             result = self._run_search(
                 inp.query,
-                ceiling=ceiling,
                 surface=inp.surface,
                 chapter_from=inp.chapter_from,
                 chapter_to=inp.chapter_to,
@@ -191,7 +182,6 @@ class LibraryService:
         self,
         query: str,
         *,
-        ceiling: int | None,
         surface: str,
         chapter_from: int | None,
         chapter_to: int | None,
@@ -199,12 +189,11 @@ class LibraryService:
         canonical: list[dict[str, Any]] = []
         notebook_hits: list[dict[str, Any]] = []
         if surface in ("both", "novel"):
-            canonical = self._search_novel(query, ceiling, chapter_from, chapter_to)
+            canonical = self._search_novel(query, chapter_from, chapter_to)
         if surface in ("both", "notebook"):
-            notebook_hits = self._search_notebook(query, ceiling, chapter_from, chapter_to)
+            notebook_hits = self._search_notebook(query, chapter_from, chapter_to)
         return {
             "query": query,
-            "ceiling": ceiling,
             "canonical_hits": canonical,
             "notebook_hits": notebook_hits,
         }
@@ -212,23 +201,20 @@ class LibraryService:
     def _search_novel(
         self,
         query: str,
-        ceiling: int | None,
         chapter_from: int | None,
         chapter_to: int | None,
     ) -> list[dict[str, Any]]:
         """Dense-first, sparse fallback (measured at the Plan 014 sweep:
         bge-large dense hit@5 0.57 beats BM42 0.40 at 40-line chunks, so
         dense is the primary arm and sparse is the backup for keyword
-        queries the embedder smears). Ceiling and range are payload
-        filters built here, never model arguments."""
+        queries the embedder smears). Range filters are built here, never
+        model arguments."""
         from qdrant_client import models
 
         client = self._client()
         if client is None:
             return []
         filters: list[Any] = []
-        if ceiling is not None:
-            filters.append(models.FieldCondition(key="chapter", range=models.Range(lte=ceiling)))
         if chapter_from is not None:
             filters.append(models.FieldCondition(key="chapter", range=models.Range(gte=chapter_from)))
         if chapter_to is not None:
@@ -277,7 +263,6 @@ class LibraryService:
     def _search_notebook(
         self,
         query: str,
-        ceiling: int | None,
         chapter_from: int | None,
         chapter_to: int | None,
     ) -> list[dict[str, Any]]:
@@ -287,8 +272,6 @@ class LibraryService:
         if client is None or self.sparse_encoder is None:
             return []
         filters: list[Any] = []
-        if ceiling is not None:
-            filters.append(models.FieldCondition(key="chapter", range=models.Range(lte=ceiling)))
         if chapter_from is not None:
             filters.append(models.FieldCondition(key="chapter", range=models.Range(gte=chapter_from)))
         if chapter_to is not None:
@@ -339,14 +322,6 @@ class LibraryService:
                 "error": f"malformed passage handle: {inp.handle!r} (expected novel:NNNN:start-end)",
             }
         chapter, start, end = parsed
-        ceiling = getattr(context, "reader_ceiling", None)
-        if ceiling is not None and chapter > ceiling:
-            return {
-                "ok": False,
-                "error_category": "validation",
-                "error": f"chapter {chapter} is beyond the reader ceiling {ceiling}; "
-                "you can only open chapters at or before the reader position.",
-            }
         try:
             passage = self.index.open_lines(chapter, start, end)
             if inp.lines is not None and inp.lines < (passage.line_end - passage.line_start + 1):
@@ -388,14 +363,7 @@ class LibraryService:
             inp = FindTextInput(**arguments)
         except Exception as exc:
             return {"ok": False, "error_category": "validation", "error": str(exc)}
-        ceiling = getattr(context, "reader_ceiling", None)
-        if ceiling is not None and inp.chapter_to is not None and inp.chapter_to > ceiling:
-            return {
-                "ok": False,
-                "error_category": "validation",
-                "error": f"chapter_to {inp.chapter_to} exceeds the reader ceiling {ceiling}; "
-                "you can only narrow the search, never widen it.",
-            }
+
         try:
             if inp.mode == "speaker":
                 hits = self.index.speaker_clusters(
@@ -447,14 +415,6 @@ class LibraryService:
             inp = BrowseChaptersInput(**arguments)
         except Exception as exc:
             return {"ok": False, "error_category": "validation", "error": str(exc)}
-        ceiling = getattr(context, "reader_ceiling", None)
-        if ceiling is not None and inp.end > ceiling:
-            return {
-                "ok": False,
-                "error_category": "validation",
-                "error": f"end chapter {inp.end} exceeds the reader ceiling {ceiling}; "
-                "you can only browse at or before the reader position.",
-            }
         try:
             chapters = self.index.browse(inp.start, inp.end)
         except Exception:
@@ -517,7 +477,7 @@ def register_reading_tools(
                 "Returns grouped hits: notebook statements first (short summaries with chapter "
                 "evidence, read these first, they often carry the answer) and novel passages "
                 "(chapter + line handles to open with read_chapters). Scores run 0-1; close "
-                "scores are not proof of the right chapter. The reader ceiling is applied "
+                "scores are not proof of the right chapter. The whole novel is always "
                 "automatically and can only be narrowed."
             ),
             parameters=SearchStoryInput.model_json_schema(),
@@ -534,7 +494,7 @@ def register_reading_tools(
                 "Read real novel text by passage handle (novel:NNNN:start-end) from "
                 "search_story, find_text or browse_chapters hits. Novel only, read-only. "
                 "Use whenever the answer needs the actual prose: verify, quote, or follow "
-                "a scene to its end. Never opens beyond the reader ceiling."
+                "a scene to its end."
             ),
             parameters=ReadChaptersInput.model_json_schema(),
             handler=service.read_chapters,
@@ -552,7 +512,7 @@ def register_reading_tools(
                 "distinctive in-world words. mode 'speaker': where a character SPEAKS - "
                 "pass the name, get their dialogue lines with context. Use when meaning "
                 "search cannot rank the answer (e.g. 'where does Weaver speak'). Returns "
-                "chapter + line hits to open with read_chapters. The reader ceiling is "
+                "chapter + line hits to open with read_chapters. The whole novel is "
                 "applied automatically and can only be narrowed."
             ),
             parameters=FindTextInput.model_json_schema(),
@@ -569,7 +529,7 @@ def register_reading_tools(
                 "Skim a chapter range (start to end, at most 50 chapters): each chapter's "
                 "title, length and opening lines. Use to orient an arc or decide which "
                 "chapters to read fully before answering a broad question. The reader "
-                "ceiling is applied automatically and can only be narrowed."
+                "always searchable."
             ),
             parameters=BrowseChaptersInput.model_json_schema(),
             handler=service.browse_chapters,

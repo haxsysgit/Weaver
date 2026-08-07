@@ -257,7 +257,6 @@ async def run_turn(
     max_model_steps: int = 5,
     tool_budget: int | None = None,
     reasoning: ReasoningEffort | None = None,
-    reader_ceiling: int | None = None,
 ) -> TurnResult:
     max_steps = min(max(max_model_steps, 1), _MAX_MODEL_STEPS)
     if tool_budget is not None:
@@ -479,7 +478,6 @@ async def run_turn(
                     turn_id=turn_id,
                     call_id=tool_call.call_id,
                     cancel_event=cancel_event,
-                    reader_ceiling=reader_ceiling,
                     on_tool_event=on_tool_event,
                 )
                 tool_result = await tool_registry.dispatch(

@@ -107,7 +107,6 @@ class ToolExecutionContext:
     turn_id: str
     call_id: str
     cancel_event: asyncio.Event
-    reader_ceiling: int | None = None
     conversation_id: str = ""
     # Plan 014 live-trial seam: async (name, status, detail) callback the
     # surface uses to show tool activity lines. Best-effort like deltas.

@@ -102,20 +102,18 @@ def service(tmp_path: Path) -> LibraryService:
     return svc
 
 
-def ctx(ceiling: int | None = None) -> ToolExecutionContext:
+def ctx() -> ToolExecutionContext:
     return ToolExecutionContext(
         session_id="s", conversation_id="c", turn_id="t", call_id="1",
         cancel_event=asyncio.Event(),
-        reader_ceiling=ceiling,
     )
 
 
 @pytest.mark.asyncio
 async def test_search_story_returns_grouped_hits(service: LibraryService):
-    res = await service.search_story({"query": "who killed the hunting party leader"}, ctx(ceiling=100))
+    res = await service.search_story({"query": "who killed the hunting party leader"}, ctx())
     assert res["ok"] is True
     result = res["result"]
-    assert result["ceiling"] == 100
     chapters = {h["chapter"] for h in result["canonical_hits"]}
     assert 98 in chapters
     for h in result["canonical_hits"]:
@@ -124,26 +122,11 @@ async def test_search_story_returns_grouped_hits(service: LibraryService):
 
 
 @pytest.mark.asyncio
-async def test_ceiling_blocks_above(service: LibraryService):
-    res = await service.search_story({"query": "fake dragon"}, ctx(ceiling=50))
-    assert res["ok"] is True
-    for h in res["result"]["canonical_hits"]:
-        assert h["chapter"] <= 50
-
-
-@pytest.mark.asyncio
-async def test_model_cannot_widen_ceiling(service: LibraryService):
-    res = await service.search_story({"query": "kunai", "chapter_to": 500}, ctx(ceiling=50))
-    assert res["ok"] is False
-    assert "ceiling" in res["error"]
-
-
-@pytest.mark.asyncio
 async def test_surface_narrowing(service: LibraryService):
-    res = await service.search_story({"query": "kunai", "surface": "novel"}, ctx(ceiling=100))
+    res = await service.search_story({"query": "kunai", "surface": "novel"}, ctx())
     assert res["result"]["notebook_hits"] == []
     assert res["result"]["canonical_hits"]
-    res = await service.search_story({"query": "kunai", "surface": "notebook"}, ctx(ceiling=100))
+    res = await service.search_story({"query": "kunai", "surface": "notebook"}, ctx())
     assert res["result"]["canonical_hits"] == []
     assert res["result"]["notebook_hits"]
 
@@ -151,7 +134,7 @@ async def test_surface_narrowing(service: LibraryService):
 @pytest.mark.asyncio
 async def test_read_chapters_opens_novel_only(service: LibraryService):
     handle = make_passage_handle(98, 3, 4)
-    res = await service.read_chapters({"handle": handle}, ctx(ceiling=100))
+    res = await service.read_chapters({"handle": handle}, ctx())
     assert res["ok"] is True
     r = res["result"]
     assert r["chapter"] == 98
@@ -160,17 +143,10 @@ async def test_read_chapters_opens_novel_only(service: LibraryService):
 
 
 @pytest.mark.asyncio
-async def test_read_chapters_respects_ceiling(service: LibraryService):
-    res = await service.read_chapters({"handle": make_passage_handle(98, 3, 4)}, ctx(ceiling=50))
-    assert res["ok"] is False
-    assert "ceiling" in res["error"]
-
-
-@pytest.mark.asyncio
 async def test_read_chapters_rejects_bad_handle(service: LibraryService):
-    res = await service.read_chapters({"handle": "novel:0098:99-100"}, ctx(ceiling=100))
+    res = await service.read_chapters({"handle": "novel:0098:99-100"}, ctx())
     assert res["ok"] is False
-    res = await service.read_chapters({"handle": "bogus"}, ctx(ceiling=100))
+    res = await service.read_chapters({"handle": "bogus"}, ctx())
     assert res["ok"] is False
 
 
@@ -205,7 +181,7 @@ async def test_dense_first_when_embedder_present(service: LibraryService):
         embedder=FakeEmbedder(),
         sparse_encoder=_EmptySparse(),
     )
-    res = await svc.search_story({"query": "who killed the hunting party leader"}, ctx(ceiling=100))
+    res = await svc.search_story({"query": "who killed the hunting party leader"}, ctx())
     assert res["ok"] is True
     hits = res["result"]["canonical_hits"]
     assert hits, "novel hits must come from the dense arm when sparse never matches"
@@ -214,7 +190,7 @@ async def test_dense_first_when_embedder_present(service: LibraryService):
 
 @pytest.mark.asyncio
 async def test_find_text_phrase_mode(service: LibraryService):
-    res = await service.find_text({"query": "fake kunai", "mode": "phrase"}, ctx(ceiling=100))
+    res = await service.find_text({"query": "fake kunai", "mode": "phrase"}, ctx())
     assert res["ok"] is True
     hits = res["result"]["hits"]
     assert any(h["chapter"] == 98 and h["text"] == "sunny kills the leader with the fake kunai" for h in hits)
@@ -227,7 +203,7 @@ async def test_find_text_phrase_mode(service: LibraryService):
 
 @pytest.mark.asyncio
 async def test_find_text_phrase_skips_title_line(service: LibraryService):
-    res = await service.find_text({"query": "Fake", "mode": "phrase"}, ctx(ceiling=100))
+    res = await service.find_text({"query": "Fake", "mode": "phrase"}, ctx())
     hits = res["result"]["hits"]
     assert all(h["line"] != 1 for h in hits)
 
@@ -235,21 +211,14 @@ async def test_find_text_phrase_skips_title_line(service: LibraryService):
 @pytest.mark.asyncio
 async def test_find_text_speaker_mode(service: LibraryService):
     # the fixture chapter has "the leader of the hunting party sneers"
-    res = await service.find_text({"query": "hunting party", "mode": "speaker"}, ctx(ceiling=100))
+    res = await service.find_text({"query": "hunting party", "mode": "speaker"}, ctx())
     assert res["ok"] is True
     assert res["result"]["mode"] == "speaker"
 
 
 @pytest.mark.asyncio
-async def test_find_text_ceiling_cannot_be_widened(service: LibraryService):
-    res = await service.find_text({"query": "kunai", "chapter_to": 500}, ctx(ceiling=50))
-    assert res["ok"] is False
-    assert "ceiling" in res["error"]
-
-
-@pytest.mark.asyncio
 async def test_browse_chapters_returns_titles_and_previews(service: LibraryService):
-    res = await service.browse_chapters({"start": 1, "end": 3}, ctx(ceiling=100))
+    res = await service.browse_chapters({"start": 1, "end": 3}, ctx())
     assert res["ok"] is True
     chapters = res["result"]["chapters"]
     assert [c["chapter"] for c in chapters] == [1, 3]  # missing chapters skipped
@@ -260,7 +229,7 @@ async def test_browse_chapters_returns_titles_and_previews(service: LibraryServi
 
 @pytest.mark.asyncio
 async def test_browse_chapters_rejects_wide_range(service: LibraryService):
-    res = await service.browse_chapters({"start": 1, "end": 100}, ctx(ceiling=100))
+    res = await service.browse_chapters({"start": 1, "end": 100}, ctx())
     assert res["ok"] is False
     assert "50" in res["error"]
 

@@ -3,15 +3,17 @@ tools (search_library, open_chapters).
 
 Everything here is pure machinery. No LLM calls, no model arguments.
 The model-facing tools in tools.py only validate and format; all
-decisions (ceiling, alias resolution, connection traversal, story-state
+decisions (alias resolution, connection traversal, story-state
 assembly, output limits) live here and are fully tested without a model.
 
 The library is the private story knowledge base:
 - the novel (immutable chapter files, the source of truth);
 - the notebook (reading/NNNN.json records, entity pages, connections).
 
-Reader position (the ceiling) is conversation state, never a model
-argument: every read path takes the ceiling from the caller and applies
+Every read path is whole-novel: no position filter exists anywhere.
+Chapter-range narrowing is an optional model-chosen refinement, never an
+enforced boundary. Spoiler handling lives in the answer framing (the
+spoiler map + judge), not in retrieval.
 it as a payload filter or range check, so a model cannot widen its own
 spoiler boundary.
 """
@@ -78,7 +80,6 @@ class SearchResult:
     """Grouped, tagged result of one search job."""
 
     query: str
-    ceiling: int | None
     canonical_hits: list[CanonicalHit]
     notebook_hits: list[NotebookHit]
     surface: str = "both"  # both | novel | notebook
@@ -86,9 +87,8 @@ class SearchResult:
 
 @dataclass(frozen=True)
 class StoryState:
-    """The story as of a chapter: entities with known facts."""
+    """Entities with their known facts from the notebook."""
 
-    ceiling: int
     entities: dict[str, list[dict]]  # canonical id -> statement dicts
 
 
@@ -395,10 +395,9 @@ class EntityMap:
 class ConnectionGraph:
     """Statement-level adjacency, walked deterministically."""
 
-    def __init__(self, notebook_dir: Path, ceiling: int | None = None):
+    def __init__(self, notebook_dir: Path):
         self.adj: dict[str, list[str]] = {}
         self.chapter_of: dict[str, int] = {}
-        self._ceiling = ceiling
         self._load(notebook_dir)
 
     def _load(self, notebook_dir: Path) -> None:
@@ -423,22 +422,15 @@ class ConnectionGraph:
                 self.chapter_of.setdefault(source, int(chapter))
                 self.chapter_of.setdefault(target, int(chapter))
 
-    def neighbors(self, node: str, ceiling: int | None = None) -> list[str]:
-        """Neighbors within the ceiling (applied by machinery)."""
-        cap = ceiling if ceiling is not None else self._ceiling
-        out = []
-        for n in self.adj.get(node, []):
-            if cap is not None and self.chapter_of.get(n, 0) > cap:
-                continue
-            out.append(n)
-        return out
+    def neighbors(self, node: str) -> list[str]:
+        """Adjacent statement ids (undirected)."""
+        return list(self.adj.get(node, []))
 
-    def reachable(self, seeds: list[str], *, depth: int = 2, ceiling: int | None = None, max_nodes: int = 200) -> list[str]:
+    def reachable(self, seeds: list[str], *, depth: int = 2, max_nodes: int = 200) -> list[str]:
         """Depth-capped BFS from seeds, bounded output."""
-        cap = ceiling if ceiling is not None else self._ceiling
         reached: list[str] = []
         seen: set[str] = set()
-        frontier = [s for s in seeds if (cap is None or self.chapter_of.get(s, 0) <= cap)]
+        frontier = list(seeds)
         for _ in range(depth):
             if not frontier or len(reached) >= max_nodes:
                 break
@@ -448,7 +440,7 @@ class ConnectionGraph:
                     continue
                 seen.add(node)
                 reached.append(node)
-                for n in self.neighbors(node, ceiling=cap):
+                for n in self.neighbors(node):
                     if n not in seen:
                         nxt.append(n)
             frontier = nxt
@@ -463,22 +455,17 @@ class ConnectionGraph:
 class NotebookReader:
     """Statements and entity pages from the notebook."""
 
-    def __init__(self, notebook_dir: Path, ceiling: int | None = None):
+    def __init__(self, notebook_dir: Path):
         self.notebook_dir = notebook_dir
-        self._ceiling = ceiling
         self.statements: list[dict] = []
         self.by_id: dict[str, dict] = {}
         self._load()
 
     def _load(self) -> None:
-        cap = self._ceiling
         for rec in sorted((self.notebook_dir / "reading").glob("[0-9]*.json")):
             try:
                 data = json.loads(rec.read_text(encoding="utf-8"))
             except json.JSONDecodeError:
-                continue
-            chapter = int(data.get("chapter", 0))
-            if cap is not None and chapter > cap:
                 continue
             for st in data.get("statements", []):
                 self.statements.append(st)

@@ -90,15 +90,16 @@ in the future need bash- and sed-grade finders and readers for real
 agentic RAG and search. That means a tool family shaped like this:
 
 - a grep-like finder (phrase seed in, every chapter and line out,
-  verbatim, ceiling-bounded)
+  verbatim, whole-novel)
 - a sed-like reader (open a chapter, read a line range, return the
   text)
 - a chapter browser (walk a range, list titles, jump)
 - entity and connection traversal over the notebook
 
 Scoped to the library: the model gets these tools against `novels/` and
-the notebook, never raw operating-system access. Read-only, ceiling
-enforced by machinery, prose never persisted (temp-vs-durable split).
+the notebook, never raw operating-system access. Read-only, prose
+never persisted (temp-vs-durable split). No position filter: the whole
+novel is always searchable, spoiler care lives in answer framing.
 The design principle stays: the model reasons and finds, deterministic
 machinery does the rest.
 
@@ -106,7 +107,7 @@ machinery does the rest.
 
 The first honest non-circular run: 40 questions drawn from the novel
 itself (30 paraphrased, half beyond chapter 1000 where the notebook has
-no statements), ceiling 3127, against the real persistent index.
+no statements), whole novel, against the real persistent index.
 
 Numbers (hit@5 / MRR): notebook exact 0.35/0.16, dense novel 0.23/0.13,
 notebook connections 0.23/0.13, hybrid rrf 0.20/0.12, hybrid dbsf
