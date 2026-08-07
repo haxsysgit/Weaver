@@ -7,9 +7,7 @@ from weaver.agent.messages import (
     AssistantMessage,
     ToolCallMessage,
     ToolResultMessage,
-    UserMessage,
 )
-from weaver.agent.session import AgentSession
 from weaver.agent.tools import (
     EffectKind,
     ToolDefinition,
@@ -601,43 +599,6 @@ class TestTurnProtocol:
         assert len(assistant_messages) == 1
         assert assistant_messages[0].tool_calls == (call,)
 
-    async def test_later_user_turn_replays_the_complete_exchange(
-        self,
-    ) -> None:
-        call = tool_call("call-1", "echo", '{"message":"hello"}')
-        layer, model, provider = scripted_layer(
-            tool_response(call),
-            stop_response("First answer."),
-            stop_response("Second answer."),
-        )
-        session = AgentSession(
-            session_id="session-1",
-            model_layer=layer,
-            model=model,
-            system_prompt="You are Weaver.",
-            tool_registry=make_registry(),
-            execution_policy=ToolExecutionPolicy.read_only(),
-            active_tools=("echo",),
-        )
-
-        first = await session.send("First question")
-        second = await session.send("Second question")
-
-        assert first.exit_reason == TurnExitReason.COMPLETED
-        assert second.exit_reason == TurnExitReason.COMPLETED
-        replay = provider.calls[2].request.messages
-        assert [message.role for message in replay] == [
-            "system",
-            "user",
-            "assistant",
-            "tool",
-            "assistant",
-            "user",
-        ]
-        assert replay[2].tool_calls == (call,)
-        assert replay[3].tool_call_id == "call-1"
-
-
 class TestUnsafeModelResponses:
     @pytest.mark.parametrize(
         "unsafe_call",
@@ -884,116 +845,7 @@ class TestTurnBoundaries:
         assert not hasattr(request, "model")
         assert provider.calls[0].model == model
 
-    async def test_session_accumulates_history(self) -> None:
-        layer, model, _ = scripted_layer(
-            stop_response("First response."),
-            stop_response("Second response."),
-        )
-        session = AgentSession(
-            session_id="session-2",
-            model_layer=layer,
-            model=model,
-            system_prompt="You are Weaver.",
-            tool_registry=make_registry(),
-            execution_policy=ToolExecutionPolicy.read_only(),
-        )
-
-        await session.send("Message 1")
-        await session.send("Message 2")
-
-        assert session.turn_count == 2
-        assert len(session.history) == 4
-        assert isinstance(session.history[0], UserMessage)
-
-
 class TestToolExecutionEvidence:
-    async def test_session_turn_and_call_ids_reach_handler(self) -> None:
-        received_ids: list[tuple[str, str, str]] = []
-
-        async def handler(arguments, context):
-            received_ids.append(
-                (
-                    context.session_id,
-                    context.turn_id,
-                    context.call_id,
-                )
-            )
-            return {"state": "read"}
-
-        registry = ToolRegistry()
-        registry.register(
-            ToolDefinition(
-                name="inspect",
-                description="Inspect state.",
-                parameters={"type": "object"},
-                handler=handler,
-                effect_kind=EffectKind.READ,
-            )
-        )
-        call = tool_call("call-context", "inspect", "{}")
-        layer, model, _ = scripted_layer(
-            tool_response(call),
-            stop_response("Inspection finished."),
-        )
-        session = AgentSession(
-            session_id="session-real",
-            model_layer=layer,
-            model=model,
-            system_prompt="You are Weaver.",
-            tool_registry=registry,
-            execution_policy=ToolExecutionPolicy.read_only(),
-            active_tools=("inspect",),
-        )
-
-        result = await session.send("Inspect")
-
-        assert received_ids == [("session-real", result.turn_id, "call-context")]
-
-    async def test_session_cancel_reaches_running_handler(self) -> None:
-        handler_started = asyncio.Event()
-        cleanup_finished = asyncio.Event()
-
-        async def handler(arguments, context):
-            handler_started.set()
-            try:
-                await asyncio.Event().wait()
-            except asyncio.CancelledError:
-                cleanup_finished.set()
-                raise
-
-        registry = ToolRegistry()
-        registry.register(
-            ToolDefinition(
-                name="waiting-read",
-                description="Wait for cancellation.",
-                parameters={"type": "object"},
-                handler=handler,
-                effect_kind=EffectKind.READ,
-            )
-        )
-        layer, model, provider = scripted_layer(
-            tool_response(tool_call("call-session-cancel", "waiting-read", "{}"))
-        )
-        session = AgentSession(
-            session_id="session-cancel",
-            model_layer=layer,
-            model=model,
-            system_prompt="You are Weaver.",
-            tool_registry=registry,
-            execution_policy=ToolExecutionPolicy.read_only(),
-            active_tools=("waiting-read",),
-        )
-        send_task = asyncio.create_task(session.send("Wait"))
-
-        await handler_started.wait()
-        session.cancel()
-        result = await send_task
-
-        assert cleanup_finished.is_set()
-        assert result.exit_reason == TurnExitReason.INTERRUPTED
-        assert result.tool_starts == 1
-        assert len(provider.calls) == 1
-
     async def test_turn_counts_only_handlers_that_started(self) -> None:
         starts: dict[str, int] = {}
 

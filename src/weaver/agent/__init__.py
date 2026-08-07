@@ -8,7 +8,6 @@ from .messages import (
     ToolResultMessage,
     UserMessage,
 )
-from .session import AgentSession
 from .tools import (
     EffectKind,
     ToolDefinition,
@@ -19,7 +18,6 @@ from .tools import (
 from .turn import TurnExitReason, TurnResult, run_turn
 
 __all__ = [
-    "AgentSession",
     "AssistantMessage",
     "ConversationMessage",
     "EffectKind",
