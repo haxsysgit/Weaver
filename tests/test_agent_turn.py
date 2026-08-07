@@ -284,6 +284,26 @@ class TestToolBudget:
             "Your tool steps are spent. Answer now from what you have gathered. Do not call tools.",
         ]
 
+    async def test_tool_budget_forced_call_strips_tools(self) -> None:
+        """The forced answer call carries no tool schemas, so the model
+        physically cannot call a tool on it (hermes-style)."""
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response("Done."),
+        )
+        await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            tool_budget=1,
+        )
+        assert len(provider.calls) == 2
+        # the tool step still carries the schema
+        assert any(t.name == "echo" for t in provider.calls[0].request.tools)
+        # the forced answer call carries no tools at all
+        assert provider.calls[1].request.tools == ()
+
 
 class TestActiveDispatch:
     async def test_unknown_tool_is_checked_first(self) -> None:

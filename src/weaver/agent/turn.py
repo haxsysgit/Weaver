@@ -292,7 +292,10 @@ async def run_turn(
             ]
         request = ModelRequest(
             messages=tuple(request_messages),
-            tools=tuple(tool_schemas),
+            # Plan 15: on the forced call the tools are stripped from the
+            # request (hermes-style), so the model physically cannot call
+            # one and must write the answer.
+            tools=() if forced_answer else tuple(tool_schemas),
         )
 
         try:
