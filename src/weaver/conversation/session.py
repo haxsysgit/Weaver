@@ -19,6 +19,7 @@ from weaver.agent.turn import (
     TurnResult,
 )
 from weaver.model_layer import ModelLayer, ModelSpec
+from weaver.model_layer.types import ReasoningEffort
 
 from .coordinator import RunCoordinator
 from .repository import ConversationRepository
@@ -134,6 +135,7 @@ class SessionWeave:
         on_delta: DeltaCallback | None = None,
         on_tool_event: ToolEventCallback | None = None,
         tool_budget: int | None = None,
+        reasoning: ReasoningEffort | None = None,
     ) -> TurnResult:
         """Run one full turn with the owner's input and return the result.
 
@@ -153,6 +155,9 @@ class SessionWeave:
         Plan 15 seam: tool_budget caps the tool-calling steps; the final
         answer call is always guaranteed. None keeps the legacy
         max_model_steps behavior.
+
+        Plan 15 seam: reasoning picks the per-call reasoning effort
+        (always-on thinking). None keeps thinking disabled.
         """
         assert self._repo is not None and self._coordinator is not None
         assert self._runner is not None, (
@@ -183,6 +188,7 @@ class SessionWeave:
             on_delta=on_delta,
             on_tool_event=on_tool_event,
             tool_budget=tool_budget,
+            reasoning=reasoning,
         )
 
     async def start_conversation(self, owner_text: str) -> str:

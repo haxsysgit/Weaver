@@ -28,6 +28,7 @@ from weaver.agent.tools import (
 from ..model_layer import (
     ModelLayer,
     ModelMessage,
+    ModelReasoning,
     ModelRequest,
     ModelResponse,
     ModelSpec,
@@ -36,6 +37,7 @@ from ..model_layer import (
     ModelToolCall,
 )
 from ..model_layer.layer import ModelProtocolError
+from ..model_layer.types import ReasoningEffort
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +53,16 @@ TOOL_BUDGET_TIERS: dict[str, int] = {
     "awakened": 50,
     "ascended": 70,
     "transcendent": 90,
+}
+
+# Plan 15 (2026-08-07, owner decision): thinking is ALWAYS on for every
+# tier. Only the tool budget and the reasoning effort differ. DeepSeek's
+# API only supports high and max (low/medium clamp up to high), so
+# awakened and ascended share high and transcendent gets max.
+REASONING_TIERS: dict[str, ReasoningEffort] = {
+    "awakened": "high",
+    "ascended": "high",
+    "transcendent": "max",
 }
 
 # Per-step countdown reminders are noise at 50-90 step budgets; they only
@@ -244,6 +256,7 @@ async def run_turn(
     on_tool_event: ToolEventCallback | None = None,
     max_model_steps: int = 5,
     tool_budget: int | None = None,
+    reasoning: ReasoningEffort | None = None,
     reader_ceiling: int | None = None,
 ) -> TurnResult:
     max_steps = min(max(max_model_steps, 1), _MAX_MODEL_STEPS)
@@ -313,6 +326,14 @@ async def run_turn(
             # request (hermes-style), so the model physically cannot call
             # one and must write the answer.
             tools=() if forced_answer else tuple(tool_schemas),
+            # Plan 15 (owner 2026-08-07): thinking stays on for every
+            # tier; the tier only picks the reasoning effort. None keeps
+            # the pre-tier behavior (thinking disabled, no effort).
+            reasoning=(
+                ModelReasoning(enabled=True, effort=reasoning)
+                if reasoning is not None
+                else ModelReasoning()
+            ),
         )
 
         try:

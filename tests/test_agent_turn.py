@@ -186,6 +186,7 @@ async def execute_turn(
     persist_message=None,
     max_model_steps: int = 5,
     tool_budget: int | None = None,
+    reasoning: str | None = None,
     execution_policy: ToolExecutionPolicy | None = None,
 ):
     return await run_turn(
@@ -202,6 +203,7 @@ async def execute_turn(
         persist_message=persist_message,
         max_model_steps=max_model_steps,
         tool_budget=tool_budget,
+        reasoning=reasoning,
     )
 
 
@@ -1152,3 +1154,43 @@ class TestToolExecutionEvidence:
             ("call-inactive", "cancelled"),
             ("call-unknown", "cancelled"),
         ]
+
+
+class TestReasoningTiers:
+    async def test_reasoning_effort_threads_into_every_model_request(
+        self,
+    ) -> None:
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response("Done."),
+        )
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            reasoning="max",
+        )
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert len(provider.calls) == 2
+        for call in provider.calls:
+            assert call.request.reasoning.enabled is True
+            assert call.request.reasoning.effort == "max"
+
+    async def test_no_reasoning_keeps_thinking_disabled(self) -> None:
+        layer, model, provider = scripted_layer(stop_response("Done."))
+        result = await execute_turn(layer, model)
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert provider.calls[0].request.reasoning.enabled is False
+        assert provider.calls[0].request.reasoning.effort is None
+
+    def test_tiers_keep_thinking_on_and_only_vary_effort(self) -> None:
+        from weaver.agent.turn import REASONING_TIERS
+
+        # Owner decision 2026-08-07: thinking is always on for all three
+        # tiers; only the tool budget and the reasoning effort differ.
+        assert REASONING_TIERS == {
+            "awakened": "high",
+            "ascended": "high",
+            "transcendent": "max",
+        }

@@ -23,6 +23,7 @@ from weaver.agent.turn import (
 )
 from weaver.agent.tools import ToolExecutionPolicy, ToolRegistry
 from weaver.model_layer import ModelLayer, ModelSpec
+from weaver.model_layer.types import ReasoningEffort
 
 from .assembler import ContextAssembler
 from .common import now
@@ -111,6 +112,7 @@ class ConversationRunner:
         on_delta: DeltaCallback | None = None,
         on_tool_event: ToolEventCallback | None = None,
         tool_budget: int | None = None,
+        reasoning: ReasoningEffort | None = None,
     ) -> TurnResult:
         """Run one bounded model/tool turn inside an existing run.
 
@@ -151,6 +153,7 @@ class ConversationRunner:
             on_tool_event=on_tool_event,
             reader_ceiling=self._reader_ceiling,
             tool_budget=tool_budget,
+            reasoning=reasoning,
         )
 
         # Plan 010 Phase D: surface the context meter on the result so the
