@@ -100,3 +100,44 @@ the notebook, never raw operating-system access. Read-only, ceiling
 enforced by machinery, prose never persisted (temp-vs-durable split).
 The design principle stays: the model reasons and finds, deterministic
 machinery does the rest.
+
+## The whole-novel measurement that settled the strategy (2026-08-07)
+
+The first honest non-circular run: 40 questions drawn from the novel
+itself (30 paraphrased, half beyond chapter 1000 where the notebook has
+no statements), ceiling 3127, against the real persistent index.
+
+Numbers (hit@5 / MRR): notebook exact 0.35/0.16, dense novel 0.23/0.13,
+notebook connections 0.23/0.13, hybrid rrf 0.20/0.12, hybrid dbsf
+0.17/0.15, novel sparse 0.12/0.09. Dense hit@10: 0.40. Dense hit@1:
+0.03.
+
+Meaning: no single arm is reliable enough to be the answer machine.
+The old 0.86 was circular (questions written from notebook statements)
+and inside the notebook's coverage. On the real whole-novel task,
+retrieval is a lead generator: the right chapter is usually in the top
+10, almost never at the top.
+
+Locked direction, the hybrid:
+- meaning search (dense and sparse) finds candidate chapters, never
+  final answers
+- the agent (the model) decides how to retrieve: which search, whether
+  to refine, when to fall back to an exact phrase
+- the finder tools (grep-like exact phrase, sed-like reading, chapter
+  browsing) catch what meaning search cannot rank; the Weaver-voice
+  trace above is the proof
+- the context assembler (the weaving) decides what goes into the
+  reading packet
+- the LLM decides how to rank the candidates after reading the real
+  text
+- exact parameters (tool budgets, fallback rules, packet size) are
+  tuned by experiment, not decree
+
+## Status
+
+Locked by the owner on 2026-08-07 as a capability requirement for Plan
+15 and the Reader Trials. Owner's words: "THIS IS THE CAPABILITY I WANT
+WEAVER TO HAVE." Amended the same day with the whole-novel measurement:
+retrieval is a hybrid of meaning search plus finder tools; the agent
+decides how to retrieve, the assembler and the LLM decide ranking,
+parameters by experiment.
