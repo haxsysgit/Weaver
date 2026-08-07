@@ -1,8 +1,8 @@
 """Slice 4: deterministic proof of the reading tools inside a real
 conversation turn, with a scripted fake model. No live model calls.
 
-The fake provider is scripted to: (1) emit a search_library tool call,
-(2) after the tool result, emit an open_chapters tool call, (3) finally
+The fake provider is scripted to: (1) emit a search_story tool call,
+(2) after the tool result, emit an read_chapters tool call, (3) finally
 answer with a cited reply. The test then asserts:
 - the turn completed with a cited answer;
 - the opened passage was real novel text (the tool ran for real);
@@ -57,16 +57,16 @@ def _scripted_provider() -> FakeModelProvider:
         "deepseek",
         models=(DEEPSEEK_FLASH,),
         responses=(
-            # step 1: call search_library
+            # step 1: call search_story
             _mk_response(
                 None,
-                (_tool_call("search_library", {"query": "who killed the hunting party leader"}, "c1"),),
+                (_tool_call("search_story", {"query": "who killed the hunting party leader"}, "c1"),),
                 ModelStopReason.TOOL_USE,
             ),
-            # step 2: call open_chapters on a hit
+            # step 2: call read_chapters on a hit
             _mk_response(
                 None,
-                (_tool_call("open_chapters", {"handle": "novel:0098:3-4"}, "c2"),),
+                (_tool_call("read_chapters", {"handle": "novel:0098:3-4"}, "c2"),),
                 ModelStopReason.TOOL_USE,
             ),
             # step 3: final cited answer
@@ -129,7 +129,7 @@ async def _open_session(tmp_path: Path, *, ceiling: int | None) -> SessionWeave:
         model=model_layer.get_model(DEEPSEEK_FLASH.provider_id, DEEPSEEK_FLASH.model_id),
         system_prompt="You are Weaver. Use the tools.",
         tool_registry=registry,
-        active_tools=("search_library", "open_chapters"),
+        active_tools=("search_story", "read_chapters"),
         execution_policy=ToolExecutionPolicy.read_only(),
         reader_ceiling=ceiling,
     )
@@ -172,7 +172,7 @@ async def test_proof_ceiling_blocks_model_override(tmp_path: Path) -> None:
     try:
         conv = await sw.start_conversation("Who killed the hunting party leader?")
         result = await sw.send(conv, "Who killed the hunting party leader?")
-        # ceiling 50 < chapter 98: the open_chapters call must fail with a
+        # ceiling 50 < chapter 98: the read_chapters call must fail with a
         # safe error; the turn still completes (scripted final answer)
         assert result.exit_reason.value == "completed"
     finally:

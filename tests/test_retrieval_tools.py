@@ -1,4 +1,4 @@
-"""Slice 3 tool tests: search_library and open_chapters on synthetic
+"""Slice 3 tool tests: search_story and read_chapters on synthetic
 data with a real in-memory Qdrant. No LLM, no network."""
 
 from __future__ import annotations
@@ -48,8 +48,10 @@ def service(tmp_path: Path) -> LibraryService:
     (novel / "0001-0100").mkdir(parents=True)
     (novel / "0101-0200").mkdir()
     ch1 = ["Shadow Slave-Chapter 1 - 1: Fake", "the fake knight fights the fake dragon", "", "the dragon breathes fake fire"]
+    ch3 = ["Shadow Slave-Chapter 3 - 3: Fake", "the fake knight sneaks through the ruins"]
     ch98 = ["Shadow Slave-Chapter 98 - 98: Fake", "the leader of the hunting party sneers", "", "sunny kills the leader with the fake kunai"]
     (novel / "0001-0100" / "chapter-0001.txt").write_text("\n".join(ch1))
+    (novel / "0001-0100" / "chapter-0003.txt").write_text("\n".join(ch3))
     (novel / "0001-0100" / "chapter-0098.txt").write_text("\n".join(ch98))
 
     nb = tmp_path / "nb"
@@ -109,8 +111,8 @@ def ctx(ceiling: int | None = None) -> ToolExecutionContext:
 
 
 @pytest.mark.asyncio
-async def test_search_library_returns_grouped_hits(service: LibraryService):
-    res = await service.search_library({"query": "who killed the hunting party leader"}, ctx(ceiling=100))
+async def test_search_story_returns_grouped_hits(service: LibraryService):
+    res = await service.search_story({"query": "who killed the hunting party leader"}, ctx(ceiling=100))
     assert res["ok"] is True
     result = res["result"]
     assert result["ceiling"] == 100
@@ -123,7 +125,7 @@ async def test_search_library_returns_grouped_hits(service: LibraryService):
 
 @pytest.mark.asyncio
 async def test_ceiling_blocks_above(service: LibraryService):
-    res = await service.search_library({"query": "fake dragon"}, ctx(ceiling=50))
+    res = await service.search_story({"query": "fake dragon"}, ctx(ceiling=50))
     assert res["ok"] is True
     for h in res["result"]["canonical_hits"]:
         assert h["chapter"] <= 50
@@ -131,25 +133,25 @@ async def test_ceiling_blocks_above(service: LibraryService):
 
 @pytest.mark.asyncio
 async def test_model_cannot_widen_ceiling(service: LibraryService):
-    res = await service.search_library({"query": "kunai", "chapter_to": 500}, ctx(ceiling=50))
+    res = await service.search_story({"query": "kunai", "chapter_to": 500}, ctx(ceiling=50))
     assert res["ok"] is False
     assert "ceiling" in res["error"]
 
 
 @pytest.mark.asyncio
 async def test_surface_narrowing(service: LibraryService):
-    res = await service.search_library({"query": "kunai", "surface": "novel"}, ctx(ceiling=100))
+    res = await service.search_story({"query": "kunai", "surface": "novel"}, ctx(ceiling=100))
     assert res["result"]["notebook_hits"] == []
     assert res["result"]["canonical_hits"]
-    res = await service.search_library({"query": "kunai", "surface": "notebook"}, ctx(ceiling=100))
+    res = await service.search_story({"query": "kunai", "surface": "notebook"}, ctx(ceiling=100))
     assert res["result"]["canonical_hits"] == []
     assert res["result"]["notebook_hits"]
 
 
 @pytest.mark.asyncio
-async def test_open_chapters_opens_novel_only(service: LibraryService):
+async def test_read_chapters_opens_novel_only(service: LibraryService):
     handle = make_passage_handle(98, 3, 4)
-    res = await service.open_chapters({"handle": handle}, ctx(ceiling=100))
+    res = await service.read_chapters({"handle": handle}, ctx(ceiling=100))
     assert res["ok"] is True
     r = res["result"]
     assert r["chapter"] == 98
@@ -158,17 +160,17 @@ async def test_open_chapters_opens_novel_only(service: LibraryService):
 
 
 @pytest.mark.asyncio
-async def test_open_chapters_respects_ceiling(service: LibraryService):
-    res = await service.open_chapters({"handle": make_passage_handle(98, 3, 4)}, ctx(ceiling=50))
+async def test_read_chapters_respects_ceiling(service: LibraryService):
+    res = await service.read_chapters({"handle": make_passage_handle(98, 3, 4)}, ctx(ceiling=50))
     assert res["ok"] is False
     assert "ceiling" in res["error"]
 
 
 @pytest.mark.asyncio
-async def test_open_chapters_rejects_bad_handle(service: LibraryService):
-    res = await service.open_chapters({"handle": "novel:0098:99-100"}, ctx(ceiling=100))
+async def test_read_chapters_rejects_bad_handle(service: LibraryService):
+    res = await service.read_chapters({"handle": "novel:0098:99-100"}, ctx(ceiling=100))
     assert res["ok"] is False
-    res = await service.open_chapters({"handle": "bogus"}, ctx(ceiling=100))
+    res = await service.read_chapters({"handle": "bogus"}, ctx(ceiling=100))
     assert res["ok"] is False
 
 
@@ -177,11 +179,12 @@ def test_registration(service: LibraryService):
 
     reg = ToolRegistry()
     register_reading_tools(reg, service)
-    assert reg.has("search_library")
-    assert reg.has("open_chapters")
-    schemas = reg.active_schemas(("search_library", "open_chapters"))
-    assert [s.name for s in schemas] == ["search_library", "open_chapters"]
-    assert reg._tools["search_library"].effect_kind is EffectKind.READ
+    expected = ["search_story", "read_chapters", "find_text", "browse_chapters", "who_is"]
+    for name in expected:
+        assert reg.has(name), name
+    schemas = reg.active_schemas(tuple(expected))
+    assert [s.name for s in schemas] == expected
+    assert reg._tools["search_story"].effect_kind is EffectKind.READ
 
 
 class _EmptySparse:
@@ -202,8 +205,80 @@ async def test_dense_first_when_embedder_present(service: LibraryService):
         embedder=FakeEmbedder(),
         sparse_encoder=_EmptySparse(),
     )
-    res = await svc.search_library({"query": "who killed the hunting party leader"}, ctx(ceiling=100))
+    res = await svc.search_story({"query": "who killed the hunting party leader"}, ctx(ceiling=100))
     assert res["ok"] is True
     hits = res["result"]["canonical_hits"]
     assert hits, "novel hits must come from the dense arm when sparse never matches"
     assert hits[0]["chapter"] == 98
+
+
+@pytest.mark.asyncio
+async def test_find_text_phrase_mode(service: LibraryService):
+    res = await service.find_text({"query": "fake kunai", "mode": "phrase"}, ctx(ceiling=100))
+    assert res["ok"] is True
+    hits = res["result"]["hits"]
+    assert any(h["chapter"] == 98 and h["text"] == "sunny kills the leader with the fake kunai" for h in hits)
+    # durable evidence carries pointers, never prose
+    for h in res["durable_evidence"]["hits"]:
+        assert h["passage_handle"].startswith("novel:")
+        assert h["source_hash"]
+    assert "kunai" not in str(res["durable_evidence"])
+
+
+@pytest.mark.asyncio
+async def test_find_text_phrase_skips_title_line(service: LibraryService):
+    res = await service.find_text({"query": "Fake", "mode": "phrase"}, ctx(ceiling=100))
+    hits = res["result"]["hits"]
+    assert all(h["line"] != 1 for h in hits)
+
+
+@pytest.mark.asyncio
+async def test_find_text_speaker_mode(service: LibraryService):
+    # the fixture chapter has "the leader of the hunting party sneers"
+    res = await service.find_text({"query": "hunting party", "mode": "speaker"}, ctx(ceiling=100))
+    assert res["ok"] is True
+    assert res["result"]["mode"] == "speaker"
+
+
+@pytest.mark.asyncio
+async def test_find_text_ceiling_cannot_be_widened(service: LibraryService):
+    res = await service.find_text({"query": "kunai", "chapter_to": 500}, ctx(ceiling=50))
+    assert res["ok"] is False
+    assert "ceiling" in res["error"]
+
+
+@pytest.mark.asyncio
+async def test_browse_chapters_returns_titles_and_previews(service: LibraryService):
+    res = await service.browse_chapters({"start": 1, "end": 3}, ctx(ceiling=100))
+    assert res["ok"] is True
+    chapters = res["result"]["chapters"]
+    assert [c["chapter"] for c in chapters] == [1, 3]  # missing chapters skipped
+    assert chapters[0]["title"] == "Fake"
+    assert "knight" in chapters[0]["preview"]
+    assert res["durable_evidence"]["kind"] == "browse_chapters"
+
+
+@pytest.mark.asyncio
+async def test_browse_chapters_rejects_wide_range(service: LibraryService):
+    res = await service.browse_chapters({"start": 1, "end": 100}, ctx(ceiling=100))
+    assert res["ok"] is False
+    assert "50" in res["error"]
+
+
+@pytest.mark.asyncio
+async def test_who_is_resolves_alias_and_title(service: LibraryService):
+    res = await service.who_is({"name": "Mongrel"}, ctx())
+    assert res["ok"] is True
+    entity = res["result"]["entity"]
+    assert entity["entity_id"] == "person:sunny"
+    assert "person:mongrel" in entity["aliases"]
+    res = await service.who_is({"name": "Sunny"}, ctx())
+    assert res["result"]["entity"]["entity_id"] == "person:sunny"
+
+
+@pytest.mark.asyncio
+async def test_who_is_unknown_name_suggests(service: LibraryService):
+    res = await service.who_is({"name": "Sunnykins"}, ctx())
+    assert res["ok"] is True
+    assert res["result"]["found"] is False
+    assert "person:sunny" in res["result"]["suggestions"]

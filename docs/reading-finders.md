@@ -67,10 +67,11 @@ the source of any claim.
 
 ## What this means for Weaver's tools
 
-- The two reading tools (search_library, open_chapters) are not enough
-  alone. The owner-endorsed "other finders" are load-bearing: exact
-  phrase search, chapter-range browsing, entity lookup, connection
-  traversal, direct chapter opens.
+- The reading toolset is now the five finders + readers (2026-08-07):
+  search_story (meaning search), find_text (exact phrase + speaker
+  mode), browse_chapters (range skim), who_is (entity map), read_chapters
+  (open prose by handle). The old two-tool set (search_library,
+  open_chapters) was renamed and extended into this set.
 - The Ariel Reader Trial depends on this exact capability. "Find where
   Ariel fought the Unholy Titan" was answered by grepping "Unholy
   Titan" across the corpus (co-occurrence at ch1247/1248/1319/1482/

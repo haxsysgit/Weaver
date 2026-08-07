@@ -26,6 +26,9 @@ from pathlib import Path
 
 ENTITY_MARKER = re.compile(r"<!--\s*entity-id:\s*([^\s]+)\s*-->")
 ALIAS_MARKER = re.compile(r"<!--\s*alias:\s*([^\s]+)\s*-->")
+FIRST_KNOWN_RE = re.compile(r"first known:\s*chapter\s*(\d+)", re.IGNORECASE)
+QUOTE_STARTS = ("\"", "'", "\u201c", "\u2018")
+TITLE_PREFIX = "Shadow Slave-Chapter"
 STATEMENT_ID_RE = re.compile(r"^statement:chapter-(\d{4}):(\d+)$")
 CONNECTION_ID_RE = re.compile(r"^conn-(\d{4})-\d+")
 
@@ -168,6 +171,122 @@ class ChapterIndex:
         chapter, start, end = parsed
         return self.open_lines(chapter, start, end)
 
+    # ------------------------------------------------------------------
+    # Finders (grep-like machinery over raw chapter text)
+    # ------------------------------------------------------------------
+
+    def _scan(self):
+        """Yield (chapter, text) for every chapter file, in order."""
+        for sub in sorted(self.novel_dir.glob("*")):
+            if not sub.is_dir():
+                continue
+            for path in sorted(sub.glob("chapter-*.txt")):
+                try:
+                    yield int(path.stem.split("-")[1]), path.read_text(encoding="utf-8")
+                except (ValueError, OSError):
+                    continue
+
+    def find_text(
+        self,
+        query: str,
+        *,
+        chapter_from: int = 1,
+        chapter_to: int | None = None,
+        limit: int = 30,
+    ) -> list[dict]:
+        """Exact substring scan over raw chapter text, like grep.
+
+        Line 1 (the title heading) is never story text and is skipped.
+        Returns [{chapter, line, text}] capped at limit.
+        """
+        hits: list[dict] = []
+        for chapter, text in self._scan():
+            if chapter < chapter_from:
+                continue
+            if chapter_to is not None and chapter > chapter_to:
+                continue
+            for i, line in enumerate(text.splitlines(), start=1):
+                if i == 1:
+                    continue
+                if query in line:
+                    hits.append({"chapter": chapter, "line": i, "text": line})
+                    if len(hits) >= limit:
+                        return hits
+        return hits
+
+    def speaker_clusters(
+        self,
+        name: str,
+        *,
+        chapter_from: int = 1,
+        chapter_to: int | None = None,
+        limit: int = 20,
+    ) -> list[dict]:
+        """Find where a character speaks.
+
+        The novel writes dialogue as standalone quote lines with the
+        attribution on a neighboring line, so a name match is only a
+        lead: this scans the +/-2 line window around every name
+        occurrence for quote lines and returns the cluster (name line
+        plus the dialogue around it). Case-insensitive name matching.
+        Returns [{chapter, line_start, line_end, text}] capped at limit.
+        """
+        needle = name.strip().lower()
+        if not needle:
+            return []
+        out: list[dict] = []
+        seen: set[tuple[int, int, int]] = set()
+        for chapter, text in self._scan():
+            if chapter < chapter_from:
+                continue
+            if chapter_to is not None and chapter > chapter_to:
+                continue
+            lines = text.splitlines()
+            for i, line in enumerate(lines, start=1):
+                if i == 1 or needle not in line.lower():
+                    continue
+                lo, hi = max(2, i - 2), min(len(lines), i + 2)
+                quotes = [j for j in range(lo, hi + 1) if lines[j - 1].strip().startswith(QUOTE_STARTS)]
+                if not quotes:
+                    continue
+                lo2, hi2 = min(min(quotes), i), max(max(quotes), i)
+                key = (chapter, lo2, hi2)
+                if key in seen:
+                    continue
+                seen.add(key)
+                out.append(
+                    {
+                        "chapter": chapter,
+                        "line_start": lo2,
+                        "line_end": hi2,
+                        "text": "\n".join(lines[lo2 - 1 : hi2]),
+                    }
+                )
+                if len(out) >= limit:
+                    return out
+        return out
+
+    def browse(self, start: int, end: int) -> list[dict]:
+        """Skim a chapter range: title, length and opening lines."""
+        out: list[dict] = []
+        for chapter in range(start, end + 1):
+            path = self._path(chapter)
+            if not path.exists():
+                continue
+            lines = path.read_text(encoding="utf-8").splitlines()
+            heading = lines[0] if lines else ""
+            title = heading.split(":", 1)[1].strip() if ":" in heading else heading
+            preview = "\n".join(lines[1 : min(7, len(lines))])
+            out.append(
+                {
+                    "chapter": chapter,
+                    "title": title,
+                    "line_count": len(lines),
+                    "preview": preview,
+                }
+            )
+        return out
+
 
 # ---------------------------------------------------------------------------
 # Entity map (canonical ids + aliases)
@@ -186,6 +305,8 @@ class EntityMap:
     def __init__(self, notebook_dir: Path):
         self.canonical: dict[str, str] = {}  # id or alias -> canonical id
         self.aliases: dict[str, str] = {}
+        # canonical id -> page metadata for who_is lookups
+        self.pages: dict[str, dict] = {}
         for sub in ("people", "places", "powers", "items", "groups"):
             for page in sorted((notebook_dir / sub).glob("*.md")):
                 text = page.read_text(encoding="utf-8")
@@ -198,12 +319,72 @@ class EntityMap:
                 for a in alias:
                     self.aliases[a] = canon
                     self.canonical[a] = canon
+                title = ""
+                for line in text.splitlines():
+                    if line.startswith("# ") and not line.startswith("## "):
+                        title = line[2:].strip()
+                        break
+                m = FIRST_KNOWN_RE.search(text)
+                self.pages[canon] = {
+                    "title": title or page.stem,
+                    "first_known": int(m.group(1)) if m else None,
+                    "aliases": alias,
+                    "body": text,
+                }
 
     def resolve(self, link: str) -> str:
         return self.canonical.get(link, link)
 
     def is_known(self, link: str) -> bool:
         return link in self.canonical
+
+    def lookup(self, name: str) -> dict | None:
+        """Resolve a user-style name to the canonical entity page.
+
+        Matches entity ids, aliases, and page titles, case-insensitive;
+        falls back to title containment. Returns the page metadata or
+        None when the name is unknown.
+        """
+        needle = name.strip().lower()
+        if not needle:
+            return None
+        canon = None
+        for key, cid in self.canonical.items():
+            if key.lower() == needle or key.split(":", 1)[1].lower() == needle:
+                canon = cid
+                break
+        if canon is None:
+            for cid, page in self.pages.items():
+                if page["title"].lower() == needle or needle in page["title"].lower():
+                    canon = cid
+                    break
+        if canon is None:
+            return None
+        page = self.pages[canon]
+        return {
+            "entity_id": canon,
+            "kind": canon.split(":", 1)[0],
+            "title": page["title"],
+            "aliases": sorted(page["aliases"]),
+            "first_known_chapter": page["first_known"],
+            "body": page["body"],
+        }
+
+    def suggest(self, name: str, *, limit: int = 5) -> list[str]:
+        """Close ids and titles for unknown names (who_is not-found)."""
+        needle = name.strip().lower()
+        out: list[str] = []
+        for cid, page in self.pages.items():
+            short = cid.split(":", 1)[1]
+            if (
+                needle in cid.lower()
+                or needle in page["title"].lower()
+                or (needle and short in needle)
+            ):
+                out.append(cid)
+                if len(out) >= limit:
+                    break
+        return out
 
 
 # ---------------------------------------------------------------------------

@@ -1160,7 +1160,7 @@ async def test_tool_result_private_material_persists_evidence_only():
     original = ToolResultMessage(
         message_id="m1",
         call_id="call-x",
-        tool_name="open_chapters",
+        tool_name="read_chapters",
         ok=True,
         result=result,
     )
@@ -1242,7 +1242,7 @@ async def test_send_tool_private_material_never_reaches_db():
     registry = ToolRegistry()
     registry.register(
         ToolDefinition(
-            name="open_chapters",
+            name="read_chapters",
             description="Open chapters",
             parameters={"type": "object", "properties": {}},
             handler=reading_handler,
@@ -1259,7 +1259,7 @@ async def test_send_tool_private_material_never_reaches_db():
                     tool_calls=(
                         ModelToolCall(
                             call_id="call-r",
-                            name="open_chapters",
+                            name="read_chapters",
                             arguments_json="{}",
                         ),
                     ),
@@ -1277,7 +1277,7 @@ async def test_send_tool_private_material_never_reaches_db():
             model=model,
             system_prompt="You are Weaver.",
             tool_registry=registry,
-            active_tools=("open_chapters",),
+            active_tools=("read_chapters",),
             execution_policy=ToolExecutionPolicy.read_only(),
         )
         await sw.open()

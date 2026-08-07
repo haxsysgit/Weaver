@@ -213,10 +213,10 @@ describe("ChatApp tool activity", () => {
   it("renders search/open activity lines while a turn streams", async () => {
     const api = createApi(
       (async function* (): AsyncGenerator<StreamEvent> {
-        yield { type: "tool", name: "search_library", status: "start", detail: "" };
-        yield { type: "tool", name: "search_library", status: "done", detail: "ok" };
-        yield { type: "tool", name: "open_chapters", status: "start", detail: "" };
-        yield { type: "tool", name: "open_chapters", status: "done", detail: "ok" };
+        yield { type: "tool", name: "search_story", status: "start", detail: "" };
+        yield { type: "tool", name: "search_story", status: "done", detail: "ok" };
+        yield { type: "tool", name: "read_chapters", status: "start", detail: "" };
+        yield { type: "tool", name: "read_chapters", status: "done", detail: "ok" };
         yield { type: "delta", text: "Sunny slew the leader with the kunai." };
         yield { type: "completed", text: "Sunny slew the leader with the kunai." };
       })(),
@@ -230,10 +230,10 @@ describe("ChatApp tool activity", () => {
     fireEvent.keyDown(composer, { key: "Enter" });
 
     const activity = await screen.findByLabelText("Library activity");
-    expect(within(activity).getByText("search_library…")).toBeTruthy();
-    expect(await within(activity).findByText("search_library ok")).toBeTruthy();
-    expect(within(activity).getByText("open_chapters…")).toBeTruthy();
-    expect(await within(activity).findByText("open_chapters ok")).toBeTruthy();
+    expect(within(activity).getByText("search_story…")).toBeTruthy();
+    expect(await within(activity).findByText("search_story ok")).toBeTruthy();
+    expect(within(activity).getByText("read_chapters…")).toBeTruthy();
+    expect(await within(activity).findByText("read_chapters ok")).toBeTruthy();
     expect(
       await screen.findByText("Sunny slew the leader with the kunai."),
     ).toBeTruthy();
@@ -242,8 +242,8 @@ describe("ChatApp tool activity", () => {
   it("clears activity on the next turn", async () => {
     const api = createApi(
       (async function* (): AsyncGenerator<StreamEvent> {
-        yield { type: "tool", name: "search_library", status: "start", detail: "" };
-        yield { type: "tool", name: "search_library", status: "done", detail: "ok" };
+        yield { type: "tool", name: "search_story", status: "start", detail: "" };
+        yield { type: "tool", name: "search_story", status: "done", detail: "ok" };
         yield { type: "completed", text: "First answer." };
       })(),
     );

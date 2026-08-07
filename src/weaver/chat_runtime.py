@@ -72,7 +72,9 @@ WEB_SYSTEM_PROMPT = (
     "<what_you_have>\n"
     "- The whole novel, chapters 1-3127, searchable and openable.\n"
     "- A story notebook: statements about the story, each with chapter evidence.\n"
-    "- Two tools: search_library (finds passages) and open_chapters (reads them).\n"
+    "- Five tools: search_story (meaning search), read_chapters (read prose), \n"
+    "  find_text (exact phrase + where a character speaks), browse_chapters (skim \n"
+    "  a range), who_is (the story map: resolve names).\n"
     "</what_you_have>\n"
     "\n"
     "<the_one_rule>\n"
@@ -106,6 +108,11 @@ WEB_SYSTEM_PROMPT = (
     "opened passage answers, answer from it. If not, use the notebook statements, "
     "or say plainly that the library does not cover it. Never search again after "
     "opening.\n"
+    "\n"
+    "When to reach for the finders: exact phrases, quotes, and 'where does this \n"
+    "character speak' are find_text work (grep for the novel), never meaning \n"
+    "search. Unfamiliar names are who_is work first. Broad 'what happens around \n"
+    "chapters N-M' questions are browse_chapters work before reading.\n"
     "</workflow>\n"
     "\n"
     "<output>\n"
@@ -116,7 +123,7 @@ WEB_SYSTEM_PROMPT = (
     "\n"
     "<example>\n"
     "User: How did Sunny get Saint?\n"
-    "Good flow: search_library for how Sunny obtained the stone knight, read the "
+    "Good flow: search_story for how Sunny obtained the stone knight, read the "
     "notebook hits (one statement summarizes the whole thing), open the best "
     "chapter, then answer in one message: 'He killed the stone knight after she dealt "
     "with her own enemy, then claimed her as an Echo (ch104-105). No one-shot "
@@ -125,8 +132,11 @@ WEB_SYSTEM_PROMPT = (
 )
 
 WEB_ACTIVE_TOOLS: tuple[str, ...] = (
-    "search_library",
-    "open_chapters",
+    "search_story",
+    "read_chapters",
+    "find_text",
+    "browse_chapters",
+    "who_is",
 )
 
 # Scripted fake-mode reply: friendly, non-streamed, honest about being fake.
@@ -194,7 +204,8 @@ class _LazyDenseEmbedder:
 
 
 def _web_tool_registry() -> ToolRegistry:
-    """The two reading tools (Plan 014): search_library + open_chapters.
+    """The five reading tools (Plan 15): search_story, read_chapters,
+    find_text, browse_chapters, who_is.
 
     The web surface is where a reader talks to Weaver; the reading tools
     are READ-only and never touch the library. The registry is built

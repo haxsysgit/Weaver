@@ -1,19 +1,31 @@
-"""The two reading tools: search_library and open_chapters.
+"""The five reading tools: search_story, read_chapters, find_text,
+find speaker clusters, browse_chapters and who_is.
 
 Thin surfaces over deterministic machinery (library.py). The tools
 contain no logic of their own beyond validation and formatting:
 
-- search_library: one search job; returns grouped canonical (novel)
-  hits and notebook hits, with passage handles and scores. The reader
-  ceiling is applied by machinery as a payload filter and can never be
-  widened by the model. The optional chapter-range and surface
-  refinements only narrow the search.
-- open_chapters: opens bounded canonical novel context behind a passage
+- search_story: one meaning-search job; returns grouped notebook hits
+  and canonical (novel) hits with passage handles and scores. The
+  reader ceiling is applied by machinery and can never be widened by
+  the model; the optional chapter-range and surface refinements only
+  narrow the search.
+- read_chapters: opens bounded canonical novel context behind a passage
   handle. Novel only, never the notebook. Handles are verified against
   the immutable source (line range + source hash) before any text is
   returned.
+- find_text: grep-like exact-substring finder on raw chapter text
+  (mode phrase) and the where-does-a-character-speak finder (mode
+  speaker) built on this novel's dialogue-attribution structure.
+- browse_chapters: skim a chapter range (titles, lengths, opening
+  lines) to orient an arc before reading.
+- who_is: resolve any name to its canonical entity page in the story
+  map (person, place, power, item, group), with aliases and first
+  known chapter.
 
-Both are EffectKind.READ: they never write, never touch the library.
+All are EffectKind.READ: they never write, never touch the library.
+Novel prose is ephemeral model material: every tool that returns it
+carries durable_evidence pointers only (chapter, lines, hash, handle),
+so the conversation store never persists novel text.
 """
 
 from __future__ import annotations
@@ -35,7 +47,7 @@ MAX_NOTEBOOK_HITS = 8
 MAX_PASSAGE_LINES = 200  # ~a chapter-and-a-half, bounded
 
 
-class SearchLibraryInput(BaseModel):
+class SearchStoryInput(BaseModel):
     query: str = Field(min_length=1, max_length=2000, description="The question or search phrase.")
     surface: str = Field(
         default="both",
@@ -53,13 +65,13 @@ class SearchLibraryInput(BaseModel):
     )
 
     @model_validator(mode="after")
-    def _check_surface(self) -> "SearchLibraryInput":
+    def _check_surface(self) -> "SearchStoryInput":
         if self.surface not in ("both", "novel", "notebook"):
             raise ValueError("surface must be one of: both, novel, notebook")
         return self
 
 
-class OpenChaptersInput(BaseModel):
+class ReadChaptersInput(BaseModel):
     handle: str = Field(min_length=1, max_length=64, description="Passage handle like novel:0098:101-123.")
     lines: int | None = Field(
         default=None,
@@ -67,6 +79,48 @@ class OpenChaptersInput(BaseModel):
         le=MAX_PASSAGE_LINES,
         description="Optional line count to open (default: the whole handle range).",
     )
+
+
+class FindTextInput(BaseModel):
+    query: str = Field(min_length=1, max_length=500, description="Exact phrase, or a character name in speaker mode.")
+    mode: str = Field(
+        default="phrase",
+        description="'phrase' finds every line containing the exact text; 'speaker' finds where the character speaks.",
+    )
+    chapter_from: int | None = Field(
+        default=None,
+        ge=1,
+        description="Narrow to chapters at or after this chapter. Can only narrow, never widen, the reader's ceiling.",
+    )
+    chapter_to: int | None = Field(
+        default=None,
+        ge=1,
+        description="Narrow to chapters at or before this chapter. Can only narrow, never widen, the reader's ceiling.",
+    )
+    limit: int = Field(default=20, ge=1, le=50, description="Maximum hits to return.")
+
+    @model_validator(mode="after")
+    def _check_mode(self) -> "FindTextInput":
+        if self.mode not in ("phrase", "speaker"):
+            raise ValueError("mode must be one of: phrase, speaker")
+        return self
+
+
+class BrowseChaptersInput(BaseModel):
+    start: int = Field(ge=1, description="First chapter to skim.")
+    end: int = Field(ge=1, description="Last chapter to skim (at most 49 after start).")
+
+    @model_validator(mode="after")
+    def _check_range(self) -> "BrowseChaptersInput":
+        if self.end < self.start:
+            raise ValueError("end must be >= start")
+        if self.end - self.start > 49:
+            raise ValueError("browse at most 50 chapters per call")
+        return self
+
+
+class WhoIsInput(BaseModel):
+    name: str = Field(min_length=1, max_length=200, description="A name from the story: person, place, power, item, or group.")
 
 
 @dataclass
@@ -100,16 +154,16 @@ class LibraryService:
         return self.client
 
     # ------------------------------------------------------------------
-    # search_library
+    # search_story
     # ------------------------------------------------------------------
 
-    async def search_library(
+    async def search_story(
         self,
         arguments: dict[str, Any],
         context: ToolExecutionContext,
     ) -> dict[str, Any]:
         try:
-            inp = SearchLibraryInput(**arguments)
+            inp = SearchStoryInput(**arguments)
         except Exception as exc:
             return {"ok": False, "error_category": "validation", "error": str(exc)}
         ceiling = getattr(context, "reader_ceiling", None)
@@ -129,7 +183,7 @@ class LibraryService:
                 chapter_to=inp.chapter_to,
             )
         except Exception as exc:
-            logger.warning("search_library failed: %s", exc)
+            logger.warning("search_story failed: %s", exc)
             return {"ok": False, "error_category": "tool_failed", "error": "search failed"}
         return {"ok": True, "result": result}
 
@@ -265,16 +319,16 @@ class LibraryService:
         return out
 
     # ------------------------------------------------------------------
-    # open_chapters
+    # read_chapters
     # ------------------------------------------------------------------
 
-    async def open_chapters(
+    async def read_chapters(
         self,
         arguments: dict[str, Any],
         context: ToolExecutionContext,
     ) -> dict[str, Any]:
         try:
-            inp = OpenChaptersInput(**arguments)
+            inp = ReadChaptersInput(**arguments)
         except Exception as exc:
             return {"ok": False, "error_category": "validation", "error": str(exc)}
         parsed = lib.parse_passage_handle(inp.handle)
@@ -300,7 +354,7 @@ class LibraryService:
         except ValueError as exc:
             return {"ok": False, "error_category": "validation", "error": str(exc)}
         except Exception:
-            logger.warning("open_chapters failed for %r", inp.handle, exc_info=True)
+            logger.warning("read_chapters failed for %r", inp.handle, exc_info=True)
             return {"ok": False, "error_category": "tool_failed", "error": "could not open the passage"}
         return {
             "ok": True,
@@ -321,23 +375,153 @@ class LibraryService:
             },
         }
 
+    # ------------------------------------------------------------------
+    # find_text
+    # ------------------------------------------------------------------
+
+    async def find_text(
+        self,
+        arguments: dict[str, Any],
+        context: ToolExecutionContext,
+    ) -> dict[str, Any]:
+        try:
+            inp = FindTextInput(**arguments)
+        except Exception as exc:
+            return {"ok": False, "error_category": "validation", "error": str(exc)}
+        ceiling = getattr(context, "reader_ceiling", None)
+        if ceiling is not None and inp.chapter_to is not None and inp.chapter_to > ceiling:
+            return {
+                "ok": False,
+                "error_category": "validation",
+                "error": f"chapter_to {inp.chapter_to} exceeds the reader ceiling {ceiling}; "
+                "you can only narrow the search, never widen it.",
+            }
+        try:
+            if inp.mode == "speaker":
+                hits = self.index.speaker_clusters(
+                    inp.query,
+                    chapter_from=inp.chapter_from or 1,
+                    chapter_to=inp.chapter_to,
+                    limit=inp.limit,
+                )
+            else:
+                hits = self.index.find_text(
+                    inp.query,
+                    chapter_from=inp.chapter_from or 1,
+                    chapter_to=inp.chapter_to,
+                    limit=inp.limit,
+                )
+        except Exception:
+            logger.warning("find_text failed for %r", inp.query, exc_info=True)
+            return {"ok": False, "error_category": "tool_failed", "error": "search failed"}
+        durable = {
+            "source_kind": "novel",
+            "kind": f"find_text:{inp.mode}",
+            "hits": [
+                {
+                    "chapter": h["chapter"],
+                    "line_start": h.get("line_start", h["line"]),
+                    "line_end": h.get("line_end", h["line"]),
+                    "source_hash": self.index.source_hash(h["chapter"]),
+                    "passage_handle": lib.make_passage_handle(
+                        h["chapter"],
+                        h.get("line_start", h["line"]),
+                        h.get("line_end", h["line"]),
+                    ),
+                }
+                for h in hits
+            ],
+        }
+        return {"ok": True, "durable_evidence": durable, "result": {"query": inp.query, "mode": inp.mode, "hits": hits}}
+
+    # ------------------------------------------------------------------
+    # browse_chapters
+    # ------------------------------------------------------------------
+
+    async def browse_chapters(
+        self,
+        arguments: dict[str, Any],
+        context: ToolExecutionContext,
+    ) -> dict[str, Any]:
+        try:
+            inp = BrowseChaptersInput(**arguments)
+        except Exception as exc:
+            return {"ok": False, "error_category": "validation", "error": str(exc)}
+        ceiling = getattr(context, "reader_ceiling", None)
+        if ceiling is not None and inp.end > ceiling:
+            return {
+                "ok": False,
+                "error_category": "validation",
+                "error": f"end chapter {inp.end} exceeds the reader ceiling {ceiling}; "
+                "you can only browse at or before the reader position.",
+            }
+        try:
+            chapters = self.index.browse(inp.start, inp.end)
+        except Exception:
+            logger.warning("browse_chapters failed for %d-%d", inp.start, inp.end, exc_info=True)
+            return {"ok": False, "error_category": "tool_failed", "error": "could not browse chapters"}
+        durable = {
+            "source_kind": "novel",
+            "kind": "browse_chapters",
+            "chapters": [
+                {
+                    "chapter": c["chapter"],
+                    "line_start": 2,
+                    "line_end": min(6, c["line_count"]),
+                    "source_hash": self.index.source_hash(c["chapter"]),
+                    "passage_handle": lib.make_passage_handle(c["chapter"], 2, min(6, c["line_count"])),
+                }
+                for c in chapters
+            ],
+        }
+        return {"ok": True, "durable_evidence": durable, "result": {"start": inp.start, "end": inp.end, "chapters": chapters}}
+
+    # ------------------------------------------------------------------
+    # who_is
+    # ------------------------------------------------------------------
+
+    async def who_is(
+        self,
+        arguments: dict[str, Any],
+        context: ToolExecutionContext,
+    ) -> dict[str, Any]:
+        try:
+            inp = WhoIsInput(**arguments)
+        except Exception as exc:
+            return {"ok": False, "error_category": "validation", "error": str(exc)}
+        found = self.entities.lookup(inp.name)
+        if found is None:
+            return {
+                "ok": True,
+                "result": {
+                    "found": False,
+                    "name": inp.name,
+                    "note": "not in the story map",
+                    "suggestions": self.entities.suggest(inp.name),
+                },
+            }
+        return {"ok": True, "result": {"found": True, "entity": found}}
+
 
 def register_reading_tools(
     registry: ToolRegistry,
     service: LibraryService,
 ) -> None:
-    """Register the two reading tools (Plan 014 Contract)."""
+    """Register the reading tools (Plan 15 tool design, 2026-08-07)."""
     registry.register(
         ToolDefinition(
-            name="search_library",
+            name="search_story",
             description=(
-                "Search Weaver's private library: the novel (canonical passages with "
-                "chapter and line handles) and the story notebook (statements with "
-                "links). Returns grouped hits; open any canonical hit with open_chapters. "
-                "The reader ceiling is applied automatically and can only be narrowed."
+                "Meaning search across the whole story (the novel and the story notebook). "
+                "Use to LOCATE where something happens when you do not know the exact words. "
+                "Returns grouped hits: notebook statements first (short summaries with chapter "
+                "evidence, read these first, they often carry the answer) and novel passages "
+                "(chapter + line handles to open with read_chapters). Scores run 0-1; close "
+                "scores are not proof of the right chapter. The reader ceiling is applied "
+                "automatically and can only be narrowed."
             ),
-            parameters=SearchLibraryInput.model_json_schema(),
-            handler=service.search_library,
+            parameters=SearchStoryInput.model_json_schema(),
+            handler=service.search_story,
             max_result_chars=24_000,
             effect_kind=EffectKind.READ,
             retry_safe=True,
@@ -345,13 +529,66 @@ def register_reading_tools(
     )
     registry.register(
         ToolDefinition(
-            name="open_chapters",
+            name="read_chapters",
             description=(
-                "Open a bounded passage of the novel by handle (novel:NNNN:start-end) "
-                "to read the actual text. Novel only. Never opens beyond the reader ceiling."
+                "Read real novel text by passage handle (novel:NNNN:start-end) from "
+                "search_story, find_text or browse_chapters hits. Novel only, read-only. "
+                "Use whenever the answer needs the actual prose: verify, quote, or follow "
+                "a scene to its end. Never opens beyond the reader ceiling."
             ),
-            parameters=OpenChaptersInput.model_json_schema(),
-            handler=service.open_chapters,
+            parameters=ReadChaptersInput.model_json_schema(),
+            handler=service.read_chapters,
+            max_result_chars=24_000,
+            effect_kind=EffectKind.READ,
+            retry_safe=True,
+        )
+    )
+    registry.register(
+        ToolDefinition(
+            name="find_text",
+            description=(
+                "Exact-text finder, like grep for the novel. mode 'phrase': every line "
+                "containing an exact phrase, case-sensitive, for names, quotes and "
+                "distinctive in-world words. mode 'speaker': where a character SPEAKS - "
+                "pass the name, get their dialogue lines with context. Use when meaning "
+                "search cannot rank the answer (e.g. 'where does Weaver speak'). Returns "
+                "chapter + line hits to open with read_chapters. The reader ceiling is "
+                "applied automatically and can only be narrowed."
+            ),
+            parameters=FindTextInput.model_json_schema(),
+            handler=service.find_text,
+            max_result_chars=24_000,
+            effect_kind=EffectKind.READ,
+            retry_safe=True,
+        )
+    )
+    registry.register(
+        ToolDefinition(
+            name="browse_chapters",
+            description=(
+                "Skim a chapter range (start to end, at most 50 chapters): each chapter's "
+                "title, length and opening lines. Use to orient an arc or decide which "
+                "chapters to read fully before answering a broad question. The reader "
+                "ceiling is applied automatically and can only be narrowed."
+            ),
+            parameters=BrowseChaptersInput.model_json_schema(),
+            handler=service.browse_chapters,
+            max_result_chars=24_000,
+            effect_kind=EffectKind.READ,
+            retry_safe=True,
+        )
+    )
+    registry.register(
+        ToolDefinition(
+            name="who_is",
+            description=(
+                "The story map: resolve any name to its canonical identity - person, place, "
+                "power, item or group. Returns the entity's biography page, aliases, and first "
+                "known chapter. Use before searching when you do not recognize a name, or to "
+                "refresh who someone is."
+            ),
+            parameters=WhoIsInput.model_json_schema(),
+            handler=service.who_is,
             max_result_chars=24_000,
             effect_kind=EffectKind.READ,
             retry_safe=True,
