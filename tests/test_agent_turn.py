@@ -185,6 +185,7 @@ async def execute_turn(
     cancel_event: asyncio.Event | None = None,
     persist_message=None,
     max_model_steps: int = 5,
+    tool_budget: int | None = None,
     execution_policy: ToolExecutionPolicy | None = None,
 ):
     return await run_turn(
@@ -200,6 +201,7 @@ async def execute_turn(
         cancel_event=cancel_event or asyncio.Event(),
         persist_message=persist_message,
         max_model_steps=max_model_steps,
+        tool_budget=tool_budget,
     )
 
 
@@ -210,6 +212,77 @@ def tool_context() -> ToolExecutionContext:
         call_id="call",
         cancel_event=asyncio.Event(),
     )
+
+
+class TestToolBudget:
+    async def test_tool_budget_guarantees_final_answer(self) -> None:
+        layer, model, _ = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            tool_response(tool_call("c2", "echo", '{"message": "b"}')),
+            stop_response("Done."),
+        )
+        starts: dict[str, int] = {}
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(starts),
+            active_tools=("echo",),
+            tool_budget=2,
+        )
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert result.final_text == "Done."
+        assert starts["echo"] == 2
+        assert result.model_steps == 3
+
+    async def test_tool_budget_spent_never_runs_tools_past_the_budget(self) -> None:
+        """The model keeps calling tools; the budget must cap dispatches
+        and the forced call must fail honestly instead of running them."""
+        layer, model, _ = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            tool_response(tool_call("c2", "echo", '{"message": "b"}')),
+        )
+        starts: dict[str, int] = {}
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(starts),
+            active_tools=("echo",),
+            tool_budget=2,
+        )
+        assert result.exit_reason == TurnExitReason.LIMIT_REACHED
+        assert starts["echo"] == 2
+        assert result.model_steps == 3
+        # one assistant-with-tool-calls per dispatched step, none from the
+        # forced call (a dangling tool call would break replay)
+        tool_assistants = sum(
+            1
+            for m in result.new_messages
+            if isinstance(m, AssistantMessage) and m.tool_calls
+        )
+        assert tool_assistants == starts["echo"] == 2
+
+    async def test_tool_budget_reminder_is_visible_to_the_model(self) -> None:
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response("Done."),
+        )
+        await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            tool_budget=1,
+        )
+        reminders = [
+            m.content
+            for call in provider.calls
+            for m in call.request.messages
+            if m.role == "system" and m.content and "tool steps" in m.content.lower()
+        ]
+        assert reminders == [
+            "Tool steps remaining: 1 of 1.",
+            "Your tool steps are spent. Answer now from what you have gathered. Do not call tools.",
+        ]
 
 
 class TestActiveDispatch:

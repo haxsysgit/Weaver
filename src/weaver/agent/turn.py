@@ -227,12 +227,19 @@ async def run_turn(
     on_delta: DeltaCallback | None = None,
     on_tool_event: ToolEventCallback | None = None,
     max_model_steps: int = 5,
+    tool_budget: int | None = None,
     reader_ceiling: int | None = None,
 ) -> TurnResult:
     max_steps = min(max(max_model_steps, 1), _MAX_MODEL_STEPS)
+    if tool_budget is not None:
+        # Plan 15 two-budget split: tool calls are capped at tool_budget
+        # and the final answer call is always guaranteed. The cap counts
+        # tool steps, never the answer.
+        max_steps = min(max(tool_budget, 0) + 1, _MAX_MODEL_STEPS)
     new_messages: list[ConversationMessage] = []
     model_steps = 0
     tool_starts = 0
+    tool_steps_used = 0
     final_text = ""
     safe_failure = ""
     model_name = ""
@@ -264,10 +271,25 @@ async def run_turn(
             break
 
         model_steps += 1
+        # Plan 15: the budget is visible to the model so it can plan, and
+        # the call after the last tool step is forced to be the answer.
+        forced_answer = tool_budget is not None and tool_steps_used >= tool_budget
         request_messages = project_messages(
             system_prompt=system_prompt,
             history=history + new_messages,
         )
+        if tool_budget is not None:
+            reminder = (
+                "Your tool steps are spent. Answer now from what you have "
+                "gathered. Do not call tools."
+                if forced_answer
+                else f"Tool steps remaining: {tool_budget - tool_steps_used} "
+                f"of {tool_budget}."
+            )
+            request_messages = [
+                *request_messages,
+                ModelMessage(role="system", content=reminder),
+            ]
         request = ModelRequest(
             messages=tuple(request_messages),
             tools=tuple(tool_schemas),
@@ -360,6 +382,12 @@ async def run_turn(
             exit_reason = TurnExitReason.MODEL_FAILED
             safe_failure = safe_error("model_protocol")
             break
+        if forced_answer:
+            # The final call must answer; a tool call here means the model
+            # refused, and running it would starve the answer again.
+            exit_reason = TurnExitReason.LIMIT_REACHED
+            safe_failure = safe_error("limit")
+            break
         if not tool_calls or not _tool_calls_are_safe(
             tool_calls,
             known_call_ids,
@@ -367,6 +395,7 @@ async def run_turn(
             exit_reason = TurnExitReason.MODEL_FAILED
             safe_failure = safe_error("model_protocol")
             break
+        tool_steps_used += 1
         known_call_ids.update(
             tool_call.call_id
             for tool_call in tool_calls

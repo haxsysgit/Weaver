@@ -184,6 +184,9 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 cancel_event=stream.cancel_event,
                 on_delta=on_delta,
                 on_tool_event=on_tool_event,
+                # Plan 15: the Ascended default. Tool calls are capped at
+                # 5; the final answer call is always guaranteed.
+                tool_budget=5,
             )
             reason = result.exit_reason
             if reason == TurnExitReason.COMPLETED:

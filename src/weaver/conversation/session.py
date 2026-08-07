@@ -133,6 +133,7 @@ class SessionWeave:
         cancel_event: asyncio.Event | None = None,
         on_delta: DeltaCallback | None = None,
         on_tool_event: ToolEventCallback | None = None,
+        tool_budget: int | None = None,
     ) -> TurnResult:
         """Run one full turn with the owner's input and return the result.
 
@@ -148,6 +149,10 @@ class SessionWeave:
         text chunks as the model streams them; deltas are a preview only,
         the final assistant message is what persists. None keeps the
         buffered behavior.
+
+        Plan 15 seam: tool_budget caps the tool-calling steps; the final
+        answer call is always guaranteed. None keeps the legacy
+        max_model_steps behavior.
         """
         assert self._repo is not None and self._coordinator is not None
         assert self._runner is not None, (
@@ -177,6 +182,7 @@ class SessionWeave:
             cancel_event,
             on_delta=on_delta,
             on_tool_event=on_tool_event,
+            tool_budget=tool_budget,
         )
 
     async def start_conversation(self, owner_text: str) -> str:
