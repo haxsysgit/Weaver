@@ -284,6 +284,50 @@ class TestToolBudget:
             "Your tool steps are spent. Answer now from what you have gathered. Do not call tools.",
         ]
 
+    async def test_budget_above_old_cap_is_not_clamped(self) -> None:
+        """The old 8-step clamp is gone: a big budget really allows many
+        tool steps (Plan 15 tiers: awakened 50 / ascended 70 / transcendent
+        90 are ceilings, not targets)."""
+        responses = [
+            tool_response(tool_call(f"c{i}", "echo", '{"message": "a"}'))
+            for i in range(1, 11)
+        ] + [stop_response("Done.")]
+        layer, model, _ = scripted_layer(*responses)
+        starts: dict[str, int] = {}
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(starts),
+            active_tools=("echo",),
+            tool_budget=12,
+        )
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert starts["echo"] == 10
+        assert result.model_steps == 11
+
+    async def test_budget_reminder_is_silent_while_plenty_remain(self) -> None:
+        """At 50+ steps a per-step countdown is noise; reminders only
+        appear when 10 or fewer steps remain or on the forced call."""
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            tool_response(tool_call("c2", "echo", '{"message": "b"}')),
+            stop_response("Done."),
+        )
+        await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            tool_budget=50,
+        )
+        reminders = [
+            m.content
+            for call in provider.calls
+            for m in call.request.messages
+            if m.role == "system" and m.content and "tool steps" in m.content.lower()
+        ]
+        assert reminders == []
+
     async def test_tool_budget_forced_call_strips_tools(self) -> None:
         """The forced answer call carries no tool schemas, so the model
         physically cannot call a tool on it (hermes-style)."""

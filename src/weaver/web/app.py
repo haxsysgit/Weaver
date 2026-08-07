@@ -22,7 +22,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from weaver.agent.errors import safe_error
-from weaver.agent.turn import TurnExitReason
+from weaver.agent.turn import TOOL_BUDGET_TIERS, TurnExitReason
 from weaver.chat_runtime import ChatRuntime
 
 MAX_MESSAGE_CHARS = 32_000
@@ -184,9 +184,10 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 cancel_event=stream.cancel_event,
                 on_delta=on_delta,
                 on_tool_event=on_tool_event,
-                # Plan 15: the Ascended default. Tool calls are capped at
-                # 5; the final answer call is always guaranteed.
-                tool_budget=5,
+                # Plan 15: the Ascended tier. Tool calls are capped at 70
+                # (awakened 50 / ascended 70 / transcendent 90); the final
+                # answer call is always guaranteed.
+                tool_budget=TOOL_BUDGET_TIERS["ascended"],
             )
             reason = result.exit_reason
             if reason == TurnExitReason.COMPLETED:

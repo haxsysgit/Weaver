@@ -39,7 +39,23 @@ from ..model_layer.layer import ModelProtocolError
 
 logger = logging.getLogger(__name__)
 
-_MAX_MODEL_STEPS = 8
+# Plan 15 (2026-08-07): the tier budgets are ceilings, not targets. The
+# absolute guardrail sits above all three tiers so a runaway loop can never
+# exceed it; hermes uses 90 iterations, pi uses no cap at all.
+_MAX_MODEL_STEPS = 100
+
+# Plan 15 tiers: the model is trusted to find the answer without burning
+# the budget; the cap exists so a runaway tool loop cannot run forever.
+# Owner decision 2026-08-07: awakened 50 / ascended 70 / transcendent 90.
+TOOL_BUDGET_TIERS: dict[str, int] = {
+    "awakened": 50,
+    "ascended": 70,
+    "transcendent": 90,
+}
+
+# Per-step countdown reminders are noise at 50-90 step budgets; they only
+# appear when the budget is running low or on the forced answer call.
+BUDGET_REMINDER_THRESHOLD = 10
 
 # Plan 008 carve-out (contract §2): the persist seam is async end-to-end.
 # A sync callback that returns a coroutine would be treated as success by
@@ -279,17 +295,18 @@ async def run_turn(
             history=history + new_messages,
         )
         if tool_budget is not None:
-            reminder = (
-                "Your tool steps are spent. Answer now from what you have "
-                "gathered. Do not call tools."
-                if forced_answer
-                else f"Tool steps remaining: {tool_budget - tool_steps_used} "
-                f"of {tool_budget}."
-            )
-            request_messages = [
-                *request_messages,
-                ModelMessage(role="system", content=reminder),
-            ]
+            remaining = tool_budget - tool_steps_used
+            if forced_answer or remaining <= BUDGET_REMINDER_THRESHOLD:
+                reminder = (
+                    "Your tool steps are spent. Answer now from what you "
+                    "have gathered. Do not call tools."
+                    if forced_answer
+                    else f"Tool steps remaining: {remaining} of {tool_budget}."
+                )
+                request_messages = [
+                    *request_messages,
+                    ModelMessage(role="system", content=reminder),
+                ]
         request = ModelRequest(
             messages=tuple(request_messages),
             # Plan 15: on the forced call the tools are stripped from the
