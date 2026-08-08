@@ -17,6 +17,8 @@ from weaver import (
     ModelResponse,
     ModelSpec,
     ModelStopReason,
+    ModelStreamEvent,
+    ModelStreamEventType,
     ModelToolCall,
 )
 from weaver.agent.tools import ToolRegistry
@@ -1413,8 +1415,6 @@ async def test_failed_turn_records_run_failed_event():
     """A broken turn must be diagnosable from the local DB: a run_failed
     event records the exit reason and the safe message."""
     from weaver.agent.tools import ToolExecutionPolicy
-
-    from weaver.conversation.coordinator import RunCoordinator
 
     async def failing_provider(model, request, cancel_event, **kwargs):
         yield ModelStreamEvent(
