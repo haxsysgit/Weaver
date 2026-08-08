@@ -254,21 +254,20 @@ describe("ChatApp tool activity", () => {
     fireEvent.change(composer, { target: { value: "who killed the leader" } });
     fireEvent.keyDown(composer, { key: "Enter" });
 
-    // only the latest tool call is on the ticker, one at a time
-    const ticker = await screen.findByLabelText("Spell announcements");
-    expect(await within(ticker).findByText(/is recalling a passage/)).toBeTruthy();
+    // one tool call at a time, shown inside the live reply box
+    expect(await screen.findByText(/is recalling a passage/)).toBeTruthy();
     await waitFor(() => {
-      expect(within(ticker).getByText(/has recalled a passage/)).toBeTruthy();
+      expect(screen.getByText(/has recalled a passage/)).toBeTruthy();
     });
-    expect(within(ticker).queryByText(/is searching the library/)).toBeNull();
-    expect(within(ticker).queryByText(/has searched the library/)).toBeNull();
+    expect(screen.queryByText(/is searching the library/)).toBeNull();
+    expect(screen.queryByText(/has searched the library/)).toBeNull();
 
-    // the answer streaming clears the ticker entirely
+    // the answer streaming clears the spell line entirely
     expect(
       await screen.findByText("Sunny slew the leader with the kunai."),
     ).toBeTruthy();
     await waitFor(() => {
-      expect(screen.queryByLabelText("Spell announcements")).toBeNull();
+      expect(screen.queryByText(/has recalled a passage/)).toBeNull();
     });
   });
 
@@ -302,7 +301,7 @@ describe("ChatApp tool activity", () => {
     fireEvent.change(composer2, { target: { value: "second" } });
     fireEvent.keyDown(composer2, { key: "Enter" });
     await secondScreen.findByText("Second answer.");
-    expect(secondScreen.queryByLabelText("Spell announcements")).toBeNull();
+    expect(secondScreen.queryByText(/is searching the library/)).toBeNull();
   });
 });
 

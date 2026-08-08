@@ -12,6 +12,8 @@ describe("Composer", () => {
         onCancel={vi.fn()}
         onDraftChange={vi.fn()}
         onSubmit={vi.fn()}
+        onTierChange={vi.fn()}
+        tier="ascended"
         turnActive={false}
       />,
     );
@@ -26,6 +28,8 @@ describe("Composer", () => {
         onCancel={vi.fn()}
         onDraftChange={vi.fn()}
         onSubmit={vi.fn()}
+        onTierChange={vi.fn()}
+        tier="ascended"
         turnActive
       />,
     );
@@ -42,6 +46,8 @@ describe("Composer", () => {
         onCancel={vi.fn()}
         onDraftChange={vi.fn()}
         onSubmit={vi.fn()}
+        onTierChange={vi.fn()}
+        tier="ascended"
         turnActive
       />,
     );
@@ -59,6 +65,8 @@ describe("Composer", () => {
         onCancel={vi.fn()}
         onDraftChange={onDraftChange}
         onSubmit={onSubmit}
+        onTierChange={vi.fn()}
+        tier="ascended"
         turnActive={false}
       />,
     );
@@ -70,4 +78,48 @@ describe("Composer", () => {
     fireEvent.keyDown(textbox, { key: "Enter" });
     expect(onSubmit).toHaveBeenCalledWith("Cassie had a plan");
   });
+describe("Composer reading tier", () => {
+  it("opens the tier menu and reports the pick", async () => {
+    const onTierChange = vi.fn();
+    render(
+      <Composer
+        cancelling={false}
+        draft=""
+        onCancel={vi.fn()}
+        onDraftChange={vi.fn()}
+        onSubmit={vi.fn()}
+        onTierChange={onTierChange}
+        tier="ascended"
+        turnActive={false}
+      />,
+    );
+
+    const pill = screen.getByRole("button", { name: "Reading tier: ascended" });
+    fireEvent.click(pill);
+    expect(screen.getByRole("option", { name: /transcendent/ })).toBeVisible();
+
+    fireEvent.click(screen.getByRole("option", { name: /transcendent/ }));
+    expect(onTierChange).toHaveBeenCalledWith("transcendent");
+  });
+
+  it("hides the menu on outside click", () => {
+    render(
+      <Composer
+        cancelling={false}
+        draft=""
+        onCancel={vi.fn()}
+        onDraftChange={vi.fn()}
+        onSubmit={vi.fn()}
+        onTierChange={vi.fn()}
+        tier="awakened"
+        turnActive={false}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Reading tier: awakened" }));
+    expect(screen.getByRole("option", { name: /ascended/ })).toBeVisible();
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole("option")).toBeNull();
+  });
+});
+
 });

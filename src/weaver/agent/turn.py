@@ -321,6 +321,19 @@ async def run_turn(
             # Plan 15: the packet is ephemeral context for the single
             # synthesis call; tools are stripped so the model must write
             # the answer from the packet.
+            #
+            # Owner 2026-08-08: the synthesis call must NOT carry the
+            # whole conversation history. An older exchange's answer can
+            # dominate the model and it replies to the wrong question
+            # (the "list the 7 daemons" turn answered the previous Anvil
+            # question). Curate: the system prompt, the immediate
+            # question, the locate draft, and the packet only.
+            question = [m for m in history if m.kind == "user"][-1:]
+            draft_messages = [m for m in new_messages if m.kind == "assistant"]
+            request_messages = project_messages(
+                system_prompt=system_prompt,
+                history=question + draft_messages,
+            )
             request_messages = [
                 *request_messages,
                 ModelMessage(

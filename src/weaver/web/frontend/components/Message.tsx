@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ComponentType } from "react";
 
 import type { DisplayMessage } from "../lib/chatModel";
+import type { ToolActivity } from "../hooks/useChatController";
 import { CopyIcon, QuoteIcon, RegenerateIcon } from "./Icons";
 import { Markdown } from "./Markdown";
 import type { WeaverMarkProps } from "./WeaverMark";
@@ -9,17 +10,44 @@ interface MessageProps {
   Mark: ComponentType<WeaverMarkProps>;
   assistantName: string;
   message: DisplayMessage;
+  /** The in-flight tool call shown inside the live reply box while the
+   * model works (owner 2026-08-08: the spell notification belongs in the
+   * response box, not a separate strip). */
+  activity?: ToolActivity | null;
   onQuote?: (text: string) => void;
   onRegenerate?: () => void;
+  onViewPassage?: (handle: string) => void;
   regenerateLabel: string;
+}
+
+const SPELL_PHRASES: Record<string, { doing: string; done: string }> = {
+  search_story: { doing: "searching the library", done: "searched the library" },
+  read_chapters: { doing: "recalling a passage", done: "recalled a passage" },
+  find_text: { doing: "finding the words", done: "found the words" },
+  browse_chapters: { doing: "browsing the chapters", done: "browsed the chapters" },
+  who_is: { doing: "consulting the notebook", done: "consulted the notebook" },
+};
+
+function spellPhrase(name: string, status: string, detail: string): string {
+  const phrase = SPELL_PHRASES[name];
+  if (phrase) {
+    return status === "start"
+      ? `weaver is ${phrase.doing}`
+      : `weaver has ${phrase.done}`;
+  }
+  return status === "start"
+    ? `${name} ${detail || "started"}`.trim()
+    : `${name} ${detail || "done"}`.trim();
 }
 
 export function Message({
   Mark,
+  activity,
   assistantName,
   message,
   onQuote,
   onRegenerate,
+  onViewPassage,
   regenerateLabel,
 }: MessageProps) {
   const [copied, setCopied] = useState(false);
@@ -86,6 +114,26 @@ export function Message({
       </div>
       <div className="weaver-message-content">
         <div className="message-role">{assistantName}</div>
+        {activity && (
+          <p className={`spell-line spell-line-${activity.status}`}>
+            <span className="spell-bracket">[</span>
+            {spellPhrase(activity.name, activity.status, activity.detail)}
+            {activity.preview && (
+              <span className="spell-preview"> {activity.preview}…</span>
+            )}
+            {activity.handles && activity.handles.length > 0 && (
+              <button
+                aria-label="View the recalled passage"
+                className="spell-view"
+                onClick={() => onViewPassage?.(activity.handles![0])}
+                type="button"
+              >
+                view passage
+              </button>
+            )}
+            <span className="spell-bracket">]</span>
+          </p>
+        )}
         <div className="markdown-body" ref={contentRef}>
           {message.content ? <Markdown>{message.content}</Markdown> : <span className="thinking-thread" />}
         </div>

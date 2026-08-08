@@ -354,6 +354,12 @@ async def open_chat_runtime(
         system_prompt = WEB_SYSTEM_PROMPT
         execution_policy = ToolExecutionPolicy.read_only()
 
+    # Plan 15 (owner 2026-08-08): the web locate phase sees a bounded
+    # recent context, not the whole unbounded history. Caps the
+    # per-step re-send cost (the slowness) and stops an old
+    # exchange from dominating the tool loop. The synthesis call
+    # is curated separately in run_turn.
+    web_context_budget = 200_000 if surface == "web" else None
     sw = SessionWeave(
         state_dir,
         model_layer=model_layer,
@@ -362,6 +368,7 @@ async def open_chat_runtime(
         tool_registry=registry,
         active_tools=active_tools,
         execution_policy=execution_policy,
+        token_budget=web_context_budget,
     )
     await sw.open()
     prefs = PreferencesStore(state_dir / "weaver.sqlite3")

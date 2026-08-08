@@ -187,3 +187,31 @@ tiny and barely glowing.
   core, a breathing star with the chapter number; the three settings
   (chapter, spoilers, tier) are Memory spheres orbiting it as spheres of
   light, joined by silver hairlines. Functionality unchanged.
+
+## Revision 6 (2026-08-08): the owner's live complaints
+
+The lab-only theme never reached the main chat, the tool announcements
+sat in a separate strip instead of inside the response box, and the
+"7 daemons" question was answered with the previous Anvil exchange.
+
+- The star-web background now renders in the main chat (SpellBackground
+  component, ch15:5 canon), subtle mode with a slightly brighter thread
+  net, transparent so the app's own gradient shows through. It was lab-
+  only before; that is fixed.
+- Tool notifications moved INTO the response box: while the model works,
+  the live weaver bubble shows the bracketed spell line at its top
+  ("[weaver is searching the library…]" -> "[weaver has searched the
+  library] [view passage]"), and it fades when the answer streams.
+- The response box is redesigned as dark glass: hairline silver border,
+  soft inner glow, rounded 14px with a 5px tail, and the reply text
+  carries the faint glowing-rune sheen (ch17:7).
+- Reading tier selector is now in the composer, ChatGPT-style: a pill
+  (awakened/ascended/transcendent) at the right end of the input with a
+  dropdown, persists through PUT /api/preferences.
+- Context engine fix (the fatal one): the two-phase synthesis call used
+  to carry the WHOLE conversation history plus the packet, so an old
+  exchange's answer dominated and the model replied to the previous
+  question. The synthesis call now gets a curated context: the system
+  prompt, the immediate question, the locate draft, and the packet only
+  (agent/turn.py, red-first test). The web locate phase also gets a
+  200K-token bounded history instead of unbounded (speed + focus).

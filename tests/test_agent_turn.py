@@ -5,6 +5,7 @@ import pytest
 from weaver.agent.errors import safe_error
 from weaver.agent.messages import (
     AssistantMessage,
+    UserMessage,
     ToolCallMessage,
     ToolResultMessage,
 )
@@ -1090,6 +1091,45 @@ class TestTwoPhaseSynthesis:
         synthesis_request = provider.calls[-1].request
         assert synthesis_request.tools == ()
         assert any("PACKET: chapter 104 prose" in (m.content or "") for m in synthesis_request.messages)
+
+    async def test_synthesis_call_drops_old_history_keeps_question(self) -> None:
+        # The "7 daemons" bug: an old exchange's answer dominated the
+        # synthesis call, so the model answered the previous question
+        # ("No, Anvil gets cooked") instead of the one just asked.
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response("Draft: located daemon statements."),
+            stop_response("Final: the daemons are children of the unknown."),
+        )
+        old_answer = "No, Anvil gets cooked. " * 200
+        history = [
+            UserMessage(
+                message_id="q1",
+                turn_id="t1",
+                content="can anvil beat the vile thieving bird",
+            ),
+            AssistantMessage(message_id="a1", turn_id="t1", content=old_answer),
+            UserMessage(message_id="q2", turn_id="t2", content="list the 7 daemons"),
+        ]
+
+        async def packet_builder(results, draft):
+            return "PACKET: daemon statements"
+
+        await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            history=history,
+            packet_builder=packet_builder,
+        )
+        synthesis_request = provider.calls[-1].request
+        joined = " ".join((m.content or "") for m in synthesis_request.messages)
+        assert "PACKET: daemon statements" in joined
+        assert "list the 7 daemons" in joined
+        # the old exchange must not leak into the synthesis context
+        assert "Anvil gets cooked" not in joined
+        assert synthesis_request.tools == ()
 
     async def test_builder_none_keeps_the_draft(self) -> None:
         layer, model, provider = scripted_layer(

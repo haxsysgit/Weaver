@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState, type ComponentType } from "react";
 
-import { useChatController } from "../hooks/useChatController";
+import { useChatController, type ToolActivity } from "../hooks/useChatController";
 import type { ChatApi } from "../lib/chatApi";
 import { weaverProduct, type ChatProduct } from "../lib/product";
-import { Composer } from "./Composer";
+import { Composer, type ReadingTier } from "./Composer";
 import { ConversationRail } from "./ConversationRail";
 import { RailOpenIcon } from "./Icons";
 import { SettingsModal } from "./SettingsModal";
 import { Message } from "./Message";
+import { SpellBackground } from "./SpellBackground";
 import { PassageModal } from "./PassageModal";
 import { RecoveryPanel } from "./RecoveryPanel";
 import { WeaverMark, type WeaverMarkProps } from "./WeaverMark";
@@ -18,26 +19,6 @@ interface ChatAppProps {
   modeLabel: string;
   privacyLabel: string;
   product?: ChatProduct;
-}
-
-const SPELL_PHRASES: Record<string, { doing: string; done: string }> = {
-  search_story: { doing: "searching the library", done: "searched the library" },
-  read_chapters: { doing: "recalling a passage", done: "recalled a passage" },
-  find_text: { doing: "finding the words", done: "found the words" },
-  browse_chapters: { doing: "browsing the chapters", done: "browsed the chapters" },
-  who_is: { doing: "consulting the notebook", done: "consulted the notebook" },
-};
-
-function spellPhrase(name: string, status: string, detail: string): string {
-  const phrase = SPELL_PHRASES[name];
-  if (phrase) {
-    return status === "start"
-      ? `weaver is ${phrase.doing}`
-      : `weaver has ${phrase.done}`;
-  }
-  return status === "start"
-    ? `${name} ${detail || "started"}`.trim()
-    : `${name} ${detail || "done"}`.trim();
 }
 
 export function ChatApp({
@@ -132,10 +113,18 @@ export function ChatApp({
     setDesktopRailCollapsed(true);
   }
 
+  const liveActivity: ToolActivity | null =
+    chat.activity.length > 0 ? chat.activity[chat.activity.length - 1] : null;
+
   return (
     <div
       className={`chat-app ${desktopRailCollapsed ? "chat-app-rail-collapsed" : ""}`}
     >
+      <SpellBackground
+        mode="subtle"
+        threadAlpha={0.22}
+        transparent
+      />
       <ConversationRail
         Mark={Mark}
         activeConversationId={chat.conversationId}
@@ -200,6 +189,7 @@ export function ChatApp({
             {chat.messages.map((message) => (
               <Message
                 Mark={Mark}
+                activity={message.streaming ? liveActivity : null}
                 assistantName={product.assistantName}
                 key={message.id}
                 message={message}
@@ -209,6 +199,7 @@ export function ChatApp({
                     ? chat.regenerateReply
                     : undefined
                 }
+                onViewPassage={(handle) => setPassageHandle(handle)}
                 regenerateLabel={product.regenerateLabel}
               />
             ))}
@@ -226,41 +217,6 @@ export function ChatApp({
           </div>
         </div>
 
-            {chat.activity.length > 0 && (
-              <div aria-label="Spell announcements" className="tool-ticker">
-                <span className="ticker-thread" aria-hidden="true" />
-                <p className={`ticker-line ticker-${chat.activity[chat.activity.length - 1].status}`}>
-                  <span className="spell-bracket">[</span>
-                  {spellPhrase(
-                    chat.activity[chat.activity.length - 1].name,
-                    chat.activity[chat.activity.length - 1].status,
-                    chat.activity[chat.activity.length - 1].detail,
-                  )}
-                  {chat.activity[chat.activity.length - 1].preview && (
-                    <span className="spell-preview">
-                      {" "}
-                      {chat.activity[chat.activity.length - 1].preview}…
-                    </span>
-                  )}
-                  {chat.activity[chat.activity.length - 1].handles &&
-                    chat.activity[chat.activity.length - 1].handles!.length > 0 && (
-                      <button
-                        aria-label="View the recalled passage"
-                        className="spell-view"
-                        onClick={() =>
-                          setPassageHandle(
-                            chat.activity[chat.activity.length - 1].handles![0],
-                          )
-                        }
-                        type="button"
-                      >
-                        view passage
-                      </button>
-                    )}
-                  <span className="spell-bracket">]</span>
-                </p>
-              </div>
-            )}
         <footer className="composer-dock">
           <Composer
             cancelling={chat.turnState === "cancelling"}
@@ -269,10 +225,15 @@ export function ChatApp({
             onCancel={() => void chat.cancelTurn()}
             onDraftChange={chat.setDraft}
             onSubmit={(message) => void chat.sendMessage(message)}
+            onTierChange={(tier: ReadingTier) => {
+              setSettingsPrefs((current) => ({ ...current, tier }));
+              void api.savePreferences({ ...settingsPrefs, tier });
+            }}
             placeholder={product.composerPlaceholder}
             sendLabel={product.sendLabel}
             stopLabel={product.stopLabel}
             stoppingLabel={product.stoppingLabel}
+            tier={settingsPrefs.tier}
             turnActive={chat.turnActive}
             textareaRef={composerRef}
           />

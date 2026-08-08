@@ -1,6 +1,7 @@
 import {
   faArrowUp,
   faBarsStaggered,
+  faChevronDown,
   faGear,
   faChevronLeft,
   faCopy,
@@ -60,4 +61,8 @@ export function TrashIcon(props: IconProps) {
 
 export function QuoteIcon(props: IconProps) {
   return <FontAwesomeIcon aria-hidden="true" icon={faQuoteLeft} {...props} />;
+}
+
+export function ChevronDownIcon(props: IconProps) {
+  return <FontAwesomeIcon aria-hidden="true" icon={faChevronDown} {...props} />;
 }
