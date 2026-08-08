@@ -98,8 +98,10 @@ classification call) returns with them, and it never assigned budgets.
 2. Preferences store + web UI knob (chapter field + spoiler toggle)
    — DONE 2026-08-08 (3cfcf1e)
 3. Two-phase loop (locate, then packet, then toolless synthesis)
-   — DONE 2026-08-08 (this slice)
-4. Label pass over the 1-1000 statements (owner review; no re-reads)
+   — DONE 2026-08-08 (aeb977a)
+4. Label pass over the 1-1000 statements — DONE 2026-08-08 (this slice); labels private at
+   `.weaver/knowledge/shadow-slave/spoiler-labels.json`, flagger + validator in
+   `scripts/label_story_statements.py`; owner review pending
 5. Verify pass (transcendent)
 6. Live trial (owner go required)
 7. Skills + router — deferred until after the live trial
