@@ -74,6 +74,17 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
   const [bootError, setBootError] = useState<string | null>(null);
   const [activity, setActivity] = useState<ToolActivity[]>([]);
   const activeLoad = useRef(0);
+  const activityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // the ticker is transient: clear its auto-fade timer on unmount
+  useEffect(
+    () => () => {
+      if (activityTimer.current) {
+        clearTimeout(activityTimer.current);
+      }
+    },
+    [],
+  );
 
   const activeTitle = useMemo(
     () =>
@@ -201,6 +212,10 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
     partialReply: string,
   ): { text: string; terminal: boolean } {
     if (event.type === "delta") {
+      if (activityTimer.current) {
+        clearTimeout(activityTimer.current);
+      }
+      setActivity([]);
       const nextText = partialReply + event.text;
       setMessages((current) => updateReply(current, replyId, nextText, true));
       return { text: nextText, terminal: false };
@@ -212,8 +227,8 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
     }
 
     if (event.type === "tool") {
-      setActivity((current) => [
-        ...current,
+      // the ticker shows one tool call at a time, then fades
+      setActivity([
         {
           name: event.name,
           status: event.status,
@@ -222,6 +237,10 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
           handles: event.handles,
         },
       ]);
+      if (activityTimer.current) {
+        clearTimeout(activityTimer.current);
+      }
+      activityTimer.current = setTimeout(() => setActivity([]), 3500);
       return { text: partialReply, terminal: false };
     }
 

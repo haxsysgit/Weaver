@@ -212,33 +212,7 @@ export function ChatApp({
                 regenerateLabel={product.regenerateLabel}
               />
             ))}
-            {chat.activity.length > 0 && (
-              <div aria-label="Spell announcements" className="spell-activity">
-                {chat.activity.map((entry, index) => (
-                  <p
-                    className={`spell-line spell-line-${entry.status}`}
-                    key={`${entry.name}-${index}`}
-                  >
-                    <span className="spell-bracket">[</span>
-                    {spellPhrase(entry.name, entry.status, entry.detail)}
-                    {entry.preview && (
-                      <span className="spell-preview"> {entry.preview}…</span>
-                    )}
-                    {entry.handles && entry.handles.length > 0 && (
-                      <button
-                        aria-label="View the recalled passage"
-                        className="spell-view"
-                        onClick={() => setPassageHandle(entry.handles![0])}
-                        type="button"
-                      >
-                        view passage
-                      </button>
-                    )}
-                    <span className="spell-bracket">]</span>
-                  </p>
-                ))}
-              </div>
-            )}
+
             {chat.recoveryMessage && (
               <RecoveryPanel
                 chooseLabel={product.recoveryChooseLabel}
@@ -252,6 +226,41 @@ export function ChatApp({
           </div>
         </div>
 
+            {chat.activity.length > 0 && (
+              <div aria-label="Spell announcements" className="tool-ticker">
+                <span className="ticker-thread" aria-hidden="true" />
+                <p className={`ticker-line ticker-${chat.activity[chat.activity.length - 1].status}`}>
+                  <span className="spell-bracket">[</span>
+                  {spellPhrase(
+                    chat.activity[chat.activity.length - 1].name,
+                    chat.activity[chat.activity.length - 1].status,
+                    chat.activity[chat.activity.length - 1].detail,
+                  )}
+                  {chat.activity[chat.activity.length - 1].preview && (
+                    <span className="spell-preview">
+                      {" "}
+                      {chat.activity[chat.activity.length - 1].preview}…
+                    </span>
+                  )}
+                  {chat.activity[chat.activity.length - 1].handles &&
+                    chat.activity[chat.activity.length - 1].handles!.length > 0 && (
+                      <button
+                        aria-label="View the recalled passage"
+                        className="spell-view"
+                        onClick={() =>
+                          setPassageHandle(
+                            chat.activity[chat.activity.length - 1].handles![0],
+                          )
+                        }
+                        type="button"
+                      >
+                        view passage
+                      </button>
+                    )}
+                  <span className="spell-bracket">]</span>
+                </p>
+              </div>
+            )}
         <footer className="composer-dock">
           <Composer
             cancelling={chat.turnState === "cancelling"}

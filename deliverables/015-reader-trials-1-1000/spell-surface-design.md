@@ -160,3 +160,30 @@ tiny and barely glowing.
   at 0.22 stroke / 0.35 opacity, isa knots 1.5 units. Single faint
   drop-shadow glow (2.5px at 0.3) instead of the double-layer bloom,
   dimmer rune color 0xaeb3c4, shimmer pulses 0.45-0.72 instead of 0.5-1.
+
+## Revision 4 (2026-08-08, owner picks 2)
+
+- The rune frame is dropped entirely. Owner: the hand-drawn runes "looked
+  like slop"; asked whether an icon/UI library has runes — none does
+  (checked: no mainstream React icon set ships a runic block; rune
+  typefaces like BabelStone/Erilaz are font files, not icon components,
+  and depend on the user's fonts). The authentic Elder Futhark glyphs
+  were the real letterforms; the problem was the framing/rendering, so
+  per the owner we forget runes as decoration.
+- The reply sample keeps the "glowing text" style (text that shines like
+  the Spell's runes, ch17:7) — the owner still likes it.
+- The background stays v1 (subtle).
+
+## Revision 5 (2026-08-08): tool ticker + Soul Sea settings
+
+- Tool calls no longer stack in the transcript. A transient ticker strip
+  sits between the transcript and the composer: one tool call at a time
+  ("[weaver is searching the library…]" -> "[weaver has searched the
+  library] [view passage]"), fades ~3.5s after the last event, clears the
+  moment the answer starts streaming. The view-passage chip stays on the
+  ticker's done state (the modal stays open if clicked).
+- The reader settings modal is the Soul Sea (ch16:21-27): a silent calm
+  dark sea lit by a lonely black sun; the reader's chapter is the soul
+  core, a breathing star with the chapter number; the three settings
+  (chapter, spoilers, tier) are Memory spheres orbiting it as spheres of
+  light, joined by silver hairlines. Functionality unchanged.

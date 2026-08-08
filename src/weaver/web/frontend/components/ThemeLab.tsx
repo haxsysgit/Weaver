@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 
-import { RUNE_GLYPHS, type RuneName } from "./runeGlyphs";
-
 /**
  * ThemeLab: a dev-only comparison page (route #theme-lab) so the owner can
  * see the Nightmare Spell surface variants side by side before they ship.
@@ -76,7 +74,6 @@ const THREAD_FRAG = /* glsl */ `
 `;
 
 type BgMode = "subtle" | "alive";
-type ReplyMode = "mirror" | "glowing-text";
 
 function makeStars(): { positions: Float32Array; phases: Float32Array; sizes: Float32Array } {
   const positions = new Float32Array(STAR_COUNT * 3);
@@ -237,65 +234,9 @@ function StarWebScene(canvas: HTMLCanvasElement, mode: BgMode) {
   };
 }
 
-const FRAME_RUNES: RuneName[] = ["fehu", "uruz", "thurisaz", "ansuz", "raidho", "kenaz"];
-const CORNER_RUNES: RuneName[] = ["elhaz", "sowilo", "tiwaz", "laguz"];
-
-function RuneGlyph({ name, size = 16, x = 0, y = 0 }: { name: RuneName; size?: number; x?: number; y?: number }) {
-  const g = RUNE_GLYPHS[name];
-  const [, , w, h] = g.viewBox.split(" ").map(Number);
-  return <use href={`#rune-${name}`} x={x} y={y} width={size} height={(size * (h + 4)) / (w + 4)} />;
-}
-
-/** The Spell-window frame: clean dark glass inside, glowing Elder Futhark
- * runes along the borders and sigils at the corners, like a mystical mirror.
- * Canon: ch2 "shimmering runes appeared in the air", ch17:7 runes "shining
- * slightly". Weaver wove the Spell from her soul (ch2920), so the frame is
- * strung like fate: thin silver threads down the sides.
- */
-export function SpellFrame({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="spell-frame">
-      <svg className="spell-frame-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-        <defs>
-          {Object.entries(RUNE_GLYPHS).map(([name, g]) => (
-            <symbol key={name} id={`rune-${name}`} viewBox={g.viewBox}>
-              {g.paths.map((d, i) => (
-                <path key={i} d={d} fill="none" stroke="currentColor" strokeWidth="4" />
-              ))}
-            </symbol>
-          ))}
-        </defs>
-        {/* corner sigils: circle + rune, like carved seals */}
-        {[[3.2, 3.2, 0], [96.8, 3.2, 1], [3.2, 96.8, 2], [96.8, 96.8, 3]].map(([cx, cy, i]) => (
-          <g key={i} className="rune-corner" transform={`translate(${cx},${cy})`} style={{ animationDelay: `${i * 0.4}s` }}>
-            <circle r="2.1" fill="none" stroke="currentColor" strokeWidth="0.4" opacity="0.6" />
-            <circle r="1.5" fill="none" stroke="currentColor" strokeWidth="0.2" opacity="0.4" />
-            <RuneGlyph name={CORNER_RUNES[i]} size={1.9} x={-1} y={-1.2} />
-          </g>
-        ))}
-        {/* top and bottom rune rows, strung between the corner sigils */}
-        {[4.5, 95.5].map((y, row) => (
-          <g key={row} className="rune-row" transform={`translate(0,${y})`}>
-            {FRAME_RUNES.map((name, i) => (
-              <RuneGlyph key={name} name={name} size={7} x={9.5 + i * 11.6} y={-4.2} />
-            ))}
-          </g>
-        ))}
-        {/* side threads: the strings of fate */}
-        <line x1="1.8" y1="9" x2="1.8" y2="91" stroke="currentColor" strokeWidth="0.22" opacity="0.35" />
-        <line x1="98.2" y1="9" x2="98.2" y2="91" stroke="currentColor" strokeWidth="0.22" opacity="0.35" />
-        <RuneGlyph name="isa" size={1.5} x={1.1} y={48.2} />
-        <RuneGlyph name="isa" size={1.5} x={97.4} y={48.2} />
-      </svg>
-      <div className="spell-frame-inner">{children}</div>
-    </div>
-  );
-}
-
 export function ThemeLab() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [bgMode, setBgMode] = useState<BgMode>("alive");
-  const [replyMode, setReplyMode] = useState<ReplyMode>("mirror");
   const modeRef = useRef<BgMode>(bgMode);
   modeRef.current = bgMode;
 
@@ -328,39 +269,17 @@ export function ThemeLab() {
               alive
             </button>
           </span>
-          <span className="theme-lab-group">
-            <button
-              type="button"
-              className={replyMode === "mirror" ? "lab-pill on" : "lab-pill"}
-              onClick={() => setReplyMode("mirror")}
-            >
-              mirror frame
-            </button>
-            <button
-              type="button"
-              className={replyMode === "glowing-text" ? "lab-pill on" : "lab-pill"}
-              onClick={() => setReplyMode("glowing-text")}
-            >
-              text as glowing runes
-            </button>
-          </span>
         </div>
       </div>
       <div className="theme-lab-sample">
         <div className="theme-lab-sample-head">
           <span className="spell-announce">[runes appeared, shining slightly]</span>
         </div>
-        {replyMode === "mirror" ? (
-          <SpellFrame>
-            <p>{SAMPLE_ANSWER}</p>
-          </SpellFrame>
-        ) : (
-          <div className="reply-sample glowing-text">
-            <p>{SAMPLE_ANSWER}</p>
-          </div>
-        )}
+        <div className="reply-sample glowing-text">
+          <p>{SAMPLE_ANSWER}</p>
+        </div>
         <p className="theme-lab-hint">
-          background: {bgMode} · reply: {replyMode} · pick your combo and I ship it
+          background: {bgMode} · the reply reads as Spell runes, shining slightly
         </p>
       </div>
     </div>

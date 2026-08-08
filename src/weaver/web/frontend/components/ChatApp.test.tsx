@@ -230,13 +230,18 @@ describe("ChatApp", () => {
 });
 
 describe("ChatApp tool activity", () => {
-  it("renders search/open activity lines while a turn streams", async () => {
+  it("shows one tool call at a time and clears when the answer streams", async () => {
+    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
     const api = createApi(
       (async function* (): AsyncGenerator<StreamEvent> {
         yield { type: "tool", name: "search_story", status: "start", detail: "" };
+        await sleep(60);
         yield { type: "tool", name: "search_story", status: "done", detail: "ok" };
+        await sleep(60);
         yield { type: "tool", name: "read_chapters", status: "start", detail: "" };
+        await sleep(60);
         yield { type: "tool", name: "read_chapters", status: "done", detail: "ok" };
+        await sleep(60);
         yield { type: "delta", text: "Sunny slew the leader with the kunai." };
         yield { type: "completed", text: "Sunny slew the leader with the kunai." };
       })(),
@@ -249,14 +254,22 @@ describe("ChatApp tool activity", () => {
     fireEvent.change(composer, { target: { value: "who killed the leader" } });
     fireEvent.keyDown(composer, { key: "Enter" });
 
-    const activity = await screen.findByLabelText("Spell announcements");
-    expect(within(activity).getByText(/is searching the library/)).toBeTruthy();
-    expect(await within(activity).findByText(/has searched the library/)).toBeTruthy();
-    expect(within(activity).getByText(/is recalling a passage/)).toBeTruthy();
-    expect(await within(activity).findByText(/has recalled a passage/)).toBeTruthy();
+    // only the latest tool call is on the ticker, one at a time
+    const ticker = await screen.findByLabelText("Spell announcements");
+    expect(await within(ticker).findByText(/is recalling a passage/)).toBeTruthy();
+    await waitFor(() => {
+      expect(within(ticker).getByText(/has recalled a passage/)).toBeTruthy();
+    });
+    expect(within(ticker).queryByText(/is searching the library/)).toBeNull();
+    expect(within(ticker).queryByText(/has searched the library/)).toBeNull();
+
+    // the answer streaming clears the ticker entirely
     expect(
       await screen.findByText("Sunny slew the leader with the kunai."),
     ).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.queryByLabelText("Spell announcements")).toBeNull();
+    });
   });
 
   it("clears activity on the next turn", async () => {
@@ -361,6 +374,7 @@ describe("ChatApp weave management", () => {
   });
 
   it("tapping a recalled-passage chip summons the passage panel", async () => {
+    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
     const api = createApi(
       (async function* () {
         yield {
@@ -371,6 +385,7 @@ describe("ChatApp weave management", () => {
           preview: "The kunai spun in the dark",
           handles: ["novel:0098:3-81"],
         };
+        await sleep(400);
         yield { type: "delta", text: "Sunny slew the leader." };
         yield { type: "completed", text: "Sunny slew the leader." };
       })(),

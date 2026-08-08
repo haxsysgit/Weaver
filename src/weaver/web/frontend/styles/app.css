@@ -893,16 +893,37 @@ a:focus-visible {
    canon: status as shimmering runes in the air (ch2), memories
    materializing from golden sparks (ch81), bracketed kill
    announcements (ch4), the Spell's whispering voice (ch162).
+
+   The tool ticker: one tool call at a time, then it fades. It never
+   stacks and never stays in the transcript (owner, 2026-08-08).
    ====================================================================== */
 
-.spell-activity {
+.tool-ticker {
   display: flex;
-  flex-direction: column;
-  gap: 5px;
-  margin: 2px 0 12px 49px;
+  align-items: center;
+  gap: 9px;
+  min-height: 34px;
+  padding: 6px 18px;
+  border-top: 1px solid var(--fate-line);
+  border-bottom: 1px solid var(--fate-line);
+  background: linear-gradient(180deg, rgba(9, 10, 15, 0.9), rgba(6, 7, 11, 0.96));
 }
 
-.spell-line {
+.ticker-thread {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-gold, #d9b45c));
+  box-shadow: 0 0 6px rgba(217, 180, 92, 0.5);
+  animation: ticker-thread-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes ticker-thread-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
+.ticker-line {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -914,19 +935,14 @@ a:focus-visible {
   animation: spell-arrive var(--motion-smooth) var(--ease-weave) both;
 }
 
+.ticker-start { color: var(--ash); }
+
+.ticker-done { color: var(--fate-silver); }
+
 .spell-bracket {
   color: var(--accent-gold);
   opacity: 0.85;
   font-weight: 700;
-}
-
-.spell-line-start {
-  color: var(--ash);
-}
-
-.spell-line-done {
-  color: var(--fate-silver);
-  text-shadow: 0 0 14px rgba(217, 180, 92, 0.22);
 }
 
 .spell-preview {
@@ -1815,35 +1831,135 @@ a:focus-visible {
   background: rgba(0, 0, 0, 0.62);
 }
 
-.settings-panel {
-  width: min(440px, calc(100vw - 40px));
-  padding: 22px 24px;
-  border: 1px solid var(--fate-line);
-  border-radius: var(--radius-card, 14px);
-  background: var(--surface, #171720);
-  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+/* ---- the Soul Sea (ch16:21-27): a silent calm dark sea lit by a lonely
+   black sun, the soul core a star, Memories orbiting as spheres of light ---- */
+
+.soul-sea-panel {
+  width: min(420px, calc(100vw - 40px));
+  overflow: hidden;
+  border: 1px solid rgba(205, 210, 235, 0.16);
+  border-radius: 16px;
+  background:
+    radial-gradient(120% 90% at 50% -10%, rgba(46, 62, 98, 0.55), rgba(10, 13, 22, 0.92) 55%, rgba(4, 5, 9, 0.98)),
+    linear-gradient(180deg, #0b1020, #05070d 70%);
+  box-shadow:
+    0 18px 60px rgba(0, 0, 0, 0.6),
+    inset 0 0 40px rgba(120, 140, 200, 0.06);
 }
 
-.settings-title {
-  margin: 0 0 18px;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text, #f2efe6);
-}
-
-.settings-field {
+.soul-sea-sky {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin: 0 0 18px;
-  border: 0;
-  padding: 0;
+  align-items: center;
+  gap: 10px;
+  padding: 26px 24px 18px;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(205, 210, 235, 0.12);
 }
 
-.settings-label {
+.soul-sun {
+  position: absolute;
+  top: -34px;
+  right: -30px;
+  width: 130px;
+  height: 130px;
+  border: 1px solid rgba(205, 210, 235, 0.22);
+  border-radius: 50%;
+  background: #000;
+  box-shadow:
+    0 0 24px rgba(120, 140, 200, 0.18),
+    inset 0 0 18px rgba(120, 140, 200, 0.12);
+}
+
+.soul-sun-glow {
+  position: absolute;
+  top: -58px;
+  right: -54px;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(130, 150, 210, 0.14), transparent 65%);
+}
+
+.soul-core {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+}
+
+.soul-core-star {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 34%, #fdfdff 0%, #cfd4ec 28%, #7f87b8 62%, #2a2f4a 100%);
+  box-shadow:
+    0 0 18px rgba(207, 212, 236, 0.55),
+    0 0 46px rgba(140, 150, 210, 0.3);
+  animation: soul-core-breathe 3.6s ease-in-out infinite;
+}
+
+@keyframes soul-core-breathe {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 18px rgba(207, 212, 236, 0.55), 0 0 46px rgba(140, 150, 210, 0.3); }
+  50% { transform: scale(1.06); box-shadow: 0 0 26px rgba(207, 212, 236, 0.7), 0 0 60px rgba(140, 150, 210, 0.42); }
+}
+
+.soul-core-chapter {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--fate-silver, #d9d9e6);
+  text-shadow: 0 0 12px rgba(207, 212, 236, 0.5);
+}
+
+.soul-sea-caption {
+  max-width: 300px;
+  margin: 0;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--text-3, #8f8a80);
+}
+
+.soul-spheres {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 18px 16px;
+}
+
+.soul-sphere {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(205, 210, 235, 0.1);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(24, 28, 44, 0.5), rgba(10, 12, 20, 0.55));
+  box-shadow: 0 0 16px rgba(120, 140, 200, 0.05);
+}
+
+.soul-sphere-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0;
   font-size: 12px;
   font-weight: 600;
   color: var(--text-2, #c9c4b8);
+}
+
+.soul-sphere-name { letter-spacing: 0.02em; }
+
+.soul-sea-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 4px 18px 18px;
 }
 
 .settings-input {
@@ -1868,13 +1984,6 @@ a:focus-visible {
   gap: 8px;
   font-size: 13px;
   color: var(--text-2, #c9c4b8);
-}
-
-.settings-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 6px;
 }
 
 .settings-button {
@@ -2005,53 +2114,6 @@ a:focus-visible {
 
 /* reply style: the mystical mirror. clean glass inside, the frame strung
    with glowing elder futhark runes and fate threads (ch15:5, ch17:7) */
-.spell-frame {
-  position: relative;
-  isolation: isolate;
-  border-radius: 14px;
-}
-
-.spell-frame-svg {
-  position: absolute;
-  inset: -6px;
-  width: calc(100% + 12px);
-  height: calc(100% + 12px);
-  color: #aeb3c4;
-  filter: drop-shadow(0 0 2.5px rgba(185, 190, 220, 0.3));
-  pointer-events: none;
-  z-index: 0;
-}
-
-.spell-frame-svg .rune-row {
-  animation: rune-shimmer 4.2s ease-in-out infinite;
-}
-
-.spell-frame-svg .rune-corner {
-  animation: rune-shimmer 3.4s ease-in-out infinite;
-}
-
-.spell-frame-svg .rune-corner:nth-of-type(2n) {
-  animation-delay: 0.9s;
-}
-
-@keyframes rune-shimmer {
-  0%, 100% { opacity: 0.45; }
-  50% { opacity: 0.72; }
-}
-
-.spell-frame-inner {
-  position: relative;
-  z-index: 1;
-  background: rgba(8, 8, 12, 0.72);
-  border-radius: 14px;
-  padding: 16px 18px;
-  color: var(--text, #f2efe6);
-  font-size: 15px;
-  line-height: 1.65;
-  backdrop-filter: blur(6px);
-}
-
-.spell-frame-inner p { margin: 0; }
 
 /* reply style B: the text itself shines like the Spell's runes */
 .reply-sample.glowing-text {
