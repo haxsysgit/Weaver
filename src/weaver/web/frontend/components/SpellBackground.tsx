@@ -100,11 +100,11 @@ export function StarWebScene(
   // degrade to nothing instead of crashing the whole chat.
   let renderer: THREE.WebGLRenderer;
   try {
-    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true });
   } catch {
     return () => undefined;
   }
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(1); // cost: 4x pixels for a faint background is not worth it
   const scene = new THREE.Scene();
   scene.background = transparent ? null : new THREE.Color(0x050508);
   const camera = new THREE.PerspectiveCamera(62, 1, 0.1, 200);
@@ -211,36 +211,35 @@ export function StarWebScene(
   resize();
   window.addEventListener("resize", resize);
 
-  const pointer = { x: 0, y: 0 };
-  const onPointer = (e: PointerEvent) => {
-    pointer.x = (e.clientX / window.innerWidth - 0.5) * 2;
-    pointer.y = (e.clientY / window.innerHeight - 0.5) * 2;
-  };
-  window.addEventListener("pointermove", onPointer);
-
-  const tick = () => {
+  // The background must never follow the cursor (owner 2026-08-08): the
+  // camera drifts on its own, slowly, so the web feels alive without
+  // reacting to the mouse.
+  let lastRender = 0;
+  const tick = (now: number) => {
     const t = clock.getElapsedTime();
-    starMat.uniforms.uTime.value = t;
-    threadMat.uniforms.uTime.value = t;
-    if (mode === "alive") {
-      netTimer += 1 / 60;
-      if (netTimer > 3.2) {
-        netTimer = 0;
-        setNet(7.5);
+    if (t - lastRender >= 1 / 30) {
+      lastRender = t;
+      starMat.uniforms.uTime.value = t;
+      threadMat.uniforms.uTime.value = t;
+      if (mode === "alive") {
+        netTimer += 1 / 30;
+        if (netTimer > 3.2) {
+          netTimer = 0;
+          setNet(7.5);
+        }
       }
+      camera.position.x = Math.sin(t * 0.05) * 0.7;
+      camera.position.y = Math.cos(t * 0.04) * 0.5;
+      camera.lookAt(0, 0, -10);
+      renderer.render(scene, camera);
     }
-    camera.position.x = Math.sin(t * 0.05) * 0.7 + pointer.x * 0.6;
-    camera.position.y = Math.cos(t * 0.04) * 0.5 + pointer.y * 0.4;
-    camera.lookAt(0, 0, -10);
-    renderer.render(scene, camera);
     raf = requestAnimationFrame(tick);
   };
-  tick();
+  raf = requestAnimationFrame(tick);
 
   return () => {
     cancelAnimationFrame(raf);
     window.removeEventListener("resize", resize);
-    window.removeEventListener("pointermove", onPointer);
     starGeo.dispose();
     lineGeo.dispose();
     starMat.dispose();
