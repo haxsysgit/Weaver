@@ -1887,6 +1887,12 @@ a:focus-visible {
   align-items: center;
   justify-content: center;
   background: rgba(0, 0, 0, 0.62);
+  animation: settings-backdrop-in 0.2s ease-out;
+}
+
+@keyframes settings-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* ---- the Soul Sea (ch16:21-27): a silent calm dark sea lit by a lonely
@@ -1895,6 +1901,7 @@ a:focus-visible {
 .soul-sea-panel {
   width: min(420px, calc(100vw - 40px));
   overflow: hidden;
+  animation: soul-sea-panel-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   border: 1px solid rgba(205, 210, 235, 0.16);
   border-radius: 16px;
   background:
@@ -1903,6 +1910,11 @@ a:focus-visible {
   box-shadow:
     0 18px 60px rgba(0, 0, 0, 0.6),
     inset 0 0 40px rgba(120, 140, 200, 0.06);
+}
+
+@keyframes soul-sea-panel-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .soul-sea-sky {
@@ -1998,6 +2010,26 @@ a:focus-visible {
   border-radius: 12px;
   background: linear-gradient(180deg, rgba(24, 28, 44, 0.5), rgba(10, 12, 20, 0.55));
   box-shadow: 0 0 16px rgba(120, 140, 200, 0.05);
+  animation: soul-sphere-in 0.3s ease-out backwards;
+  transition:
+    border-color 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.soul-sphere:nth-child(1) { animation-delay: 0.05s; }
+.soul-sphere:nth-child(2) { animation-delay: 0.1s; }
+.soul-sphere:nth-child(3) { animation-delay: 0.15s; }
+
+.soul-sphere:hover {
+  border-color: rgba(205, 210, 235, 0.24);
+  transform: translateX(3px);
+  box-shadow: 0 0 22px rgba(120, 140, 200, 0.14);
+}
+
+@keyframes soul-sphere-in {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .soul-sphere-label {
@@ -2028,6 +2060,13 @@ a:focus-visible {
   background: var(--bg-2, #12121a);
   color: var(--text, #f2efe6);
   font-size: 14px;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.settings-input:focus {
+  outline: none;
+  border-color: rgba(205, 210, 235, 0.38);
+  box-shadow: 0 0 0 3px rgba(120, 140, 200, 0.14);
 }
 
 .settings-hint {
@@ -2052,12 +2091,33 @@ a:focus-visible {
   color: var(--text-2, #c9c4b8);
   font-size: 13px;
   cursor: pointer;
+  transition:
+    background 0.16s ease,
+    color 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.12s ease;
 }
+
+.settings-button:hover {
+  background: rgba(205, 210, 235, 0.08);
+  border-color: rgba(205, 210, 235, 0.3);
+  color: var(--text, #f2efe6);
+}
+
+.settings-button:active { transform: scale(0.96); }
 
 .settings-button-primary {
   border-color: var(--accent-crimson, #b63a33);
   background: var(--accent-crimson, #b63a33);
   color: #fff;
+}
+
+.settings-button-primary:hover {
+  background: var(--accent-crimson, #b63a33);
+  filter: brightness(1.14);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 20px rgba(182, 58, 51, 0.45);
 }
 
 .settings-button-primary:disabled {

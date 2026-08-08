@@ -215,3 +215,31 @@ sat in a separate strip instead of inside the response box, and the
   prompt, the immediate question, the locate draft, and the packet only
   (agent/turn.py, red-first test). The web locate phase also gets a
   200K-token bounded history instead of unbounded (speed + focus).
+
+
+## Revision 7 (2026-08-08): the web corrected, the 91 divine cores, settings polish
+
+Owner pass on the spell background and settings:
+
+- **No cursor coupling.** The camera previously followed the pointer; the
+  parallax is gone. The camera is static and the web lives through the
+  star twinkle and the alive-mode re-weave (ch15:5-7: "a myriad of stars...
+  countless strings of silver light woven into a beautiful and
+  inconceivably complex net").
+- **Constellations, not random points.** The thread radius tightened
+  (8.5 -> 5.2 subtle, 7.5 -> 4.8 alive) and each star links to up to five
+  neighbours (was three), so threads read as local nexuses and
+  constellations instead of scattered dots. Thread budget 2600 -> 3400.
+- **Colors.** Stars are silver-white (0xc2c6d2), threads proper silver
+  (0xc8ccd6) per the canon; the old blue-grey thread tint is gone.
+- **Threads just a little brighter.** Chat web 0.22 -> 0.30; subtle
+  default 0.16 -> 0.24, alive 0.5 -> 0.55.
+- **The 91 divine cores.** The Nightmare Spell was matured by Weaver using
+  himself and his six siblings (7 daemons x 7 cores = 49) and the six gods
+  (6 x 7 = 42): 91 divine titan cores that shine especially well among the
+  stars - nearer, larger, soft gold (0xe8c078), breathing slowly instead
+  of twinkling (owner lore direction 2026-08-08).
+- **Settings modal polish.** Entrance animation (backdrop fade, panel
+  scale-and-rise, staggered sphere rise), hover states on the memory
+  spheres and buttons, focus ring on the chapter input, press feedback on
+  buttons.

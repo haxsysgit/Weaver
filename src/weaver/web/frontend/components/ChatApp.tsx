@@ -122,7 +122,7 @@ export function ChatApp({
     >
       <SpellBackground
         mode="subtle"
-        threadAlpha={0.22}
+        threadAlpha={0.3}
         transparent
       />
       <ConversationRail

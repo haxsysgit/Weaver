@@ -14,9 +14,16 @@ import * as THREE from "three";
 
 export type SpellBgMode = "subtle" | "alive";
 
-const STAR_COLOR = new THREE.Color(0xa8a8b8);
-const THREAD_COLOR = new THREE.Color(0x8f93a8);
+const STAR_COLOR = new THREE.Color(0xc2c6d2);
+const THREAD_COLOR = new THREE.Color(0xc8ccd6);
 const STAR_COUNT = 4500;
+
+// 91 divine cores shining especially well among the myriad of stars:
+// the Nightmare Spell was matured by Weaver using himself and his six
+// siblings (7 daemons, 7 cores each = 49) and the six gods (6 x 7 = 42),
+// every one a divine titan (owner direction 2026-08-08).
+const DIVINE_COUNT = 91;
+const DIVINE_COLOR = new THREE.Color(0xe8c078);
 
 const STAR_VERT = /* glsl */ `
   attribute float phase;
@@ -68,6 +75,33 @@ const THREAD_FRAG = /* glsl */ `
   }
 `;
 
+// divine cores breathe slowly instead of twinkling, and glow harder.
+const DIVINE_VERT = /* glsl */ `
+  attribute float phase;
+  attribute float size;
+  uniform float uTime;
+  uniform float uPixelRatio;
+  varying float vGlow;
+  void main() {
+    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    float breath = 0.78 + 0.22 * sin(uTime * 0.55 + phase * 6.2831);
+    vGlow = breath;
+    gl_PointSize = size * uPixelRatio * (150.0 / -mv.z);
+    gl_Position = projectionMatrix * mv;
+  }
+`;
+
+const DIVINE_FRAG = /* glsl */ `
+  varying float vGlow;
+  uniform vec3 uColor;
+  void main() {
+    vec2 uv = gl_PointCoord - 0.5;
+    float d = length(uv);
+    float a = smoothstep(0.5, 0.06, d);
+    gl_FragColor = vec4(uColor, a * (0.5 + 0.5 * vGlow));
+  }
+`;
+
 function makeStars(): {
   positions: Float32Array;
   phases: Float32Array;
@@ -86,6 +120,27 @@ function makeStars(): {
     positions[i * 3 + 2] = r * Math.sin(theta) * Math.cos(phi) - 18;
     phases[i] = Math.random();
     sizes[i] = 0.7 + Math.random() * 1.6;
+  }
+  return { positions, phases, sizes };
+}
+
+function makeDivineCores(): {
+  positions: Float32Array;
+  phases: Float32Array;
+  sizes: Float32Array;
+} {
+  const positions = new Float32Array(DIVINE_COUNT * 3);
+  const phases = new Float32Array(DIVINE_COUNT);
+  const sizes = new Float32Array(DIVINE_COUNT);
+  for (let i = 0; i < DIVINE_COUNT; i++) {
+    const r = 13 + Math.random() * 15;
+    const theta = Math.random() * Math.PI * 2;
+    const phi = (Math.random() - 0.5) * 1.1;
+    positions[i * 3] = r * Math.cos(theta) * Math.cos(phi);
+    positions[i * 3 + 1] = r * Math.sin(phi) * 2.2;
+    positions[i * 3 + 2] = r * Math.sin(theta) * Math.cos(phi) - 12;
+    phases[i] = Math.random();
+    sizes[i] = 1.7 + Math.random() * 0.9;
   }
   return { positions, phases, sizes };
 }
@@ -109,6 +164,7 @@ export function StarWebScene(
   scene.background = transparent ? null : new THREE.Color(0x050508);
   const camera = new THREE.PerspectiveCamera(62, 1, 0.1, 200);
   camera.position.set(0, 0, 6);
+  camera.lookAt(0, 0, -10);
 
   const { positions, phases, sizes } = makeStars();
   const starGeo = new THREE.BufferGeometry();
@@ -129,8 +185,27 @@ export function StarWebScene(
   const stars = new THREE.Points(starGeo, starMat);
   scene.add(stars);
 
+  const { positions: dPos, phases: dPh, sizes: dSizes } = makeDivineCores();
+  const dGeo = new THREE.BufferGeometry();
+  dGeo.setAttribute("position", new THREE.BufferAttribute(dPos, 3));
+  dGeo.setAttribute("phase", new THREE.BufferAttribute(dPh, 1));
+  dGeo.setAttribute("size", new THREE.BufferAttribute(dSizes, 1));
+  const dMat = new THREE.ShaderMaterial({
+    vertexShader: DIVINE_VERT,
+    fragmentShader: DIVINE_FRAG,
+    uniforms: {
+      uTime: { value: 0 },
+      uPixelRatio: { value: renderer.getPixelRatio() },
+      uColor: { value: DIVINE_COLOR },
+    },
+    transparent: true,
+    depthWrite: false,
+  });
+  const divine = new THREE.Points(dGeo, dMat);
+  scene.add(divine);
+
   // silver threads: connect stars within a radius, rebuilt on a timer
-  const maxSegs = 2600;
+  const maxSegs = 3400;
   const lineGeo = new THREE.BufferGeometry();
   const threadPositions = new Float32Array(maxSegs * 6);
   const lineUV = new Float32Array(maxSegs * 2);
@@ -148,7 +223,7 @@ export function StarWebScene(
       uAlpha: {
         value:
           threadAlpha ??
-          (mode === "alive" ? 0.5 : 0.16),
+          (mode === "alive" ? 0.55 : 0.24),
       },
     },
     transparent: true,
@@ -177,7 +252,7 @@ export function StarWebScene(
         if (d2 < radius * radius) near.push([j, d2]);
       }
       near.sort((a, b) => a[1] - b[1]);
-      for (const [j] of near.slice(0, 3)) {
+      for (const [j] of near.slice(0, 5)) {
         if (segs.length >= maxSegs * 6) break;
         const key = i < j ? `${i}-${j}` : `${j}-${i}`;
         if (seen.has(key)) continue;
@@ -196,7 +271,7 @@ export function StarWebScene(
     lineGeo.setDrawRange(0, segs.length / 3);
   };
 
-  setNet(mode === "alive" ? 7.5 : 8.5, true);
+  setNet(mode === "alive" ? 4.8 : 5.2, true);
 
   const clock = new THREE.Clock();
   let raf = 0;
@@ -221,16 +296,14 @@ export function StarWebScene(
       lastRender = t;
       starMat.uniforms.uTime.value = t;
       threadMat.uniforms.uTime.value = t;
+      dMat.uniforms.uTime.value = t;
       if (mode === "alive") {
         netTimer += 1 / 30;
         if (netTimer > 3.2) {
           netTimer = 0;
-          setNet(7.5);
+          setNet(4.8);
         }
       }
-      camera.position.x = Math.sin(t * 0.05) * 0.7;
-      camera.position.y = Math.cos(t * 0.04) * 0.5;
-      camera.lookAt(0, 0, -10);
       renderer.render(scene, camera);
     }
     raf = requestAnimationFrame(tick);
@@ -242,8 +315,10 @@ export function StarWebScene(
     window.removeEventListener("resize", resize);
     starGeo.dispose();
     lineGeo.dispose();
+    dGeo.dispose();
     starMat.dispose();
     threadMat.dispose();
+    dMat.dispose();
     renderer.dispose();
   };
 }
