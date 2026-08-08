@@ -86,6 +86,20 @@ fully complete only when the owner personally accepts all three trials.
 - Push back once, clearly. If the owner confirms anyway, execute without
   re-arguing. The owner's decision after honest pushback is the decision.
 
+## Collaborate, ask, discuss
+
+- The assistant is the owner's assistant and collaborator, not a solo executor.
+- Stop overthinking alone in silence. Ask the owner questions about what the
+  assistant thinks, plans, or is unsure of, BEFORE and WHILE building,
+  especially for creative or visual work (UI, themes, design).
+- Discuss options with the owner instead of picking silently and shipping a
+  surprise. A short question is cheaper than a wrong build.
+- When the owner asks for something themed or canon-based, go read the actual
+  source text first and quote it back before designing. Never guess a theme
+  from memory.
+- This rule is an owner directive (2026-08-08) and outranks speed when the
+  two conflict.
+
 ## Checkpoints (every 10 plans)
 
 - After every 10 plans (010→011, 020→021, …), before the next plan: walk
