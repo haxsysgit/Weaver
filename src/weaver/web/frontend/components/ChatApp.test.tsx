@@ -32,18 +32,30 @@ function deferredStream() {
 function createApi(stream: AsyncIterable<StreamEvent>): ChatApi {
   return {
     cancelTurn: vi.fn().mockResolvedValue("cancelling"),
+    deleteConversation: vi.fn().mockResolvedValue({ deleted: "thread-2" }),
+    getPassage: vi.fn().mockResolvedValue({
+      handle: "novel:0098:3-81",
+      chapter: 98,
+      line_start: 3,
+      line_end: 81,
+      text: "The kunai spun in the dark.",
+      volume: 2,
+      beats: [],
+    }),
     getPreferences: vi.fn().mockResolvedValue({
       reader_chapter: null,
       spoiler_mode: "protect",
+      tier: "ascended",
     }),
     savePreferences: vi.fn().mockResolvedValue({
       reader_chapter: null,
       spoiler_mode: "protect",
+      tier: "ascended",
     }),
     createConversation: vi.fn().mockResolvedValue({ conversation_id: "thread-1" }),
     listConversations: vi.fn().mockResolvedValue([
-      { conversation_id: "thread-1", title: "Asterion" },
-      { conversation_id: "thread-2", title: "Cassie's choice" },
+      { conversation_id: "thread-1", title: "Asterion", created_at: "2026-08-08T10:00:00Z" },
+      { conversation_id: "thread-2", title: "Cassie's choice", created_at: "2026-08-01T10:00:00Z" },
     ]),
     loadMessages: vi.fn().mockImplementation(async (conversationId: string) => {
       if (conversationId === "thread-2") {
@@ -171,7 +183,7 @@ describe("ChatApp", () => {
     });
 
     expect(await screen.findByRole("button", { name: "Regenerate reply" })).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: /Cassie's choice/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Cassie's choice thread/ }));
 
     expect(await screen.findByText("Old answer")).toBeVisible();
     expect(screen.queryByRole("button", { name: "Regenerate reply" })).toBeNull();
@@ -237,11 +249,11 @@ describe("ChatApp tool activity", () => {
     fireEvent.change(composer, { target: { value: "who killed the leader" } });
     fireEvent.keyDown(composer, { key: "Enter" });
 
-    const activity = await screen.findByLabelText("Library activity");
-    expect(within(activity).getByText("search_story…")).toBeTruthy();
-    expect(await within(activity).findByText("search_story ok")).toBeTruthy();
-    expect(within(activity).getByText("read_chapters…")).toBeTruthy();
-    expect(await within(activity).findByText("read_chapters ok")).toBeTruthy();
+    const activity = await screen.findByLabelText("Spell announcements");
+    expect(within(activity).getByText(/is searching the library/)).toBeTruthy();
+    expect(await within(activity).findByText(/has searched the library/)).toBeTruthy();
+    expect(within(activity).getByText(/is recalling a passage/)).toBeTruthy();
+    expect(await within(activity).findByText(/has recalled a passage/)).toBeTruthy();
     expect(
       await screen.findByText("Sunny slew the leader with the kunai."),
     ).toBeTruthy();
@@ -277,7 +289,7 @@ describe("ChatApp tool activity", () => {
     fireEvent.change(composer2, { target: { value: "second" } });
     fireEvent.keyDown(composer2, { key: "Enter" });
     await secondScreen.findByText("Second answer.");
-    expect(secondScreen.queryByLabelText("Library activity")).toBeNull();
+    expect(secondScreen.queryByLabelText("Spell announcements")).toBeNull();
   });
 });
 
@@ -285,7 +297,7 @@ it("opens reader settings, saves the chapter and the knob", async () => {
   const api = createApi((async function* () {})());
   render(<ChatApp api={api} modeLabel="fake" privacyLabel="Local fake mode" />);
 
-  fireEvent.click(screen.getByRole("button", { name: "Chat settings" }));
+  fireEvent.click(screen.getByRole("button", { name: "Reader status and settings" }));
   expect(await screen.findByRole("dialog", { name: "Chat settings" })).toBeTruthy();
 
   fireEvent.change(screen.getByLabelText("I'm at chapter"), {
@@ -298,6 +310,86 @@ it("opens reader settings, saves the chapter and the knob", async () => {
     expect(api.savePreferences).toHaveBeenCalledWith({
       reader_chapter: 600,
       spoiler_mode: "none",
+      tier: "ascended",
     });
+  });
+});
+
+describe("ChatApp weave management", () => {
+  it("new weave is a no-op inside a fresh unused weave", async () => {
+    const api = createApi((async function* () {})());
+    localStorage.setItem("weaver.active-conversation", "thread-1");
+    render(<ChatApp api={api} modeLabel="fake" privacyLabel="Local fake mode" />);
+
+    await screen.findByText("What thread are we pulling?");
+    fireEvent.click(screen.getByRole("button", { name: "New weave" }));
+    await waitFor(() => {
+      expect(api.createConversation).not.toHaveBeenCalled();
+    });
+  });
+
+  it("new weave creates a chat once the current one has been used", async () => {
+    const api = createApi((async function* () {})());
+    localStorage.setItem("weaver.active-conversation", "thread-2");
+    render(<ChatApp api={api} modeLabel="fake" privacyLabel="Local fake mode" />);
+
+    // thread-2 has one stored weaver message, so the weave is used
+    await screen.findByText("Old answer");
+    fireEvent.click(screen.getByRole("button", { name: "New weave" }));
+    await waitFor(() => {
+      expect(api.createConversation).toHaveBeenCalled();
+    });
+  });
+
+  it("deletes a conversation and lands on the newest remaining one", async () => {
+    const api = createApi((async function* () {})());
+    localStorage.setItem("weaver.active-conversation", "thread-1");
+    render(<ChatApp api={api} modeLabel="fake" privacyLabel="Local fake mode" />);
+
+    await screen.findByText("What thread are we pulling?");
+    // thread-1 is the active (empty) weave; delete it via the rail
+    const deleteButton = await screen.findByRole("button", {
+      name: "Delete Asterion",
+    });
+    fireEvent.click(deleteButton); // first click arms the confirmation
+    fireEvent.click(deleteButton); // second click confirms
+    await waitFor(() => {
+      expect(api.deleteConversation).toHaveBeenCalledWith("thread-1");
+    });
+    const listMock = api.listConversations as ReturnType<typeof vi.fn>;
+    expect(listMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("tapping a recalled-passage chip summons the passage panel", async () => {
+    const api = createApi(
+      (async function* () {
+        yield {
+          type: "tool",
+          name: "read_chapters",
+          status: "done",
+          detail: "ok",
+          preview: "The kunai spun in the dark",
+          handles: ["novel:0098:3-81"],
+        };
+        yield { type: "delta", text: "Sunny slew the leader." };
+        yield { type: "completed", text: "Sunny slew the leader." };
+      })(),
+    );
+    localStorage.setItem("weaver.active-conversation", "thread-1");
+    render(<ChatApp api={api} modeLabel="fake" privacyLabel="Local fake mode" />);
+
+    const composer = await screen.findByLabelText("Message Weaver");
+    fireEvent.change(composer, { target: { value: "who killed the leader" } });
+    fireEvent.keyDown(composer, { key: "Enter" });
+
+    const viewButton = await screen.findByRole("button", {
+      name: "View the recalled passage",
+    });
+    fireEvent.click(viewButton);
+    expect(
+      await screen.findByRole("dialog", { name: "Summoned passage" }),
+    ).toBeTruthy();
+    expect(await screen.findByText(/chapter 98/)).toBeTruthy();
+    expect(api.getPassage).toHaveBeenCalledWith("novel:0098:3-81");
   });
 });

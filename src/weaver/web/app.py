@@ -46,6 +46,7 @@ class TurnBody(BaseModel):
 class PreferencesBody(BaseModel):
     reader_chapter: int | None = Field(default=None, ge=1, le=3127)
     spoiler_mode: str = Field(default="protect", pattern="^(protect|none)$")
+    tier: str = Field(default="ascended", pattern="^(awakened|ascended|transcendent)$")
 
 
 def _reject_blank(message: str) -> None:
@@ -99,6 +100,104 @@ class TurnStream:
         self.task: asyncio.Task[Any] | None = None
 
 
+# Plan 15 slice 5: the thread-naming call. One cheap flash call per
+# conversation (the first one only), short and creative like ChatGPT's
+# names. Best-effort: never fails the turn; falls back to a derived name.
+NAMING_SYSTEM_PROMPT = (
+    "You name chat threads. Given the user's first message and the reply, "
+    "produce a short, concise, creative thread name of 2 to 6 words. "
+    "Output only the name, no quotes, no punctuation at the end."
+)
+
+
+def _derived_title(first_message: str) -> str:
+    """Fallback title from the first owner message (fake mode / failure)."""
+    words = [w for w in first_message.split() if len(w) > 2][:5]
+    return " ".join(words).title() or "New chat"
+
+
+async def _name_thread(runtime: ChatRuntime, conversation_id: str, first_message: str, answer: str) -> None:
+    """One LLM call to name the thread; stores it. The sidebar refetches."""
+    from weaver.model_layer import ModelMessage, ModelRequest
+
+    title = _derived_title(first_message)
+    if runtime.live and runtime.model_layer is not None and runtime.model is not None:
+        try:
+            request = ModelRequest(
+                messages=(
+                    ModelMessage(role="system", content=NAMING_SYSTEM_PROMPT),
+                    ModelMessage(
+                        role="user",
+                        content=(
+                            f"First message: {first_message[:400]}\n"
+                            f"Reply: {answer[:600]}"
+                        ),
+                    ),
+                ),
+                max_output_tokens=32,
+            )
+            response = await runtime.model_layer.complete(runtime.model, request, asyncio.Event())
+            text = (response.content or "").strip().strip('"')
+            if text:
+                title = text[:60]
+        except Exception:
+            # the turn already succeeded; a failed name is not a failure
+            title = _derived_title(first_message)
+    if runtime.prefs is not None:
+        await runtime.prefs.set_title(conversation_id, title)
+
+
+def _tool_preview(name: str, result: dict) -> tuple[str | None, list[str]]:
+    """Preview snippet + passage handles for the tap-to-view surface.
+
+    Reading tools return novel prose in their in-turn results; the preview
+    is a short snippet for the UI only, never persisted. Handles let the
+    frontend summon the full passage via GET /api/passages.
+    """
+    payload = result.get("result") or {}
+    if name == "read_chapters":
+        evidence = result.get("durable_evidence") or {}
+        text = str(payload.get("text", ""))
+        return text[:140] or None, [evidence["passage_handle"]] if evidence.get("passage_handle") else []
+    if name == "find_text":
+        hits = payload.get("hits") or []
+        if not hits:
+            return None, []
+        first = hits[0]
+        handles = [
+            h["passage_handle"]
+            for h in hits[:3]
+            if h.get("passage_handle")
+        ]
+        return str(first.get("text", ""))[:140] or None, handles
+    if name == "browse_chapters":
+        chapters = payload.get("chapters") or []
+        if not chapters:
+            return None, []
+        first = chapters[0]
+        return (
+            f"ch {first.get('chapter')} - {first.get('title', '')}"[:140],
+            [c["passage_handle"] for c in chapters[:3] if c.get("passage_handle")],
+        )
+    if name == "search_story":
+        notebook = payload.get("notebook_hits") or []
+        canonical = payload.get("canonical_hits") or []
+        if notebook:
+            return str(notebook[0].get("statement", ""))[:140] or None, []
+        if canonical:
+            first = canonical[0]
+            return (
+                f"ch {first.get('chapter')}, lines {first.get('line_start')}-{first.get('line_end')}",
+                [h["passage_handle"] for h in canonical[:3] if h.get("passage_handle")],
+            )
+        return None, []
+    if name == "who_is":
+        entity = payload.get("entity") or {}
+        body = str(entity.get("body", ""))[:140]
+        return (str(entity.get("title", "")) + " - " + body)[:140] if body else None, []
+    return None, []
+
+
 def _sse(event: str, payload: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(payload)}\n\n"
 
@@ -149,9 +248,13 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
     @app.get("/api/preferences", dependencies=[Depends(_check_local)])
     async def get_preferences() -> dict:
         if runtime.prefs is None:
-            return {"reader_chapter": None, "spoiler_mode": "protect"}
+            return {"reader_chapter": None, "spoiler_mode": "protect", "tier": "ascended"}
         prefs = await runtime.prefs.get()
-        return {"reader_chapter": prefs.reader_chapter, "spoiler_mode": prefs.spoiler_mode}
+        return {
+            "reader_chapter": prefs.reader_chapter,
+            "spoiler_mode": prefs.spoiler_mode,
+            "tier": prefs.tier,
+        }
 
     @app.put("/api/preferences", dependencies=[Depends(_check_local)])
     async def put_preferences(body: PreferencesBody) -> dict:
@@ -160,17 +263,29 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         from weaver.prefs import UserPreferences
 
         await runtime.prefs.set(
-            UserPreferences(reader_chapter=body.reader_chapter, spoiler_mode=body.spoiler_mode)
+            UserPreferences(
+                reader_chapter=body.reader_chapter,
+                spoiler_mode=body.spoiler_mode,
+                tier=body.tier,
+            )
         )
-        return {"reader_chapter": body.reader_chapter, "spoiler_mode": body.spoiler_mode}
+        return {
+            "reader_chapter": body.reader_chapter,
+            "spoiler_mode": body.spoiler_mode,
+            "tier": body.tier,
+        }
 
     @app.get("/api/conversations")
     async def list_conversations() -> list[dict]:
         rows = await runtime.session.list_conversations()
+        stored = await runtime.prefs.titles() if runtime.prefs is not None else {}
         return [
             {
                 "conversation_id": row["conversation_id"],
-                "title": row["last_owner_text"][:80] or "New chat",
+                "title": stored.get(row["conversation_id"])
+                or (row["last_owner_text"] or "")[:80]
+                or "New chat",
+                "created_at": row["created_at"],
             }
             for row in rows
         ]
@@ -181,6 +296,58 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
     async def create_conversation() -> dict:
         conversation_id = await runtime.session.start_conversation("")
         return {"conversation_id": conversation_id}
+
+    @app.delete(
+        "/api/conversations/{conversation_id}",
+        dependencies=[Depends(_check_local)],
+    )
+    async def delete_conversation(conversation_id: str) -> dict:
+        if conversation_id in active:
+            raise HTTPException(status_code=409, detail="a turn is running in this conversation")
+        if not await runtime.session.delete_conversation(conversation_id):
+            raise HTTPException(status_code=404, detail="unknown conversation")
+        if runtime.prefs is not None:
+            await runtime.prefs.clear_title(conversation_id)
+        return {"deleted": conversation_id}
+
+    @app.get("/api/passages", dependencies=[Depends(_check_local)])
+    async def get_passage(handle: str) -> dict:
+        """Ephemeral passage fetch for the tap-to-view surface.
+
+        Reads the novel straight from disk by handle; nothing is
+        persisted (the durable split: prose lives in the novel, never in
+        the conversation store).
+        """
+        if runtime.library is None:
+            raise HTTPException(status_code=404, detail="library unavailable")
+        from weaver.retrieval.library import parse_passage_handle
+
+        try:
+            parsed = parse_passage_handle(handle)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc))
+        if parsed is None:
+            raise HTTPException(status_code=422, detail="malformed passage handle")
+        chapter, start, end = parsed
+        try:
+            passage = runtime.library.index.open_lines(chapter, start, end)
+        except (FileNotFoundError, ValueError, IndexError):
+            raise HTTPException(status_code=404, detail="unknown chapter")
+        from weaver.spoilers.judge import volume_of
+
+        beats = [
+            beat["title"]
+            for beat in spoiler_judge.beats_for(chapter)
+        ]
+        return {
+            "handle": handle,
+            "chapter": passage.chapter,
+            "line_start": passage.line_start,
+            "line_end": passage.line_end,
+            "text": passage.text,
+            "volume": volume_of(chapter),
+            "beats": beats,
+        }
 
     @app.get("/api/conversations/{conversation_id}/messages")
     async def get_messages(conversation_id: str) -> list[dict]:
@@ -205,12 +372,21 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
             stream.queue.put_nowait(_sse("delta", {"text": text}))
 
         # Plan 014 live-trial seam: tool activity as SSE 'tool' events so
-        # the UI can render search/open lines. Backward compatible: the
-        # frontend parser ignores unknown events.
-        async def on_tool_event(name: str, status: str, detail: str) -> None:
-            stream.queue.put_nowait(
-                _sse("tool", {"name": name, "status": status, "detail": detail})
-            )
+        # the UI can render search/open lines. Plan 15 slice 5: on
+        # success the handler's result is enriched with a preview snippet
+        # and passage handles for the tap-to-view surface. Backward
+        # compatible: the frontend parser ignores unknown fields.
+        async def on_tool_event(
+            name: str, status: str, detail: str, result: dict | None = None
+        ) -> None:
+            payload: dict[str, Any] = {"name": name, "status": status, "detail": detail}
+            if status == "done" and isinstance(result, dict) and result.get("ok"):
+                preview, handles = _tool_preview(name, result)
+                if preview:
+                    payload["preview"] = preview
+                if handles:
+                    payload["handles"] = handles
+            stream.queue.put_nowait(_sse("tool", payload))
 
         # Plan 15 two-phase: when the model stops calling tools, the
         # draft is a locate summary. The packet builder re-reads the
@@ -233,22 +409,32 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
             return packet.text if packet is not None else None
 
         try:
+            prefs = await runtime.prefs.get() if runtime.prefs is not None else None
+            tier = prefs.tier if prefs is not None else "ascended"
+            # the naming call runs once, after the very first turn
+            is_first_turn = (
+                len(await runtime.session.load_transcript(conversation_id)) == 0
+            )
             result = await runtime.session.send(
                 conversation_id,
                 message,
                 cancel_event=stream.cancel_event,
                 on_delta=on_delta,
                 on_tool_event=on_tool_event,
-                # Plan 15: the Ascended tier. Tool calls are capped at 70
-                # (awakened 50 / ascended 70 / transcendent 90); the final
+                # Plan 15: the tier is a user preference (the mode
+                # selector). Tool calls are capped at 50/70/90; the final
                 # answer call is always guaranteed. Thinking is always on;
-                # the tier picks the reasoning effort (ascended -> high).
-                tool_budget=TOOL_BUDGET_TIERS["ascended"],
-                reasoning=REASONING_TIERS["ascended"],
+                # the tier picks the reasoning effort.
+                tool_budget=TOOL_BUDGET_TIERS[tier],
+                reasoning=REASONING_TIERS[tier],
                 packet_builder=on_packet,
             )
             reason = result.exit_reason
             if reason == TurnExitReason.COMPLETED:
+                if is_first_turn and runtime.prefs is not None:
+                    asyncio.create_task(
+                        _name_thread(runtime, conversation_id, message, result.final_text)
+                    )
                 await stream.queue.put(
                     _sse(
                         "completed",

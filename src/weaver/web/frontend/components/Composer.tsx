@@ -13,6 +13,7 @@ interface ComposerProps {
   sendLabel?: string;
   stopLabel?: string;
   stoppingLabel?: string;
+  textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
   turnActive: boolean;
 }
 
@@ -27,18 +28,20 @@ export function Composer({
   sendLabel = "Send message",
   stopLabel = "Stop assistant",
   stoppingLabel = "Stopping assistant",
+  textareaRef,
   turnActive,
 }: ComposerProps) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const innerRef = useRef<HTMLTextAreaElement>(null);
+  const resolvedRef = textareaRef ?? innerRef;
 
   useEffect(() => {
-    const textarea = textareaRef.current;
+    const textarea = resolvedRef.current;
     if (!textarea) {
       return;
     }
     textarea.style.height = "auto";
     textarea.style.height = `${Math.min(textarea.scrollHeight, 160)}px`;
-  }, [draft]);
+  }, [draft, resolvedRef]);
 
   function submitDraft() {
     const message = draft.trim();
@@ -65,7 +68,7 @@ export function Composer({
           onChange={(event) => onDraftChange(event.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          ref={textareaRef}
+          ref={resolvedRef}
           rows={1}
           value={draft}
         />

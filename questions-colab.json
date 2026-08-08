@@ -1,0 +1,352 @@
+[
+ {
+  "id": "q01",
+  "text": "Who killed the leader of the hunting party?",
+  "expected_chapter": 98,
+  "expected_lines": [
+   143,
+   157
+  ],
+  "paraphrase": false
+ },
+ {
+  "id": "q02",
+  "text": "In what condition did the girl emerge from the dark sea?",
+  "expected_chapter": 95,
+  "expected_lines": [
+   97,
+   135
+  ],
+  "paraphrase": true
+ },
+ {
+  "id": "q03",
+  "text": "Who did Cassie give Sunny's True Name to?",
+  "expected_chapter": 360,
+  "expected_lines": [
+   57,
+   75
+  ],
+  "paraphrase": false
+ },
+ {
+  "id": "q04",
+  "text": "What was the name of the slave Nephis chose as her guide?",
+  "expected_chapter": 500,
+  "expected_lines": [
+   119,
+   135
+  ],
+  "paraphrase": false
+ },
+ {
+  "id": "q05",
+  "text": "Whose child is Mordret?",
+  "expected_chapter": 577,
+  "expected_lines": [
+   3,
+   51
+  ],
+  "paraphrase": true
+ },
+ {
+  "id": "q06",
+  "text": "What did Kai discover was sustaining the Ivory City?",
+  "expected_chapter": 684,
+  "expected_lines": [
+   3,
+   61
+  ],
+  "paraphrase": false
+ },
+ {
+  "id": "q07",
+  "text": "How did the cohort learn who Mongrel was?",
+  "expected_chapter": 871,
+  "expected_lines": [
+   3,
+   107
+  ],
+  "paraphrase": true
+ },
+ {
+  "id": "q08",
+  "text": "What did Sunny find when he returned to LO49 alone?",
+  "expected_chapter": 900,
+  "expected_lines": [
+   193,
+   207
+  ],
+  "paraphrase": false
+ },
+ {
+  "id": "q09",
+  "text": "What rank and class did Sunny's shadow companion reach?",
+  "expected_chapter": 1000,
+  "expected_lines": [
+   21,
+   41
+  ],
+  "paraphrase": true
+ },
+ {
+  "id": "q10",
+  "text": "Who threw herself between Sunny and the Messenger?",
+  "expected_chapter": 260,
+  "expected_lines": [
+   21,
+   27
+  ],
+  "paraphrase": true
+ },
+ {
+  "id": "q11",
+  "text": "Why did Sunny turn himself in at a police station?",
+  "expected_chapter": 1,
+  "expected_lines": [
+   41,
+   45
+  ],
+  "paraphrase": true
+ },
+ {
+  "id": "q12",
+  "text": "What did Cassie see in her vision of the darkness?",
+  "expected_chapter": 44,
+  "expected_lines": [
+   43,
+   55
+  ],
+  "paraphrase": false
+ },
+ {
+  "id": "q13",
+  "text": "What happened when the ship entered the Seed in the Ivory Tower?",
+  "expected_chapter": 600,
+  "expected_lines": [
+   85,
+   151
+  ],
+  "paraphrase": false
+ },
+ {
+  "id": "q14",
+  "text": "Which ability lets Saint grow stronger in the dark?",
+  "expected_chapter": 1000,
+  "expected_lines": [
+   51,
+   67
+  ],
+  "paraphrase": true
+ },
+ {
+  "id": "q15",
+  "text": "What did the leader call Nephis before Sunny killed him?",
+  "expected_chapter": 98,
+  "expected_lines": [
+   129,
+   137
+  ],
+  "paraphrase": false
+ },
+ {
+  "id": "q16",
+  "text": "Where did Sunny and Cassie climb to escape the water?",
+  "expected_chapter": 95,
+  "expected_lines": [
+   21,
+   23
+  ],
+  "paraphrase": true
+ },
+ {
+  "id": "q17",
+  "text": "How does Mordret travel between mirrors?",
+  "expected_chapter": 577,
+  "expected_lines": [
+   57,
+   67
+  ],
+  "paraphrase": true
+ },
+ {
+  "id": "q18",
+  "text": "What does Sunny use to guide the ship through the divine flames?",
+  "expected_chapter": 600,
+  "expected_lines": [
+   11,
+   39
+  ],
+  "paraphrase": true
+ },
+ {
+  "id": "q19",
+  "text": "Who is Eurys of the Nine?",
+  "expected_chapter": 500,
+  "expected_lines": [
+   119,
+   135
+  ],
+  "paraphrase": true
+ },
+ {
+  "id": "q20",
+  "text": "Which of Sunny's abilities evolved after the Shadow God lineage was swallowed?",
+  "expected_chapter": 552,
+  "expected_lines": [
+   29,
+   49
+  ],
+  "paraphrase": false
+ },
+ {
+  "id": "q21",
+  "text": "Why can Sunny never lie?",
+  "expected_chapter": 17,
+  "expected_lines": [
+   9,
+   11
+  ],
+  "paraphrase": false
+ },
+ {
+  "id": "q22",
+  "text": "What is a True Name in the Nightmare Spell?",
+  "expected_chapter": 9,
+  "expected_lines": [
+   99,
+   103
+  ],
+  "paraphrase": false
+ },
+ {
+  "id": "q23",
+  "text": "What is an Echo and how does it differ from a Memory?",
+  "expected_chapter": 47,
+  "expected_lines": [
+   3,
+   31
+  ],
+  "paraphrase": true
+ },
+ {
+  "id": "q24",
+  "text": "What was the divine mask behind the door in the pyramid?",
+  "expected_chapter": 278,
+  "expected_lines": [
+   41,
+   49
+  ],
+  "paraphrase": true
+ },
+ {
+  "id": "q25",
+  "text": "Where is the Sanctuary of Noctis located?",
+  "expected_chapter": 386,
+  "expected_lines": [
+   15,
+   31
+  ],
+  "paraphrase": false
+ },
+ {
+  "id": "q26",
+  "text": "What were the seven Chain Lords in truth?",
+  "expected_chapter": 649,
+  "expected_lines": [
+   3,
+   77
+  ],
+  "paraphrase": true
+ },
+ {
+  "id": "q27",
+  "text": "What did Sunny name his new shadow steed?",
+  "expected_chapter": 653,
+  "expected_lines": [
+   3,
+   125
+  ],
+  "paraphrase": false
+ },
+ {
+  "id": "q28",
+  "text": "How did Nephis survive the dark sea crossing?",
+  "expected_chapter": 95,
+  "expected_lines": [
+   97,
+   135
+  ],
+  "paraphrase": true
+ },
+ {
+  "id": "q29",
+  "text": "How had Sunny prepared the hunting party leader's death in advance?",
+  "expected_chapter": 99,
+  "expected_lines": [
+   3,
+   23
+  ],
+  "paraphrase": true
+ },
+ {
+  "id": "q30",
+  "text": "Which clan did Caster come from?",
+  "expected_chapter": 148,
+  "expected_lines": [
+   45,
+   47
+  ],
+  "paraphrase": false
+ },
+ {
+  "id": "q31",
+  "text": "Who does the Nightmare Spell infect?",
+  "expected_chapter": 1,
+  "expected_lines": [
+   55,
+   63
+  ],
+  "paraphrase": true
+ },
+ {
+  "id": "q32",
+  "text": "What forces Sunny to reveal his True Name to a worthy master?",
+  "expected_chapter": 15,
+  "expected_lines": [
+   95,
+   117
+  ],
+  "paraphrase": true
+ },
+ {
+  "id": "q33",
+  "text": "What happened when Sunny summoned the Weaver's Mask?",
+  "expected_chapter": 279,
+  "expected_lines": [
+   17,
+   23
+  ],
+  "paraphrase": true
+ },
+ {
+  "id": "q34",
+  "text": "Who were the seven heroes said to have fought in the dark?",
+  "expected_chapter": 56,
+  "expected_lines": [
+   55,
+   85
+  ],
+  "paraphrase": true
+ },
+ {
+  "id": "q35",
+  "text": "What did Harper say about the castle's rules?",
+  "expected_chapter": 135,
+  "expected_lines": [
+   3,
+   9
+  ],
+  "paraphrase": true
+ }
+]

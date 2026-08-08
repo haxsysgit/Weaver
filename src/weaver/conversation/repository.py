@@ -269,6 +269,36 @@ class ConversationRepository:
             rows = await cur.fetchall()
         return [(r[0], r[1], r[2]) for r in rows]
 
+    async def delete_conversation(self, conversation_id: str) -> bool:
+        """Hard-delete a conversation and everything under it.
+
+        Returns False when the conversation does not exist. One
+        transaction: run_event -> conversation_item -> run -> turn ->
+        conversation (foreign-key order).
+        """
+        if not await self.conversation_exists(conversation_id):
+            return False
+        await self._db.execute(
+            "DELETE FROM run_event WHERE conversation_id = ?", (conversation_id,)
+        )
+        await self._db.execute(
+            "DELETE FROM conversation_item WHERE conversation_id = ?",
+            (conversation_id,),
+        )
+        await self._db.execute(
+            "DELETE FROM run WHERE turn_id IN ("
+            " SELECT id FROM turn WHERE conversation_id = ?)",
+            (conversation_id,),
+        )
+        await self._db.execute(
+            "DELETE FROM turn WHERE conversation_id = ?", (conversation_id,)
+        )
+        await self._db.execute(
+            "DELETE FROM conversation WHERE id = ?", (conversation_id,)
+        )
+        await self._db.commit()
+        return True
+
     async def load_runs(self, conversation_id: str) -> list[RunRecord]:
         cursor = await self._db.execute(
             "SELECT r.id, r.turn_id, r.attempt, r.phase, r.interrupted_run_id, r.created_at "

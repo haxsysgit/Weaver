@@ -35,6 +35,7 @@ async def _emit_tool_event(
     tool_name: str,
     status: str,
     detail: str = "",
+    result: dict | None = None,
 ) -> None:
     """Forward tool activity to the surface callback (UI activity lines).
 
@@ -45,7 +46,7 @@ async def _emit_tool_event(
     if callback is None:
         return
     try:
-        await callback(tool_name, status, detail)
+        await callback(tool_name, status, detail, result)
     except Exception:
         logger.warning("on_tool_event callback failed", exc_info=True)
 
@@ -108,9 +109,11 @@ class ToolExecutionContext:
     call_id: str
     cancel_event: asyncio.Event
     conversation_id: str = ""
-    # Plan 014 live-trial seam: async (name, status, detail) callback the
-    # surface uses to show tool activity lines. Best-effort like deltas.
-    on_tool_event: Callable[[str, str, str], Awaitable[None]] | None = None
+    # Plan 014 live-trial seam: async (name, status, detail, result)
+    # callback the surface uses to show tool activity lines. result is the
+    # handler's dict on success (None on start / failure). Best-effort
+    # like deltas.
+    on_tool_event: Callable[[str, str, str, dict | None], Awaitable[None]] | None = None
 
     def raise_if_cancelled(self) -> None:
         """Stop at a cooperative handler checkpoint.
@@ -327,7 +330,7 @@ class ToolRegistry:
                         error="Tool execution failed.",
                         started=True,
                     )
-                await _emit_tool_event(context, tool_name, "done", "ok")
+                await _emit_tool_event(context, tool_name, "done", "ok", result)
             else:
                 # Cancellation won the race.
                 handler_task.cancel()

@@ -15,6 +15,8 @@ export interface ToolActivity {
   name: string;
   status: string;
   detail: string;
+  preview?: string;
+  handles?: string[];
 }
 
 function localMessageId(prefix: string): string {
@@ -62,6 +64,7 @@ function findConversationTitle(
 export function useChatController(api: ChatApi, product: ChatProduct) {
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const conversationIdState = conversationId;
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [turnState, setTurnState] = useState<TurnState>("idle");
@@ -131,7 +134,9 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
   }
 
   async function createConversation() {
-    if (turnActive) {
+    // ChatGPT-style: inside a fresh, unused weave a New weave click is a
+    // no-op - there is nothing to leave.
+    if (turnActive || messages.length === 0) {
       return false;
     }
     const created = await api.createConversation();
@@ -143,6 +148,30 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
     localStorage.setItem(product.storageKey, created.conversation_id);
     await refreshConversations();
     return true;
+  }
+
+  async function deleteConversation(conversationId: string) {
+    if (turnActive) {
+      return;
+    }
+    await api.deleteConversation(conversationId);
+    if (conversationId === conversationIdState) {
+      // the active weave is gone: land on the newest remaining one or a
+      // fresh weave
+      const remaining = (await api.listConversations()).filter(
+        (item) => item.conversation_id !== conversationId,
+      );
+      if (remaining.length > 0) {
+        await selectConversation(remaining[0].conversation_id);
+      } else {
+        await createConversation();
+      }
+    }
+    await refreshConversations();
+  }
+
+  async function loadPassage(handle: string) {
+    return api.getPassage(handle);
   }
 
   async function selectConversation(nextConversationId: string) {
@@ -185,7 +214,13 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
     if (event.type === "tool") {
       setActivity((current) => [
         ...current,
-        { name: event.name, status: event.status, detail: event.detail },
+        {
+          name: event.name,
+          status: event.status,
+          detail: event.detail,
+          preview: event.preview,
+          handles: event.handles,
+        },
       ]);
       return { text: partialReply, terminal: false };
     }
@@ -276,6 +311,8 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
     conversationId,
     conversations,
     createConversation,
+    deleteConversation,
+    loadPassage,
     draft,
     liveReplyId,
     messages,

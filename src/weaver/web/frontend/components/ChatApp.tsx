@@ -5,9 +5,10 @@ import type { ChatApi } from "../lib/chatApi";
 import { weaverProduct, type ChatProduct } from "../lib/product";
 import { Composer } from "./Composer";
 import { ConversationRail } from "./ConversationRail";
-import { RailOpenIcon, SettingsIcon } from "./Icons";
+import { RailOpenIcon } from "./Icons";
 import { SettingsModal } from "./SettingsModal";
 import { Message } from "./Message";
+import { PassageModal } from "./PassageModal";
 import { RecoveryPanel } from "./RecoveryPanel";
 import { WeaverMark, type WeaverMarkProps } from "./WeaverMark";
 
@@ -17,6 +18,26 @@ interface ChatAppProps {
   modeLabel: string;
   privacyLabel: string;
   product?: ChatProduct;
+}
+
+const SPELL_PHRASES: Record<string, { doing: string; done: string }> = {
+  search_story: { doing: "searching the library", done: "searched the library" },
+  read_chapters: { doing: "recalling a passage", done: "recalled a passage" },
+  find_text: { doing: "finding the words", done: "found the words" },
+  browse_chapters: { doing: "browsing the chapters", done: "browsed the chapters" },
+  who_is: { doing: "consulting the notebook", done: "consulted the notebook" },
+};
+
+function spellPhrase(name: string, status: string, detail: string): string {
+  const phrase = SPELL_PHRASES[name];
+  if (phrase) {
+    return status === "start"
+      ? `weaver is ${phrase.doing}`
+      : `weaver has ${phrase.done}`;
+  }
+  return status === "start"
+    ? `${name} ${detail || "started"}`.trim()
+    : `${name} ${detail || "done"}`.trim();
 }
 
 export function ChatApp({
@@ -34,10 +55,13 @@ export function ChatApp({
   const [settingsPrefs, setSettingsPrefs] = useState<{
     reader_chapter: number | null;
     spoiler_mode: "protect" | "none";
-  }>({ reader_chapter: null, spoiler_mode: "protect" });
+    tier: "awakened" | "ascended" | "transcendent";
+  }>({ reader_chapter: null, spoiler_mode: "protect", tier: "ascended" });
+  const [passageHandle, setPassageHandle] = useState<string | null>(null);
   const returnFocusToRailToggle = useRef(false);
   const railToggleRef = useRef<HTMLButtonElement>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
   const railInteractionHidden = mobileLayout ? !drawerOpen : desktopRailCollapsed;
   const mainInteractionHidden = mobileLayout && drawerOpen;
 
@@ -64,6 +88,21 @@ export function ChatApp({
       transcript.scrollTop = transcript.scrollHeight;
     }
   }, [chat.messages, chat.recoveryMessage, chat.activity]);
+
+  function openSettings() {
+    void api
+      .getPreferences()
+      .then((prefs) => {
+        setSettingsPrefs(prefs);
+        setSettingsOpen(true);
+      })
+      .catch(() => setSettingsOpen(true));
+  }
+
+  function askAboutQuote(quote: string) {
+    chat.setDraft(`"${quote}" `);
+    composerRef.current?.focus();
+  }
 
   async function createConversation() {
     if (await chat.createConversation()) {
@@ -108,8 +147,13 @@ export function ChatApp({
         mobileOpen={drawerOpen}
         onClose={closeConversationRail}
         onCreate={() => void createConversation()}
+        onDelete={(id) => void chat.deleteConversation(id)}
+        onOpenSettings={openSettings}
         onSelect={(id) => void selectConversation(id)}
         product={product}
+        readerChapter={settingsPrefs.reader_chapter}
+        spoilerMode={settingsPrefs.spoiler_mode}
+        tier={settingsPrefs.tier}
       />
 
       <main
@@ -136,22 +180,6 @@ export function ChatApp({
             <strong>{chat.activeTitle}</strong>
           </div>
           <span className="mode-seal">{modeLabel}</span>
-          <button
-            aria-label="Chat settings"
-            className="icon-button settings-toggle"
-            onClick={() => {
-              void api
-                .getPreferences()
-                .then((prefs) => {
-                  setSettingsPrefs(prefs);
-                  setSettingsOpen(true);
-                })
-                .catch(() => setSettingsOpen(true));
-            }}
-            type="button"
-          >
-            <SettingsIcon />
-          </button>
         </header>
 
         <div aria-live="polite" className="transcript" ref={transcriptRef}>
@@ -175,6 +203,7 @@ export function ChatApp({
                 assistantName={product.assistantName}
                 key={message.id}
                 message={message}
+                onQuote={askAboutQuote}
                 onRegenerate={
                   message.id === chat.liveReplyId && chat.turnState === "idle"
                     ? chat.regenerateReply
@@ -184,12 +213,28 @@ export function ChatApp({
               />
             ))}
             {chat.activity.length > 0 && (
-              <div aria-label="Library activity" className="tool-activity">
+              <div aria-label="Spell announcements" className="spell-activity">
                 {chat.activity.map((entry, index) => (
-                  <p className="tool-activity-line" key={`${entry.name}-${index}`}>
-                    {entry.status === "done"
-                      ? `${entry.name} ${entry.detail || "done"}`
-                      : `${entry.name}\u2026`}
+                  <p
+                    className={`spell-line spell-line-${entry.status}`}
+                    key={`${entry.name}-${index}`}
+                  >
+                    <span className="spell-bracket">[</span>
+                    {spellPhrase(entry.name, entry.status, entry.detail)}
+                    {entry.preview && (
+                      <span className="spell-preview"> {entry.preview}…</span>
+                    )}
+                    {entry.handles && entry.handles.length > 0 && (
+                      <button
+                        aria-label="View the recalled passage"
+                        className="spell-view"
+                        onClick={() => setPassageHandle(entry.handles![0])}
+                        type="button"
+                      >
+                        view passage
+                      </button>
+                    )}
+                    <span className="spell-bracket">]</span>
                   </p>
                 ))}
               </div>
@@ -220,6 +265,7 @@ export function ChatApp({
             stopLabel={product.stopLabel}
             stoppingLabel={product.stoppingLabel}
             turnActive={chat.turnActive}
+            textareaRef={composerRef}
           />
           <p className="privacy-line">
             <span className="privacy-dot" />
@@ -235,6 +281,13 @@ export function ChatApp({
             await api.savePreferences(prefs);
             setSettingsPrefs(prefs);
           }}
+        />
+      )}
+      {passageHandle && (
+        <PassageModal
+          handle={passageHandle}
+          loadPassage={chat.loadPassage}
+          onClose={() => setPassageHandle(null)}
         />
       )}
     </div>

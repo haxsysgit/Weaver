@@ -266,6 +266,8 @@ class ChatRuntime:
         live: bool,
         prefs: PreferencesStore | None = None,
         library=None,
+        model_layer: ModelLayer | None = None,
+        model=None,
     ) -> None:
         self.session = session
         self.surface = surface
@@ -273,6 +275,9 @@ class ChatRuntime:
         self.live = live
         self.prefs = prefs
         self.library = library
+        # Plan 15 slice 5: the thread-naming call runs on this layer.
+        self.model_layer = model_layer
+        self.model = model
 
     async def close(self) -> None:
         if self.prefs is not None:

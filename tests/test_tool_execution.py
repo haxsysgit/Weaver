@@ -451,8 +451,9 @@ class TestCooperativeCancellation:
 
 @pytest.mark.asyncio
 async def test_on_tool_event_reports_start_and_done_in_order() -> None:
-    """Plan 014 seam: dispatch forwards (name, status, detail) events so
-    the surface can render tool activity lines."""
+    """Plan 014 seam: dispatch forwards (name, status, detail, result)
+    events so the surface can render tool activity lines. The Plan 15
+    slice 5 seam adds the handler's result dict on done."""
     registry = ToolRegistry()
     register_tool(
         registry,
@@ -462,7 +463,7 @@ async def test_on_tool_event_reports_start_and_done_in_order() -> None:
     )
     events: list[tuple[str, str, str]] = []
 
-    async def on_tool_event(name: str, status: str, detail: str) -> None:
+    async def on_tool_event(name: str, status: str, detail: str, result: dict | None = None) -> None:
         events.append((name, status, detail))
 
     context = execution_context()
@@ -506,3 +507,45 @@ async def test_on_tool_event_failure_never_fails_the_turn() -> None:
         context=context,
     )
     assert result.ok is True
+
+
+@pytest.mark.asyncio
+async def test_on_tool_event_receives_handler_result() -> None:
+    """Plan 15 slice 5: the done event carries the handler's result dict."""
+    events: list[tuple] = []
+
+    async def capture(name, status, detail, result=None):
+        events.append((name, status, detail, result))
+
+    context = ToolExecutionContext(
+        session_id="s",
+        turn_id="t",
+        call_id="c",
+        cancel_event=asyncio.Event(),
+        on_tool_event=capture,
+    )
+
+    async def handler(arguments, ctx):
+        return {"ok": True, "result": {"text": "hello"}}
+
+    registry = ToolRegistry()
+    registry.register(
+        ToolDefinition(
+            name="probe",
+            description="probe",
+            parameters={"type": "object"},
+            handler=handler,
+            effect_kind=EffectKind.READ,
+        )
+    )
+    result = await registry.dispatch(
+        "probe",
+        "{}",
+        active_names=("probe",),
+        policy=ToolExecutionPolicy.read_only(),
+        context=context,
+    )
+    assert result.ok
+    assert events[0] == ("probe", "start", "", None)
+    assert events[1][:3] == ("probe", "done", "ok")
+    assert events[1][3] == {"ok": True, "result": {"text": "hello"}}

@@ -79,7 +79,7 @@ async def _no_canaries(text: str) -> None:
 async def test_preferences_defaults(client) -> None:
     resp = await client.get("/api/preferences")
     assert resp.status_code == 200
-    assert resp.json() == {"reader_chapter": None, "spoiler_mode": "protect"}
+    assert resp.json() == {"reader_chapter": None, "spoiler_mode": "protect", "tier": "ascended"}
 
 
 async def test_preferences_roundtrip(client) -> None:
@@ -88,9 +88,9 @@ async def test_preferences_roundtrip(client) -> None:
         json={"reader_chapter": 600, "spoiler_mode": "none"},
     )
     assert resp.status_code == 200
-    assert resp.json() == {"reader_chapter": 600, "spoiler_mode": "none"}
+    assert resp.json() == {"reader_chapter": 600, "spoiler_mode": "none", "tier": "ascended"}
     resp = await client.get("/api/preferences")
-    assert resp.json() == {"reader_chapter": 600, "spoiler_mode": "none"}
+    assert resp.json() == {"reader_chapter": 600, "spoiler_mode": "none", "tier": "ascended"}
 
 
 async def test_preferences_reject_invalid(client) -> None:
@@ -754,3 +754,34 @@ async def test_private_protocol_canaries_never_reach_web_surfaces(
     assert "PRIVATE_ARGUMENT_CANARY" not in public_text
     assert "PRIVATE_RESULT_CANARY" not in public_text
     await runtime.close()
+
+
+async def test_delete_conversation_removes_it(client) -> None:
+    resp = await client.post("/api/conversations")
+    assert resp.status_code == 201
+    conv_id = resp.json()["conversation_id"]
+    resp = await client.delete(f"/api/conversations/{conv_id}")
+    assert resp.status_code == 200
+    assert resp.json() == {"deleted": conv_id}
+    listed = await client.get("/api/conversations")
+    assert all(c["conversation_id"] != conv_id for c in listed.json())
+
+
+async def test_delete_unknown_conversation_is_404(client) -> None:
+    resp = await client.delete("/api/conversations/nope")
+    assert resp.status_code == 404
+
+
+async def test_tier_validation_rejects_unknown_mode(client) -> None:
+    resp = await client.put("/api/preferences", json={"tier": "supreme"})
+    assert resp.status_code == 422
+    resp = await client.put("/api/preferences", json={"tier": "transcendent"})
+    assert resp.status_code == 200
+    assert resp.json()["tier"] == "transcendent"
+
+
+async def test_passages_rejects_bad_handle(client) -> None:
+    resp = await client.get("/api/passages", params={"handle": "nonsense"})
+    assert resp.status_code == 422
+    resp = await client.get("/api/passages", params={"handle": "novel:99999:1-5"})
+    assert resp.status_code == 404

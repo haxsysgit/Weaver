@@ -223,6 +223,11 @@ class SessionWeave:
             )
         return out
 
+    async def delete_conversation(self, conversation_id: str) -> bool:
+        """Hard-delete a conversation and all its items, runs and events."""
+        assert self._repo is not None
+        return await self._repo.delete_conversation(conversation_id)
+
     async def conversation_exists(self, conversation_id: str) -> bool:
         """Distinguish an empty persisted chat from an unknown ID."""
         assert self._repo is not None

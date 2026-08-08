@@ -15,6 +15,7 @@ export function SettingsModal({ onClose, onSave, initial }: SettingsModalProps) 
   const [spoilerMode, setSpoilerMode] = useState<"protect" | "none">(
     initial.spoiler_mode,
   );
+  const [tier, setTier] = useState<UserPreferences["tier"]>(initial.tier);
   const [saving, setSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -28,6 +29,7 @@ export function SettingsModal({ onClose, onSave, initial }: SettingsModalProps) 
     await onSave({
       reader_chapter: parsed && parsed >= 1 && parsed <= 3127 ? parsed : null,
       spoiler_mode: spoilerMode,
+      tier,
     });
     setSaving(false);
     onClose();
@@ -78,6 +80,36 @@ export function SettingsModal({ onClose, onSave, initial }: SettingsModalProps) 
               type="radio"
             />
             No spoiler care (spoil me freely)
+          </label>
+        </fieldset>
+        <fieldset className="settings-field">
+          <legend className="settings-label">Reading tier</legend>
+          <label className="settings-option">
+            <input
+              checked={tier === "awakened"}
+              name="reading-tier"
+              onChange={() => setTier("awakened")}
+              type="radio"
+            />
+            Awakened (fast, 50 tool steps)
+          </label>
+          <label className="settings-option">
+            <input
+              checked={tier === "ascended"}
+              name="reading-tier"
+              onChange={() => setTier("ascended")}
+              type="radio"
+            />
+            Ascended (default, 70 tool steps)
+          </label>
+          <label className="settings-option">
+            <input
+              checked={tier === "transcendent"}
+              name="reading-tier"
+              onChange={() => setTier("transcendent")}
+              type="radio"
+            />
+            Transcendent (deep, 90 tool steps)
           </label>
         </fieldset>
         <div className="settings-actions">

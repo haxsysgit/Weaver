@@ -8,6 +8,8 @@ import {
   faPlus,
   faRotateRight,
   faSquare,
+  faTrash,
+  faQuoteLeft,
 } from "@fortawesome/free-solid-svg-icons";
 import {
   FontAwesomeIcon,
@@ -50,4 +52,12 @@ export function RailCloseIcon(props: IconProps) {
 
 export function SettingsIcon(props: IconProps) {
   return <FontAwesomeIcon aria-hidden="true" icon={faGear} {...props} />;
+}
+
+export function TrashIcon(props: IconProps) {
+  return <FontAwesomeIcon aria-hidden="true" icon={faTrash} {...props} />;
+}
+
+export function QuoteIcon(props: IconProps) {
+  return <FontAwesomeIcon aria-hidden="true" icon={faQuoteLeft} {...props} />;
 }

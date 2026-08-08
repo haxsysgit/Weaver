@@ -106,9 +106,22 @@ classification call) returns with them, and it never assigned budgets.
    inherits a beat's label for any citation whose chapter falls inside its range (an explicit
    statement label overrides beats); the packet carries beat titles as context; owner review
    of both files pending
-5. Verify pass (transcendent)
+5. Nightmare Spell surface (UI sharpening) — DONE 2026-08-08 (this slice);
+   canon research done (`deliverables/015-reader-trials-1-1000/spell-surface-design.md`):
+   status as shimmering runes in the air (ch2), Memories materializing from golden
+   sparks (ch81), bracketed kill announcements (ch4), the Spell's whispering voice.
+   Builds: new-weave no-op on unused chat; sidebar sections with foldable chat
+   groups + delete; settings/profile moved into the sidebar; LLM thread naming
+   (one flash call, stored); passage tap-to-view via an ephemeral read-only
+   endpoint (never persisted, consistent with the durable split); selection
+   quote-and-ask; tier mode selector (awakened/ascended/transcendent) wired to
+   budget + reasoning; Spell-themed tokens, send coalescing animation, tool
+   activity as bracketed Spell announcements. Verified: live proof green
+   (turn, rail, mobile, PWA), 147 backend + 16 vitest green.
 6. Live trial (owner go required)
-7. Skills + router — deferred until after the live trial
+7. Verify pass — only if the live trial shows the synthesis call failing
+   (owner-directed ordering 2026-08-08)
+8. Skills + router — deferred until after the live trial
 
 Compaction (labeled context, living story-state note, graph-anchored user
 takes) is the second half of Plan 15, after the front half works live.
