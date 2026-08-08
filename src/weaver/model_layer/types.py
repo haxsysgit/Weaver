@@ -4,7 +4,7 @@ from typing import Any, Literal
 
 ModelRole = Literal["system", "user", "assistant", "tool"]
 ResponseFormat = Literal["text", "json_object"]
-ReasoningEffort = Literal["high", "max"]
+ReasoningEffort = Literal["low", "high", "max"]
 
 
 class ModelStopReason(str, Enum):

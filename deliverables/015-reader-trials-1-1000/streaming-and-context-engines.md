@@ -119,10 +119,12 @@ the whole locate phase plus the synthesis thinking:
 - The synthesis call now sends a small curated window instead of the whole
   history — less input to process on the heaviest call.
 
-Remaining levers (product decisions, not done here): the locate steps do not
-need max-effort thinking (thinking stays on, but a lower effort for tool-call
-steps would cut locate latency), and fewer locate steps via tighter prompt
-discipline (the current prompt already caps searches at two per question).
+Done after the owner said yes (same session): locate steps now run at
+reasoning effort `low` (thinking still on, per the always-on rule) while the
+synthesis answer call keeps the tier effort (`high`/`max`). DeepSeek flash
+documents `reasoning_effort` low/high/max, so the lower effort is honored, not
+clamped. The remaining lever is fewer locate steps via tighter prompt
+discipline (the prompt already caps searches at two per question).
 
 ## 5. hermes and pi context engines (documented, per the owner)
 

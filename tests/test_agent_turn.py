@@ -1016,9 +1016,13 @@ class TestToolExecutionEvidence:
 
 
 class TestReasoningTiers:
-    async def test_reasoning_effort_threads_into_every_model_request(
+    async def test_locate_steps_use_low_effort_while_thinking_stays_on(
         self,
     ) -> None:
+        # Owner decision 2026-08-08: search/locate steps do not need the
+        # tier's full reasoning effort. Thinking stays on everywhere, but
+        # tool-call steps (and a no-packet final answer) drop to low so
+        # the search loop is fast.
         layer, model, provider = scripted_layer(
             tool_response(tool_call("c1", "echo", '{"message": "a"}')),
             stop_response("Done."),
@@ -1034,7 +1038,7 @@ class TestReasoningTiers:
         assert len(provider.calls) == 2
         for call in provider.calls:
             assert call.request.reasoning.enabled is True
-            assert call.request.reasoning.effort == "max"
+            assert call.request.reasoning.effort == "low"
 
     async def test_no_reasoning_keeps_thinking_disabled(self) -> None:
         layer, model, provider = scripted_layer(stop_response("Done."))
@@ -1095,6 +1099,36 @@ class TestTwoPhaseSynthesis:
         synthesis_request = provider.calls[-1].request
         assert synthesis_request.tools == ()
         assert any("PACKET: chapter 104 prose" in (m.content or "") for m in synthesis_request.messages)
+
+    async def test_synthesis_call_keeps_the_tier_effort(self) -> None:
+        # The tier effort (high / max) belongs to the heavy synthesis
+        # answer call; locate steps drop to low (thinking still on).
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response("Draft: located."),
+            stop_response("Final: answer."),
+        )
+
+        async def packet_builder(results, draft):
+            return "PACKET: prose"
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            reasoning="max",
+            packet_builder=packet_builder,
+        )
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert len(provider.calls) == 3
+        # locate steps (the tool call and the draft) use the low effort.
+        assert provider.calls[0].request.reasoning.effort == "low"
+        assert provider.calls[1].request.reasoning.effort == "low"
+        # the synthesis answer call keeps the tier effort.
+        assert provider.calls[2].request.reasoning.effort == "max"
+        for call in provider.calls:
+            assert call.request.reasoning.enabled is True
 
     async def test_synthesis_call_keeps_recent_exchanges_drops_old_ones(self) -> None:
         # The "7 daemons" bug: the WHOLE conversation history dominated

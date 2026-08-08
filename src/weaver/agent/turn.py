@@ -59,6 +59,13 @@ TOOL_BUDGET_TIERS: dict[str, int] = {
 # tier. Only the tool budget and the reasoning effort differ. DeepSeek's
 # API only supports high and max (low/medium clamp up to high), so
 # awakened and ascended share high and transcendent gets max.
+# Plan 15 (owner 2026-08-08): search/locate steps do not need the tier's
+# full reasoning effort. Thinking stays on for every call, but tool-call
+# steps (and a no-packet final answer) drop to low so the search loop is
+# fast; the heavy synthesis answer call keeps the tier effort (high/max).
+# DeepSeek flash documents reasoning_effort low/high/max.
+LOCATE_REASONING_EFFORT: ReasoningEffort = "low"
+
 REASONING_TIERS: dict[str, ReasoningEffort] = {
     "awakened": "high",
     "ascended": "high",
@@ -420,8 +427,17 @@ async def run_turn(
             # Plan 15 (owner 2026-08-07): thinking stays on for every
             # tier; the tier only picks the reasoning effort. None keeps
             # the pre-tier behavior (thinking disabled, no effort).
+            # Plan 15 (owner 2026-08-08): answer calls (synthesis or the
+            # forced call) keep the tier effort; locate steps drop to low.
             reasoning=(
-                ModelReasoning(enabled=True, effort=reasoning)
+                ModelReasoning(
+                    enabled=True,
+                    effort=(
+                        reasoning
+                        if (synthesis_packet is not None or forced_answer)
+                        else LOCATE_REASONING_EFFORT
+                    ),
+                )
                 if reasoning is not None
                 else ModelReasoning()
             ),
