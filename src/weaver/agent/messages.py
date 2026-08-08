@@ -31,12 +31,10 @@ class AssistantMessage:
     content: str = ""
     tool_calls: tuple[ModelToolCall, ...] = field(default_factory=tuple)
     # DeepSeek thinking-mode contract: assistant messages that carried
-    # tool calls must pass reasoning_content back in later requests.
+    # tool calls must pass reasoning_content back in later requests; an
+    # empty string satisfies the presence check (never captured).
     reasoning_content: str = ""
     status: Literal["complete", "interrupted", "failed"] = "complete"
-    # DeepSeek thinking-mode requirement: assistant reasoning passed back
-    # after tool calls. Empty string = never captured (still sent as "").
-    reasoning_content: str = ""
     created_at: str = field(default_factory=_utcnow)
 
 

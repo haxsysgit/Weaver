@@ -54,17 +54,6 @@ def _stable_arguments_json(arguments: Any) -> str:
     )
 
 
-# Plan 15 (owner 2026-08-08): transient provider failures are retried with
-# exponential backoff (pi's retryAssistantCall pattern). Rate limits, server
-# errors, timeouts and connection drops are retried; auth/balance/invalid
-# requests fail fast. Backoff = 2s * 2^(attempt-1), max 3 retries.
-_RETRYABLE_CATEGORIES = frozenset(
-    {"rate_limit", "timeout", "connection", "provider"}
-)
-_MAX_RETRIES = 3
-_RETRY_BASE_DELAY_MS = 2000
-
-
 class DeepSeekProvider:
     provider_id = "deepseek"
     models = DEEPSEEK_MODELS
@@ -328,7 +317,7 @@ class DeepSeekProvider:
             # fallback). Gated on the model's capability, not the
             # per-request thinking toggle, matching pi's compat flag.
             payload["reasoning_content"] = message.reasoning_content or ""
-        if message.reasoning_content is not None:
+        elif message.reasoning_content is not None:
             payload["reasoning_content"] = message.reasoning_content
         if message.tool_calls:
             payload["tool_calls"] = [
