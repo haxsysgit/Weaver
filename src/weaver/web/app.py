@@ -11,6 +11,7 @@ checks on every mutating route.
 
 import asyncio
 import json
+from collections import deque
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -54,8 +55,12 @@ def _reject_blank(message: str) -> None:
         raise HTTPException(status_code=422, detail="message must not be blank")
 
 
-def _check_local(request: Request) -> None:
-    """Require an exact loopback host and a matching origin when supplied."""
+def _check_local_hostname(request: Request) -> None:
+    """Require an exact loopback host (no origin requirement).
+
+    Used by read-only routes consumed by EventSource, which does not
+    always send an Origin header.
+    """
     host = request.headers.get("host", "").lower()
     try:
         parsed_host = urlparse(f"//{host}")
@@ -82,22 +87,65 @@ def _check_local(request: Request) -> None:
     if host != expected_host:
         raise HTTPException(status_code=403, detail="host not allowed")
 
+
+def _check_local(request: Request) -> None:
+    """Require an exact loopback host and a matching origin when supplied."""
+    _check_local_hostname(request)
     origin = request.headers.get("origin")
     if not origin:
         raise HTTPException(status_code=403, detail="origin required")
-    expected_origin = f"{request.url.scheme}://{host}"
+    expected_origin = f"{request.url.scheme}://{request.headers.get('host', '').lower()}"
     if origin.rstrip("/").lower() != expected_origin:
         raise HTTPException(status_code=403, detail="origin not allowed")
 
 
 class TurnStream:
-    """One owned turn task plus the SSE queue it feeds."""
+    """One owned turn task plus its SSE event bus.
 
-    def __init__(self, conversation_id: str, queue: asyncio.Queue[str]) -> None:
+    The turn task emits events into ``history`` (a bounded replay buffer)
+    and every current subscriber queue. Clients read the stream via GET
+    (EventSource); on a dropped connection the browser reconnects with
+    Last-Event-ID and the server replays what it missed (hermes-webui
+    pattern). A disconnect never cancels the turn: it completes
+    server-side and the reply is persisted, so a reload or reconnect
+    always finds the outcome.
+    """
+
+    def __init__(self, conversation_id: str) -> None:
         self.conversation_id = conversation_id
-        self.queue = queue
         self.cancel_event = asyncio.Event()
         self.task: asyncio.Task[Any] | None = None
+        self.seq = 0
+        self.history: deque[tuple[int, str]] = deque(maxlen=2048)
+        self.finished = False
+        self._subscribers: set[asyncio.Queue[tuple[int, str]]] = set()
+
+    def emit(self, event: str, payload: dict) -> None:
+        self.seq += 1
+        frame = (
+            f"id: {self.seq}\n"
+            f"event: {event}\n"
+            f"data: {json.dumps(payload)}\n\n"
+        )
+        self.history.append((self.seq, frame))
+        for queue in list(self._subscribers):
+            queue.put_nowait((self.seq, frame))
+
+    def subscribe(self, queue: asyncio.Queue[tuple[int, str]]) -> None:
+        self._subscribers.add(queue)
+
+    def unsubscribe(self, queue: asyncio.Queue[tuple[int, str]]) -> None:
+        self._subscribers.discard(queue)
+
+
+def _is_terminal_frame(frame: str) -> bool:
+    return frame.startswith(
+        ("event: completed", "event: interrupted", "event: failed")
+    )
+
+
+def _sse(event: str, payload: dict) -> str:
+    return f"event: {event}\ndata: {json.dumps(payload)}\n\n"
 
 
 # Plan 15 slice 5: the thread-naming call. One cheap flash call per
@@ -204,15 +252,15 @@ def _sse(event: str, payload: dict) -> str:
 
 def create_app(runtime: ChatRuntime) -> FastAPI:
     # One active stream per conversation id. An entry lives from the
-    # moment a turn is accepted until that turn's task finishes (the
-    # task removes itself in a finally), so the 409 guard cannot race
-    # with a still-settling turn.
+    # moment a turn is accepted until the turn's task finishes (the task
+    # marks it finished in a finally), then a janitor drops it after the
+    # grace window so a late reconnect can still replay the outcome.
     active: dict[str, TurnStream] = {}
 
     async def _settle(conversation_id: str) -> None:
-        """Cancel a turn and await it; the task's finally removes the entry."""
+        """Cancel a running turn and await it."""
         stream = active.get(conversation_id)
-        if stream is None:
+        if stream is None or stream.finished:
             return
         stream.cancel_event.set()
         if stream.task is not None:
@@ -302,7 +350,8 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         dependencies=[Depends(_check_local)],
     )
     async def delete_conversation(conversation_id: str) -> dict:
-        if conversation_id in active:
+        stream = active.get(conversation_id)
+        if stream is not None and not stream.finished:
             raise HTTPException(status_code=409, detail="a turn is running in this conversation")
         if not await runtime.session.delete_conversation(conversation_id):
             raise HTTPException(status_code=404, detail="unknown conversation")
@@ -369,7 +418,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         """Run the send, streaming deltas, then the terminal event."""
 
         async def on_delta(text: str) -> None:
-            stream.queue.put_nowait(_sse("delta", {"text": text}))
+            stream.emit("delta", {"text": text})
 
         # Plan 014 live-trial seam: tool activity as SSE 'tool' events so
         # the UI can render search/open lines. Plan 15 slice 5: on
@@ -386,7 +435,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                     payload["preview"] = preview
                 if handles:
                     payload["handles"] = handles
-            stream.queue.put_nowait(_sse("tool", payload))
+            stream.emit("tool", payload)
 
         # Plan 15 two-phase: when the model stops calling tools, the
         # draft is a locate summary. The packet builder re-reads the
@@ -435,87 +484,141 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                     asyncio.create_task(
                         _name_thread(runtime, conversation_id, message, result.final_text)
                     )
-                await stream.queue.put(
-                    _sse(
-                        "completed",
-                        {
-                            "text": result.final_text,
-                            "token_count": result.token_count,
-                            "token_budget": result.token_budget,
-                        },
-                    )
+                stream.emit(
+                    "completed",
+                    {
+                        "text": result.final_text,
+                        "token_count": result.token_count,
+                        "token_budget": result.token_budget,
+                    },
                 )
             elif reason == TurnExitReason.INTERRUPTED:
-                await stream.queue.put(
-                    _sse(
-                        "interrupted",
-                        {
-                            "code": "interrupted",
-                            "message": result.safe_failure or safe_error("interrupted"),
-                        },
-                    )
+                stream.emit(
+                    "interrupted",
+                    {
+                        "code": "interrupted",
+                        "message": result.safe_failure or safe_error("interrupted"),
+                    },
                 )
             else:
                 # MODEL_FAILED, LIMIT_REACHED, PERSISTENCE_FAILED, INCOMPLETE.
-                await stream.queue.put(
-                    _sse(
-                        "failed",
-                        {
-                            "code": reason.value,
-                            "message": result.safe_failure or safe_error("turn"),
-                        },
-                    )
+                stream.emit(
+                    "failed",
+                    {
+                        "code": reason.value,
+                        "message": result.safe_failure or safe_error("turn"),
+                    },
                 )
         except asyncio.CancelledError:
             # Caller-side disconnect during startup; nothing was sent.
             pass
         except Exception:
-            await stream.queue.put(
-                _sse(
-                    "failed",
-                    {"code": "turn", "message": safe_error("turn")},
-                )
+            stream.emit(
+                "failed",
+                {"code": "turn", "message": safe_error("turn")},
             )
         finally:
-            # The turn is done (or wedged past the settle window): only now
-            # may a new turn start for this conversation.
-            active.pop(conversation_id, None)
+            # The turn is done but the stream (with its full event
+            # history) stays in the registry so a reconnecting client can
+            # replay the outcome; the GET handler pops it once the
+            # terminal has been served. A size cap bounds streams whose
+            # client never came back.
+            stream.finished = True
 
     @app.post(
         "/api/conversations/{conversation_id}/turns",
         dependencies=[Depends(_check_local)],
     )
-    async def stream_turn(
+    async def start_turn(
         conversation_id: str,
         body: TurnBody,
     ) -> Response:
         if not await runtime.session.conversation_exists(conversation_id):
             raise HTTPException(status_code=404, detail="unknown conversation")
         _reject_blank(body.message)
-        if conversation_id in active:
+        stream = active.get(conversation_id)
+        if stream is not None and not stream.finished:
             raise HTTPException(status_code=409, detail="a turn is already running")
 
-        queue: asyncio.Queue[str] = asyncio.Queue()
-        stream = TurnStream(conversation_id, queue)
+        stream = TurnStream(conversation_id)
         active[conversation_id] = stream
+        if len(active) > 32:
+            for stale_id, stale in list(active.items()):
+                if stale.finished:
+                    active.pop(stale_id, None)
+                    break
         stream.task = asyncio.create_task(
             _run_turn(conversation_id, body.message, stream)
         )
+        # The turn runs server-side; the reply is streamed over the GET
+        # /stream route (EventSource with Last-Event-ID resume), so a
+        # dropped connection never loses the reply (hermes-webui pattern).
+        return Response(
+            status_code=202,
+            content=json.dumps({"conversation_id": conversation_id}),
+            media_type="application/json",
+        )
+
+    @app.get(
+        "/api/conversations/{conversation_id}/stream",
+        dependencies=[Depends(_check_local_hostname)],
+    )
+    async def read_turn_stream(conversation_id: str, request: Request) -> Response:
+        """SSE stream for the active (or recently finished) turn.
+
+        The browser reconnects with Last-Event-ID on any drop; the server
+        replays the missed events from the bounded history, then follows
+        live until the terminal event. A disconnect never cancels the
+        turn.
+        """
+        if not await runtime.session.conversation_exists(conversation_id):
+            raise HTTPException(status_code=404, detail="unknown conversation")
+        stream = active.get(conversation_id)
+        if stream is None:
+            raise HTTPException(status_code=404, detail="no turn stream")
+
+        last_event_id = 0
+        raw = request.headers.get("last-event-id")
+        if raw and raw.isdigit():
+            last_event_id = int(raw)
+
+        # the generator rebinds the cursor, so it must not close over the
+        # route's int local (ints are immutable); a one-element list is a
+        # simple mutable cell
+        seen: list[int] = [last_event_id]
 
         async def generator():
-            try:
-                while True:
-                    chunk = await stream.queue.get()
-                    yield chunk
-                    if (
-                        chunk.startswith("event: completed")
-                        or chunk.startswith("event: interrupted")
-                        or chunk.startswith("event: failed")
-                    ):
-                        break
-            finally:
-                # Client disconnect or normal end: settle the owned task.
-                await _settle(conversation_id)
+            async def _finished() -> None:
+                # the client saw the whole story: drop the entry unless a
+                # newer turn replaced it
+                if stream.finished and active.get(conversation_id) is stream:
+                    active.pop(conversation_id, None)
+
+            while True:
+                # catch up: replay everything past the client's last id
+                for seq, frame in stream.history:
+                    if seq > seen[0]:
+                        seen[0] = seq
+                        yield frame
+                        if _is_terminal_frame(frame):
+                            await _finished()
+                            return
+                if stream.finished:
+                    await _finished()
+                    return
+                queue: asyncio.Queue[tuple[int, str]] = asyncio.Queue()
+                stream.subscribe(queue)
+                try:
+                    seq, frame = await queue.get()
+                finally:
+                    stream.unsubscribe(queue)
+                if seq <= seen[0]:
+                    continue  # already replayed; re-sync from history
+                seen[0] = seq
+                yield frame
+                if _is_terminal_frame(frame):
+                    await _finished()
+                    return
 
         return StreamingResponse(generator(), headers=EVENT_HEADERS)
 
@@ -527,7 +630,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         if not await runtime.session.conversation_exists(conversation_id):
             raise HTTPException(status_code=404, detail="unknown conversation")
         stream = active.get(conversation_id)
-        if stream is None:
+        if stream is None or stream.finished:
             return Response(status_code=200, content="idle")
         stream.cancel_event.set()
         return Response(status_code=202, content="cancelling")

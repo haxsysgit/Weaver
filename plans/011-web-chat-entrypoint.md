@@ -150,7 +150,8 @@ weaver web [--fake] [--port PORT]
 | `GET /api/conversations` | `200 [{"conversation_id":"...","title":"..."}]`, newest first |
 | `POST /api/conversations` | `201 {"conversation_id":"..."}` |
 | `GET /api/conversations/{id}/messages` | filtered persisted transcript |
-| `POST /api/conversations/{id}/turns` | SSE stream for `{"message":"..."}` |
+| `POST /api/conversations/{id}/turns` | 202; the turn runs server-side |
+| `GET /api/conversations/{id}/stream` | SSE `delta`/`tool`/`completed`/`interrupted`/`failed` with `id:` seq + `Last-Event-ID` resume (hermes-webui pattern, Plan 15 2026-08-08) |
 | `POST /api/conversations/{id}/cancel` | `202 cancelling`, `200 idle`, or `404 unknown` |
 
 SSE events:

@@ -66,24 +66,6 @@ async function requireJson<T>(response: Response, action: string): Promise<T> {
   return (await response.json()) as T;
 }
 
-function parseEventBlock(block: string): RawStreamEvent | null {
-  const lines = block.split(/\r?\n/);
-  const eventLine = lines.find((line) => line.startsWith("event:"));
-  const dataLine = lines.find((line) => line.startsWith("data:"));
-  if (!eventLine || !dataLine) {
-    return null;
-  }
-
-  try {
-    return {
-      event: eventLine.slice("event:".length).trim(),
-      data: JSON.parse(dataLine.slice("data:".length).trim()) as Record<string, unknown>,
-    };
-  } catch {
-    return null;
-  }
-}
-
 function toStreamEvent(rawEvent: RawStreamEvent): StreamEvent | null {
   const text = typeof rawEvent.data.text === "string" ? rawEvent.data.text : "";
   const message =
@@ -132,46 +114,67 @@ function toStreamEvent(rawEvent: RawStreamEvent): StreamEvent | null {
   return null;
 }
 
-async function* readEventStream(response: Response): AsyncGenerator<StreamEvent> {
-  if (!response.body) {
-    throw new Error("The reply stream was empty.");
-  }
+/**
+ * hermes-webui pattern (owner, 2026-08-08): the turn runs server-side and
+ * the reply is read over a per-turn EventSource. The browser reconnects
+ * automatically with Last-Event-ID and the server replays the missed
+ * events, so a dropped connection resumes the reply instead of killing
+ * it. The generator ends on the terminal event (or when the connection
+ * permanently closes without one).
+ */
+async function* streamEvents(source: EventSource): AsyncGenerator<StreamEvent> {
+  const pending: StreamEvent[] = [];
+  let waiters: Array<() => void> = [];
+  let failure: Error | null = null;
+  let errorCount = 0;
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-
-  while (true) {
-    const { done, value } = await reader.read();
-    buffer += decoder.decode(value, { stream: !done });
-
-    let separatorIndex = buffer.search(/\r?\n\r?\n/);
-    while (separatorIndex >= 0) {
-      const block = buffer.slice(0, separatorIndex);
-      const separator = buffer.slice(separatorIndex).match(/^\r?\n\r?\n/)?.[0];
-      buffer = buffer.slice(separatorIndex + (separator?.length ?? 2));
-
-      const rawEvent = parseEventBlock(block);
-      if (rawEvent) {
-        const event = toStreamEvent(rawEvent);
+  // The server sends NAMED events (event: delta / tool / completed / ...),
+  // which EventSource dispatches to addEventListener, not onmessage.
+  const EVENT_NAMES = [
+    "delta",
+    "tool",
+    "completed",
+    "interrupted",
+    "failed",
+  ] as const;
+  for (const name of EVENT_NAMES) {
+    source.addEventListener(name, (message: MessageEvent<string>) => {
+      try {
+        const event = toStreamEvent({
+          event: name,
+          data: JSON.parse(message.data) as Record<string, unknown>,
+        });
         if (event) {
-          yield event;
+          pending.push(event);
+          waiters.splice(0).forEach((wake) => wake());
         }
+      } catch {
+        // malformed frame; ignore
       }
-      separatorIndex = buffer.search(/\r?\n\r?\n/);
-    }
-
-    if (done) {
-      break;
-    }
+    });
   }
-
-  const trailingEvent = parseEventBlock(buffer);
-  if (trailingEvent) {
-    const event = toStreamEvent(trailingEvent);
-    if (event) {
-      yield event;
+  source.onerror = () => {
+    // EventSource auto-reconnects (Last-Event-ID resume); a few errors
+    // are normal blips, but a dead stream must surface eventually.
+    errorCount += 1;
+    if (source.readyState === EventSource.CLOSED || errorCount > 4) {
+      failure = new Error("The reply stream was interrupted.");
+      waiters.splice(0).forEach((wake) => wake());
     }
+  };
+
+  try {
+    while (true) {
+      if (pending.length > 0) {
+        yield pending.shift() as StreamEvent;
+      } else if (failure) {
+        throw failure;
+      } else {
+        await new Promise<void>((resolve) => waiters.push(resolve));
+      }
+    }
+  } finally {
+    source.close();
   }
 }
 
@@ -237,7 +240,24 @@ export function createHttpChatApi(fetcher: typeof fetch = fetch): ChatApi {
       if (!response.ok) {
         throw new Error(`Sending the message failed (${response.status})`);
       }
-      yield* readEventStream(response);
+      const source = new EventSource(
+        `/api/conversations/${encodeURIComponent(conversationId)}/stream`,
+      );
+      let terminalSeen = false;
+      for await (const event of streamEvents(source)) {
+        yield event;
+        if (
+          event.type === "completed" ||
+          event.type === "interrupted" ||
+          event.type === "failed"
+        ) {
+          terminalSeen = true;
+          break;
+        }
+      }
+      if (!terminalSeen) {
+        throw new Error("The reply stream closed without finishing.");
+      }
     },
 
     async cancelTurn(conversationId) {

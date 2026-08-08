@@ -115,6 +115,23 @@ async def _complete_streaming(
     return final_response
 
 
+# Plan 15 (owner 2026-08-08): the answer call must never truncate. The
+# model writes long answers while thinking is on, and DeepSeek counts
+# reasoning tokens against max_tokens, so the default 4096 cap cut the
+# daemons answer mid-sentence (finish_reason="length", the run marked
+# interrupted). Tool-call calls keep the 4096 default (their outputs are
+# short and bounded thinking keeps the locate loop fast); the answer
+# calls get headroom.
+ANSWER_MAX_OUTPUT_TOKENS = 16384
+
+# Plan 15 (owner 2026-08-08): the synthesis call must keep conversation
+# continuity without letting an old exchange dominate. The window is the
+# last three owner/assistant exchanges (the immediate question plus two
+# previous Q&A pairs); anything older is dropped and only survives in
+# the packet.
+SYNTHESIS_HISTORY_EXCHANGES = 3
+
+
 class TurnExitReason(str, Enum):
     COMPLETED = "completed"
     INCOMPLETE = "incomplete"
@@ -206,6 +223,33 @@ def _tool_calls_are_safe(
         if not isinstance(arguments, dict):
             return False
     return True
+
+
+def _recent_exchanges(
+    history: list[ConversationMessage],
+    *,
+    max_exchanges: int,
+) -> list[ConversationMessage]:
+    """The last ``max_exchanges`` owner/assistant exchanges, in order.
+
+    Tool-call and tool-result messages are skipped (their evidence lives
+    in the packet; carrying old tool transcripts bloats the context). The
+    returned window always ends at the current question.
+    """
+    messages = [
+        message
+        for message in history
+        if message.kind in ("user", "assistant")
+    ]
+    window: list[ConversationMessage] = []
+    user_count = 0
+    for message in reversed(messages):
+        window.append(message)
+        if message.kind == "user":
+            user_count += 1
+            if user_count >= max_exchanges:
+                break
+    return list(reversed(window))
 
 
 def _known_call_ids(
@@ -323,16 +367,20 @@ async def run_turn(
             # the answer from the packet.
             #
             # Owner 2026-08-08: the synthesis call must NOT carry the
-            # whole conversation history. An older exchange's answer can
-            # dominate the model and it replies to the wrong question
-            # (the "list the 7 daemons" turn answered the previous Anvil
-            # question). Curate: the system prompt, the immediate
-            # question, the locate draft, and the packet only.
-            question = [m for m in history if m.kind == "user"][-1:]
+            # whole conversation history (an older exchange's answer can
+            # dominate the model and it replies to the wrong question),
+            # but it also must not forget the conversation (follow-ups
+            # like "and what about the 6th daemon?" need the previous
+            # exchange). Curate: the system prompt, the last few
+            # exchanges, the locate draft, and the packet.
+            recent = _recent_exchanges(
+                history,
+                max_exchanges=SYNTHESIS_HISTORY_EXCHANGES,
+            )
             draft_messages = [m for m in new_messages if m.kind == "assistant"]
             request_messages = project_messages(
                 system_prompt=system_prompt,
-                history=question + draft_messages,
+                history=recent + draft_messages,
             )
             request_messages = [
                 *request_messages,
@@ -361,6 +409,14 @@ async def run_turn(
             # request (hermes-style), so the model physically cannot call
             # one and must write the answer.
             tools=() if (forced_answer or synthesis_packet is not None) else tuple(tool_schemas),
+            # Plan 15: answer calls get headroom so a long answer with a
+            # long thinking trace never truncates (see the daemons turn);
+            # tool-call calls keep the model default (4096).
+            max_output_tokens=(
+                ANSWER_MAX_OUTPUT_TOKENS
+                if (synthesis_packet is not None or forced_answer)
+                else None
+            ),
             # Plan 15 (owner 2026-08-07): thinking stays on for every
             # tier; the tier only picks the reasoning effort. None keeps
             # the pre-tier behavior (thinking disabled, no effort).

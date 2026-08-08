@@ -4,7 +4,9 @@ Routes:
 - POST /api/conversations -> 201 {"conversation_id": "..."}
 - GET /api/conversations -> 200 [{conversation_id, title}], newest first
 - GET /api/conversations/{id}/messages -> filtered persisted transcript
-- POST /api/conversations/{id}/turns -> SSE delta/completed/interrupted/failed
+- POST /api/conversations/{id}/turns -> 202 (turn runs server-side)
+- GET /api/conversations/{id}/stream -> SSE delta/completed/interrupted/failed
+  (EventSource with Last-Event-ID resume, hermes-webui pattern)
 - POST /api/conversations/{id}/cancel -> 202 cancelling / 200 idle / 404
 
 Private canaries must never appear in any response body.
@@ -148,36 +150,71 @@ async def test_overlong_messages_rejected_422(client) -> None:
     assert resp.status_code == 422
 
 
-async def test_turn_streams_delta_before_completed(client) -> None:
-    conv = (await client.post("/api/conversations")).json()["conversation_id"]
-    events = []
+
+async def _run_turn(client, conv: str, message: str) -> tuple[list[str], list[dict]]:
+    """POST the turn (202), then read the SSE stream to completion.
+
+    The turn runs server-side; the reply arrives over the GET stream
+    (EventSource with Last-Event-ID resume), so the POST no longer
+    carries the stream.
+    """
+    resp = await client.post(
+        f"/api/conversations/{conv}/turns", json={"message": message}
+    )
+    assert resp.status_code == 202
+    events: list[str] = []
+    payloads: list[dict] = []
     async with client.stream(
-        "POST",
-        f"/api/conversations/{conv}/turns",
-        json={"message": "hello"},
-    ) as resp:
-        assert resp.status_code == 200
-        async for line in resp.aiter_lines():
+        "GET", f"/api/conversations/{conv}/stream"
+    ) as stream_resp:
+        assert stream_resp.status_code == 200
+        async for line in stream_resp.aiter_lines():
             if line.startswith("event:"):
                 events.append(line.split(":", 1)[1].strip())
             elif line.startswith("data:"):
-                payload = json.loads(line.split(":", 1)[1].strip())
-                if events and events[-1] == "delta":
-                    assert isinstance(payload.get("text"), str)
+                payloads.append(json.loads(line.split(":", 1)[1].strip()))
+    return events, payloads
+
+
+async def test_turn_streams_delta_before_completed(client) -> None:
+    conv = (await client.post("/api/conversations")).json()["conversation_id"]
+    events, payloads = await _run_turn(client, conv, "hello")
     assert events[0] == "delta"
     assert "completed" in events
     assert "failed" not in events
     assert "interrupted" not in events
+    assert payloads[-1]["text"]
+
+
+async def test_stream_replays_the_full_log_for_a_fresh_client(client) -> None:
+    # hermes-webui pattern: the stream carries id: lines, so a client
+    # that connects fresh (or reconnects) gets every event in order.
+    conv = (await client.post("/api/conversations")).json()["conversation_id"]
+    events, payloads = await _run_turn(client, conv, "hello")
+    assert events[0] == "delta"
+    assert "completed" in events
+
+
+async def test_stream_does_not_resend_events_already_seen(client) -> None:
+    # Last-Event-ID resume: a reconnecting client that already saw the
+    # whole turn gets nothing replayed (no duplicated deltas).
+    conv = (await client.post("/api/conversations")).json()["conversation_id"]
+    first = await client.post(
+        f"/api/conversations/{conv}/turns", json={"message": "hello"}
+    )
+    assert first.status_code == 202
+    async with client.stream(
+        "GET",
+        f"/api/conversations/{conv}/stream",
+        headers={"Last-Event-ID": "999999"},
+    ) as stream_resp:
+        body = await stream_resp.aread()
+    assert b"event:" not in body
 
 
 async def test_transcript_after_turn(client) -> None:
     conv = (await client.post("/api/conversations")).json()["conversation_id"]
-    async with client.stream(
-        "POST",
-        f"/api/conversations/{conv}/turns",
-        json={"message": "hello weaver"},
-    ):
-        pass
+    await _run_turn(client, conv, "hello weaver")
     resp = await client.get(f"/api/conversations/{conv}/messages")
     assert resp.status_code == 200
     msgs = resp.json()
@@ -230,16 +267,11 @@ async def test_concurrent_turn_409(tmp_path) -> None:
     ) as client:
         conv = (await client.post("/api/conversations")).json()["conversation_id"]
 
-        async def hold_stream():
-            async with client.stream(
-                "POST",
-                f"/api/conversations/{conv}/turns",
-                json={"message": "slow"},
-            ) as resp:
-                assert resp.status_code == 200
-                await resp.aread()
-
-        first = asyncio.create_task(hold_stream())
+        first = await client.post(
+            f"/api/conversations/{conv}/turns",
+            json={"message": "slow"},
+        )
+        assert first.status_code == 202
         await entered.wait()
         second = await client.post(
             f"/api/conversations/{conv}/turns",
@@ -247,7 +279,11 @@ async def test_concurrent_turn_409(tmp_path) -> None:
         )
         assert second.status_code == 409
         gate.set()
-        await first
+        # let the gated turn finish cleanly
+        async with client.stream(
+            "GET", f"/api/conversations/{conv}/stream"
+        ) as stream_resp:
+            await stream_resp.aread()
     await runtime.close()
     runtime.session.send = original_send  # type: ignore[method-assign]
 
@@ -290,27 +326,24 @@ async def test_cancel_active_turn_returns_202_and_interrupted_event(tmp_path) ->
     ) as client:
         conv = (await client.post("/api/conversations")).json()["conversation_id"]
 
-        async def hold_stream():
-            events = []
-            payloads = []
-            async with client.stream(
-                "POST",
-                f"/api/conversations/{conv}/turns",
-                json={"message": "slow"},
-            ) as resp:
-                assert resp.status_code == 200
-                async for line in resp.aiter_lines():
-                    if line.startswith("event:"):
-                        events.append(line.split(":", 1)[1].strip())
-                    elif line.startswith("data:"):
-                        payloads.append(json.loads(line.split(":", 1)[1].strip()))
-            return events, payloads
-
-        task = asyncio.create_task(hold_stream())
+        first = await client.post(
+            f"/api/conversations/{conv}/turns",
+            json={"message": "slow"},
+        )
+        assert first.status_code == 202
         await entered.wait()
         cancel = await client.post(f"/api/conversations/{conv}/cancel")
         assert cancel.status_code == 202
-        events, payloads = await task
+        events = []
+        payloads = []
+        async with client.stream(
+            "GET", f"/api/conversations/{conv}/stream"
+        ) as stream_resp:
+            async for line in stream_resp.aiter_lines():
+                if line.startswith("event:"):
+                    events.append(line.split(":", 1)[1].strip())
+                elif line.startswith("data:"):
+                    payloads.append(json.loads(line.split(":", 1)[1].strip()))
         assert "interrupted" in events
         assert "completed" not in events
         assert payloads[-1]["code"] == "interrupted"
@@ -350,15 +383,18 @@ async def test_failed_exit_reason_emits_failed_event(tmp_path) -> None:
         headers=SAME_ORIGIN_HEADERS,
     ) as client:
         conv = (await client.post("/api/conversations")).json()["conversation_id"]
+        resp = await client.post(
+            f"/api/conversations/{conv}/turns",
+            json={"message": "boom"},
+        )
+        assert resp.status_code == 202
         events = []
         payloads = []
         async with client.stream(
-            "POST",
-            f"/api/conversations/{conv}/turns",
-            json={"message": "boom"},
-        ) as resp:
-            assert resp.status_code == 200
-            async for line in resp.aiter_lines():
+            "GET", f"/api/conversations/{conv}/stream"
+        ) as stream_resp:
+            assert stream_resp.status_code == 200
+            async for line in stream_resp.aiter_lines():
                 if line.startswith("event:"):
                     events.append(line.split(":", 1)[1].strip())
                 elif line.startswith("data:"):
@@ -387,20 +423,25 @@ async def test_turn_settles_before_next_turn(tmp_path) -> None:
         headers=SAME_ORIGIN_HEADERS,
     ) as client:
         conv = (await client.post("/api/conversations")).json()["conversation_id"]
-        async with client.stream(
-            "POST",
+        first = await client.post(
             f"/api/conversations/{conv}/turns",
             json={"message": "one"},
-        ) as resp:
-            assert resp.status_code == 200
-            await resp.aread()
-        # First turn fully consumed: the entry is gone, so this is 200, not 409.
+        )
+        assert first.status_code == 202
+        # first turn fully served: the registry entry is dropped
         async with client.stream(
-            "POST",
+            "GET", f"/api/conversations/{conv}/stream"
+        ) as stream_resp:
+            await stream_resp.aread()
+        second = await client.post(
             f"/api/conversations/{conv}/turns",
             json={"message": "two"},
-        ) as resp:
-            assert resp.status_code == 200
+        )
+        assert second.status_code == 202
+        async with client.stream(
+            "GET", f"/api/conversations/{conv}/stream"
+        ) as stream_resp:
+            await stream_resp.aread()
     await runtime.close()
 
 
@@ -506,13 +547,14 @@ async def test_mutating_routes_reject_nonlocal_origin(tmp_path) -> None:
             headers={"Origin": "https://evil.example"},
         )
         assert resp.status_code == 403
-        # A loopback origin is accepted.
+        # A loopback origin is accepted (the turn is accepted; the reply
+        # streams over the GET route).
         resp = await client.post(
             f"/api/conversations/{conv}/turns",
             json={"message": "x"},
             headers={"Origin": "http://127.0.0.1"},
         )
-        assert resp.status_code == 200
+        assert resp.status_code == 202
     await runtime.close()
 
 

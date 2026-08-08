@@ -16,7 +16,11 @@ from weaver.agent.tools import (
     ToolExecutionPolicy,
     ToolRegistry,
 )
-from weaver.agent.turn import TurnExitReason, run_turn
+from weaver.agent.turn import (
+    ANSWER_MAX_OUTPUT_TOKENS,
+    TurnExitReason,
+    run_turn,
+)
 from weaver import (
     FakeModelProvider,
     ModelLayer,
@@ -1092,17 +1096,32 @@ class TestTwoPhaseSynthesis:
         assert synthesis_request.tools == ()
         assert any("PACKET: chapter 104 prose" in (m.content or "") for m in synthesis_request.messages)
 
-    async def test_synthesis_call_drops_old_history_keeps_question(self) -> None:
-        # The "7 daemons" bug: an old exchange's answer dominated the
-        # synthesis call, so the model answered the previous question
-        # ("No, Anvil gets cooked") instead of the one just asked.
+    async def test_synthesis_call_keeps_recent_exchanges_drops_old_ones(self) -> None:
+        # The "7 daemons" bug: the WHOLE conversation history dominated
+        # the synthesis call, so the model answered the previous question
+        # instead of the one just asked. The window keeps the last few
+        # exchanges (continuity: follow-ups must know the previous Q&A)
+        # and drops everything older than that.
         layer, model, provider = scripted_layer(
             tool_response(tool_call("c1", "echo", '{"message": "a"}')),
             stop_response("Draft: located daemon statements."),
             stop_response("Final: the daemons are children of the unknown."),
         )
         old_answer = "No, Anvil gets cooked. " * 200
+        ancient_answer = "The dark sea swallowed Nephis. " * 100
         history = [
+            UserMessage(
+                message_id="q-1",
+                turn_id="t-1",
+                content="who is the shadow god",
+            ),
+            AssistantMessage(message_id="a-1", turn_id="t-1", content=ancient_answer),
+            UserMessage(
+                message_id="q0",
+                turn_id="t0",
+                content="what happened on the forgotten shore",
+            ),
+            AssistantMessage(message_id="a0", turn_id="t0", content="the shore had a colossus."),
             UserMessage(
                 message_id="q1",
                 turn_id="t1",
@@ -1127,9 +1146,42 @@ class TestTwoPhaseSynthesis:
         joined = " ".join((m.content or "") for m in synthesis_request.messages)
         assert "PACKET: daemon statements" in joined
         assert "list the 7 daemons" in joined
-        # the old exchange must not leak into the synthesis context
-        assert "Anvil gets cooked" not in joined
+        # continuity: the previous exchange stays in the window
+        assert "Anvil gets cooked" in joined
+        # the exchange before that is beyond the window and must not leak
+        assert "dark sea swallowed Nephis" not in joined
         assert synthesis_request.tools == ()
+
+    async def test_synthesis_request_carries_the_answer_token_cap(self) -> None:
+        # The daemons answer was cut mid-sentence at finish_reason=
+        # "length": the synthesis call sent the default 4096 max_tokens
+        # while thinking is on, and DeepSeek counts reasoning tokens
+        # against it. Answer calls must carry headroom; tool-call calls
+        # keep the model default.
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response("Draft: located daemon statements."),
+            stop_response("Final: the daemons are children of the unknown."),
+        )
+
+        async def packet_builder(results, draft):
+            return "PACKET: daemon statements"
+
+        await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            packet_builder=packet_builder,
+        )
+        assert len(provider.calls) == 3
+        # first call: a locate tool step, keeps the default cap (None)
+        assert provider.calls[0].request.max_output_tokens is None
+        # last call: the synthesis answer, must have headroom
+        assert (
+            provider.calls[-1].request.max_output_tokens
+            == ANSWER_MAX_OUTPUT_TOKENS
+        )
 
     async def test_builder_none_keeps_the_draft(self) -> None:
         layer, model, provider = scripted_layer(
