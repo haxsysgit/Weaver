@@ -79,6 +79,7 @@ PersistCallback = Callable[[ConversationMessage], Awaitable[None]]
 # Deltas are best-effort preview: a callback failure is logged and
 # swallowed so a UI hiccup can never fail a turn.
 DeltaCallback = Callable[[str], Awaitable[None]]
+PacketBuilder = Callable[[list[ToolResult], str], Awaitable[str | None]]
 
 # Plan 014 live-trial seam: the dispatch forwards tool activity
 # (name, status, detail) so the surface can render search/open lines
@@ -257,6 +258,12 @@ async def run_turn(
     max_model_steps: int = 5,
     tool_budget: int | None = None,
     reasoning: ReasoningEffort | None = None,
+    # Plan 15 two-phase seam: called with the turn's tool results and the
+    # model's draft answer when the model first stops without calling a
+    # tool. Returns the reading packet text, or None to accept the draft
+    # as final. A non-None packet triggers one final toolless synthesis
+    # call with the packet in context; the draft is never persisted.
+    packet_builder: PacketBuilder | None = None,
 ) -> TurnResult:
     max_steps = min(max(max_model_steps, 1), _MAX_MODEL_STEPS)
     if tool_budget is not None:
@@ -265,6 +272,7 @@ async def run_turn(
         # tool steps, never the answer.
         max_steps = min(max(tool_budget, 0) + 1, _MAX_MODEL_STEPS)
     new_messages: list[ConversationMessage] = []
+    turn_tool_results: list[ToolResult] = []
     model_steps = 0
     tool_starts = 0
     tool_steps_used = 0
@@ -274,6 +282,8 @@ async def run_turn(
     provider_name = ""
     completed_response = False
     exit_reason = TurnExitReason.COMPLETED
+    synthesis_packet: str | None = None
+    synthesis_requested = False
 
     try:
         tool_schemas = tool_registry.active_schemas(active_tools)
@@ -302,10 +312,23 @@ async def run_turn(
         # Plan 15: the budget is visible to the model so it can plan, and
         # the call after the last tool step is forced to be the answer.
         forced_answer = tool_budget is not None and tool_steps_used >= tool_budget
+        synthesis_requested = False
         request_messages = project_messages(
             system_prompt=system_prompt,
             history=history + new_messages,
         )
+        if synthesis_packet is not None:
+            # Plan 15: the packet is ephemeral context for the single
+            # synthesis call; tools are stripped so the model must write
+            # the answer from the packet.
+            request_messages = [
+                *request_messages,
+                ModelMessage(
+                    role="system",
+                    content=synthesis_packet + "\n\nAnswer now, citing chapters.",
+                ),
+            ]
+            synthesis_requested = True
         if tool_budget is not None:
             remaining = tool_budget - tool_steps_used
             if forced_answer or remaining <= BUDGET_REMINDER_THRESHOLD:
@@ -324,7 +347,7 @@ async def run_turn(
             # Plan 15: on the forced call the tools are stripped from the
             # request (hermes-style), so the model physically cannot call
             # one and must write the answer.
-            tools=() if forced_answer else tuple(tool_schemas),
+            tools=() if (forced_answer or synthesis_packet is not None) else tuple(tool_schemas),
             # Plan 15 (owner 2026-08-07): thinking stays on for every
             # tier; the tier only picks the reasoning effort. None keeps
             # the pre-tier behavior (thinking disabled, no effort).
@@ -365,6 +388,7 @@ async def run_turn(
 
         model_name = response.model_id
         provider_name = response.provider_id
+        synthesis_packet = None
         if not _response_matches_model(response, model):
             exit_reason = TurnExitReason.MODEL_FAILED
             safe_failure = safe_error("model_protocol")
@@ -409,6 +433,22 @@ async def run_turn(
                 turn_id=turn_id,
                 response_message=response_message,
             )
+            # Plan 15 two-phase: the first no-tool draft is a locate
+            # summary, not the answer. Assemble the packet from the
+            # turn's evidence and run one final toolless synthesis call.
+            # Never on the forced-answer call (budget exhausted) and
+            # never twice.
+            if (
+                packet_builder is not None
+                and not synthesis_requested
+                and not forced_answer
+                and turn_tool_results
+            ):
+                packet = await packet_builder(turn_tool_results, assistant.content)
+                if packet:
+                    new_messages.append(assistant)  # ephemeral, never persisted
+                    synthesis_packet = packet
+                    continue
             new_messages.append(assistant)
             if not await _persist(assistant, persist_message):
                 exit_reason = TurnExitReason.PERSISTENCE_FAILED
@@ -419,6 +459,11 @@ async def run_turn(
             break
 
         if response.stop_reason != ModelStopReason.TOOL_USE:
+            exit_reason = TurnExitReason.MODEL_FAILED
+            safe_failure = safe_error("model_protocol")
+            break
+        if synthesis_requested:
+            # tools were stripped; a tool call here is a protocol break
             exit_reason = TurnExitReason.MODEL_FAILED
             safe_failure = safe_error("model_protocol")
             break
@@ -489,6 +534,7 @@ async def run_turn(
                 )
             if tool_result.started:
                 tool_starts += 1
+            turn_tool_results.append(tool_result)
             if (
                 tool_result.error_code == CANCELLED
                 or cancel_event.is_set()

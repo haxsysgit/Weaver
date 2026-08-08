@@ -204,25 +204,21 @@ class _LazyDenseEmbedder:
         return self._inner.embed(texts)
 
 
-def _web_tool_registry() -> ToolRegistry:
-    """The five reading tools (Plan 15): search_story, read_chapters,
-    find_text, browse_chapters, who_is.
+def _web_library_service():
+    """The web surface's library service (reading machinery).
 
-    The web surface is where a reader talks to Weaver; the reading tools
-    are READ-only and never touch the library. The registry is built
-    lazily per runtime so tests can point at synthetic data. The Qdrant
-    index is loaded from .weaver/retrieval/index when present (built by
-    scripts/build_library_index.py); without it the tools register but
-    searches return empty until the index is built.
+    None when the novel is not on this machine. The Qdrant index is
+    opened lazily from .weaver/retrieval/index on first search (built by
+    scripts/build_library_index.py); without it searches return empty.
+    Packet assembly never touches the index, only chapters and notebook.
     """
-    registry = ToolRegistry()
-    from .retrieval.tools import LibraryService, register_reading_tools
+    from .retrieval.tools import LibraryService
 
     project_root = Path(os.environ.get("WEAVER_PROJECT_ROOT", Path.cwd()))
     novel_dir = project_root / "novels" / "shadow-slave"
     notebook_dir = project_root / ".weaver" / "knowledge" / "shadow-slave"
     if not novel_dir.exists():
-        return registry  # no library on this machine: tools stay unregistered
+        return None
     index_dir = project_root / ".weaver" / "retrieval" / "index"
     sparse_encoder = None
     if index_dir.exists():
@@ -233,7 +229,7 @@ def _web_tool_registry() -> ToolRegistry:
         sparse_encoder = splade_encoder(
             SparseTextEmbedding("Qdrant/bm42-all-minilm-l6-v2-attentions")
         )
-    service = LibraryService(
+    return LibraryService(
         novel_dir=novel_dir,
         notebook_dir=notebook_dir,
         client=None,  # opened lazily from index_dir on first search
@@ -241,7 +237,20 @@ def _web_tool_registry() -> ToolRegistry:
         sparse_encoder=sparse_encoder,
         index_dir=index_dir,
     )
-    register_reading_tools(registry, service)
+
+
+def _web_tool_registry() -> ToolRegistry:
+    """The five reading tools (Plan 15): search_story, read_chapters,
+    find_text, browse_chapters, who_is. READ-only, never touch the
+    library. Built lazily per runtime so tests can point at synthetic
+    data; empty registry when the novel is not on this machine.
+    """
+    from .retrieval.tools import register_reading_tools
+
+    registry = ToolRegistry()
+    service = _web_library_service()
+    if service is not None:
+        register_reading_tools(registry, service)
     return registry
 
 
@@ -256,12 +265,14 @@ class ChatRuntime:
         mode_label: str,
         live: bool,
         prefs: PreferencesStore | None = None,
+        library=None,
     ) -> None:
         self.session = session
         self.surface = surface
         self.mode_label = mode_label
         self.live = live
         self.prefs = prefs
+        self.library = library
 
     async def close(self) -> None:
         if self.prefs is not None:
@@ -328,7 +339,12 @@ async def open_chat_runtime(
         system_prompt = DEVELOPER_SYSTEM_PROMPT
         execution_policy = ToolExecutionPolicy.maintenance()
     else:
-        registry = _web_tool_registry()
+        from .retrieval.tools import register_reading_tools
+
+        library = _web_library_service()
+        registry = ToolRegistry()
+        if library is not None:
+            register_reading_tools(registry, library)
         active_tools = WEB_ACTIVE_TOOLS
         system_prompt = WEB_SYSTEM_PROMPT
         execution_policy = ToolExecutionPolicy.read_only()
@@ -351,4 +367,5 @@ async def open_chat_runtime(
         mode_label=mode_label,
         live=live,
         prefs=prefs,
+        library=library if surface == "web" else None,
     )

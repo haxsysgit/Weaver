@@ -14,6 +14,7 @@ import aiosqlite
 from weaver.agent.tools import ToolExecutionPolicy, ToolRegistry
 from weaver.agent.turn import (
     DeltaCallback,
+    PacketBuilder,
     ToolEventCallback,
     TurnExitReason,
     TurnResult,
@@ -133,6 +134,7 @@ class SessionWeave:
         on_tool_event: ToolEventCallback | None = None,
         tool_budget: int | None = None,
         reasoning: ReasoningEffort | None = None,
+        packet_builder: PacketBuilder | None = None,
     ) -> TurnResult:
         """Run one full turn with the owner's input and return the result.
 
@@ -186,6 +188,7 @@ class SessionWeave:
             on_tool_event=on_tool_event,
             tool_budget=tool_budget,
             reasoning=reasoning,
+            packet_builder=packet_builder,
         )
 
     async def start_conversation(self, owner_text: str) -> str:

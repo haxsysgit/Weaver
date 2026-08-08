@@ -46,11 +46,15 @@ tool-level position filter.
 
 ### The flow (what happens on send)
 
-1. **Router.** One cheap call (~1-2s). Classes: quick-lore,
-   scene-reconstruction, what-if/power-scaling, compare-and-trace,
-   open-mystery. Picks the skill pack, the tier default, the per-question
-   tool ceiling (under the 50/70/90 tier caps), the packet size target.
-2. **Locate.** Short tool loop, 2-6 calls. `search_story` first (notebook
+1. **Locate.** The tool loop under the tier budget. The model
+   decides its own steps; per-question budgets and a router call are
+   explicitly rejected (owner 2026-08-08: the model knows what to do).
+   `search_story` first (notebook statements read first, they often
+   carry the answer), `find_text` for exact phrases and "where does X
+   speak", `who_is` for names. Triage to 1-3 candidate passages plus
+   notebook statements. The model's first no-tool response is a locate
+   draft, never the answer.
+2. **Packet assembly (machinery, not the model).** `read_chapters` `search_story` first (notebook
    statements read first, they often carry the answer), `find_text` for
    exact phrases and "where does X speak", `who_is` for names. Triage to
    1-3 candidate passages plus notebook statements.
@@ -60,8 +64,9 @@ tool-level position filter.
    persisted (temp-vs-durable split).
 4. **Judge gate (machinery).** Deterministic pass over the packet's
    citations.
-5. **Synthesis.** One heavy toolless call (tools stripped, hermes-style).
-   Answers cite chapters. Framing instruction comes from the gate.
+5. **Synthesis.** One heavy toolless call (tools stripped, hermes-style)
+   with the packet in context. Answers cite chapters. Framing comes from
+   the judge. The draft is ephemeral; only the final answer persists.
 6. **Verify (transcendent only).** Re-read the cited passages, check the
    claims, refine.
 
@@ -78,21 +83,26 @@ tool-level position filter.
 - Position is soft, not law: a ch1250 reader asking about ch2648 material
   gets guarded or full by question intent and knob, never blocked.
 
-### Skills (prompt packs injected by the router)
+### Skills (deferred)
 
-power-scaling, what-if, arc-recap, character-profile, spoiler-policy.
-Ship power-scaling + spoiler-policy first, add the rest when a trial
-proves they are needed.
+Skills are packaged track record ("we did this kind of question before,
+here are the steps, here is the answer the user liked"). Weaver has no
+judged answers yet, so the packs would be fiction. Deferred until after
+the live trial produces the first real record; the router (one cheap
+classification call) returns with them, and it never assigned budgets.
 
 ## Slices
 
 1. Spoiler map data + judge gate (volumes first; labels file scaffold and
-   loader) — IN IMPLEMENTATION
+   loader) — DONE 2026-08-08 (9924716)
 2. Preferences store + web UI knob (chapter field + spoiler toggle)
-3. Router + skill packs
-4. Two-phase loop (locate, then packet, then toolless synthesis)
+   — DONE 2026-08-08 (3cfcf1e)
+3. Two-phase loop (locate, then packet, then toolless synthesis)
+   — DONE 2026-08-08 (this slice)
+4. Label pass over the 1-1000 statements (owner review; no re-reads)
 5. Verify pass (transcendent)
 6. Live trial (owner go required)
+7. Skills + router — deferred until after the live trial
 
 Compaction (labeled context, living story-state note, graph-anchored user
 takes) is the second half of Plan 15, after the front half works live.

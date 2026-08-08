@@ -134,6 +134,15 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
     )
     app.state.runtime = runtime
 
+    from weaver.retrieval.packet import build_packet
+    from weaver.spoilers.judge import SpoilerJudge, load_labels
+
+    spoiler_judge = (
+        SpoilerJudge(load_labels(runtime.library.notebook_dir))
+        if runtime.library is not None
+        else SpoilerJudge()
+    )
+
     @app.get("/api/preferences", dependencies=[Depends(_check_local)])
     async def get_preferences() -> dict:
         if runtime.prefs is None:
@@ -200,6 +209,26 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 _sse("tool", {"name": name, "status": status, "detail": detail})
             )
 
+        # Plan 15 two-phase: when the model stops calling tools, the
+        # draft is a locate summary. The packet builder re-reads the
+        # turn's opened passages with expanded windows plus the notebook
+        # statements and the spoiler judge's framing, then one final
+        # toolless synthesis call writes the answer. The packet is
+        # ephemeral, never persisted.
+        async def on_packet(tool_results, draft: str):
+            if runtime.library is None:
+                return None
+            prefs = await runtime.prefs.get() if runtime.prefs is not None else None
+            packet = build_packet(
+                runtime.library,
+                tool_results,
+                user_chapter=prefs.reader_chapter if prefs is not None else None,
+                spoiler_mode=prefs.spoiler_mode if prefs is not None else "protect",
+                tier="ascended",
+                judge=spoiler_judge,
+            )
+            return packet.text if packet is not None else None
+
         try:
             result = await runtime.session.send(
                 conversation_id,
@@ -213,6 +242,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 # the tier picks the reasoning effort (ascended -> high).
                 tool_budget=TOOL_BUDGET_TIERS["ascended"],
                 reasoning=REASONING_TIERS["ascended"],
+                packet_builder=on_packet,
             )
             reason = result.exit_reason
             if reason == TurnExitReason.COMPLETED:

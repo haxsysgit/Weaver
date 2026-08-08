@@ -163,3 +163,90 @@ async def test_proof_no_novel_prose_in_durable_store(tmp_path: Path) -> None:
             assert "fake kunai" not in json.dumps(result)
     finally:
         await sw.close()
+
+
+async def test_proof_two_phase_packet_drives_the_final_answer(tmp_path: Path) -> None:
+    """Plan 15 slice 3: locate draft is ephemeral, packet call answers."""
+    novel = tmp_path / "novel"
+    nb = tmp_path / "nb"
+    _make_library(novel, nb)
+    registry = ToolRegistry()
+    service = LibraryService(novel, nb)
+    register_reading_tools(registry, service)
+
+    provider = FakeModelProvider(
+        "deepseek",
+        models=(_model_spec_provider(),),
+        responses=(
+            # step 1: search
+            _mk_response(
+                None,
+                (_tool_call("search_story", {"query": "who killed the hunting party leader"}, "c1"),),
+                ModelStopReason.TOOL_USE,
+            ),
+            # step 2: open the hit
+            _mk_response(
+                None,
+                (_tool_call("read_chapters", {"handle": "novel:0098:3-4"}, "c2"),),
+                ModelStopReason.TOOL_USE,
+            ),
+            # step 3: locate draft (first no-tool response)
+            _mk_response("Draft: the leader was killed with the kunai.", (), ModelStopReason.STOP),
+            # step 4: synthesis over the packet
+            _mk_response(
+                "Sunny killed the leader with the kunai at chapter 98. "
+                "The Black Knight slew the other five at chapter 99.",
+                (),
+                ModelStopReason.STOP,
+            ),
+        ),
+    )
+    model_layer = ModelLayer()
+    model_layer.register_provider(provider)
+    from weaver.model_layer.deepseek import DEEPSEEK_FLASH
+
+    sw = SessionWeave(
+        tmp_path / "state",
+        model_layer=model_layer,
+        model=model_layer.get_model(DEEPSEEK_FLASH.provider_id, DEEPSEEK_FLASH.model_id),
+        system_prompt="You are Weaver. Use the tools.",
+        tool_registry=registry,
+        active_tools=("search_story", "read_chapters"),
+        execution_policy=ToolExecutionPolicy.read_only(),
+    )
+    await sw.open()
+    try:
+        conv = await sw.start_conversation("Who killed the hunting party leader?")
+
+        seen: list[tuple[int, str]] = []
+
+        async def packet_builder(results, draft):
+            from weaver.retrieval.packet import build_packet
+
+            packet = build_packet(service, results, user_chapter=100, spoiler_mode="protect")
+            seen.append((len(results), draft))
+            return packet.text if packet is not None else None
+
+        result = await sw.send(
+            conv,
+            "Who killed the hunting party leader?",
+            packet_builder=packet_builder,
+        )
+        assert result.exit_reason.value == "completed"
+        assert "kunai" in result.final_text
+        assert seen and seen[0][0] == 2  # search + read evidence
+        # the draft must not survive in the store; only the final answer
+        items = await sw._repo.load_items(conv)
+        assistant_texts = [
+            json.loads(i.body).get("content", "") for i in items if i.kind == "assistant"
+        ]
+        assert any("kunai" in t for t in assistant_texts)
+        assert not any("Draft:" in t for t in assistant_texts)
+    finally:
+        await sw.close()
+
+
+def _model_spec_provider():
+    from weaver.model_layer.deepseek import DEEPSEEK_FLASH
+
+    return DEEPSEEK_FLASH

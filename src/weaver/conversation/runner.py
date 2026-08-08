@@ -15,6 +15,7 @@ import uuid
 from weaver.agent.messages import ConversationMessage
 from weaver.agent.turn import (
     DeltaCallback,
+    PacketBuilder,
     ToolEventCallback,
     PersistCallback,
     TurnExitReason,
@@ -109,6 +110,7 @@ class ConversationRunner:
         on_tool_event: ToolEventCallback | None = None,
         tool_budget: int | None = None,
         reasoning: ReasoningEffort | None = None,
+        packet_builder: PacketBuilder | None = None,
     ) -> TurnResult:
         """Run one bounded model/tool turn inside an existing run.
 
@@ -149,6 +151,7 @@ class ConversationRunner:
             on_tool_event=on_tool_event,
             tool_budget=tool_budget,
             reasoning=reasoning,
+            packet_builder=packet_builder,
         )
 
         # Plan 010 Phase D: surface the context meter on the result so the

@@ -186,6 +186,7 @@ async def execute_turn(
     tool_budget: int | None = None,
     reasoning: str | None = None,
     execution_policy: ToolExecutionPolicy | None = None,
+    packet_builder=None,
 ):
     return await run_turn(
         session_id=session_id,
@@ -202,6 +203,7 @@ async def execute_turn(
         max_model_steps=max_model_steps,
         tool_budget=tool_budget,
         reasoning=reasoning,
+        packet_builder=packet_builder,
     )
 
 
@@ -1046,3 +1048,127 @@ class TestReasoningTiers:
             "ascended": "high",
             "transcendent": "max",
         }
+
+
+class TestTwoPhaseSynthesis:
+    """Plan 15 slice 3: the first no-tool draft triggers the packet."""
+
+    async def test_synthesis_call_writes_the_final_answer(self) -> None:
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response("Draft: I found the passage."),
+            stop_response("Final: Saint came from chapter 104."),
+        )
+        calls = []
+        persisted = []
+
+        async def packet_builder(results, draft):
+            calls.append((len(results), draft))
+            return "PACKET: chapter 104 prose"
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            persist_message=_async_append(persisted),
+            packet_builder=packet_builder,
+        )
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert result.final_text == "Final: Saint came from chapter 104."
+        assert calls == [(1, "Draft: I found the passage.")]
+        assert len(provider.calls) == 3
+        # the draft is ephemeral: only the final answer is persisted
+        assert [m.kind for m in persisted] == [
+            "assistant",
+            "tool_call",
+            "tool_result",
+            "assistant",
+        ]
+        assert persisted[-1].content == "Final: Saint came from chapter 104."
+        # the synthesis request carries the packet and no tools
+        synthesis_request = provider.calls[-1].request
+        assert synthesis_request.tools == ()
+        assert any("PACKET: chapter 104 prose" in (m.content or "") for m in synthesis_request.messages)
+
+    async def test_builder_none_keeps_the_draft(self) -> None:
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response("Draft answer."),
+        )
+        persisted = []
+
+        async def packet_builder(results, draft):
+            return None
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            persist_message=_async_append(persisted),
+            packet_builder=packet_builder,
+        )
+        assert result.final_text == "Draft answer."
+        assert len(provider.calls) == 2
+        assert [m.kind for m in persisted][-1] == "assistant"
+
+    async def test_no_synthesis_without_tool_evidence(self) -> None:
+        layer, model, provider = scripted_layer(stop_response("Plain answer."))
+        called = []
+
+        async def packet_builder(results, draft):
+            called.append(draft)
+            return "PACKET"
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            packet_builder=packet_builder,
+        )
+        assert result.final_text == "Plain answer."
+        assert called == []
+        assert len(provider.calls) == 1
+
+    async def test_no_synthesis_after_forced_answer(self) -> None:
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response("Forced answer."),
+        )
+        called = []
+
+        async def packet_builder(results, draft):
+            called.append(draft)
+            return "PACKET"
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            tool_budget=1,
+            packet_builder=packet_builder,
+        )
+        assert result.final_text == "Forced answer."
+        assert called == []
+        assert len(provider.calls) == 2
+
+    async def test_tool_use_after_synthesis_is_a_protocol_failure(self) -> None:
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response("Draft."),
+            tool_response(tool_call("c2", "echo", '{"message": "b"}')),
+        )
+
+        async def packet_builder(results, draft):
+            return "PACKET"
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            packet_builder=packet_builder,
+        )
+        assert result.exit_reason == TurnExitReason.MODEL_FAILED
