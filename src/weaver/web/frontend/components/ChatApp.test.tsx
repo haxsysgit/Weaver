@@ -32,6 +32,14 @@ function deferredStream() {
 function createApi(stream: AsyncIterable<StreamEvent>): ChatApi {
   return {
     cancelTurn: vi.fn().mockResolvedValue("cancelling"),
+    getPreferences: vi.fn().mockResolvedValue({
+      reader_chapter: null,
+      spoiler_mode: "protect",
+    }),
+    savePreferences: vi.fn().mockResolvedValue({
+      reader_chapter: null,
+      spoiler_mode: "protect",
+    }),
     createConversation: vi.fn().mockResolvedValue({ conversation_id: "thread-1" }),
     listConversations: vi.fn().mockResolvedValue([
       { conversation_id: "thread-1", title: "Asterion" },
@@ -270,5 +278,26 @@ describe("ChatApp tool activity", () => {
     fireEvent.keyDown(composer2, { key: "Enter" });
     await secondScreen.findByText("Second answer.");
     expect(secondScreen.queryByLabelText("Library activity")).toBeNull();
+  });
+});
+
+it("opens reader settings, saves the chapter and the knob", async () => {
+  const api = createApi((async function* () {})());
+  render(<ChatApp api={api} modeLabel="fake" privacyLabel="Local fake mode" />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Chat settings" }));
+  expect(await screen.findByRole("dialog", { name: "Chat settings" })).toBeTruthy();
+
+  fireEvent.change(screen.getByLabelText("I'm at chapter"), {
+    target: { value: "600" },
+  });
+  fireEvent.click(screen.getByRole("radio", { name: "No spoiler care (spoil me freely)" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+  await waitFor(() => {
+    expect(api.savePreferences).toHaveBeenCalledWith({
+      reader_chapter: 600,
+      spoiler_mode: "none",
+    });
   });
 });

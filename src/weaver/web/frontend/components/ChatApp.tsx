@@ -5,7 +5,8 @@ import type { ChatApi } from "../lib/chatApi";
 import { weaverProduct, type ChatProduct } from "../lib/product";
 import { Composer } from "./Composer";
 import { ConversationRail } from "./ConversationRail";
-import { RailOpenIcon } from "./Icons";
+import { RailOpenIcon, SettingsIcon } from "./Icons";
+import { SettingsModal } from "./SettingsModal";
 import { Message } from "./Message";
 import { RecoveryPanel } from "./RecoveryPanel";
 import { WeaverMark, type WeaverMarkProps } from "./WeaverMark";
@@ -29,6 +30,11 @@ export function ChatApp({
   const [desktopRailCollapsed, setDesktopRailCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [mobileLayout, setMobileLayout] = useState(() => window.innerWidth < 768);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsPrefs, setSettingsPrefs] = useState<{
+    reader_chapter: number | null;
+    spoiler_mode: "protect" | "none";
+  }>({ reader_chapter: null, spoiler_mode: "protect" });
   const returnFocusToRailToggle = useRef(false);
   const railToggleRef = useRef<HTMLButtonElement>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
@@ -130,6 +136,22 @@ export function ChatApp({
             <strong>{chat.activeTitle}</strong>
           </div>
           <span className="mode-seal">{modeLabel}</span>
+          <button
+            aria-label="Chat settings"
+            className="icon-button settings-toggle"
+            onClick={() => {
+              void api
+                .getPreferences()
+                .then((prefs) => {
+                  setSettingsPrefs(prefs);
+                  setSettingsOpen(true);
+                })
+                .catch(() => setSettingsOpen(true));
+            }}
+            type="button"
+          >
+            <SettingsIcon />
+          </button>
         </header>
 
         <div aria-live="polite" className="transcript" ref={transcriptRef}>
@@ -205,6 +227,16 @@ export function ChatApp({
           </p>
         </footer>
       </main>
+      {settingsOpen && (
+        <SettingsModal
+          initial={settingsPrefs}
+          onClose={() => setSettingsOpen(false)}
+          onSave={async (prefs) => {
+            await api.savePreferences(prefs);
+            setSettingsPrefs(prefs);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -76,6 +76,29 @@ async def _no_canaries(text: str) -> None:
         assert canary not in text
 
 
+async def test_preferences_defaults(client) -> None:
+    resp = await client.get("/api/preferences")
+    assert resp.status_code == 200
+    assert resp.json() == {"reader_chapter": None, "spoiler_mode": "protect"}
+
+
+async def test_preferences_roundtrip(client) -> None:
+    resp = await client.put(
+        "/api/preferences",
+        json={"reader_chapter": 600, "spoiler_mode": "none"},
+    )
+    assert resp.status_code == 200
+    assert resp.json() == {"reader_chapter": 600, "spoiler_mode": "none"}
+    resp = await client.get("/api/preferences")
+    assert resp.json() == {"reader_chapter": 600, "spoiler_mode": "none"}
+
+
+async def test_preferences_reject_invalid(client) -> None:
+    assert (await client.put("/api/preferences", json={"reader_chapter": 0})).status_code == 422
+    assert (await client.put("/api/preferences", json={"reader_chapter": 3128})).status_code == 422
+    assert (await client.put("/api/preferences", json={"spoiler_mode": "maybe"})).status_code == 422
+
+
 async def test_create_conversation_returns_201(client) -> None:
     resp = await client.post("/api/conversations")
     assert resp.status_code == 201

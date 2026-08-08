@@ -24,6 +24,7 @@ from .agent.tools import (
 )
 from .config import DEFAULT_TIMEOUT_SECONDS
 from .conversation.session import SessionWeave
+from .prefs import PreferencesStore
 from .corpus.tools import register_chat_tools, service_from_environment
 from .model_layer import (
     DEEPSEEK_FLASH,
@@ -245,7 +246,7 @@ def _web_tool_registry() -> ToolRegistry:
 
 
 class ChatRuntime:
-    """Owns the open session, mode label, and close lifecycle."""
+    """Owns the open session, mode label, preferences, and close lifecycle."""
 
     def __init__(
         self,
@@ -254,13 +255,17 @@ class ChatRuntime:
         surface: Surface,
         mode_label: str,
         live: bool,
+        prefs: PreferencesStore | None = None,
     ) -> None:
         self.session = session
         self.surface = surface
         self.mode_label = mode_label
         self.live = live
+        self.prefs = prefs
 
     async def close(self) -> None:
+        if self.prefs is not None:
+            await self.prefs.close()
         await self.session.close()
 
 
@@ -338,9 +343,12 @@ async def open_chat_runtime(
         execution_policy=execution_policy,
     )
     await sw.open()
+    prefs = PreferencesStore(state_dir / "weaver.sqlite3")
+    await prefs.open()
     return ChatRuntime(
         sw,
         surface=surface,
         mode_label=mode_label,
         live=live,
+        prefs=prefs,
     )

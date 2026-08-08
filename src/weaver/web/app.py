@@ -43,6 +43,11 @@ class TurnBody(BaseModel):
     message: str = Field(min_length=1, max_length=MAX_MESSAGE_CHARS)
 
 
+class PreferencesBody(BaseModel):
+    reader_chapter: int | None = Field(default=None, ge=1, le=3127)
+    spoiler_mode: str = Field(default="protect", pattern="^(protect|none)$")
+
+
 def _reject_blank(message: str) -> None:
     if not message.strip():
         raise HTTPException(status_code=422, detail="message must not be blank")
@@ -128,6 +133,24 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         lifespan=lifespan,
     )
     app.state.runtime = runtime
+
+    @app.get("/api/preferences", dependencies=[Depends(_check_local)])
+    async def get_preferences() -> dict:
+        if runtime.prefs is None:
+            return {"reader_chapter": None, "spoiler_mode": "protect"}
+        prefs = await runtime.prefs.get()
+        return {"reader_chapter": prefs.reader_chapter, "spoiler_mode": prefs.spoiler_mode}
+
+    @app.put("/api/preferences", dependencies=[Depends(_check_local)])
+    async def put_preferences(body: PreferencesBody) -> dict:
+        if runtime.prefs is None:
+            raise HTTPException(status_code=404, detail="preferences store unavailable")
+        from weaver.prefs import UserPreferences
+
+        await runtime.prefs.set(
+            UserPreferences(reader_chapter=body.reader_chapter, spoiler_mode=body.spoiler_mode)
+        )
+        return {"reader_chapter": body.reader_chapter, "spoiler_mode": body.spoiler_mode}
 
     @app.get("/api/conversations")
     async def list_conversations() -> list[dict]:

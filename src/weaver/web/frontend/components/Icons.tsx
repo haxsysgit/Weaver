@@ -1,6 +1,7 @@
 import {
   faArrowUp,
   faBarsStaggered,
+  faGear,
   faChevronLeft,
   faCopy,
   faLink,
@@ -45,4 +46,8 @@ export function RailOpenIcon(props: IconProps) {
 
 export function RailCloseIcon(props: IconProps) {
   return <FontAwesomeIcon aria-hidden="true" icon={faChevronLeft} {...props} />;
+}
+
+export function SettingsIcon(props: IconProps) {
+  return <FontAwesomeIcon aria-hidden="true" icon={faGear} {...props} />;
 }

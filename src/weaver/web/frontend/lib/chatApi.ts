@@ -18,12 +18,19 @@ export type StreamEvent =
   | { type: "failed"; message: string; code?: string }
   | { type: "tool"; name: string; status: string; detail: string };
 
+export interface UserPreferences {
+  reader_chapter: number | null;
+  spoiler_mode: "protect" | "none";
+}
+
 export interface ChatApi {
   listConversations(): Promise<ConversationSummary[]>;
   createConversation(): Promise<{ conversation_id: string }>;
   loadMessages(conversationId: string): Promise<StoredMessage[]>;
   streamTurn(conversationId: string, message: string): AsyncIterable<StreamEvent>;
   cancelTurn(conversationId: string): Promise<"cancelling" | "idle">;
+  getPreferences(): Promise<UserPreferences>;
+  savePreferences(prefs: UserPreferences): Promise<UserPreferences>;
 }
 
 interface RawStreamEvent {
@@ -144,6 +151,20 @@ async function* readEventStream(response: Response): AsyncGenerator<StreamEvent>
 
 export function createHttpChatApi(fetcher: typeof fetch = fetch): ChatApi {
   return {
+    async getPreferences() {
+      const response = await fetcher("/api/preferences");
+      return requireJson<UserPreferences>(response, "Loading preferences");
+    },
+
+    async savePreferences(prefs) {
+      const response = await fetcher("/api/preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(prefs),
+      });
+      return requireJson<UserPreferences>(response, "Saving preferences");
+    },
+
     async listConversations() {
       const response = await fetcher("/api/conversations");
       return requireJson<ConversationSummary[]>(response, "Loading conversations");
