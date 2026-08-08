@@ -13,9 +13,14 @@ the judge returns one of three modes:
   position, unless the question itself targets the future (asks_beyond),
   which downgrades to guarded.
 
-Two layers of the map feed the judge:
+Three layers of the map feed the judge:
 - statement labels (ch 1-1000), loaded from <notebook>/spoiler-labels.json
   (absent-tolerant: the judge works on volume rules alone)
+- the beat map (<notebook>/spoiler-beats.json): curated story beats -
+  "culminations" - each with a chapter range, a heavy label and a plain
+  summary. A citation whose chapter falls inside a beat's range inherits
+  the beat's label when no statement label applies, so protection
+  extends beyond the labeled statements to the whole beat span.
 - canonical volume boundaries, the coarse safety net for everything,
   including chapters beyond notebook coverage
 
@@ -67,11 +72,33 @@ class Verdict:
 
 
 class SpoilerJudge:
-    def __init__(self, labels: dict[str, str] | None = None):
+    def __init__(
+        self,
+        labels: dict[str, str] | None = None,
+        beats: list[dict] | None = None,
+    ):
         self._labels = labels or {}
         for sid, label in self._labels.items():
             if label not in ALL_LABELS:
                 raise ValueError(f"unknown spoiler label {label!r} for {sid}")
+        self._beats = beats or []
+        seen: set[str] = set()
+        for beat in self._beats:
+            if beat.get("label") not in HEAVY_LABELS:
+                raise ValueError(f"unknown beat label {beat.get('label')!r}")
+            start, end = beat.get("chapter_start"), beat.get("chapter_end")
+            if not (isinstance(start, int) and isinstance(end, int) and start <= end):
+                raise ValueError(f"invalid beat chapter range {start}-{end}")
+            if beat.get("id") in seen:
+                raise ValueError(f"duplicate beat id {beat.get('id')!r}")
+            seen.add(beat.get("id"))
+
+    def beats_for(self, chapter: int) -> list[dict]:
+        """Beats whose chapter range contains the chapter, oldest first."""
+        return [
+            beat for beat in self._beats
+            if beat["chapter_start"] <= chapter <= beat["chapter_end"]
+        ]
 
     def decide(
         self,
@@ -96,12 +123,19 @@ class SpoilerJudge:
             if c.chapter <= user_chapter:
                 continue
             label = self._labels.get(c.statement_id or "")
+            if label is None:
+                # no statement label at all: does the chapter fall inside a
+                # beat? An explicit label (even safe_lore) overrides beats.
+                for beat in self.beats_for(c.chapter):
+                    label = beat["label"]
+                    break
             if label == "safe_lore":
                 continue
             if label in HEAVY_LABELS:
+                article = "an" if label.startswith(("a", "e", "i", "o")) else "a"
                 reasons.append(
                     f"{c.statement_id or ('chapter ' + str(c.chapter))} "
-                    f"is a {label} beyond chapter {user_chapter}"
+                    f"is {article} {label} beyond chapter {user_chapter}"
                 )
                 worst = "ask_first"
             elif worst == "full":
@@ -122,3 +156,17 @@ def load_labels(notebook_dir: Path) -> dict[str, str]:
     # validate eagerly so a broken file fails at load, not at verdict time
     SpoilerJudge(labels)
     return labels
+
+
+def load_beats(notebook_dir: Path) -> list[dict]:
+    """Load <notebook_dir>/spoiler-beats.json; missing file = empty list."""
+    path = notebook_dir / "spoiler-beats.json"
+    if not path.exists():
+        return []
+    data = json.loads(path.read_text(encoding="utf-8"))
+    beats = data.get("beats") if isinstance(data, dict) else None
+    if not isinstance(beats, list):
+        raise ValueError("spoiler-beats.json must hold a beats list")
+    # validate eagerly so a broken file fails at load, not at verdict time
+    SpoilerJudge(beats=beats)
+    return beats

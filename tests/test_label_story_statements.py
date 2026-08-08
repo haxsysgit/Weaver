@@ -5,6 +5,7 @@ import json
 from scripts.label_story_statements import (
     flag_statements,
     load_labels,
+    validate_beats,
     validate_labels,
 )
 
@@ -87,3 +88,44 @@ def test_validate_labels_rejects_unknown_id_and_label(tmp_path) -> None:
 def test_missing_labels_file_is_tolerated(tmp_path) -> None:
     assert load_labels(tmp_path) == {}
     assert validate_labels(tmp_path, {}) == []
+
+
+def test_validate_beats_accepts_sound_file(tmp_path) -> None:
+    _write_record(
+        tmp_path,
+        5,
+        [_st("statement:chapter-0005:01", "Sunny killed the beast with the kunai.")],
+    )
+    beats = [
+        {
+            "id": "beat-1",
+            "title": "The kill",
+            "label": "death",
+            "volume": 1,
+            "chapter_start": 5,
+            "chapter_end": 5,
+            "summary": "x",
+            "anchors": ["statement:chapter-0005:01"],
+        }
+    ]
+    assert validate_beats(tmp_path, beats) == []
+
+
+def test_validate_beats_rejects_bad_ids_ranges_and_anchors(tmp_path) -> None:
+    _write_record(
+        tmp_path,
+        5,
+        [_st("statement:chapter-0005:01", "Sunny killed the beast with the kunai.")],
+    )
+    beats = [
+        {"id": "a", "label": "death", "volume": 1, "chapter_start": 1, "chapter_end": 2, "anchors": []},
+        {"id": "a", "label": "twist", "volume": 1, "chapter_start": 1, "chapter_end": 2, "anchors": []},
+        {"id": "b", "label": "banana", "volume": 1, "chapter_start": 1, "chapter_end": 2, "anchors": []},
+        {"id": "c", "label": "death", "volume": 99, "chapter_start": 5, "chapter_end": 3, "anchors": ["statement:chapter-9999:01"]},
+    ]
+    problems = validate_beats(tmp_path, beats)
+    assert any("duplicate beat id" in p for p in problems)
+    assert any("invalid beat label" in p for p in problems)
+    assert any("invalid beat chapter range" in p for p in problems)
+    assert any("invalid beat volume" in p for p in problems)
+    assert any("unknown beat anchor" in p for p in problems)

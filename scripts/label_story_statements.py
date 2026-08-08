@@ -95,6 +95,37 @@ def validate_labels(root: Path, labels: dict) -> list[str]:
     return problems
 
 
+def load_beats(root: Path) -> list[dict]:
+    path = root / "spoiler-beats.json"
+    if not path.exists():
+        return []
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return data.get("beats", []) if isinstance(data, dict) else []
+
+
+def validate_beats(root: Path, beats: list[dict]) -> list[str]:
+    """Return a list of problems; empty means the beats file is sound."""
+    problems: list[str] = []
+    known = {statement["id"] for statement in load_statements(root)}
+    seen: set[str] = set()
+    for beat in beats:
+        beat_id = beat.get("id", "")
+        if beat_id in seen:
+            problems.append(f"duplicate beat id: {beat_id}")
+        seen.add(beat_id)
+        if beat.get("label") not in HEAVY_LABELS:
+            problems.append(f"invalid beat label {beat.get('label')!r} for {beat_id}")
+        start, end = beat.get("chapter_start"), beat.get("chapter_end")
+        if not (isinstance(start, int) and isinstance(end, int) and start <= end):
+            problems.append(f"invalid beat chapter range {start}-{end} for {beat_id}")
+        if not isinstance(beat.get("volume"), int) or not 1 <= beat["volume"] <= 12:
+            problems.append(f"invalid beat volume {beat.get('volume')!r} for {beat_id}")
+        for anchor in beat.get("anchors", []):
+            if anchor not in known:
+                problems.append(f"unknown beat anchor {anchor!r} for {beat_id}")
+    return problems
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path(".weaver/knowledge/shadow-slave"))
@@ -112,17 +143,22 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.check:
+        problems: list[str] = []
         labels = load_labels(args.root)
-        if not labels:
-            print("no spoiler-labels.json present (volume rules only)")
-            return 0
-        problems = validate_labels(args.root, labels)
+        problems.extend(
+            f"labels: {p}" for p in validate_labels(args.root, labels)
+        )
+        beats = load_beats(args.root)
+        problems.extend(f"beats: {p}" for p in validate_beats(args.root, beats))
         if problems:
-            print(f"spoiler-labels.json: {len(problems)} problem(s)")
+            print(f"spoiler files: {len(problems)} problem(s)")
             for problem in problems[:50]:
                 print(" -", problem)
             return 1
-        print(f"spoiler-labels.json: {len(labels)} statements, all ids and labels valid")
+        print(
+            f"spoiler-labels.json: {len(labels)} statements, "
+            f"spoiler-beats.json: {len(beats)} beats, all valid"
+        )
         return 0
 
     parser.print_help()

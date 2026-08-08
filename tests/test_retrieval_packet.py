@@ -175,3 +175,58 @@ async def test_packet_size_cap_keeps_framing_and_statements(tmp_path: Path) -> N
     assert packet is not None
     assert "spoiler framing" in packet.text
     assert "statement:chapter-0104:01" in packet.text
+
+
+@pytest.mark.asyncio
+async def test_packet_carries_beat_context(tmp_path: Path) -> None:
+    svc = _service(tmp_path)
+    beats = [
+        {
+            "id": "beat-caster",
+            "title": "Caster's death",
+            "label": "death",
+            "volume": 2,
+            "chapter_start": 104,
+            "chapter_end": 104,
+            "summary": "Sunny kills Caster",
+            "anchors": [],
+        }
+    ]
+    judge = SpoilerJudge(beats=beats)
+    packet = build_packet(
+        svc,
+        [_read_result(104, 10, 12)],
+        user_chapter=100,
+        judge=judge,
+    )
+    assert packet is not None
+    assert "beat: Caster's death" in packet.text
+    assert packet.verdict.mode == "ask_first"  # beat label applies
+
+
+@pytest.mark.asyncio
+async def test_packet_beat_context_only_for_matching_chapters(tmp_path: Path) -> None:
+    svc = _service(tmp_path)
+    judge = SpoilerJudge(
+        beats=[
+            {
+                "id": "beat-x",
+                "title": "X climax",
+                "label": "twist",
+                "volume": 2,
+                "chapter_start": 104,
+                "chapter_end": 104,
+                "summary": "x",
+                "anchors": [],
+            }
+        ]
+    )
+    packet = build_packet(
+        svc,
+        [_read_result(98, 5, 8)],
+        user_chapter=98,
+        judge=judge,
+    )
+    assert packet is not None
+    assert "beat:" not in packet.text
+    assert packet.verdict.mode == "full"  # ch98 not in any beat

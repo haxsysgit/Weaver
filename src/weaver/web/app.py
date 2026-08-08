@@ -135,10 +135,13 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
     app.state.runtime = runtime
 
     from weaver.retrieval.packet import build_packet
-    from weaver.spoilers.judge import SpoilerJudge, load_labels
+    from weaver.spoilers.judge import SpoilerJudge, load_beats, load_labels
 
     spoiler_judge = (
-        SpoilerJudge(load_labels(runtime.library.notebook_dir))
+        SpoilerJudge(
+            load_labels(runtime.library.notebook_dir),
+            beats=load_beats(runtime.library.notebook_dir),
+        )
         if runtime.library is not None
         else SpoilerJudge()
     )

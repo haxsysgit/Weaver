@@ -99,9 +99,13 @@ classification call) returns with them, and it never assigned budgets.
    — DONE 2026-08-08 (3cfcf1e)
 3. Two-phase loop (locate, then packet, then toolless synthesis)
    — DONE 2026-08-08 (aeb977a)
-4. Label pass over the 1-1000 statements — DONE 2026-08-08 (this slice); labels private at
-   `.weaver/knowledge/shadow-slave/spoiler-labels.json`, flagger + validator in
-   `scripts/label_story_statements.py`; owner review pending
+4. Label pass over the 1-1000 statements — DONE 2026-08-08 (7f17f9d + this slice); labels
+   private at `.weaver/knowledge/shadow-slave/spoiler-labels.json` (33 statements) plus the
+   semantic beat map `spoiler-beats.json` (32 story beats with chapter ranges, labels and
+   plain summaries); flagger + validator in `scripts/label_story_statements.py`; the judge
+   inherits a beat's label for any citation whose chapter falls inside its range (an explicit
+   statement label overrides beats); the packet carries beat titles as context; owner review
+   of both files pending
 5. Verify pass (transcendent)
 6. Live trial (owner go required)
 7. Skills + router — deferred until after the live trial

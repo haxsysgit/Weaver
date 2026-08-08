@@ -58,6 +58,14 @@ class Packet:
     verdict: Verdict
 
 
+def _beat_lines(judge: SpoilerJudge | None, chapter: int) -> str:
+    """One 'beat: <title>' line per story beat covering the chapter."""
+    if judge is None:
+        return ""
+    lines = [f"beat: {beat['title']}" for beat in judge.beats_for(chapter)]
+    return "\n".join(lines) + ("\n" if lines else "")
+
+
 def _collect_evidence(tool_results: list) -> tuple[list[tuple[int, int, int]], list[dict]]:
     """Handles the model opened plus notebook hits it surfaced."""
     handles: list[tuple[int, int, int]] = []
@@ -114,7 +122,8 @@ def build_packet(
     citations: list[Citation] = []
 
     # 1. Opened passages, expanded windows, oldest first so trimming
-    # drops the earliest reads.
+    # drops the earliest reads. Beat lines give the synthesis call the
+    # semantic shape of the story around the passage.
     opened = []
     for chapter, start, end in handles[:MAX_OPENED_PASSAGES]:
         passage = service.index.open_lines(
@@ -124,7 +133,7 @@ def build_packet(
         )
         opened.append(
             f"--- chapter {chapter}, lines {passage.line_start}-{passage.line_end} ---\n"
-            f"{passage.text}"
+            f"{_beat_lines(judge, chapter)}{passage.text}"
         )
         citations.append(Citation(chapter=chapter))
     parts.extend(opened)
@@ -138,7 +147,8 @@ def build_packet(
             continue
         statements.append(
             f"--- notebook statement {h.get('statement_id')} "
-            f"[{h.get('kind') or st.get('kind', '')}] ch {h.get('chapter')} ---\n{text}"
+            f"[{h.get('kind') or st.get('kind', '')}] ch {h.get('chapter')} ---\n"
+            f"{_beat_lines(judge, int(h['chapter']))}{text}"
         )
         citations.append(
             Citation(chapter=int(h["chapter"]), statement_id=h.get("statement_id"))

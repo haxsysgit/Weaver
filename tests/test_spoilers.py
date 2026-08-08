@@ -110,3 +110,72 @@ def test_verdict_is_frozen() -> None:
     v = Verdict("guarded", ("chapter 200 is beyond chapter 100",))
     assert v.mode == "guarded"
     assert v.reasons == ("chapter 200 is beyond chapter 100",)
+
+
+class TestBeatMap:
+    """Beat-level protection (Plan 15 slice 4): a citation inside a beat's
+    chapter range inherits the beat's label when no statement label applies."""
+
+    def _beats(self):
+        return [
+            {
+                "id": "beat-spire",
+                "title": "The Crimson Spire siege",
+                "label": "arc_payoff",
+                "volume": 2,
+                "chapter_start": 316,
+                "chapter_end": 333,
+                "summary": "four-fifths of the army dies",
+                "anchors": [],
+            },
+            {
+                "id": "beat-caster",
+                "title": "Caster's death",
+                "label": "death",
+                "volume": 2,
+                "chapter_start": 343,
+                "chapter_end": 343,
+                "summary": "Sunny kills Caster",
+                "anchors": [],
+            },
+        ]
+
+    def test_citation_inside_beat_range_is_ask_first_beyond_position(self):
+        judge = SpoilerJudge(beats=self._beats())
+        verdict = judge.decide([Citation(chapter=320)], user_chapter=300)
+        assert verdict.mode == "ask_first"
+        assert any("arc_payoff" in r for r in verdict.reasons)
+
+    def test_beat_within_position_is_full(self):
+        judge = SpoilerJudge(beats=self._beats())
+        assert judge.decide([Citation(chapter=330)], user_chapter=400).mode == "full"
+
+    def test_statement_label_wins_over_beat(self):
+        judge = SpoilerJudge(
+            labels={"statement:chapter-0320:01": "safe_lore"},
+            beats=self._beats(),
+        )
+        # the statement is safe_lore even though ch320 sits inside the beat range
+        verdict = judge.decide([Citation(chapter=320, statement_id="statement:chapter-0320:01")], user_chapter=300)
+        assert verdict.mode == "full"
+
+    def test_beats_for_lists_matching_beats(self):
+        judge = SpoilerJudge(beats=self._beats())
+        assert [b["id"] for b in judge.beats_for(320)] == ["beat-spire"]
+        assert judge.beats_for(343)[0]["id"] == "beat-caster"
+        assert judge.beats_for(400) == []
+
+    def test_invalid_beat_file_raises_at_load(self):
+        import pytest as _pytest
+
+        with _pytest.raises(ValueError):
+            SpoilerJudge(beats=[{"id": "x", "label": "banana", "chapter_start": 1, "chapter_end": 2}])
+        with _pytest.raises(ValueError):
+            SpoilerJudge(beats=[{"id": "x", "label": "death", "chapter_start": 10, "chapter_end": 2}])
+        with _pytest.raises(ValueError):
+            SpoilerJudge(
+                beats=[
+                    {"id": "a", "label": "death", "chapter_start": 1, "chapter_end": 2},
+                    {"id": "a", "label": "twist", "chapter_start": 1, "chapter_end": 2},
+                ]
+            )
