@@ -21,7 +21,7 @@ evidence, review, and human decision gates must also be complete.
 | [012 - Direct reading baseline](012-direct-reading-baseline.md) | Accepted 2026-08-04 | Plan 011 accepted | Private chapter-evidenced notebook and connection map completed through chapter 1000, without retrieval changing the reading method |
 | [013 - Responsive interface and installable PWA](013-responsive-interface-pwa.md) | Accepted and closed 2026-08-05 | Plan 012 accepted | One responsive React chat surface with the Shadow Slave theme, real conversation controls, safe Markdown, and PWA |
 | [014 - Reading tools and the 1-1000 retrieval experiment](014-weaver-reads-from-the-shelf.md) | Completed and owner-accepted 2026-08-07 | Plan 013 accepted | Split tool results into temporary and durable forms, run the 1-1000 retrieval experiment on Qdrant (exact, notebook, vector, hybrid, connections), then build search_library and open_chapters around the winner |
-| [015 - Reader capability conversations (1-1000)](015-reader-trials-1-1000.md) | Drafted 2026-08-04; learning gate required | Plan 014 accepted | Three owner-worded capability conversations inside chapters 1-1000: canon reconstruction, time-aware comparison, state versus environment |
+| [015 - Weaver the agent (context + agentic parts)](015-reader-trials-1-1000.md) | Re-scoped 2026-08-07; implementing 2026-08-08 | Plan 014 accepted | Whole-novel search (ceiling dead), spoiler map + judge, preferences, router + two-phase read, skills; compaction second half |
 | [016 - Refresh the shelf safely](016-refresh-the-shelf-safely.md) | Drafted 2026-08-04; learning gate required | Plan 014 accepted | Preview-first, owner-confirmed fetch/update/export wired into the web profile with clear effect classification, progress, and cancellation |
 | Later - Reading continuation 1001-3200 | Not yet drafted | Plan 015 accepted | Extend the notebook and retrieval coverage toward the founding Reader Trials (AGENTS.md) |
 | Later - Founding Reader Trials | Not yet drafted | Reading continuation | The finished-product bar: Ariel and the Unholy Titan, Sunny 3120+ versus Azarax, Anvil versus Azarax what-if |
@@ -41,7 +41,7 @@ recorded in `docs/process/checkpoint-001-010.md`. The next sequence is:
 4. **014**: split tool results into temporary and durable forms, run the
    1-1000 retrieval experiment, then build the reading tools around the
    winner.
-5. **015**: run the three owner-worded 1-1000 capability conversations.
+5. **015**: weaver as a full agentic product: spoiler map + judge, two-phase read, router + skills, then compaction.
 6. **016**: refresh the shelf safely with preview and confirmation.
 7. **Later**: reading continuation 1001-3200, then the founding Reader
    Trials, then durable reader memory.

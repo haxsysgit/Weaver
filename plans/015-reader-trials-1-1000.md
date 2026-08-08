@@ -1,0 +1,110 @@
+# Plan 015: Weaver the agent (context system + agentic parts)
+
+> Re-scoped by the owner 2026-08-07: Plan 15 is no longer the 1-1000
+> reader capability conversations. It is the context-management system and
+> the agentic sharpening that make weaver a full agentic product. The
+> three founding Reader Trials in AGENTS.md stay the finished-product bar
+> and remain a separate later plan.
+
+## Status
+
+- State: Admitted 2026-08-07 (owner re-scope); implementing 2026-08-08
+- Priority P2, Effort L, Risk Medium
+- Depends on: Plan 014 accepted and closed (done 2026-08-07)
+
+## Locked design (owner-approved 2026-08-08)
+
+### The one rule
+
+The reader ceiling is dead. Weaver holds the whole novel: every search and
+tool runs over all 3127 chapters. Spoiler care happens only in answer
+framing, driven by the user's position. Never reintroduce a retrieval- or
+tool-level position filter.
+
+### Spoiler map (data)
+
+- Statement labels for ch 1-1000: `safe_lore` / `reveal` / `twist` /
+  `death` / `arc_payoff` per notebook statement, alongside
+  `first_known_chapter`. Stored as `<notebook>/spoiler-labels.json`,
+  loaded by the judge, absent-tolerant.
+- Volume boundaries for everything (verified from the novel 2026-08-04):
+  Vol 1 ends ch95, Vol 2 350, Vol 3 600, Vol 4 750, Vol 5 1060, Vol 6 1230,
+  Vol 7 1590, Vol 8 1840, Vol 9 2260, Vol 10 2720, Vol 11 3000,
+  Vol 12 3001+. This is the coarse safety net, including all
+  beyond-notebook coverage.
+- The label pass (LLM classification over existing statements, owner
+  review, spot-checks via evidence lines only) is a later slice. The judge
+  works on volume rules alone from slice 1.
+
+### State (user preferences, never tool arguments)
+
+- Stored per user: current chapter N, spoiler mode (protect / no
+  spoilers), flavor prefs (best character, best scene, fun stuff) for
+  later plans.
+- The knob: toggled by the user in the UI, or "spoil me" for one question.
+- Tools never see position or mode. No filters, no validation, nothing.
+
+### The flow (what happens on send)
+
+1. **Router.** One cheap call (~1-2s). Classes: quick-lore,
+   scene-reconstruction, what-if/power-scaling, compare-and-trace,
+   open-mystery. Picks the skill pack, the tier default, the per-question
+   tool ceiling (under the 50/70/90 tier caps), the packet size target.
+2. **Locate.** Short tool loop, 2-6 calls. `search_story` first (notebook
+   statements read first, they often carry the answer), `find_text` for
+   exact phrases and "where does X speak", `who_is` for names. Triage to
+   1-3 candidate passages plus notebook statements.
+3. **Packet assembly (machinery, not the model).** `read_chapters` with
+   expanded windows, labels + first_known_chapter, volume/arc context,
+   skill pack, user position and mode. Ephemeral 50-200K tokens, never
+   persisted (temp-vs-durable split).
+4. **Judge gate (machinery).** Deterministic pass over the packet's
+   citations.
+5. **Synthesis.** One heavy toolless call (tools stripped, hermes-style).
+   Answers cite chapters. Framing instruction comes from the gate.
+6. **Verify (transcendent only).** Re-read the cited passages, check the
+   claims, refine.
+
+### Judge outcomes
+
+- `full`: citations at or before position, `safe_lore` labeled, or
+  no-spoiler mode on.
+- `guarded`: beyond-position material that is not a heavy beat. Answer
+  but protect the beats; close with "that's past your chapter, say the
+  word for the full spoil."
+- `ask_first`: heavy beats (`reveal` / `twist` / `death` / `arc_payoff`)
+  beyond position when the question does not target the future. Warn and
+  ask. One question, not a wall.
+- Position is soft, not law: a ch1250 reader asking about ch2648 material
+  gets guarded or full by question intent and knob, never blocked.
+
+### Skills (prompt packs injected by the router)
+
+power-scaling, what-if, arc-recap, character-profile, spoiler-policy.
+Ship power-scaling + spoiler-policy first, add the rest when a trial
+proves they are needed.
+
+## Slices
+
+1. Spoiler map data + judge gate (volumes first; labels file scaffold and
+   loader) — IN IMPLEMENTATION
+2. Preferences store + web UI knob (chapter field + spoiler toggle)
+3. Router + skill packs
+4. Two-phase loop (locate, then packet, then toolless synthesis)
+5. Verify pass (transcendent)
+6. Live trial (owner go required)
+
+Compaction (labeled context, living story-state note, graph-anchored user
+takes) is the second half of Plan 15, after the front half works live.
+
+## Unchanged
+
+The five reading tools, the whole-novel index, the durable split, the
+50/70/90 tool budgets, the always-on reasoning tiers (high/high/max), the
+web system prompt.
+
+## Verification
+
+Focused: `uv run pytest tests/test_spoilers.py tests/test_retrieval_tools.py`,
+`ruff check src/weaver/spoilers`, full suite at slice boundaries, staged
+credential/private-text scan before any push.
