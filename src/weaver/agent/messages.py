@@ -30,7 +30,13 @@ class AssistantMessage:
     turn_id: str = ""
     content: str = ""
     tool_calls: tuple[ModelToolCall, ...] = field(default_factory=tuple)
+    # DeepSeek thinking-mode contract: assistant messages that carried
+    # tool calls must pass reasoning_content back in later requests.
+    reasoning_content: str = ""
     status: Literal["complete", "interrupted", "failed"] = "complete"
+    # DeepSeek thinking-mode requirement: assistant reasoning passed back
+    # after tool calls. Empty string = never captured (still sent as "").
+    reasoning_content: str = ""
     created_at: str = field(default_factory=_utcnow)
 
 
@@ -95,6 +101,7 @@ def project_messages(
                     role="assistant",
                     content=content,
                     tool_calls=message.tool_calls,
+                    reasoning_content=message.reasoning_content or None,
                 )
             )
         elif isinstance(message, ToolResultMessage):

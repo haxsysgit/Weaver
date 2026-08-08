@@ -1292,3 +1292,188 @@ async def test_send_tool_private_material_never_reaches_db():
             assert "sha256:abc" in bodies
         finally:
             await sw.close()
+
+
+class _RaisingProvider(FakeModelProvider):
+    """A provider whose stream explodes, to drive a MODEL_FAILED turn."""
+
+    async def stream(self, model, request, cancel_event, *, max_output_tokens):
+        raise RuntimeError("inference exploded")
+
+
+def test_assistant_reasoning_content_round_trips_through_items():
+    """DeepSeek thinking-mode contract: tool-call assistant messages keep
+    their reasoning_content through the durable item store."""
+    from weaver.agent.messages import AssistantMessage
+    from weaver.conversation.items import items_to_messages, message_to_item
+
+    message = AssistantMessage(
+        message_id="itm1",
+        turn_id="turn1",
+        content="",
+        tool_calls=(
+            ModelToolCall(
+                call_id="call_1",
+                name="echo",
+                arguments_json='{"message": "a"}',
+            ),
+        ),
+        reasoning_content="the user wants the weather",
+    )
+    item = message_to_item(
+        message,
+        conversation_id="conv1",
+        run_id="run1",
+        turn_id="turn1",
+        sequence=1,
+        created_at="2026-07-31T00:00:00",
+    )
+    body = json.loads(item.body)
+    assert body["reasoning_content"] == "the user wants the weather"
+    restored = items_to_messages([item])[0]
+    assert isinstance(restored, AssistantMessage)
+    assert restored.reasoning_content == "the user wants the weather"
+
+
+@pytest.mark.asyncio
+async def test_model_failure_records_a_run_failed_event(tmp_path):
+    """A broken model stream writes a run_failed event with details, so a
+    broken thread is diagnosable from the state DB (Plan 15)."""
+    _, model, _ = _fake_layer()
+    layer = ModelLayer()
+    layer.register_provider(
+        _RaisingProvider(model.provider_id, models=(model,))
+    )
+    sw = _open_woven(Path(tmp_path), layer, model, _echo_registry())
+    await sw.open()
+    try:
+        conv_id = await sw.start_conversation("hi")
+        result = await sw.send(conv_id, "hello")
+        assert result.exit_reason == "model_failed"
+        events = await sw.repo.load_events(conv_id)
+        failed = [event for event in events if event.kind == "run_failed"]
+        assert failed, events
+        body = json.loads(failed[-1].body)
+        assert body["exit_reason"] == "model_failed"
+        assert body["message"]
+    finally:
+        await sw.close()
+
+
+def test_assistant_reasoning_content_round_trips():
+    """DeepSeek thinking-mode requirement: reasoning_content survives the
+    persist -> replay cycle (and old rows without it replay as '')."""
+    import json as _json
+
+    from weaver.agent.messages import AssistantMessage
+    from weaver.conversation.items import items_to_messages, message_to_item
+    from weaver.conversation.repository import ItemRecord
+
+    def round_trip(body: dict, item_id: str) -> ItemRecord:
+        return ItemRecord(
+            id=item_id,
+            conversation_id="conv1",
+            run_id="run1",
+            turn_id="turn1",
+            sequence=1,
+            kind="assistant",
+            body=_json.dumps(body),
+            created_at="2026-08-08T00:00:00",
+        )
+
+    msg = AssistantMessage(
+        message_id="m1",
+        turn_id="turn1",
+        content="",
+        reasoning_content="the stored thinking trace",
+    )
+    item = message_to_item(
+        msg,
+        conversation_id="conv1",
+        run_id="run1",
+        turn_id="turn1",
+        sequence=1,
+        created_at="2026-08-08T00:00:00",
+    )
+    body = _json.loads(item.body)
+    assert body["reasoning_content"] == "the stored thinking trace"
+
+    replayed = items_to_messages(
+        [round_trip(body, "itm1")]
+    )
+    assert replayed[0].reasoning_content == "the stored thinking trace"
+
+    # pre-fix rows have no reasoning_content: replay as "" (still sent back
+    # as "" by the provider, satisfying the API's presence check).
+    legacy = items_to_messages([round_trip({"content": "old"}, "itm2")])
+    assert legacy[0].reasoning_content == ""
+
+
+async def test_failed_turn_records_run_failed_event():
+    """A broken turn must be diagnosable from the local DB: a run_failed
+    event records the exit reason and the safe message."""
+    from weaver.agent.tools import ToolExecutionPolicy
+
+    from weaver.conversation.coordinator import RunCoordinator
+
+    async def failing_provider(model, request, cancel_event, **kwargs):
+        yield ModelStreamEvent(
+            event_type=ModelStreamEventType.RESPONSE_COMPLETE,
+            response=ModelResponse(
+                assistant_message=ModelMessage(role="assistant", content=None),
+                provider_id="test-provider",
+                model_id="test-reader",
+                stop_reason=ModelStopReason.ERROR,
+                raw_stop_reason="provider_error",
+                error_category="provider",
+            ),
+        )
+
+    class FailingLayer:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def register_provider(self, provider) -> None:
+            pass
+
+        async def stream(self, model, request, cancel_event, **kwargs):
+            self.calls += 1
+            async for event in failing_provider(model, request, cancel_event):
+                yield event
+
+        async def complete(self, model, request, cancel_event, **kwargs):
+            response = None
+            async for event in self.stream(model, request, cancel_event):
+                if event.event_type == ModelStreamEventType.RESPONSE_COMPLETE:
+                    response = event.response
+            return response
+
+    with tempfile.TemporaryDirectory() as tmp:
+        layer = FailingLayer()
+        registry = _echo_registry()
+        sw = SessionWeave(
+            Path(tmp) / ".weaver" / "state",
+            model_layer=layer,
+            model=ModelSpec(
+                provider_id="test-provider",
+                model_id="test-reader",
+                api_family="openai-chat-completions",
+                default_output_tokens=4096,
+                supports_reasoning=False,
+            ),
+            system_prompt="You are Weaver.",
+            tool_registry=registry,
+            active_tools=("echo",),
+            execution_policy=ToolExecutionPolicy.read_only(),
+        )
+        await sw.open()
+        conv_id = await sw.start_conversation("")
+        result = await sw.send(conv_id, "hi")
+        assert result.exit_reason == "model_failed"
+        events = await sw._repo.load_events(conv_id)
+        failed = [e for e in events if e.kind == "run_failed"]
+        assert len(failed) == 1
+        body = json.loads(failed[0].body)
+        assert body["exit_reason"] == "model_failed"
+        assert body["message"] == "Model stream failed."
+        await sw.close()

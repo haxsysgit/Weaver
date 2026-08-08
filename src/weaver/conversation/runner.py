@@ -171,5 +171,13 @@ class ConversationRunner:
                 final_item_already_persisted=True,
             )
         else:
+            await self._coordinator.record_run_failed(
+                conversation_id,
+                run_id,
+                exit_reason=result.exit_reason.value,
+                message=result.safe_failure,
+                error_category=result.error_category,
+                raw_stop_reason=result.raw_stop_reason,
+            )
             await self._coordinator.mark_interrupted(run_id)
         return result

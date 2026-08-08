@@ -160,6 +160,10 @@ class TurnResult:
     model_name: str = ""
     provider_name: str = ""
     input_characters: int = 0
+    # Plan 15: failure details recorded so a failed turn is diagnosable
+    # later (persisted as a run_event by the runner).
+    error_category: str = ""
+    raw_stop_reason: str = ""
     # Plan 010 Phase D: context meter surfaced from the assembler snapshot
     # (0 = no snapshot; token_budget 0 = unbounded).
     token_count: int = 0
@@ -288,6 +292,7 @@ def _assistant_message(
         content=response_message.content or "",
         tool_calls=tool_calls,
         status=status,
+        reasoning_content=response_message.reasoning_content or "",
     )
 
 
@@ -329,6 +334,8 @@ async def run_turn(
     tool_steps_used = 0
     final_text = ""
     safe_failure = ""
+    error_category = ""
+    raw_stop_reason = ""
     model_name = ""
     provider_name = ""
     completed_response = False
@@ -490,6 +497,8 @@ async def run_turn(
         if response.stop_reason == ModelStopReason.ERROR:
             exit_reason = TurnExitReason.MODEL_FAILED
             safe_failure = safe_error("model")
+            error_category = response.error_category or ""
+            raw_stop_reason = response.raw_stop_reason
             break
 
         if response.stop_reason == ModelStopReason.LENGTH:
@@ -675,4 +684,6 @@ async def run_turn(
         model_name=model_name,
         provider_name=provider_name,
         input_characters=input_characters,
+        error_category=error_category,
+        raw_stop_reason=raw_stop_reason,
     )

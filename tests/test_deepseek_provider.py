@@ -10,6 +10,7 @@ from weaver import (
     DeepSeekProvider,
     ModelLayer,
     ModelMessage,
+    ModelReasoning,
     ModelRequest,
     ModelStopReason,
     ModelStreamEventType,
@@ -35,16 +36,19 @@ class StubStream:
 
 
 class StubCompletions:
-    def __init__(self, chunks, *, error=None) -> None:
+    def __init__(self, chunks, *, error=None, failures=None) -> None:
         self.stream = StubStream(chunks)
         self.error = error
+        self.failures = failures
         self.payload = None
         self.starts = 0
 
     async def create(self, **payload):
         self.starts += 1
         self.payload = payload
-        if self.error is not None:
+        if self.error is not None and (self.failures is None or self.failures > 0):
+            if self.failures is not None:
+                self.failures -= 1
             raise self.error
         return self.stream
 
@@ -261,7 +265,11 @@ async def test_cancellation_is_aborted_before_sdk_start() -> None:
 
 
 @pytest.mark.asyncio
-async def test_usage_is_normalized_and_reasoning_text_stays_ephemeral() -> None:
+async def test_usage_is_normalized_and_reasoning_is_captured_not_surfaced() -> None:
+    # Reasoning deltas are captured onto the assistant message because
+    # DeepSeek requires reasoning_content pass-back after tool calls, but
+    # they never reach the UI: the turn loop only forwards TEXT_DELTAs.
+
     usage = SimpleNamespace(
         prompt_tokens=30,
         completion_tokens=12,
@@ -315,7 +323,8 @@ async def test_usage_is_normalized_and_reasoning_text_stays_ephemeral() -> None:
     assert response.usage.reasoning_tokens == 7
     assert response.usage.cache_hit_tokens == 20
     assert response.usage.cache_miss_tokens == 10
-    assert "private scratchwork" not in repr(response)
+    # new contract: reasoning is carried for pass-back, never surfaced
+    assert response.assistant_message.reasoning_content == "private scratchwork"
 
 
 @pytest.mark.asyncio
@@ -452,3 +461,216 @@ async def test_task_cancel_closes_sdk_stream() -> None:
     assert response.stop_reason == ModelStopReason.ABORTED
     assert response.raw_stop_reason == "cancelled"
     assert completions.stream.closed is True
+
+
+class TestReasoningPassbackAndRetry:
+    """Plan 15 (2026-08-08): the good LLM layer.
+
+    DeepSeek's thinking-mode docs: for requests carrying the tools
+    parameter, reasoning_content must be fully passed back in all
+    subsequent requests or the API returns a 400. And transient provider
+    failures are retried with exponential backoff (pi's
+    retryAssistantCall pattern); auth/balance/invalid requests fail fast.
+    """
+
+    @pytest.mark.asyncio
+    async def test_request_passes_reasoning_content_back(self) -> None:
+        completions = StubCompletions([chunk(content="final")])
+        provider = DeepSeekProvider(
+            "test-only-key",
+            sdk_client=sdk_with(completions),
+        )
+        request = ModelRequest(
+            messages=(
+                ModelMessage(
+                    role="assistant",
+                    content=None,
+                    tool_calls=(
+                        ModelToolCall(
+                            call_id="call_1",
+                            name="echo",
+                            arguments_json='{"message": "a"}',
+                        ),
+                    ),
+                    reasoning_content="the user wants the weather",
+                ),
+                ModelMessage(
+                    role="tool",
+                    content="result",
+                    tool_call_id="call_1",
+                ),
+            ),
+        )
+        events = [
+            event
+            async for event in provider.stream(
+                DEEPSEEK_FLASH,
+                request,
+                asyncio.Event(),
+                max_output_tokens=512,
+            )
+        ]
+        assert events[-1].event_type == ModelStreamEventType.RESPONSE_COMPLETE
+        assistant_payload = completions.payload["messages"][0]
+        assert assistant_payload["reasoning_content"] == "the user wants the weather"
+
+    @pytest.mark.asyncio
+    async def test_stream_response_carries_joined_reasoning_content(
+        self,
+    ) -> None:
+        completions = StubCompletions(
+            [
+                chunk(reasoning_content="think "),
+                chunk(reasoning_content="more"),
+                chunk(content="final"),
+                chunk(finish_reason="stop"),
+            ]
+        )
+        provider = DeepSeekProvider(
+            "test-only-key",
+            sdk_client=sdk_with(completions),
+        )
+        events = [
+            event
+            async for event in provider.stream(
+                DEEPSEEK_FLASH,
+                ModelRequest(messages=()),
+                asyncio.Event(),
+                max_output_tokens=512,
+            )
+        ]
+        response = events[-1].response
+        assert response is not None
+        assert response.assistant_message.reasoning_content == "think more"
+        assert response.assistant_message.content == "final"
+
+    @pytest.mark.asyncio
+    async def test_transient_error_is_retried_with_backoff_then_succeeds(
+        self,
+    ) -> None:
+        completions = StubCompletions(
+            [chunk(content="ok"), chunk(finish_reason="stop")],
+            error=openai.APIStatusError(
+                "synthetic rate limit",
+                response=httpx.Response(
+                    429,
+                    request=httpx.Request(
+                        "POST",
+                        "https://api.deepseek.com/chat/completions",
+                    ),
+                ),
+                body=None,
+            ),
+            failures=1,
+        )
+        provider = DeepSeekProvider(
+            "test-only-key",
+            sdk_client=sdk_with(completions),
+        )
+        events = [
+            event
+            async for event in provider.stream(
+                DEEPSEEK_FLASH,
+                ModelRequest(messages=()),
+                asyncio.Event(),
+                max_output_tokens=512,
+            )
+        ]
+        assert completions.starts == 2
+        assert events[-1].event_type == ModelStreamEventType.RESPONSE_COMPLETE
+        assert events[-1].response is not None
+        assert events[-1].response.stop_reason != ModelStopReason.ERROR
+        assert events[-1].response.error_category is None
+
+    @pytest.mark.asyncio
+    async def test_invalid_request_is_not_retried(self) -> None:
+        completions = StubCompletions(
+            [chunk(content="ok")],
+            error=openai.APIStatusError(
+                "synthetic 400",
+                response=httpx.Response(
+                    400,
+                    request=httpx.Request(
+                        "POST",
+                        "https://api.deepseek.com/chat/completions",
+                    ),
+                ),
+                body=None,
+            ),
+            failures=5,
+        )
+        provider = DeepSeekProvider(
+            "test-only-key",
+            sdk_client=sdk_with(completions),
+        )
+        events = [
+            event
+            async for event in provider.stream(
+                DEEPSEEK_FLASH,
+                ModelRequest(messages=()),
+                asyncio.Event(),
+                max_output_tokens=512,
+            )
+        ]
+        assert completions.starts == 1
+        assert events[-1].response is not None
+        assert events[-1].response.stop_reason == ModelStopReason.ERROR
+        assert events[-1].response.error_category == "invalid_request"
+
+
+
+def test_request_payload_sends_reasoning_content_back() -> None:
+    """Assistant messages sent to DeepSeek with thinking on always carry
+    reasoning_content (real value, or "" when never captured)."""
+    provider = DeepSeekProvider("test-only-key")
+    request = ModelRequest(
+        messages=(
+            ModelMessage(
+                role="assistant",
+                content=None,
+                reasoning_content="the stored thinking",
+                tool_calls=(
+                    ModelToolCall(
+                        call_id="c1",
+                        name="search_story",
+                        arguments_json='{"query":"x"}',
+                    ),
+                ),
+            ),
+            ModelMessage(role="tool", content="ok", tool_call_id="c1"),
+            ModelMessage(
+                role="assistant",
+                content="draft",
+                reasoning_content="",
+            ),
+        ),
+        reasoning=ModelReasoning(enabled=True, effort="low"),
+    )
+    payload = provider._request_payload(
+        DEEPSEEK_FLASH, request, max_output_tokens=4096
+    )
+    assistant_messages = [
+        m for m in payload["messages"] if m["role"] == "assistant"
+    ]
+    assert assistant_messages[0]["reasoning_content"] == "the stored thinking"
+    assert assistant_messages[1]["reasoning_content"] == ""
+    assert "reasoning_content" not in payload["messages"][1]  # tool role
+
+    # gated on the model capability: still sent (as "") for a reasoning
+    # model even when the per-request thinking toggle is off, matching pi.
+    off = provider._request_payload(
+        DEEPSEEK_FLASH,
+        ModelRequest(messages=request.messages),
+        max_output_tokens=4096,
+    )
+    assistant_off = [
+        m for m in off["messages"] if m["role"] == "assistant"
+    ]
+    assert assistant_off[0]["reasoning_content"] == "the stored thinking"
+    assert assistant_off[1]["reasoning_content"] == ""
+
+
+
+
+
+

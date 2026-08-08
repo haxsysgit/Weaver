@@ -292,6 +292,41 @@ class RunCoordinator:
             )
             await self._repo._update_run_phase(run_id, "completed")
 
+    async def record_run_failed(
+        self,
+        conversation_id: str,
+        run_id: str,
+        *,
+        exit_reason: str,
+        message: str,
+        error_category: str = "",
+        raw_stop_reason: str = "",
+    ) -> None:
+        """Record a run_failed event so a broken turn is diagnosable from
+        the local state DB without the server's stderr."""
+        ts = now()
+        db = self._repo._db
+        async with _tx(db):
+            eseq = await self._repo._next_event_sequence(conversation_id)
+            await self._repo._insert_event(
+                EventRecord(
+                    id=uid(),
+                    conversation_id=conversation_id,
+                    sequence=eseq,
+                    run_id=run_id,
+                    kind="run_failed",
+                    body=json.dumps(
+                        {
+                            "exit_reason": exit_reason,
+                            "message": message,
+                            "error_category": error_category,
+                            "raw_stop_reason": raw_stop_reason,
+                        }
+                    ),
+                    created_at=ts,
+                )
+            )
+
     async def mark_interrupted(self, run_id: str) -> None:
         """Mark a run as interrupted (crash before completion)."""
         db = self._repo._db

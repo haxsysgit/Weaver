@@ -44,6 +44,14 @@ class ModelMessage:
     name: str | None = None
     tool_call_id: str | None = None
     tool_calls: tuple[ModelToolCall, ...] = field(default_factory=tuple)
+    # DeepSeek thinking mode: when a request carries tools, the assistant's
+    # reasoning_content must be passed back in every subsequent request or
+    # the API returns a 400 (api-docs.deepseek.com/guides/thinking_mode).
+    reasoning_content: str | None = None
+    # DeepSeek thinking mode requires reasoning_content on assistant
+    # messages sent back after tool calls (pi's catalog flag
+    # requiresReasoningContentOnAssistantMessages). None = never captured.
+    reasoning_content: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

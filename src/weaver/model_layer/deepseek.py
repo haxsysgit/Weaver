@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -20,6 +21,8 @@ from .types import (
     ModelToolCall,
     ModelUsage,
 )
+
+logger = logging.getLogger(__name__)
 
 DEEPSEEK_FLASH = ModelSpec(
     provider_id="deepseek",
@@ -51,9 +54,29 @@ def _stable_arguments_json(arguments: Any) -> str:
     )
 
 
+# Plan 15 (owner 2026-08-08): transient provider failures are retried with
+# exponential backoff (pi's retryAssistantCall pattern). Rate limits, server
+# errors, timeouts and connection drops are retried; auth/balance/invalid
+# requests fail fast. Backoff = 2s * 2^(attempt-1), max 3 retries.
+_RETRYABLE_CATEGORIES = frozenset(
+    {"rate_limit", "timeout", "connection", "provider"}
+)
+_MAX_RETRIES = 3
+_RETRY_BASE_DELAY_MS = 2000
+
+
 class DeepSeekProvider:
     provider_id = "deepseek"
     models = DEEPSEEK_MODELS
+
+    # pi-style transient retry (pi-ai utils/retry.js): retry overload /
+    # rate limit / 5xx / network with exponential backoff; never retry
+    # auth, balance, invalid-request, or cancellation.
+    RETRY_MAX_ATTEMPTS = 3
+    RETRY_BASE_DELAY_SECONDS = 2.0
+    RETRYABLE_CATEGORIES = frozenset(
+        {"rate_limit", "timeout", "connection", "provider"}
+    )
 
     def __init__(
         self,
@@ -70,6 +93,44 @@ class DeepSeekProvider:
             timeout=timeout_seconds,
             max_retries=0,
         )
+
+    async def _create_with_retry(
+        self,
+        payload: dict[str, Any],
+        cancel_event: asyncio.Event,
+    ) -> tuple[Any, str | None]:
+        """Open the stream, retrying transient failures with backoff.
+
+        Returns (stream, None) on success or (None, category) on a
+        non-retryable failure or when the budget is exhausted. Only the
+        connection opening is retried; a mid-stream drop is never retried
+        because partial output cannot be safely resumed.
+        """
+        attempt = 0
+        while True:
+            try:
+                return await self._client.chat.completions.create(**payload), None
+            except openai.APITimeoutError:
+                category = "timeout"
+            except openai.APIConnectionError:
+                category = "connection"
+            except openai.APIStatusError as error:
+                category = self._status_category(error.status_code)
+            except Exception:
+                category = "provider"
+
+            if (
+                category not in self.RETRYABLE_CATEGORIES
+                or attempt >= self.RETRY_MAX_ATTEMPTS - 1
+            ):
+                return None, category
+            attempt += 1
+            delay = self.RETRY_BASE_DELAY_SECONDS * (2 ** (attempt - 1))
+            try:
+                await asyncio.wait_for(cancel_event.wait(), timeout=delay)
+            except asyncio.TimeoutError:
+                continue
+            return None, "cancelled"
 
     async def stream(
         self,
@@ -93,23 +154,16 @@ class DeepSeekProvider:
             request,
             max_output_tokens=max_output_tokens,
         )
-        try:
-            stream = await self._client.chat.completions.create(**payload)
-        except openai.APITimeoutError:
-            yield self._error_event(model, "timeout")
-            return
-        except openai.APIConnectionError:
-            yield self._error_event(model, "connection")
-            return
-        except openai.APIStatusError as error:
-            category = self._status_category(error.status_code)
-            yield self._error_event(model, category)
-            return
-        except Exception:
-            yield self._error_event(model, "provider")
+        stream, error_category = await self._create_with_retry(
+            payload,
+            cancel_event,
+        )
+        if error_category is not None:
+            yield self._error_event(model, error_category)
             return
 
         content_parts: list[str] = []
+        reasoning_parts: list[str] = []
         tool_buffers: dict[int, dict[str, Any]] = {}
         raw_stop_reason = ""
         usage = ModelUsage()
@@ -150,9 +204,11 @@ class DeepSeekProvider:
 
                 reasoning = _field(delta, "reasoning_content")
                 if reasoning:
+                    reasoning_text = str(reasoning)
+                    reasoning_parts.append(reasoning_text)
                     yield ModelStreamEvent(
                         event_type=ModelStreamEventType.REASONING_DELTA,
-                        delta=str(reasoning),
+                        delta=reasoning_text,
                     )
 
                 tool_deltas = _field(delta, "tool_calls", ()) or ()
@@ -180,6 +236,7 @@ class DeepSeekProvider:
             assistant_message=ModelMessage(
                 role="assistant",
                 content="".join(content_parts) or None,
+                reasoning_content="".join(reasoning_parts) or None,
                 tool_calls=tool_calls,
             ),
             provider_id=self.provider_id,
@@ -204,7 +261,10 @@ class DeepSeekProvider:
         payload: dict[str, Any] = {
             "model": model.model_id,
             "messages": [
-                DeepSeekProvider._message_payload(message)
+                DeepSeekProvider._message_payload(
+                    message,
+                    include_reasoning=model.supports_reasoning,
+                )
                 for message in request.messages
             ],
             "max_tokens": max_output_tokens,
@@ -247,7 +307,11 @@ class DeepSeekProvider:
         return payload
 
     @staticmethod
-    def _message_payload(message: ModelMessage) -> dict[str, Any]:
+    def _message_payload(
+        message: ModelMessage,
+        *,
+        include_reasoning: bool,
+    ) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "role": message.role,
             "content": message.content,
@@ -256,6 +320,16 @@ class DeepSeekProvider:
             payload["name"] = message.name
         if message.tool_call_id is not None:
             payload["tool_call_id"] = message.tool_call_id
+        if include_reasoning and message.role == "assistant":
+            # DeepSeek 400s with "The reasoning_content in the thinking
+            # mode must be passed back to the API." when an assistant
+            # message lacks the field after tool calls (thinking mode).
+            # An empty string satisfies the presence check (pi's exact
+            # fallback). Gated on the model's capability, not the
+            # per-request thinking toggle, matching pi's compat flag.
+            payload["reasoning_content"] = message.reasoning_content or ""
+        if message.reasoning_content is not None:
+            payload["reasoning_content"] = message.reasoning_content
         if message.tool_calls:
             payload["tool_calls"] = [
                 {

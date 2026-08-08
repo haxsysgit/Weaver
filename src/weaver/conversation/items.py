@@ -110,6 +110,7 @@ def items_to_messages(items: list[ItemRecord]) -> list[ConversationMessage]:
                     message_id=item.id,
                     turn_id=item.turn_id,
                     content=body.get("content", ""),
+                    reasoning_content=body.get("reasoning_content", ""),
                     tool_calls=tuple(tool_calls),
                 )
             )
@@ -169,6 +170,8 @@ def message_to_item(
     elif isinstance(message, AssistantMessage):
         kind = "assistant"
         body = {"content": message.content}
+        if message.reasoning_content:
+            body["reasoning_content"] = message.reasoning_content
         if message.tool_calls:
             body["tool_calls"] = [
                 {
