@@ -1298,3 +1298,36 @@ class TestTwoPhaseSynthesis:
             packet_builder=packet_builder,
         )
         assert result.exit_reason == TurnExitReason.MODEL_FAILED
+
+    async def test_synthesis_request_never_carries_orphaned_drafts(self) -> None:
+        # Plan 15 thread-break (2026-08-08): the synthesis request kept the
+        # locate tool-use drafts, which carry tool_calls but no following
+        # tool messages. DeepSeek 400s that (invalid_request/provider_error,
+        # reproduced live). The synthesis wire must contain only the
+        # content-bearing final locate draft: no assistant message with
+        # tool_calls, no empty-content assistant message.
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response("Draft: found it."),
+            stop_response("Final: chapter 104."),
+        )
+
+        async def packet_builder(results, draft):
+            return "PACKET: prose"
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            packet_builder=packet_builder,
+        )
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert result.final_text == "Final: chapter 104."
+        synthesis = provider.calls[-1].request.messages
+        for m in synthesis:
+            if m.role == "assistant":
+                assert not m.tool_calls, "orphaned tool_calls in synthesis request"
+                assert m.content, "empty assistant message in synthesis request"
+        drafts = [m for m in synthesis if m.role == "assistant"]
+        assert [m.content for m in drafts] == ["Draft: found it."]

@@ -391,7 +391,16 @@ async def run_turn(
                 history,
                 max_exchanges=SYNTHESIS_HISTORY_EXCHANGES,
             )
-            draft_messages = [m for m in new_messages if m.kind == "assistant"]
+            # Only the content-bearing final locate draft reaches the
+            # synthesis call. The locate tool-use drafts carry tool_calls
+            # with no following tool messages (and empty content), which
+            # DeepSeek rejects with a 400 invalid_request - reproduced
+            # live 2026-08-08 after the 'the thread broke' failure.
+            draft_messages = [
+                m
+                for m in new_messages
+                if m.kind == "assistant" and m.content
+            ]
             request_messages = project_messages(
                 system_prompt=system_prompt,
                 history=recent + draft_messages,
