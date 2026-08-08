@@ -21,9 +21,9 @@ import { RUNE_GLYPHS, type RuneName } from "./runeGlyphs";
 const SAMPLE_ANSWER =
   "you're remembering it right. Sunny killed the corrupted stone knight and claimed her as an Echo, and the Spell announced her like this: [You have slain a Corrupted Monster, Stone Knight.] she was Awakened rank, with [Battle Master] and [Stalwart], and the runes said she was created by the treacherous Lost From Light in the cursed darkness of the forgotten shore. she's been with him since ch104-105, and by ch1000 she's evolved all the way to Onyx Saint, an Ascended Devil with both shadow and true-darkness affinity.";
 
-const STAR_COLOR = new THREE.Color(0xc9cddd);
-const THREAD_COLOR = new THREE.Color(0xb9bed4);
-const STAR_COUNT = 5500;
+const STAR_COLOR = new THREE.Color(0xa8a8b8);
+const THREAD_COLOR = new THREE.Color(0x8f93a8);
+const STAR_COUNT = 4500;
 
 const STAR_VERT = /* glsl */ `
   attribute float phase;
@@ -91,7 +91,7 @@ function makeStars(): { positions: Float32Array; phases: Float32Array; sizes: Fl
     positions[i * 3 + 1] = r * Math.sin(phi) * 2.2; // taller than wide
     positions[i * 3 + 2] = r * Math.sin(theta) * Math.cos(phi) - 18;
     phases[i] = Math.random();
-    sizes[i] = 0.9 + Math.random() * 1.9;
+    sizes[i] = 0.7 + Math.random() * 1.6;
   }
   return { positions, phases, sizes };
 }
@@ -121,7 +121,6 @@ function StarWebScene(canvas: HTMLCanvasElement, mode: BgMode) {
     depthWrite: false,
   });
   const stars = new THREE.Points(starGeo, starMat);
-  stars.frustumCulled = false;
   scene.add(stars);
 
   // silver threads: connect stars within a radius, rebuilt on a timer
@@ -140,13 +139,12 @@ function StarWebScene(canvas: HTMLCanvasElement, mode: BgMode) {
     uniforms: {
       uTime: { value: 0 },
       uColor: { value: THREAD_COLOR },
-      uAlpha: { value: mode === "alive" ? 0.8 : 0.22 },
+      uAlpha: { value: mode === "alive" ? 0.5 : 0.16 },
     },
     transparent: true,
     depthWrite: false,
   });
   const threads = new THREE.LineSegments(lineGeo, threadMat);
-  threads.frustumCulled = false;
   scene.add(threads);
 
   const setNet = (radius: number, force = false) => {
@@ -167,7 +165,7 @@ function StarWebScene(canvas: HTMLCanvasElement, mode: BgMode) {
         if (d2 < radius * radius) near.push([j, d2]);
       }
       near.sort((a, b) => a[1] - b[1]);
-      for (const [j] of near.slice(0, 4)) {
+      for (const [j] of near.slice(0, 3)) {
         if (segs.length >= maxSegs * 6) break;
         const key = i < j ? `${i}-${j}` : `${j}-${i}`;
         if (seen.has(key)) continue;
@@ -186,7 +184,7 @@ function StarWebScene(canvas: HTMLCanvasElement, mode: BgMode) {
     lineGeo.setDrawRange(0, segs.length / 3);
   };
 
-  setNet(mode === "alive" ? 8.5 : 9.5, true);
+  setNet(mode === "alive" ? 7.5 : 8.5, true);
 
   const clock = new THREE.Clock();
   let raf = 0;
@@ -214,9 +212,9 @@ function StarWebScene(canvas: HTMLCanvasElement, mode: BgMode) {
     threadMat.uniforms.uTime.value = t;
     if (mode === "alive") {
       netTimer += 1 / 60;
-      if (netTimer > 2.6) {
+      if (netTimer > 3.2) {
         netTimer = 0;
-        setNet(8.5);
+        setNet(7.5);
       }
     }
     camera.position.x = Math.sin(t * 0.05) * 0.7 + pointer.x * 0.6;
@@ -239,7 +237,7 @@ function StarWebScene(canvas: HTMLCanvasElement, mode: BgMode) {
   };
 }
 
-const FRAME_RUNES: RuneName[] = ["fehu", "uruz", "thurisaz", "ansuz", "raidho", "kenaz", "gebo", "wunjo"];
+const FRAME_RUNES: RuneName[] = ["fehu", "uruz", "thurisaz", "ansuz", "raidho", "kenaz"];
 const CORNER_RUNES: RuneName[] = ["elhaz", "sowilo", "tiwaz", "laguz"];
 
 function RuneGlyph({ name, size = 16, x = 0, y = 0 }: { name: RuneName; size?: number; x?: number; y?: number }) {
@@ -268,11 +266,11 @@ export function SpellFrame({ children }: { children: React.ReactNode }) {
           ))}
         </defs>
         {/* corner sigils: circle + rune, like carved seals */}
-        {[[4, 4, 0], [96, 4, 1], [4, 96, 2], [96, 96, 3]].map(([cx, cy, i]) => (
+        {[[3.2, 3.2, 0], [96.8, 3.2, 1], [3.2, 96.8, 2], [96.8, 96.8, 3]].map(([cx, cy, i]) => (
           <g key={i} className="rune-corner" transform={`translate(${cx},${cy})`} style={{ animationDelay: `${i * 0.4}s` }}>
-            <circle r="5.4" fill="none" stroke="currentColor" strokeWidth="0.5" opacity="0.8" />
-            <circle r="3.9" fill="none" stroke="currentColor" strokeWidth="0.25" opacity="0.5" />
-            <RuneGlyph name={CORNER_RUNES[i]} size={5.2} x={-2.6} y={-3.1} />
+            <circle r="2.1" fill="none" stroke="currentColor" strokeWidth="0.4" opacity="0.6" />
+            <circle r="1.5" fill="none" stroke="currentColor" strokeWidth="0.2" opacity="0.4" />
+            <RuneGlyph name={CORNER_RUNES[i]} size={1.9} x={-1} y={-1.2} />
           </g>
         ))}
         {/* top and bottom rune rows, strung between the corner sigils */}
@@ -284,10 +282,10 @@ export function SpellFrame({ children }: { children: React.ReactNode }) {
           </g>
         ))}
         {/* side threads: the strings of fate */}
-        <line x1="2.2" y1="8" x2="2.2" y2="92" stroke="currentColor" strokeWidth="0.35" opacity="0.55" />
-        <line x1="97.8" y1="8" x2="97.8" y2="92" stroke="currentColor" strokeWidth="0.35" opacity="0.55" />
-        <RuneGlyph name="isa" size={3.2} x={0.7} y={47} />
-        <RuneGlyph name="isa" size={3.2} x={96.2} y={47} />
+        <line x1="1.8" y1="9" x2="1.8" y2="91" stroke="currentColor" strokeWidth="0.22" opacity="0.35" />
+        <line x1="98.2" y1="9" x2="98.2" y2="91" stroke="currentColor" strokeWidth="0.22" opacity="0.35" />
+        <RuneGlyph name="isa" size={1.5} x={1.1} y={48.2} />
+        <RuneGlyph name="isa" size={1.5} x={97.4} y={48.2} />
       </svg>
       <div className="spell-frame-inner">{children}</div>
     </div>

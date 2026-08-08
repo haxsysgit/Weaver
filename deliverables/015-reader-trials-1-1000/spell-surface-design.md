@@ -145,3 +145,18 @@ Owner: "the web or star needs to be more visible". Changes: 5500 stars
 (was 4500), brighter silver (0xc9cddd stars, 0xb9bed4 threads), alive net
 alpha 0.8, 4 neighbours per star (was 3), re-weave every ~2.6s, wider
 connection radius, slightly larger stars.
+
+## Revision 3 (2026-08-08, owner corrections)
+
+Owner: v1 background was better and the brighter/denser v2 was "too bright
+and distracting"; the runes looked like slop / large images and must be
+tiny and barely glowing.
+
+- Background reverted to v1 exactly: 4500 stars, 0xa8a8b8 stars,
+  0x8f93a8 threads, alive alpha 0.5 / subtle 0.16, 3 neighbours, radius
+  7.5/8.5, re-weave every 3.2s, sizes 0.7-2.3.
+- Runes: tiny and faint. Frame rows carry 6 runes at 2.4 units (was 8 at
+  7), corner sigils 2.1-radius circles with 1.9-unit runes, side threads
+  at 0.22 stroke / 0.35 opacity, isa knots 1.5 units. Single faint
+  drop-shadow glow (2.5px at 0.3) instead of the double-layer bloom,
+  dimmer rune color 0xaeb3c4, shimmer pulses 0.45-0.72 instead of 0.5-1.

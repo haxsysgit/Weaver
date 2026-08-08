@@ -2016,9 +2016,8 @@ a:focus-visible {
   inset: -6px;
   width: calc(100% + 12px);
   height: calc(100% + 12px);
-  color: #d8dae8;
-  filter: drop-shadow(0 0 5px rgba(200, 205, 235, 0.55))
-          drop-shadow(0 0 16px rgba(200, 205, 235, 0.22));
+  color: #aeb3c4;
+  filter: drop-shadow(0 0 2.5px rgba(185, 190, 220, 0.3));
   pointer-events: none;
   z-index: 0;
 }
@@ -2036,8 +2035,8 @@ a:focus-visible {
 }
 
 @keyframes rune-shimmer {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.72; }
 }
 
 .spell-frame-inner {
