@@ -2003,30 +2003,56 @@ a:focus-visible {
   50% { opacity: 1; text-shadow: 0 0 12px rgba(168, 168, 184, 0.55); }
 }
 
-/* reply style A: runes behind the text */
-.reply-sample {
+/* reply style: the mystical mirror. clean glass inside, the frame strung
+   with glowing elder futhark runes and fate threads (ch15:5, ch17:7) */
+.spell-frame {
+  position: relative;
+  isolation: isolate;
+  border-radius: 14px;
+}
+
+.spell-frame-svg {
+  position: absolute;
+  inset: -6px;
+  width: calc(100% + 12px);
+  height: calc(100% + 12px);
+  color: #d8dae8;
+  filter: drop-shadow(0 0 5px rgba(200, 205, 235, 0.55))
+          drop-shadow(0 0 16px rgba(200, 205, 235, 0.22));
+  pointer-events: none;
+  z-index: 0;
+}
+
+.spell-frame-svg .rune-row {
+  animation: rune-shimmer 4.2s ease-in-out infinite;
+}
+
+.spell-frame-svg .rune-corner {
+  animation: rune-shimmer 3.4s ease-in-out infinite;
+}
+
+.spell-frame-svg .rune-corner:nth-of-type(2n) {
+  animation-delay: 0.9s;
+}
+
+@keyframes rune-shimmer {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.spell-frame-inner {
+  position: relative;
+  z-index: 1;
+  background: rgba(8, 8, 12, 0.72);
+  border-radius: 14px;
+  padding: 16px 18px;
   color: var(--text, #f2efe6);
   font-size: 15px;
   line-height: 1.65;
-  border-radius: 12px;
-  padding: 14px 16px;
+  backdrop-filter: blur(6px);
 }
 
-.reply-sample p { margin: 0; }
-
-.reply-sample.runes-behind {
-  position: relative;
-  isolation: isolate;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='120' viewBox='0 0 220 120'><g fill='none' stroke='%23a8a8b8' stroke-width='1' opacity='0.5'><path d='M10 30 L30 10 L50 30 L30 50 Z'/><path d='M10 30 L18 22'/><path d='M50 30 L42 22'/><path d='M30 50 L30 60 M24 56 L36 56'/><path d='M90 20 L105 8 L120 20 L105 32 Z'/><path d='M90 20 L98 14 M120 20 L112 14'/><path d='M105 32 L105 44 M99 39 L111 39'/><path d='M160 60 L175 46 L190 60 L175 74 Z'/><path d='M160 60 L168 54 M190 60 L182 54'/><path d='M175 74 L175 86 M169 80 L181 80'/><path d='M40 90 L55 78 L70 90 L55 102 Z'/><path d='M40 90 L48 84 M70 90 L62 84'/><path d='M140 100 L155 88 L170 100 L155 112 Z'/><path d='M140 100 L148 94 M170 100 L162 94'/></g></svg>");
-  background-size: 220px 120px;
-  border: 1px solid rgba(168, 168, 184, 0.14);
-  animation: runes-breathe 5s ease-in-out infinite;
-}
-
-@keyframes runes-breathe {
-  0%, 100% { background-position: 0 0, 0 0; opacity: 1; }
-  50% { background-position: 0 -6px, 0 0; opacity: 0.92; }
-}
+.spell-frame-inner p { margin: 0; }
 
 /* reply style B: the text itself shines like the Spell's runes */
 .reply-sample.glowing-text {

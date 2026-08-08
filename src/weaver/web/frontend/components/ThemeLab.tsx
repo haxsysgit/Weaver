@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 
+import { RUNE_GLYPHS, type RuneName } from "./runeGlyphs";
+
 /**
  * ThemeLab: a dev-only comparison page (route #theme-lab) so the owner can
  * see the Nightmare Spell surface variants side by side before they ship.
@@ -19,9 +21,9 @@ import * as THREE from "three";
 const SAMPLE_ANSWER =
   "you're remembering it right. Sunny killed the corrupted stone knight and claimed her as an Echo, and the Spell announced her like this: [You have slain a Corrupted Monster, Stone Knight.] she was Awakened rank, with [Battle Master] and [Stalwart], and the runes said she was created by the treacherous Lost From Light in the cursed darkness of the forgotten shore. she's been with him since ch104-105, and by ch1000 she's evolved all the way to Onyx Saint, an Ascended Devil with both shadow and true-darkness affinity.";
 
-const STAR_COLOR = new THREE.Color(0xa8a8b8);
-const THREAD_COLOR = new THREE.Color(0x8f93a8);
-const STAR_COUNT = 4500;
+const STAR_COLOR = new THREE.Color(0xc9cddd);
+const THREAD_COLOR = new THREE.Color(0xb9bed4);
+const STAR_COUNT = 5500;
 
 const STAR_VERT = /* glsl */ `
   attribute float phase;
@@ -74,7 +76,7 @@ const THREAD_FRAG = /* glsl */ `
 `;
 
 type BgMode = "subtle" | "alive";
-type ReplyMode = "runes-behind" | "glowing-text";
+type ReplyMode = "mirror" | "glowing-text";
 
 function makeStars(): { positions: Float32Array; phases: Float32Array; sizes: Float32Array } {
   const positions = new Float32Array(STAR_COUNT * 3);
@@ -89,7 +91,7 @@ function makeStars(): { positions: Float32Array; phases: Float32Array; sizes: Fl
     positions[i * 3 + 1] = r * Math.sin(phi) * 2.2; // taller than wide
     positions[i * 3 + 2] = r * Math.sin(theta) * Math.cos(phi) - 18;
     phases[i] = Math.random();
-    sizes[i] = 0.7 + Math.random() * 1.6;
+    sizes[i] = 0.9 + Math.random() * 1.9;
   }
   return { positions, phases, sizes };
 }
@@ -119,6 +121,7 @@ function StarWebScene(canvas: HTMLCanvasElement, mode: BgMode) {
     depthWrite: false,
   });
   const stars = new THREE.Points(starGeo, starMat);
+  stars.frustumCulled = false;
   scene.add(stars);
 
   // silver threads: connect stars within a radius, rebuilt on a timer
@@ -137,12 +140,13 @@ function StarWebScene(canvas: HTMLCanvasElement, mode: BgMode) {
     uniforms: {
       uTime: { value: 0 },
       uColor: { value: THREAD_COLOR },
-      uAlpha: { value: mode === "alive" ? 0.5 : 0.16 },
+      uAlpha: { value: mode === "alive" ? 0.8 : 0.22 },
     },
     transparent: true,
     depthWrite: false,
   });
   const threads = new THREE.LineSegments(lineGeo, threadMat);
+  threads.frustumCulled = false;
   scene.add(threads);
 
   const setNet = (radius: number, force = false) => {
@@ -163,7 +167,7 @@ function StarWebScene(canvas: HTMLCanvasElement, mode: BgMode) {
         if (d2 < radius * radius) near.push([j, d2]);
       }
       near.sort((a, b) => a[1] - b[1]);
-      for (const [j] of near.slice(0, 3)) {
+      for (const [j] of near.slice(0, 4)) {
         if (segs.length >= maxSegs * 6) break;
         const key = i < j ? `${i}-${j}` : `${j}-${i}`;
         if (seen.has(key)) continue;
@@ -182,7 +186,7 @@ function StarWebScene(canvas: HTMLCanvasElement, mode: BgMode) {
     lineGeo.setDrawRange(0, segs.length / 3);
   };
 
-  setNet(mode === "alive" ? 7.5 : 8.5, true);
+  setNet(mode === "alive" ? 8.5 : 9.5, true);
 
   const clock = new THREE.Clock();
   let raf = 0;
@@ -210,9 +214,9 @@ function StarWebScene(canvas: HTMLCanvasElement, mode: BgMode) {
     threadMat.uniforms.uTime.value = t;
     if (mode === "alive") {
       netTimer += 1 / 60;
-      if (netTimer > 3.2) {
+      if (netTimer > 2.6) {
         netTimer = 0;
-        setNet(7.5);
+        setNet(8.5);
       }
     }
     camera.position.x = Math.sin(t * 0.05) * 0.7 + pointer.x * 0.6;
@@ -235,10 +239,65 @@ function StarWebScene(canvas: HTMLCanvasElement, mode: BgMode) {
   };
 }
 
+const FRAME_RUNES: RuneName[] = ["fehu", "uruz", "thurisaz", "ansuz", "raidho", "kenaz", "gebo", "wunjo"];
+const CORNER_RUNES: RuneName[] = ["elhaz", "sowilo", "tiwaz", "laguz"];
+
+function RuneGlyph({ name, size = 16, x = 0, y = 0 }: { name: RuneName; size?: number; x?: number; y?: number }) {
+  const g = RUNE_GLYPHS[name];
+  const [, , w, h] = g.viewBox.split(" ").map(Number);
+  return <use href={`#rune-${name}`} x={x} y={y} width={size} height={(size * (h + 4)) / (w + 4)} />;
+}
+
+/** The Spell-window frame: clean dark glass inside, glowing Elder Futhark
+ * runes along the borders and sigils at the corners, like a mystical mirror.
+ * Canon: ch2 "shimmering runes appeared in the air", ch17:7 runes "shining
+ * slightly". Weaver wove the Spell from her soul (ch2920), so the frame is
+ * strung like fate: thin silver threads down the sides.
+ */
+export function SpellFrame({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="spell-frame">
+      <svg className="spell-frame-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          {Object.entries(RUNE_GLYPHS).map(([name, g]) => (
+            <symbol key={name} id={`rune-${name}`} viewBox={g.viewBox}>
+              {g.paths.map((d, i) => (
+                <path key={i} d={d} fill="none" stroke="currentColor" strokeWidth="4" />
+              ))}
+            </symbol>
+          ))}
+        </defs>
+        {/* corner sigils: circle + rune, like carved seals */}
+        {[[4, 4, 0], [96, 4, 1], [4, 96, 2], [96, 96, 3]].map(([cx, cy, i]) => (
+          <g key={i} className="rune-corner" transform={`translate(${cx},${cy})`} style={{ animationDelay: `${i * 0.4}s` }}>
+            <circle r="5.4" fill="none" stroke="currentColor" strokeWidth="0.5" opacity="0.8" />
+            <circle r="3.9" fill="none" stroke="currentColor" strokeWidth="0.25" opacity="0.5" />
+            <RuneGlyph name={CORNER_RUNES[i]} size={5.2} x={-2.6} y={-3.1} />
+          </g>
+        ))}
+        {/* top and bottom rune rows, strung between the corner sigils */}
+        {[4.5, 95.5].map((y, row) => (
+          <g key={row} className="rune-row" transform={`translate(0,${y})`}>
+            {FRAME_RUNES.map((name, i) => (
+              <RuneGlyph key={name} name={name} size={7} x={9.5 + i * 11.6} y={-4.2} />
+            ))}
+          </g>
+        ))}
+        {/* side threads: the strings of fate */}
+        <line x1="2.2" y1="8" x2="2.2" y2="92" stroke="currentColor" strokeWidth="0.35" opacity="0.55" />
+        <line x1="97.8" y1="8" x2="97.8" y2="92" stroke="currentColor" strokeWidth="0.35" opacity="0.55" />
+        <RuneGlyph name="isa" size={3.2} x={0.7} y={47} />
+        <RuneGlyph name="isa" size={3.2} x={96.2} y={47} />
+      </svg>
+      <div className="spell-frame-inner">{children}</div>
+    </div>
+  );
+}
+
 export function ThemeLab() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [bgMode, setBgMode] = useState<BgMode>("alive");
-  const [replyMode, setReplyMode] = useState<ReplyMode>("glowing-text");
+  const [replyMode, setReplyMode] = useState<ReplyMode>("mirror");
   const modeRef = useRef<BgMode>(bgMode);
   modeRef.current = bgMode;
 
@@ -274,10 +333,10 @@ export function ThemeLab() {
           <span className="theme-lab-group">
             <button
               type="button"
-              className={replyMode === "runes-behind" ? "lab-pill on" : "lab-pill"}
-              onClick={() => setReplyMode("runes-behind")}
+              className={replyMode === "mirror" ? "lab-pill on" : "lab-pill"}
+              onClick={() => setReplyMode("mirror")}
             >
-              runes behind text
+              mirror frame
             </button>
             <button
               type="button"
@@ -293,9 +352,15 @@ export function ThemeLab() {
         <div className="theme-lab-sample-head">
           <span className="spell-announce">[runes appeared, shining slightly]</span>
         </div>
-        <div className={`reply-sample ${replyMode}`}>
-          <p>{SAMPLE_ANSWER}</p>
-        </div>
+        {replyMode === "mirror" ? (
+          <SpellFrame>
+            <p>{SAMPLE_ANSWER}</p>
+          </SpellFrame>
+        ) : (
+          <div className="reply-sample glowing-text">
+            <p>{SAMPLE_ANSWER}</p>
+          </div>
+        )}
         <p className="theme-lab-hint">
           background: {bgMode} · reply: {replyMode} · pick your combo and I ship it
         </p>
