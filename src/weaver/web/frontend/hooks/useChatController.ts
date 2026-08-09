@@ -400,6 +400,15 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
     }
   }
 
+  // The regenerate affordance belongs under the LAST reply: the last
+  // message is a weaver reply and the turn is idle. This holds across
+  // page reloads too (liveReplyId only exists for the in-session
+  // stream, so it could never light up a server-loaded transcript).
+  const lastReplyId = (() => {
+    const last = messages[messages.length - 1];
+    return last && last.role === "weaver" ? last.id : null;
+  })();
+
   return {
     activeTitle,
     activity,
@@ -411,6 +420,7 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
     deleteConversation,
     loadPassage,
     draft,
+    lastReplyId,
     liveReplyId,
     messages,
     recoveryMessage,

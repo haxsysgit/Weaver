@@ -168,7 +168,7 @@ describe("ChatApp", () => {
     expect(screen.queryByText("Demon of Fate")).toBeNull();
   });
 
-  it("streams a turn, scopes regenerate to its live reply, and clears it on conversation change", async () => {
+  it("regenerate lives under the last reply, even after switching threads", async () => {
     localStorage.setItem("weaver.active-conversation", "thread-1");
     const controlled = deferredStream();
     const api = createApi(controlled.stream);
@@ -188,8 +188,16 @@ describe("ChatApp", () => {
     expect(await screen.findByRole("button", { name: "Regenerate reply" })).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: /Cassie's choice thread/ }));
 
+    // a server-loaded transcript ends with a weaver reply: regenerate
+    // stays under it (no live session needed, unlike the old gate)
     expect(await screen.findByText("Old answer")).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Regenerate reply" })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Regenerate reply" }),
+    ).toBeVisible();
+    // the button does not follow older replies - only the last one
+    expect(screen.getAllByRole("button", { name: "Regenerate reply" }).length).toBe(
+      1,
+    );
   });
 
   it("keeps stop disabled after cancellation is requested until the stream settles", async () => {

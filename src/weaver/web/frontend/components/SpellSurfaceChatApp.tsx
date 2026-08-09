@@ -424,7 +424,7 @@ export function SpellSurfaceChatApp({
                   composerRef.current?.focus();
                 }}
                 onRegenerate={
-                  message.id === chat.liveReplyId && chat.turnState === "idle"
+                  message.id === chat.lastReplyId && chat.turnState === "idle"
                     ? regenerateReply
                     : undefined
                 }

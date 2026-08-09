@@ -195,7 +195,7 @@ export function ChatApp({
                 message={message}
                 onQuote={askAboutQuote}
                 onRegenerate={
-                  message.id === chat.liveReplyId && chat.turnState === "idle"
+                  message.id === chat.lastReplyId && chat.turnState === "idle"
                     ? chat.regenerateReply
                     : undefined
                 }
