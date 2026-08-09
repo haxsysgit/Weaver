@@ -1379,3 +1379,144 @@ class TestTwoPhaseSynthesis:
         joined = " ".join((m.content or "") for m in synthesis_request.messages)
         assert "Weaver told Noctis" in joined  # continuity kept
         assert "chapter 2729" in joined
+
+
+class TestTextToolCallSlips:
+    """A thinking model can slip out of the structured tool-call protocol
+    and write its call as prose ('<tool calls>' + a JSON block). That text
+    is never an answer: the harness corrects the model and re-runs, and
+    never persists the slip."""
+
+    SLIP = (
+        "<tool calls>\n```json\n"
+        '[{"name": "echo", "arguments": {"message": "x"}}]\n```'
+    )
+
+    async def test_text_tool_call_draft_is_corrected_not_answered(self) -> None:
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response(self.SLIP),
+            stop_response("Real answer."),
+        )
+        persisted: list = []
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            persist_message=_async_append(persisted),
+        )
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert result.final_text == "Real answer."
+        # the corrective call still has tools available
+        corrective = provider.calls[2].request
+        assert corrective.tools != ()
+        assert any(
+            "wrote a tool call as plain text" in (m.content or "")
+            for m in corrective.messages
+        )
+        # the slip never reached the store, the real answer did
+        assert [m.kind for m in persisted] == [
+            "assistant",
+            "tool_call",
+            "tool_result",
+            "assistant",
+        ]
+        assert persisted[-1].content == "Real answer."
+        assert all(
+            "tool calls>" not in (getattr(m, "content", "") or "")
+            for m in persisted
+        )
+
+    async def test_text_tool_call_on_synthesis_is_corrected_tools_stay_stripped(
+        self,
+    ) -> None:
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response("Draft: found."),
+            stop_response(self.SLIP),
+            stop_response("Final: the answer."),
+        )
+        persisted: list = []
+
+        async def packet_builder(results, draft):
+            return "PACKET: prose"
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            persist_message=_async_append(persisted),
+            packet_builder=packet_builder,
+        )
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert result.final_text == "Final: the answer."
+        assert len(provider.calls) == 4
+        # the corrective call is still the synthesis call: tools stripped,
+        # the packet still present, plus the correction message
+        corrective = provider.calls[3].request
+        assert corrective.tools == ()
+        assert any(
+            "PACKET: prose" in (m.content or "") for m in corrective.messages
+        )
+        assert any(
+            "wrote a tool call as plain text" in (m.content or "")
+            for m in corrective.messages
+        )
+        # only the final answer is persisted, never the slip
+        assert [m.kind for m in persisted] == [
+            "assistant",
+            "tool_call",
+            "tool_result",
+            "assistant",
+        ]
+        assert persisted[-1].content == "Final: the answer."
+
+    async def test_text_tool_call_slip_limit_fails_honestly(self) -> None:
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response(self.SLIP),
+            stop_response(self.SLIP),
+            stop_response(self.SLIP),
+        )
+        persisted: list = []
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            persist_message=_async_append(persisted),
+        )
+        # two corrections are allowed; the third slip fails the turn
+        assert result.exit_reason == TurnExitReason.MODEL_FAILED
+        assert result.model_steps == 4
+        # no slip text ever reached the store
+        assert all(
+            "tool calls>" not in (getattr(m, "content", "") or "")
+            for m in persisted
+        )
+        assert [m.kind for m in persisted] == [
+            "assistant",
+            "tool_call",
+            "tool_result",
+        ]
+
+    async def test_text_tool_call_on_forced_call_is_a_refusal(self) -> None:
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response(self.SLIP),
+        )
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            tool_budget=1,
+        )
+        # the forced call already told the model its steps are spent; a
+        # text tool call there is a refusal, not an answer
+        assert result.exit_reason == TurnExitReason.LIMIT_REACHED
+        assert result.model_steps == 2

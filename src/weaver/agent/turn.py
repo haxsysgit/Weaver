@@ -138,6 +138,28 @@ ANSWER_MAX_OUTPUT_TOKENS = 16384
 # the packet.
 SYNTHESIS_HISTORY_EXCHANGES = 3
 
+# A thinking model sometimes slips out of the structured tool-call
+# protocol and writes its call as prose ('<tool calls>' plus a JSON
+# block). That text is never an answer: the harness corrects the model
+# and re-runs, at most this many times, and never persists the slip.
+TEXT_TOOL_SLIP_LIMIT = 2
+TEXT_TOOL_CORRECTION = (
+    "Your previous message wrote a tool call as plain text. Tool calls "
+    "are structured, never text: to call a tool use the tool-call "
+    "mechanism attached to your reply, or, if you have enough to "
+    "answer, write the answer directly."
+)
+
+
+def _is_textual_tool_call(content: str) -> bool:
+    """True when the model wrote a tool call as prose instead of using
+    the structured tool-call mechanism (a known thinking-model slip:
+    '<tool calls>' plus a JSON block in the content)."""
+    stripped = content.lstrip()
+    if stripped.startswith("<tool calls>") or stripped.startswith("<tool_calls>"):
+        return True
+    return "```json" in content and '"name"' in content and '"arguments"' in content
+
 
 class TurnExitReason(str, Enum):
     COMPLETED = "completed"
@@ -352,6 +374,8 @@ async def run_turn(
     exit_reason = TurnExitReason.COMPLETED
     synthesis_packet: str | None = None
     synthesis_requested = False
+    text_tool_slips = 0
+    text_tool_note: str | None = None
 
     try:
         tool_schemas = tool_registry.active_schemas(active_tools)
@@ -436,6 +460,12 @@ async def run_turn(
                     *request_messages,
                     ModelMessage(role="system", content=reminder),
                 ]
+        if text_tool_note is not None:
+            request_messages = [
+                *request_messages,
+                ModelMessage(role="system", content=text_tool_note),
+            ]
+            text_tool_note = None
         request = ModelRequest(
             messages=tuple(request_messages),
             # Plan 15: on the forced call the tools are stripped from the
@@ -499,7 +529,6 @@ async def run_turn(
 
         model_name = response.model_id
         provider_name = response.provider_id
-        synthesis_packet = None
         if not _response_matches_model(response, model):
             exit_reason = TurnExitReason.MODEL_FAILED
             safe_failure = safe_error("model_protocol")
@@ -546,6 +575,28 @@ async def run_turn(
                 turn_id=turn_id,
                 response_message=response_message,
             )
+            # A text-form tool call is never an answer (2026-08-09 live
+            # turn: the model wrote '<tool calls>' plus JSON as the
+            # synthesis reply because tools were stripped). Correct and
+            # re-run: locate calls keep tools, the synthesis call stays
+            # stripped with its packet intact (synthesis_packet survives
+            # so the corrective call still sees the evidence). The slip
+            # is ephemeral, never persisted. On the forced call the
+            # reminder already said the steps are spent; a slip there is
+            # a refusal, not an answer.
+            if _is_textual_tool_call(assistant.content or ""):
+                if forced_answer:
+                    exit_reason = TurnExitReason.LIMIT_REACHED
+                    safe_failure = safe_error("limit")
+                    break
+                if text_tool_slips >= TEXT_TOOL_SLIP_LIMIT:
+                    exit_reason = TurnExitReason.MODEL_FAILED
+                    safe_failure = safe_error("model_protocol")
+                    break
+                text_tool_slips += 1
+                text_tool_note = TEXT_TOOL_CORRECTION
+                new_messages.append(assistant)
+                continue
             # Plan 15 two-phase: the first no-tool draft is a locate
             # summary, not the answer. Assemble the packet from the
             # turn's evidence and run one final toolless synthesis call.
