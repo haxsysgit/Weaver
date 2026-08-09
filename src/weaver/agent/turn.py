@@ -230,8 +230,33 @@ def _is_textual_tool_call(content: str, tool_names: tuple[str, ...]) -> bool:
 
 def _is_working_note_candidate(content: str) -> bool:
     """True when a plain reply only promises or narrates future work."""
-    casefolded = content.casefold()
-    return any(marker in casefolded for marker in WORKING_NOTE_MARKERS)
+    for raw_line in content.splitlines():
+        line = raw_line.strip().casefold()
+        if not line or line.startswith(('"', "'")):
+            continue
+        line = line.lstrip("-*• ").lstrip("<[")
+        for marker in WORKING_NOTE_MARKERS:
+            if not line.startswith(marker):
+                continue
+            if marker != "one moment":
+                return True
+
+            remainder = line[len(marker) :].lstrip(" ,.!:;>]")
+            working_remainders = (
+                "please",
+                "hold",
+                "while i",
+                "let me",
+                "i'll",
+                "i will",
+                "i need",
+                "i'm",
+                "i am",
+                "to ",
+            )
+            if not remainder or remainder.startswith(working_remainders):
+                return True
+    return False
 
 
 def _candidate_rejection_note(
@@ -445,9 +470,14 @@ async def run_turn(
     max_steps = min(max(max_model_steps, 1), _MAX_MODEL_STEPS)
     if tool_budget is not None:
         # Plan 15 two-budget split: tool calls are capped at tool_budget
-        # and the final answer call is always guaranteed. The cap counts
-        # tool steps, never the answer.
-        max_steps = min(max(tool_budget, 0) + 1, _MAX_MODEL_STEPS)
+        # and the final answer call is always guaranteed. Candidate
+        # corrections and the one zero-evidence check are bounded overhead;
+        # they must not consume either the tool ceiling or answer slot.
+        correction_steps = TEXT_TOOL_SLIP_LIMIT + 1
+        max_steps = min(
+            max(tool_budget, 0) + 1 + correction_steps,
+            _MAX_MODEL_STEPS,
+        )
     new_messages: list[ConversationMessage] = []
     turn_tool_results: list[ToolResult] = []
     model_steps = 0

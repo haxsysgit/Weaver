@@ -360,6 +360,29 @@ class TestToolBudget:
         # the forced answer call carries no tools at all
         assert provider.calls[1].request.tools == ()
 
+    async def test_candidate_correction_does_not_consume_forced_answer(self) -> None:
+        layer, model, provider = scripted_layer(
+            stop_response("Let me check the evidence."),
+            tool_response(tool_call("c1", "echo", '{"message": "evidence"}')),
+            stop_response("Answer from the gathered evidence."),
+        )
+        starts: dict[str, int] = {}
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(starts),
+            active_tools=("echo",),
+            tool_budget=1,
+        )
+
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert result.final_text == "Answer from the gathered evidence."
+        assert starts == {"echo": 1}
+        assert len(provider.calls) == 3
+        assert provider.calls[1].request.tools
+        assert provider.calls[2].request.tools == ()
+
 
 class TestActiveDispatch:
     async def test_unknown_tool_is_checked_first(self) -> None:
@@ -1505,19 +1528,58 @@ class TestFinalReadingPhase:
 
 class TestCandidateValidation:
     WORKING_NOTE_CASES = [
-        ("One moment, please.", "That single moment changed the battle."),
-        ("Give me a moment to confirm.", "Give Sunny time to recover."),
-        ("Let me look through the chapters.", "The look on his face gave it away."),
-        ("Let me search for that name.", "The search ended in chapter 12."),
-        ("Let me check the exact wording.", "Check chapter 12 for the wording."),
-        ("I'll search the later chapters.", "The search covered later chapters."),
-        ("I'll look for the scene.", "I looked at the scene in chapter 12."),
-        ("I'll check the passage.", "The passage checks out against chapter 12."),
-        ("I'll trace the name first.", "The trace remained on his soul."),
-        ("I'll open the best result.", "The best result opens in chapter 12."),
-        ("I need to verify that claim.", "The chapter verifies that claim."),
-        ("Reaching into the story map now.", "The story map resolves Auro."),
-        ("Searching the library now.", "The library search found chapter 12."),
+        (
+            "One moment, please.",
+            "One moment, Sunny stood beside Nephis; the next, he was gone (ch. 500).",
+        ),
+        (
+            "Give me a moment to confirm.",
+            'Sunny said "give me a moment" before leaving (ch. 12).',
+        ),
+        (
+            "Let me look through the chapters.",
+            'The line begins "let me look at you" (ch. 12).',
+        ),
+        (
+            "Let me search for that name.",
+            'The quote "let me search" belongs to the scene in chapter 12.',
+        ),
+        (
+            "Let me check the exact wording.",
+            'Sunny says "let me check" before opening the door (ch. 12).',
+        ),
+        (
+            "I'll search the later chapters.",
+            'The promise "I\'ll search" appears in chapter 12.',
+        ),
+        (
+            "I'll look for the scene.",
+            'His reply was "I\'ll look for it" (ch. 12).',
+        ),
+        (
+            "I'll check the passage.",
+            'The exact reply is "I\'ll check" (ch. 12).',
+        ),
+        (
+            "I'll trace the name first.",
+            'Auro says "I\'ll trace it" in chapter 12.',
+        ),
+        (
+            "I'll open the best result.",
+            'The line "I\'ll open it" appears in chapter 12.',
+        ),
+        (
+            "I need to verify that claim.",
+            'He admits "I need to verify it" in chapter 12.',
+        ),
+        (
+            "Reaching into the story map now.",
+            "Sunny was reaching into the shadows when it happened (ch. 12).",
+        ),
+        (
+            "Searching the library now.",
+            "Cassie was searching the library during that scene (ch. 12).",
+        ),
     ]
 
     @pytest.mark.parametrize(
