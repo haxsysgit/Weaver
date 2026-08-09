@@ -72,6 +72,7 @@ function createApi(stream: AsyncIterable<StreamEvent>): ChatApi {
       return [];
     }),
     streamTurn: vi.fn().mockReturnValue(stream),
+    retryTurn: vi.fn().mockReturnValue(stream),
   };
 }
 
@@ -136,6 +137,7 @@ describe("ChatApp", () => {
         recoveryChooseLabel: "Choose another session",
         recoveryCreateLabel: "Start a new session",
         recoveryTitle: "This run stopped.",
+        recoveryRetryLabel: "Retry",
         regenerateLabel: "Run again",
         sendLabel: "Send message",
         stopLabel: "Stop Career Guide",
@@ -406,4 +408,48 @@ describe("ChatApp weave management", () => {
     expect(await screen.findByText(/chapter 98/)).toBeTruthy();
     expect(api.getPassage).toHaveBeenCalledWith("novel:0098:3-81");
   });
+});
+
+it("retries a broken turn from the recovery panel", async () => {
+  // Plan 15 retry (2026-08-09): after a failed turn the recovery panel
+  // offers Retry; clicking it re-runs the turn server-side and the
+  // streamed answer replaces the recovery panel.
+  const controlled = {
+    stream: (async function* () {
+      yield { type: "delta" as const, text: "retried answer" };
+      yield { type: "completed" as const, text: "retried answer" };
+    })(),
+    retryStream: (async function* () {
+      yield { type: "delta" as const, text: "retried answer" };
+      yield { type: "completed" as const, text: "retried answer" };
+    })(),
+  };
+  const api = createApi(controlled.stream);
+  (api.retryTurn as ReturnType<typeof vi.fn>).mockReturnValue(
+    controlled.retryStream,
+  );
+  (api.streamTurn as ReturnType<typeof vi.fn>).mockReturnValue(
+    (async function* () {
+      yield { type: "failed" as const, message: "Model stream failed." };
+    })(),
+  );
+
+  render(<ChatApp api={api} modeLabel="fake" privacyLabel="Local fake mode" />);
+
+  await screen.findByText("What thread are we pulling?");
+  const composer = screen.getByRole("textbox", { name: "Message Weaver" });
+  fireEvent.keyDown(composer, { key: "Enter" });
+  fireEvent.change(composer, {
+    target: { value: "who told noctis the gods cant kill daemons" },
+  });
+  fireEvent.keyDown(composer, { key: "Enter" });
+
+  const recovery = await screen.findByText("The thread broke.");
+  expect(recovery).toBeTruthy();
+
+  fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+  await screen.findByText("retried answer");
+  expect(screen.queryByText("The thread broke.")).toBeNull();
+  expect(api.retryTurn).toHaveBeenCalledTimes(1);
 });

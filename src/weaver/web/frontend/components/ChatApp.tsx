@@ -211,6 +211,8 @@ export function ChatApp({
                 message={chat.recoveryMessage}
                 onChooseConversation={openConversationRail}
                 onCreateConversation={() => void createConversation()}
+                onRetry={() => void chat.retryLastTurn()}
+                retryLabel={product.recoveryRetryLabel}
                 title={product.recoveryTitle}
               />
             )}

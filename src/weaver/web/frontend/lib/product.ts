@@ -20,6 +20,7 @@ export interface ChatProduct {
   recentConversationsLabel: string;
   recoveryChooseLabel: string;
   recoveryCreateLabel: string;
+  recoveryRetryLabel: string;
   recoveryTitle: string;
   regenerateLabel: string;
   sendLabel: string;
@@ -52,6 +53,7 @@ export const weaverProduct: ChatProduct = {
   recentConversationsLabel: "Recent threads",
   recoveryChooseLabel: "Choose another thread",
   recoveryCreateLabel: "Start a new weave",
+  recoveryRetryLabel: "Retry",
   recoveryTitle: "The thread broke.",
   regenerateLabel: "Regenerate",
   sendLabel: "Send message",

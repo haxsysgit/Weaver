@@ -47,6 +47,7 @@ export interface ChatApi {
   createConversation(): Promise<{ conversation_id: string }>;
   loadMessages(conversationId: string): Promise<StoredMessage[]>;
   streamTurn(conversationId: string, message: string): AsyncIterable<StreamEvent>;
+  retryTurn(conversationId: string): AsyncIterable<StreamEvent>;
   cancelTurn(conversationId: string): Promise<"cancelling" | "idle">;
   deleteConversation(conversationId: string): Promise<{ deleted: string }>;
   getPassage(handle: string): Promise<Passage>;
@@ -178,6 +179,29 @@ async function* streamEvents(source: EventSource): AsyncGenerator<StreamEvent> {
   }
 }
 
+async function* openTurnStream(
+  conversationId: string,
+): AsyncGenerator<StreamEvent> {
+  const source = new EventSource(
+    `/api/conversations/${encodeURIComponent(conversationId)}/stream`,
+  );
+  let terminalSeen = false;
+  for await (const event of streamEvents(source)) {
+    yield event;
+    if (
+      event.type === "completed" ||
+      event.type === "interrupted" ||
+      event.type === "failed"
+    ) {
+      terminalSeen = true;
+      break;
+    }
+  }
+  if (!terminalSeen) {
+    throw new Error("The reply stream closed without finishing.");
+  }
+}
+
 export function createHttpChatApi(fetcher: typeof fetch = fetch): ChatApi {
   return {
     async getPreferences() {
@@ -240,24 +264,20 @@ export function createHttpChatApi(fetcher: typeof fetch = fetch): ChatApi {
       if (!response.ok) {
         throw new Error(`Sending the message failed (${response.status})`);
       }
-      const source = new EventSource(
-        `/api/conversations/${encodeURIComponent(conversationId)}/stream`,
+      yield* openTurnStream(conversationId);
+    },
+
+    // Plan 15 retry (2026-08-09): the server reloads the failed turn's
+    // own message from the store, so the client never re-sends text.
+    async *retryTurn(conversationId) {
+      const response = await fetcher(
+        `/api/conversations/${encodeURIComponent(conversationId)}/retry`,
+        { method: "POST" },
       );
-      let terminalSeen = false;
-      for await (const event of streamEvents(source)) {
-        yield event;
-        if (
-          event.type === "completed" ||
-          event.type === "interrupted" ||
-          event.type === "failed"
-        ) {
-          terminalSeen = true;
-          break;
-        }
+      if (!response.ok) {
+        throw new Error(`Retrying failed (${response.status})`);
       }
-      if (!terminalSeen) {
-        throw new Error("The reply stream closed without finishing.");
-      }
+      yield* openTurnStream(conversationId);
     },
 
     async cancelTurn(conversationId) {

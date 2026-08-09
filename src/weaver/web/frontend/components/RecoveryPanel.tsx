@@ -4,6 +4,8 @@ interface RecoveryPanelProps {
   message: string;
   onChooseConversation: () => void;
   onCreateConversation: () => void;
+  onRetry?: () => void;
+  retryLabel?: string;
   title: string;
 }
 
@@ -13,6 +15,8 @@ export function RecoveryPanel({
   message,
   onChooseConversation,
   onCreateConversation,
+  onRetry,
+  retryLabel,
   title,
 }: RecoveryPanelProps) {
   return (
@@ -22,6 +26,11 @@ export function RecoveryPanel({
         <strong>{title}</strong>
         <p>{message}</p>
         <div className="recovery-actions">
+          {onRetry && retryLabel && (
+            <button className="recovery-retry" onClick={onRetry} type="button">
+              {retryLabel}
+            </button>
+          )}
           <button onClick={onCreateConversation} type="button">
             {createLabel}
           </button>

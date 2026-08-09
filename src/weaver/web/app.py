@@ -402,6 +402,13 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
     async def get_messages(conversation_id: str) -> list[dict]:
         if not await runtime.session.conversation_exists(conversation_id):
             raise HTTPException(status_code=404, detail="unknown conversation")
+        # Dead attempts (interrupted or retried runs) never render: a retry
+        # re-persists the owner message under a new run, so hiding the old
+        # run's items keeps the transcript free of duplicates.
+        runs = await runtime.session.repo.load_runs(conversation_id)
+        dead_run_ids = {
+            run.id for run in runs if run.phase in ("interrupted", "superseded")
+        }
         transcript = await runtime.session.load_transcript(conversation_id)
         return [
             {
@@ -412,10 +419,14 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 "created_at": item["created_at"],
             }
             for item in transcript
+            if item["run_id"] not in dead_run_ids
         ]
 
-    async def _run_turn(conversation_id: str, message: str, stream: TurnStream) -> None:
-        """Run the send, streaming deltas, then the terminal event."""
+    async def _run_turn(
+        conversation_id: str, message: str, stream: TurnStream, *, retry: bool = False
+    ) -> None:
+        """Run the send (or the last-turn retry), streaming deltas, then
+        the terminal event."""
 
         async def on_delta(text: str) -> None:
             stream.emit("delta", {"text": text})
@@ -464,25 +475,48 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
             is_first_turn = (
                 len(await runtime.session.load_transcript(conversation_id)) == 0
             )
-            result = await runtime.session.send(
-                conversation_id,
-                message,
-                cancel_event=stream.cancel_event,
-                on_delta=on_delta,
-                on_tool_event=on_tool_event,
-                # Plan 15: the tier is a user preference (the mode
-                # selector). Tool calls are capped at 50/70/90; the final
-                # answer call is always guaranteed. Thinking is always on;
-                # the tier picks the reasoning effort.
-                tool_budget=TOOL_BUDGET_TIERS[tier],
-                reasoning=REASONING_TIERS[tier],
-                packet_builder=on_packet,
-            )
+            if retry:
+                retried = await runtime.session.retry_last_turn(
+                    conversation_id,
+                    cancel_event=stream.cancel_event,
+                    on_delta=on_delta,
+                    on_tool_event=on_tool_event,
+                    tool_budget=TOOL_BUDGET_TIERS[tier],
+                    reasoning=REASONING_TIERS[tier],
+                    packet_builder=on_packet,
+                )
+                if retried is None:
+                    stream.emit(
+                        "failed",
+                        {"code": "retry", "message": "There is nothing to retry."},
+                    )
+                    return
+                result, retried_message = retried
+            else:
+                result = await runtime.session.send(
+                    conversation_id,
+                    message,
+                    cancel_event=stream.cancel_event,
+                    on_delta=on_delta,
+                    on_tool_event=on_tool_event,
+                    # Plan 15: the tier is a user preference (the mode
+                    # selector). Tool calls are capped at 50/70/90; the final
+                    # answer call is always guaranteed. Thinking is always on;
+                    # the tier picks the reasoning effort.
+                    tool_budget=TOOL_BUDGET_TIERS[tier],
+                    reasoning=REASONING_TIERS[tier],
+                    packet_builder=on_packet,
+                )
             reason = result.exit_reason
             if reason == TurnExitReason.COMPLETED:
                 if is_first_turn and runtime.prefs is not None:
                     asyncio.create_task(
-                        _name_thread(runtime, conversation_id, message, result.final_text)
+                        _name_thread(
+                            runtime,
+                            conversation_id,
+                            retried_message if retry else message,
+                            result.final_text,
+                        )
                     )
                 stream.emit(
                     "completed",
@@ -553,6 +587,40 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         # The turn runs server-side; the reply is streamed over the GET
         # /stream route (EventSource with Last-Event-ID resume), so a
         # dropped connection never loses the reply (hermes-webui pattern).
+        return Response(
+            status_code=202,
+            content=json.dumps({"conversation_id": conversation_id}),
+            media_type="application/json",
+        )
+
+    @app.post(
+        "/api/conversations/{conversation_id}/retry",
+        dependencies=[Depends(_check_local)],
+    )
+    async def retry_last_turn(conversation_id: str) -> Response:
+        """Re-run the last interrupted turn with its own message.
+
+        The web layer never takes the message from the client: the
+        session reloads the failed turn's owner text from the store, so
+        retry cannot be steered. Same 202 + GET /stream contract as the
+        turns route.
+        """
+        if not await runtime.session.conversation_exists(conversation_id):
+            raise HTTPException(status_code=404, detail="unknown conversation")
+        stream = active.get(conversation_id)
+        if stream is not None and not stream.finished:
+            raise HTTPException(status_code=409, detail="a turn is already running")
+
+        stream = TurnStream(conversation_id)
+        active[conversation_id] = stream
+        if len(active) > 32:
+            for stale_id, stale in list(active.items()):
+                if stale.finished:
+                    active.pop(stale_id, None)
+                    break
+        stream.task = asyncio.create_task(
+            _run_turn(conversation_id, "", stream, retry=True)
+        )
         return Response(
             status_code=202,
             content=json.dumps({"conversation_id": conversation_id}),

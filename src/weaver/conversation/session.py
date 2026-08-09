@@ -22,8 +22,9 @@ from weaver.agent.turn import (
 from weaver.model_layer import ModelLayer, ModelSpec
 from weaver.model_layer.types import ReasoningEffort
 
-from .coordinator import RunCoordinator
-from .repository import ConversationRepository
+from .common import now, uid
+from .coordinator import RunCoordinator, _tx
+from .repository import ConversationRepository, ItemRecord
 from .runner import INTERRUPTED_RUN_EXISTS, ConversationRunner
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,7 @@ class TranscriptMessage(TypedDict):
     """One owner-visible message from Weaver's persisted chat history."""
 
     message_id: str
+    run_id: str
     turn_id: str
     role: Literal["owner", "weaver"]
     content: str
@@ -269,6 +271,7 @@ class SessionWeave:
             transcript.append(
                 {
                     "message_id": item.id,
+                    "run_id": item.run_id,
                     "turn_id": item.turn_id,
                     "role": role,
                     "content": content,
@@ -344,6 +347,77 @@ class SessionWeave:
             conversation_id, interrupted
         )
         return new_run_id
+
+    async def retry_last_turn(
+        self,
+        conversation_id: str,
+        *,
+        cancel_event: asyncio.Event | None = None,
+        on_delta: DeltaCallback | None = None,
+        on_tool_event: ToolEventCallback | None = None,
+        tool_budget: int | None = None,
+        reasoning: ReasoningEffort | None = None,
+        packet_builder: PacketBuilder | None = None,
+    ) -> tuple[TurnResult, str] | None:
+        """Re-run the last interrupted turn with its own owner message.
+
+        The interrupted run is superseded so future sends are no longer
+        refused, the owner message is re-persisted for the new run (the
+        runner treats this run's owner item as the current question), and
+        the turn runs through the same loop as send(). Returns
+        (result, message) or None when there is nothing to retry.
+        """
+        assert self._repo is not None and self._coordinator is not None
+        assert self._runner is not None, (
+            "retry_last_turn() requires model_layer, model, tool_registry, "
+            "and execution_policy at construction"
+        )
+        interrupted = await self._repo.find_interrupted_run(conversation_id)
+        if interrupted is None:
+            return None
+        items = await self._repo.load_items(
+            conversation_id, for_run_id=interrupted.id
+        )
+        owner = [item for item in items if item.kind == "owner"]
+        if not owner:
+            return None
+        message = json.loads(owner[-1].body).get("content", "")
+        new_run_id, _ = await self._coordinator.retry_interrupted(
+            conversation_id, interrupted
+        )
+        db = self._repo._db
+        async with _tx(db):
+            seq = await self._repo._next_sequence(conversation_id)
+            await self._repo._insert_item(
+                ItemRecord(
+                    id=uid(),
+                    conversation_id=conversation_id,
+                    sequence=seq,
+                    turn_id=interrupted.turn_id,
+                    run_id=new_run_id,
+                    kind="owner",
+                    body=json.dumps({"content": message}),
+                    created_at=now(),
+                )
+            )
+            # The failed attempt must not block future sends; the retry run
+            # is the owner of this turn now. (_update_run_phase commits
+            # nothing on its own, so it must live inside the tx.)
+            await self._repo._update_run_phase(interrupted.id, "superseded")
+        if cancel_event is None:
+            cancel_event = asyncio.Event()
+        result = await self._runner.run_turn_in_run(
+            conversation_id,
+            new_run_id,
+            interrupted.turn_id,
+            cancel_event,
+            on_delta=on_delta,
+            on_tool_event=on_tool_event,
+            tool_budget=tool_budget,
+            reasoning=reasoning,
+            packet_builder=packet_builder,
+        )
+        return result, message
 
     async def find_interrupted_runs(self) -> list[dict]:
         """Load all conversations and return any with interrupted runs."""

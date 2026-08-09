@@ -322,6 +322,57 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
     }
   }
 
+  // Plan 15 retry (2026-08-09): the dead-end refusal after a broken turn
+  // is gone - the recovery panel retries the same message server-side
+  // (the backend reloads it from the store; the client never re-sends).
+  async function retryLastTurn() {
+    if (!conversationId || turnState !== "idle" || !lastOwnerText) {
+      return;
+    }
+    const replyId = localMessageId("assistant");
+    setLiveReplyId(null);
+    setRecoveryMessage(null);
+    setActivity([]);
+    setTurnState("streaming");
+    setMessages((current) => [
+      ...current,
+      { id: replyId, role: "weaver", content: "", streaming: true },
+    ]);
+
+    let partialReply = "";
+    let terminalEventReceived = false;
+    try {
+      for await (const event of api.retryTurn(conversationId)) {
+        const result = handleStreamEvent(event, replyId, partialReply);
+        partialReply = result.text;
+        terminalEventReceived = result.terminal;
+        if (result.terminal) {
+          break;
+        }
+      }
+      if (!terminalEventReceived) {
+        setMessages((current) => updateReply(current, replyId, partialReply, false));
+        setRecoveryMessage(product.incompleteTurnMessage);
+      }
+    } catch (error) {
+      setMessages((current) => updateReply(current, replyId, partialReply, false));
+      const message =
+        error instanceof Error ? error.message : product.connectionLostMessage;
+      setRecoveryMessage(
+        error instanceof Error
+          ? `${message} This turn cannot resume.`
+          : product.connectionLostMessage,
+      );
+    } finally {
+      setTurnState("idle");
+      try {
+        await refreshConversations();
+      } catch {
+        // The transcript stays usable if only the conversation list refresh fails.
+      }
+    }
+  }
+
   return {
     activeTitle,
     activity,
@@ -337,6 +388,7 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
     messages,
     recoveryMessage,
     regenerateReply,
+    retryLastTurn,
     selectConversation,
     sendMessage,
     setDraft,

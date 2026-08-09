@@ -1477,3 +1477,81 @@ async def test_failed_turn_records_run_failed_event():
         assert body["exit_reason"] == "model_failed"
         assert body["message"] == "Model stream failed."
         await sw.close()
+
+
+async def test_retry_last_turn_reruns_the_failed_message_and_unblocks_sends():
+    """Plan 15 (2026-08-09): after a broken turn, retry_last_turn re-runs
+    the failed owner message, supersedes the interrupted run (so future
+    sends are no longer refused), and the retried answer persists."""
+    from weaver.agent.tools import ToolExecutionPolicy
+
+    import weaver.conversation.runner as runner_module
+
+    real_callback = runner_module.ConversationRunner._persist_callback
+
+    def failing_callback(self, conversation_id, run_id, turn_id):
+        async def callback(message):
+            raise RuntimeError("disk on fire")
+
+        return callback
+
+    with tempfile.TemporaryDirectory() as tmp:
+        layer, model, provider = _fake_layer(_stop_response("Done."))
+        registry = _echo_registry()
+        sw = SessionWeave(
+            Path(tmp) / ".weaver" / "state",
+            model_layer=layer,
+            model=model,
+            system_prompt="You are Weaver.",
+            tool_registry=registry,
+            active_tools=("echo",),
+            execution_policy=ToolExecutionPolicy.read_only(),
+        )
+        runner_module.ConversationRunner._persist_callback = failing_callback
+        try:
+            await sw.open()
+            conv_id = await sw.start_conversation("")
+            failed = await sw.send(conv_id, "hello there")
+            assert failed.exit_reason == "persistence_failed"
+
+            # the dead-end the web UI hit: a send is refused while the
+            # interrupted run exists
+            refused = await sw.send(conv_id, "hello there")
+            assert refused.exit_reason == "interrupted"
+            assert refused.turn_id == ""
+        finally:
+            runner_module.ConversationRunner._persist_callback = real_callback
+            await sw.close()
+
+        # retry with a healthy persist path
+        layer, model, provider = _fake_layer(_stop_response("Done."))
+        registry = _echo_registry()
+        sw = SessionWeave(
+            Path(tmp) / ".weaver" / "state",
+            model_layer=layer,
+            model=model,
+            system_prompt="You are Weaver.",
+            tool_registry=registry,
+            active_tools=("echo",),
+            execution_policy=ToolExecutionPolicy.read_only(),
+        )
+        await sw.open()
+        try:
+            out = await sw.retry_last_turn(conv_id)
+            assert out is not None
+            result, message = out
+            assert message == "hello there"
+            assert result.exit_reason == "completed"
+
+            # the interrupted run is superseded: sends work again
+            runs = await sw._repo.load_runs(conv_id)
+            phases = [r.phase for r in runs]
+            assert "interrupted" not in phases
+            assert "superseded" in phases
+            again = await sw.send(conv_id, "second question")
+            assert again.exit_reason == "completed"
+
+            # nothing left to retry once healthy
+            assert await sw.retry_last_turn(conv_id) is None
+        finally:
+            await sw.close()

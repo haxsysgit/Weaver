@@ -827,3 +827,94 @@ async def test_passages_rejects_bad_handle(client) -> None:
     assert resp.status_code == 422
     resp = await client.get("/api/passages", params={"handle": "novel:99999:1-5"})
     assert resp.status_code == 404
+
+
+async def test_retry_route_reruns_and_streams(tmp_path) -> None:
+    # Plan 15 retry (2026-08-09): POST /retry re-runs the failed turn
+    # server-side (the client never re-sends text) under the same 202 +
+    # GET /stream contract.
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+
+    async def fake_retry(
+        conversation_id,
+        cancel_event=None,
+        on_delta=None,
+        on_tool_event=None,
+        tool_budget=None,
+        reasoning=None,
+        packet_builder=None,
+    ):
+        if on_delta:
+            await on_delta("retried answer")
+        return (
+            TurnResult(
+                turn_id="turn-r",
+                exit_reason=TurnExitReason.COMPLETED,
+                final_text="retried answer",
+            ),
+            "youre wrong",
+        )
+
+    runtime.session.retry_last_turn = fake_retry  # type: ignore[method-assign]
+    app = create_app(runtime)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://127.0.0.1",
+        headers=SAME_ORIGIN_HEADERS,
+    ) as client:
+        conv = (await client.post("/api/conversations")).json()["conversation_id"]
+        assert (
+            await client.post("/api/conversations/nope/retry")
+        ).status_code == 404
+        resp = await client.post(f"/api/conversations/{conv}/retry")
+        assert resp.status_code == 202
+        events: list[str] = []
+        payloads: list[dict] = []
+        async with client.stream(
+            "GET", f"/api/conversations/{conv}/stream"
+        ) as stream_resp:
+            assert stream_resp.status_code == 200
+            async for line in stream_resp.aiter_lines():
+                if line.startswith("event:"):
+                    events.append(line.split(":", 1)[1].strip())
+                elif line.startswith("data:"):
+                    payloads.append(json.loads(line.split(":", 1)[1].strip()))
+        assert events[0] == "delta"
+        assert events[-1] == "completed"
+        assert payloads[-1]["text"] == "retried answer"
+    await runtime.close()
+
+
+async def test_retry_route_reports_nothing_to_retry(tmp_path) -> None:
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+
+    async def fake_retry(
+        conversation_id,
+        cancel_event=None,
+        on_delta=None,
+        on_tool_event=None,
+        tool_budget=None,
+        reasoning=None,
+        packet_builder=None,
+    ):
+        return None
+
+    runtime.session.retry_last_turn = fake_retry  # type: ignore[method-assign]
+    app = create_app(runtime)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://127.0.0.1",
+        headers=SAME_ORIGIN_HEADERS,
+    ) as client:
+        conv = (await client.post("/api/conversations")).json()["conversation_id"]
+        resp = await client.post(f"/api/conversations/{conv}/retry")
+        assert resp.status_code == 202
+        async with client.stream(
+            "GET", f"/api/conversations/{conv}/stream"
+        ) as stream_resp:
+            body = (await stream_resp.aread()).decode()
+        assert "event: failed" in body
+        assert "nothing to retry" in body
+    await runtime.close()

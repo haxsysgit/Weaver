@@ -1465,6 +1465,17 @@ a:focus-visible {
   font-size: 12px;
 }
 
+.recovery-actions .recovery-retry {
+  border-color: rgba(176, 52, 42, 0.55);
+  color: #e8b9b4;
+}
+
+.recovery-actions .recovery-retry:hover {
+  background: rgba(176, 52, 42, 0.16);
+  border-color: var(--accent, #b0342a);
+  color: #f2efe6;
+}
+
 .recovery-actions button:first-child {
   border-color: rgba(186, 60, 53, 0.42);
   color: var(--bone-white);
