@@ -481,13 +481,13 @@ class LibraryService:
             "hits": [
                 {
                     "chapter": h["chapter"],
-                    "line_start": h.get("line_start", h["line"]),
-                    "line_end": h.get("line_end", h["line"]),
+                    "line_start": h.get("line_start", h.get("line")),
+                    "line_end": h.get("line_end", h.get("line")),
                     "source_hash": self.index.source_hash(h["chapter"]),
                     "passage_handle": lib.make_passage_handle(
                         h["chapter"],
-                        h.get("line_start", h["line"]),
-                        h.get("line_end", h["line"]),
+                        h.get("line_start", h.get("line")),
+                        h.get("line_end", h.get("line")),
                     ),
                 }
                 for h in hits

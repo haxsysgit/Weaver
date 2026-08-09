@@ -750,3 +750,47 @@ async def test_lore_path_max_hops_bound(tmp_path: Path) -> None:
     )
     assert res["result"]["found"] is False
     assert "within 2 hops" in res["result"]["note"]
+
+
+@pytest.mark.asyncio
+async def test_find_text_speaker_mode_does_not_crash_on_durable_evidence(
+    tmp_path: Path,
+) -> None:
+    # speaker hits carry line_start/line_end, never 'line' - the durable
+    # evidence builder used to evaluate h['line'] eagerly and KeyError
+    novel = tmp_path / "novel"
+    (novel / "0001-0100").mkdir(parents=True)
+    lines = [
+        "Shadow Slave-Chapter 70 - 70: The Warning",
+        '"Leave the city tonight," Nephis said.',
+        "sunny stared at her",
+        "the gate guards shifted",
+        '"I will," he said at last.',
+    ]
+    (novel / "0001-0100" / "chapter-0070.txt").write_text("\n".join(lines))
+    service = LibraryService(novel_dir=novel, notebook_dir=tmp_path / "nb")
+    res = await service.find_text({"query": "nephis", "mode": "speaker"}, ctx())
+    assert res["ok"] is True
+    assert res["result"]["hits"], "speaker mode should find the quote cluster"
+    for h in res["durable_evidence"]["hits"]:
+        assert isinstance(h["line_start"], int)
+        assert isinstance(h["line_end"], int)
+        assert h["passage_handle"].startswith("novel:")
+
+
+@pytest.mark.asyncio
+async def test_find_text_phrase_durable_evidence_keeps_working(tmp_path: Path) -> None:
+    # phrase hits carry 'line' only - line_start/line_end must fall back
+    # to it without crashing and without evaluating missing keys
+    novel = tmp_path / "novel"
+    (novel / "0001-0100").mkdir(parents=True)
+    (novel / "0001-0100" / "chapter-0071.txt").write_text(
+        "Shadow Slave-Chapter 71 - 71: Quiet\n"
+        "the kunai gleams in the dark\n"
+    )
+    service = LibraryService(novel_dir=novel, notebook_dir=tmp_path / "nb")
+    res = await service.find_text({"query": "kunai", "mode": "phrase"}, ctx())
+    assert res["ok"] is True
+    hit = res["durable_evidence"]["hits"][0]
+    assert hit["line_start"] == 2
+    assert hit["line_end"] == 2
