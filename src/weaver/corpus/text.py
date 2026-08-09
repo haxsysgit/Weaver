@@ -13,7 +13,12 @@ from .errors import CorpusError
 from .models import ErrorCategory, FetchedPage
 from .spec import ShadowSlaveSpec
 
-_CHAPTER_NUMBER = re.compile(r"\bchapter\s*[-#:]*\s*(\d+)\b", re.IGNORECASE)
+# The source site once shipped a title misspelling Chapter as Chaoter
+# (chapter 2843), so the marker word is matched loosely: any word that
+# starts with ch and ends with ter, still followed by the chapter number.
+_CHAPTER_NUMBER = re.compile(
+    r"\bch[a-z]*ter\s*[-#:]*\s*(\d+)\b", re.IGNORECASE
+)
 _SPACE = re.compile(r"[ \t\f\v]+")
 _BLANK_LINES = re.compile(r"\n{3,}")
 

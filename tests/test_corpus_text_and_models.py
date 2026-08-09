@@ -156,3 +156,37 @@ def test_placeholder_words_inside_long_natural_sentence_are_not_placeholder() ->
     result = validate_local_bytes(value, chapter=3, spec=SHADOW_SLAVE)
 
     assert result.valid
+
+
+def test_local_validation_accepts_source_typo_in_chapter_word() -> None:
+    # novelfire's own title for chapter 2843 misspells Chapter as
+    # Chaoter, which deadlocked the shelf refresh (2026-08-09): the
+    # validator must accept the site's typo while still checking the
+    # chapter number itself.
+    value = chapter_text(3).replace("Chapter 3", "Chaoter 3", 1).encode()
+
+    result = validate_local_bytes(value, chapter=3, spec=SHADOW_SLAVE)
+
+    assert result.valid
+
+
+def test_fetched_page_accepts_source_typo_in_chapter_word() -> None:
+    page = fetched_page(3, html=chapter_html(3).replace("Chapter 3", "Chaoter 3"))
+
+    cleaned = clean_fetched_page(page, chapter=3, spec=SHADOW_SLAVE)
+
+    assert cleaned.stored_title == "Shadow Slave-Chaoter 3: Synthetic Test"
+
+
+def test_typo_in_chapter_word_still_checks_the_number() -> None:
+    # the typo tolerance must not weaken the wrong-page guard
+    page = fetched_page(
+        3,
+        html=chapter_html(3, title_chapter=4).replace(
+            "Chapter 4", "Chaoter 4", 1
+        ),
+    )
+
+    with pytest.raises(CorpusError) as captured:
+        clean_fetched_page(page, chapter=3, spec=SHADOW_SLAVE)
+    assert captured.value.detail_code == "visible_chapter_mismatch"

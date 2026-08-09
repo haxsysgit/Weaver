@@ -222,7 +222,8 @@ def _run_refresh(*, apply: bool, through_chapter: int | None) -> int:
         )
     else:
         print(
-            f"refresh done: fetched {counts.get('fetched', 0)}, "
+            f"refresh done: saved {counts.get('saved', 0)}, "
+            f"replaced {counts.get('replaced', 0)}, "
             f"skipped {counts.get('skipped', 0)}"
         )
         stopped = result.get("stopped_at_chapter")

@@ -218,7 +218,7 @@ def test_refresh_apply_runs_the_live_loop(monkeypatch, tmp_path, capsys) -> None
             "operation": "update_novel_corpus",
             "preview": False,
             "actions": [{"status": "fetched"}],
-            "action_counts": {"fetched": 1},
+            "action_counts": {"saved": 1},
             "stopped_at_chapter": 3129,
             "stop_reason": "first_404",
             "receipt_path": "/tmp/receipt.json",
@@ -231,7 +231,7 @@ def test_refresh_apply_runs_the_live_loop(monkeypatch, tmp_path, capsys) -> None
     assert exit_code == 0
     assert captured == {"preview": False, "through_chapter": None}
     out = capsys.readouterr().out
-    assert "fetched 1" in out
+    assert "saved 1" in out
     assert "stopped at chapter 3129" in out
 
 
