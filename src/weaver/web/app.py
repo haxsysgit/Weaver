@@ -450,13 +450,12 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                     payload["handles"] = handles
             stream.emit("tool", payload)
 
-        # Plan 15 two-phase: when the model stops calling tools, the
-        # draft is a locate summary. The packet builder re-reads the
-        # turn's opened passages with expanded windows plus the notebook
-        # statements and the spoiler judge's framing, then one final
-        # toolless synthesis call writes the answer. The packet is
-        # ephemeral, never persisted.
-        async def on_packet(tool_results, draft: str):
+        # Plan 15 final reading phase: after a candidate passes the
+        # mechanical checks, the packet builder re-reads the turn's
+        # opened passages with expanded windows plus the notebook
+        # statements and spoiler framing. One toolless call may improve
+        # the answer; the candidate and packet stay ephemeral.
+        async def on_packet(tool_results, _candidate: str):
             if runtime.library is None:
                 return None
             prefs = await runtime.prefs.get() if runtime.prefs is not None else None

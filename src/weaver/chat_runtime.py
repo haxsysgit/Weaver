@@ -105,10 +105,10 @@ WEB_SYSTEM_PROMPT = (
     "is a closer match, but close scores are NOT proof of the right chapter. "
     "Notebook hits include the statement's full text: READ THOSE FIRST, they often "
     "answer directly. Only then pick the best 1-2 hits (notebook or novel) to open.\n"
-    "4. Open, then answer in the SAME message, with chapter references. If the "
-    "opened passage answers, answer from it. If not, use the notebook statements, "
-    "or say plainly that the library does not cover it. Never search again after "
-    "opening.\n"
+    "4. Open, then judge the evidence. If the passage answers, prepare the answer "
+    "with chapter references. If it does not, keep using the available reading "
+    "tools until you have enough, or say plainly that the library does not cover "
+    "it.\n"
     "\n"
     "When to reach for the finders: exact phrases, quotes, and 'where does this \n"
     "character speak' are find_text work (grep for the novel), never meaning \n"
@@ -125,12 +125,13 @@ WEB_SYSTEM_PROMPT = (
     "Never narrate your steps: no 'let me search', no 'let me look' - tool calls "
     "are invisible to the reader, so write only the answer. Keep replies short "
     "and direct. You cannot modify the library.\n"
-    "A reply WITHOUT a tool call is your FINAL answer - the turn ends there and "
-    "you get one last heavy pass over everything you gathered, with no more "
-    "tools. So: if you still need evidence, call a tool in THIS message; never "
-    "write a plain reply as a placeholder or a 'let me check' promise, and "
-    "never answer from memory alone. When you have what you need, answer "
-    "fully, because you will not get another tool step.\n"
+    "A plain reply without a tool call is your answer candidate. Weaver validates "
+    "it before the reader sees it. If it names or writes a tool call, narrates "
+    "work you plan to do, or is a placeholder, it is rejected and you continue "
+    "with tools available. If you still need evidence, call a tool in THIS "
+    "message. Never answer from memory alone. When you answer, answer fully with "
+    "chapter citations, because your answer gets one final heavy reading pass "
+    "and then the turn ends.\n"
     "Tool calls are STRUCTURED, never text: do not write '<tool calls>', "
     "'<find_text: ...>', angle-bracket stage directions, or a JSON block as "
     "prose. Use the tool-call mechanism attached to your reply, or write the "
@@ -372,7 +373,7 @@ async def open_chat_runtime(
     # Plan 15 (owner 2026-08-08): the web locate phase sees a bounded
     # recent context, not the whole unbounded history. Caps the
     # per-step re-send cost (the slowness) and stops an old
-    # exchange from dominating the tool loop. The synthesis call
+    # exchange from dominating the tool loop. The final reading call
     # is curated separately in run_turn.
     web_context_budget = 200_000 if surface == "web" else None
     sw = SessionWeave(

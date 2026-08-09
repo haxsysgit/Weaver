@@ -1,9 +1,7 @@
-"""Reading-packet assembly for the two-phase turn (Plan 15 slice 3).
+"""Reading-packet assembly for Plan 15's final reading phase.
 
-Machinery, not the model: after the locate phase (the tool loop), the
-model's first no-tool draft is a summary of what it found, not the
-answer. This module assembles one ephemeral reading packet from the
-turn's own evidence:
+After the open reading loop produces a validated answer candidate, this
+module assembles one ephemeral reading packet from the turn's evidence:
 
 - every passage the model opened via read_chapters, re-opened with an
   expanded window (the dominant retrieval miss was the answer landing
@@ -13,8 +11,8 @@ turn's own evidence:
 - the spoiler judge's verdict for the answer framing, from the user's
   position and knob (never a model argument)
 
-The packet is plain text appended to the final toolless synthesis call
-and is never persisted (temp-vs-durable split). Tier picks the size cap.
+The packet is plain text appended to the final toolless reading call and
+is never persisted. Tier picks the size cap.
 """
 
 from __future__ import annotations
@@ -110,8 +108,8 @@ def build_packet(
 ) -> Packet | None:
     """Assemble the reading packet from the turn's evidence.
 
-    Returns None when the turn produced no evidence (the draft stands as
-    the answer). Deterministic: same evidence, same packet.
+    Returns None when the turn produced no evidence (the candidate stands
+    as the answer). Deterministic: same evidence, same packet.
     """
     handles, notebook_hits = _collect_evidence(tool_results)
     if not handles and not notebook_hits:
@@ -122,7 +120,7 @@ def build_packet(
     citations: list[Citation] = []
 
     # 1. Opened passages, expanded windows, oldest first so trimming
-    # drops the earliest reads. Beat lines give the synthesis call the
+    # drops the earliest reads. Beat lines give the final reading call the
     # semantic shape of the story around the passage.
     opened = []
     for chapter, start, end in handles[:MAX_OPENED_PASSAGES]:

@@ -523,7 +523,7 @@ async def test_send_restart_projection():
         try:
             result2 = await sw2.send(conv_id, "Again")
             assert result2.exit_reason == "completed"
-            assert result2.model_steps == 1
+            assert result2.model_steps == 2
             assert result2.tool_starts == 0
 
             messages = provider2.calls[0].request.messages
@@ -817,8 +817,8 @@ async def test_runner_unbounded_default_preserves_plan008():
 
 
 # ---------------------------------------------------------------------------
-# Plan 010 Phase B: live text deltas through send(on_delta=...).
-# Deltas are a preview; the final assistant message is what persists.
+# Plan 010 Phase B plus Plan 015 validation: send(on_delta=...) keeps
+# candidate chunks private, then releases only the accepted answer.
 # ---------------------------------------------------------------------------
 
 
@@ -875,8 +875,8 @@ def _chunked_layer(response, *, chunk_size: int, gate=None):
 
 
 @pytest.mark.asyncio
-async def test_send_on_delta_streams_chunks_before_completion(tmp_path):
-    """Deltas arrive chunk by chunk while the send is still running."""
+async def test_send_on_delta_releases_only_the_validated_answer(tmp_path):
+    """Candidate chunks stay buffered until the accepted answer is known."""
     import asyncio
 
     received: list[str] = []
@@ -897,9 +897,9 @@ async def test_send_on_delta_streams_chunks_before_completion(tmp_path):
         task = asyncio.create_task(sw.send(conv_id, "hello", on_delta=collect))
         await asyncio.sleep(0.05)  # let the turn reach the mid-stream gate
 
-        # Mid-turn: the first chunk is already rendered, the send is not
-        # done yet.
-        assert received == ["Hello "]
+        # Mid-turn candidate text stays private until the complete reply
+        # has passed validation.
+        assert received == []
         assert not task.done()
 
         gate.set()
@@ -1580,7 +1580,10 @@ async def test_regenerate_last_turn_replaces_the_answer_in_place():
     with tempfile.TemporaryDirectory() as tmp:
         layer, model, provider = _fake_layer(
             _stop_response("First answer."),
+            _stop_response("First answer."),
             _stop_response("Second answer."),
+            _stop_response("Second answer."),
+            _stop_response("Regenerated answer."),
             _stop_response("Regenerated answer."),
         )
         registry = _echo_registry()

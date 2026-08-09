@@ -19,6 +19,7 @@ from weaver.agent.tools import (
 from weaver.agent.turn import (
     ANSWER_MAX_OUTPUT_TOKENS,
     TurnExitReason,
+    _is_working_note_candidate,
     run_turn,
 )
 from weaver import (
@@ -49,6 +50,7 @@ def model_response(
     tool_calls: tuple[ModelToolCall, ...] = (),
     raw_stop_reason: str | None = None,
     error_category: str | None = None,
+    reasoning_content: str | None = None,
 ) -> ModelResponse:
     model = _model_spec()
     return ModelResponse(
@@ -56,6 +58,7 @@ def model_response(
             role="assistant",
             content=content,
             tool_calls=tool_calls,
+            reasoning_content=reasoning_content,
         ),
         provider_id=model.provider_id,
         model_id=model.model_id,
@@ -76,12 +79,14 @@ def stop_response(text: str) -> ModelResponse:
 def tool_response(
     *tool_calls: ModelToolCall,
     content: str | None = None,
+    reasoning_content: str | None = None,
 ) -> ModelResponse:
     return model_response(
         stop_reason=ModelStopReason.TOOL_USE,
         content=content,
         tool_calls=tuple(tool_calls),
         raw_stop_reason="tool_calls",
+        reasoning_content=reasoning_content,
     )
 
 
@@ -442,7 +447,9 @@ class TestTurnProtocol:
 
         assert result.exit_reason == TurnExitReason.COMPLETED
         assert result.final_text == "Hello, reader."
-        assert result.model_steps == 1
+        # A zero-evidence answer candidate gets one bounded confirmation
+        # pass, then the second candidate publishes.
+        assert result.model_steps == 2
         assert result.tool_starts == 0
         assert provider.calls[0].max_output_tokens == 777
         assert len(result.new_messages) == 1
@@ -1059,10 +1066,10 @@ class TestReasoningTiers:
         }
 
 
-class TestTwoPhaseSynthesis:
-    """Plan 15 slice 3: the first no-tool draft triggers the packet."""
+class TestFinalReadingPhase:
+    """Plan 15: validated candidates get one fail-soft reading pass."""
 
-    async def test_synthesis_call_writes_the_final_answer(self) -> None:
+    async def test_final_reading_call_writes_the_answer(self) -> None:
         layer, model, provider = scripted_layer(
             tool_response(tool_call("c1", "echo", '{"message": "a"}')),
             stop_response("Draft: I found the passage."),
@@ -1087,7 +1094,7 @@ class TestTwoPhaseSynthesis:
         assert result.final_text == "Final: Saint came from chapter 104."
         assert calls == [(1, "Draft: I found the passage.")]
         assert len(provider.calls) == 3
-        # the draft is ephemeral: only the final answer is persisted
+        # The candidate is ephemeral: only the final answer is persisted.
         assert [m.kind for m in persisted] == [
             "assistant",
             "tool_call",
@@ -1095,13 +1102,16 @@ class TestTwoPhaseSynthesis:
             "assistant",
         ]
         assert persisted[-1].content == "Final: Saint came from chapter 104."
-        # the synthesis request carries the packet and no tools
-        synthesis_request = provider.calls[-1].request
-        assert synthesis_request.tools == ()
-        assert any("PACKET: chapter 104 prose" in (m.content or "") for m in synthesis_request.messages)
+        final_request = provider.calls[-1].request
+        assert final_request.tools == ()
+        assert final_request.tool_choice is None
+        assert any(
+            "PACKET: chapter 104 prose" in (message.content or "")
+            for message in final_request.messages
+        )
 
-    async def test_synthesis_call_keeps_the_tier_effort(self) -> None:
-        # The tier effort (high / max) belongs to the heavy synthesis
+    async def test_final_reading_call_keeps_the_tier_effort(self) -> None:
+        # The tier effort (high / max) belongs to the heavy final reading
         # answer call; locate steps drop to low (thinking still on).
         layer, model, provider = scripted_layer(
             tool_response(tool_call("c1", "echo", '{"message": "a"}')),
@@ -1122,17 +1132,17 @@ class TestTwoPhaseSynthesis:
         )
         assert result.exit_reason == TurnExitReason.COMPLETED
         assert len(provider.calls) == 3
-        # locate steps (the tool call and the draft) use the low effort.
+        # Locate steps (the tool call and candidate) use low effort.
         assert provider.calls[0].request.reasoning.effort == "low"
         assert provider.calls[1].request.reasoning.effort == "low"
-        # the synthesis answer call keeps the tier effort.
+        # The final reading call keeps the tier effort.
         assert provider.calls[2].request.reasoning.effort == "max"
         for call in provider.calls:
             assert call.request.reasoning.enabled is True
 
-    async def test_synthesis_call_keeps_recent_exchanges_drops_old_ones(self) -> None:
+    async def test_final_reading_keeps_recent_exchanges_drops_old_ones(self) -> None:
         # The "7 daemons" bug: the WHOLE conversation history dominated
-        # the synthesis call, so the model answered the previous question
+        # the final reading call, so the model answered the previous question
         # instead of the one just asked. The window keeps the last few
         # exchanges (continuity: follow-ups must know the previous Q&A)
         # and drops everything older than that.
@@ -1176,19 +1186,19 @@ class TestTwoPhaseSynthesis:
             history=history,
             packet_builder=packet_builder,
         )
-        synthesis_request = provider.calls[-1].request
-        joined = " ".join((m.content or "") for m in synthesis_request.messages)
+        final_request = provider.calls[-1].request
+        joined = " ".join((m.content or "") for m in final_request.messages)
         assert "PACKET: daemon statements" in joined
         assert "list the 7 daemons" in joined
         # continuity: the previous exchange stays in the window
         assert "Anvil gets cooked" in joined
         # the exchange before that is beyond the window and must not leak
         assert "dark sea swallowed Nephis" not in joined
-        assert synthesis_request.tools == ()
+        assert final_request.tools == ()
 
-    async def test_synthesis_request_carries_the_answer_token_cap(self) -> None:
+    async def test_final_reading_request_carries_the_answer_token_cap(self) -> None:
         # The daemons answer was cut mid-sentence at finish_reason=
-        # "length": the synthesis call sent the default 4096 max_tokens
+        # "length": the final call sent the default 4096 max_tokens
         # while thinking is on, and DeepSeek counts reasoning tokens
         # against it. Answer calls must carry headroom; tool-call calls
         # keep the model default.
@@ -1211,13 +1221,13 @@ class TestTwoPhaseSynthesis:
         assert len(provider.calls) == 3
         # first call: a locate tool step, keeps the default cap (None)
         assert provider.calls[0].request.max_output_tokens is None
-        # last call: the synthesis answer, must have headroom
+        # Last call: the final reading answer must have headroom.
         assert (
             provider.calls[-1].request.max_output_tokens
             == ANSWER_MAX_OUTPUT_TOKENS
         )
 
-    async def test_builder_none_keeps_the_draft(self) -> None:
+    async def test_builder_none_keeps_the_candidate(self) -> None:
         layer, model, provider = scripted_layer(
             tool_response(tool_call("c1", "echo", '{"message": "a"}')),
             stop_response("Draft answer."),
@@ -1239,25 +1249,36 @@ class TestTwoPhaseSynthesis:
         assert len(provider.calls) == 2
         assert [m.kind for m in persisted][-1] == "assistant"
 
-    async def test_no_synthesis_without_tool_evidence(self) -> None:
-        layer, model, provider = scripted_layer(stop_response("Plain answer."))
+    async def test_zero_evidence_candidate_gets_one_reprompt_then_publishes(
+        self,
+    ) -> None:
+        layer, model, provider = scripted_layer(
+            stop_response("First direct answer."),
+            stop_response("Second direct answer."),
+        )
         called = []
 
         async def packet_builder(results, draft):
-            called.append(draft)
-            return "PACKET"
+            called.append((results, draft))
+            return None
 
         result = await execute_turn(
             layer,
             model,
             registry=make_registry(),
+            active_tools=("echo",),
             packet_builder=packet_builder,
         )
-        assert result.final_text == "Plain answer."
-        assert called == []
-        assert len(provider.calls) == 1
+        assert result.final_text == "Second direct answer."
+        assert called == [([], "Second direct answer.")]
+        assert len(provider.calls) == 2
+        assert all(call.request.tools for call in provider.calls)
+        assert any(
+            "without opening any evidence" in (message.content or "")
+            for message in provider.calls[1].request.messages
+        )
 
-    async def test_no_synthesis_after_forced_answer(self) -> None:
+    async def test_no_final_reading_after_forced_answer(self) -> None:
         layer, model, provider = scripted_layer(
             tool_response(tool_call("c1", "echo", '{"message": "a"}')),
             stop_response("Forced answer."),
@@ -1280,7 +1301,7 @@ class TestTwoPhaseSynthesis:
         assert called == []
         assert len(provider.calls) == 2
 
-    async def test_tool_use_after_synthesis_is_a_protocol_failure(self) -> None:
+    async def test_tool_use_in_final_phase_falls_back_to_candidate(self) -> None:
         layer, model, provider = scripted_layer(
             tool_response(tool_call("c1", "echo", '{"message": "a"}')),
             stop_response("Draft."),
@@ -1297,13 +1318,17 @@ class TestTwoPhaseSynthesis:
             active_tools=("echo",),
             packet_builder=packet_builder,
         )
-        assert result.exit_reason == TurnExitReason.MODEL_FAILED
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert result.final_text == "Draft."
+        assert len(provider.calls) == 3
+        assert provider.calls[-1].request.tools == ()
+        assert all(call.request.tool_choice is None for call in provider.calls)
 
-    async def test_synthesis_request_never_carries_orphaned_drafts(self) -> None:
-        # Plan 15 thread-break (2026-08-08): the synthesis request kept the
+    async def test_final_request_never_carries_orphaned_tool_drafts(self) -> None:
+        # Plan 15 thread-break (2026-08-08): the final request kept the
         # locate tool-use drafts, which carry tool_calls but no following
         # tool messages. DeepSeek 400s that (invalid_request/provider_error,
-        # reproduced live). The synthesis wire must contain only the
+        # reproduced live). The final reading wire must contain only the
         # content-bearing final locate draft: no assistant message with
         # tool_calls, no empty-content assistant message.
         layer, model, provider = scripted_layer(
@@ -1324,15 +1349,15 @@ class TestTwoPhaseSynthesis:
         )
         assert result.exit_reason == TurnExitReason.COMPLETED
         assert result.final_text == "Final: chapter 104."
-        synthesis = provider.calls[-1].request.messages
-        for m in synthesis:
+        final_messages = provider.calls[-1].request.messages
+        for m in final_messages:
             if m.role == "assistant":
-                assert not m.tool_calls, "orphaned tool_calls in synthesis request"
-                assert m.content, "empty assistant message in synthesis request"
-        drafts = [m for m in synthesis if m.role == "assistant"]
-        assert [m.content for m in drafts] == ["Draft: found it."]
+                assert not m.tool_calls, "orphaned tool_calls in final request"
+                assert m.content, "empty assistant message in final request"
+        candidates = [m for m in final_messages if m.role == "assistant"]
+        assert [m.content for m in candidates] == ["Draft: found it."]
 
-    async def test_synthesis_window_drops_previous_tool_use_assistants(self) -> None:
+    async def test_final_window_drops_previous_tool_use_assistants(self) -> None:
         # Multi-turn thread-broke (2026-08-09): the recent window kept the
         # previous turn's tool-use assistant messages (tool_calls, empty
         # content) but skipped their tool results, so the synthesis request
@@ -1372,13 +1397,248 @@ class TestTwoPhaseSynthesis:
             history=history,
             packet_builder=packet_builder,
         )
-        synthesis_request = provider.calls[-1].request
-        for m in synthesis_request.messages:
+        final_request = provider.calls[-1].request
+        for m in final_request.messages:
             if m.role == "assistant":
-                assert not m.tool_calls, "previous turn tool calls leaked into synthesis"
-        joined = " ".join((m.content or "") for m in synthesis_request.messages)
+                assert not m.tool_calls, "previous turn tool calls leaked into final request"
+        joined = " ".join((m.content or "") for m in final_request.messages)
         assert "Weaver told Noctis" in joined  # continuity kept
         assert "chapter 2729" in joined
+
+
+    @pytest.mark.parametrize(
+        "final_response",
+        [
+            stop_response(""),
+            stop_response("   \n"),
+            stop_response("I can't answer that from the packet."),
+            model_response(
+                stop_reason=ModelStopReason.ERROR,
+                error_category="provider_error",
+            ),
+        ],
+        ids=["empty", "whitespace", "refusal", "provider-error"],
+    )
+    async def test_bad_final_phase_output_publishes_validated_candidate(
+        self,
+        final_response: ModelResponse,
+    ) -> None:
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response("Candidate grounded in chapter 104."),
+            final_response,
+        )
+        persisted: list = []
+
+        async def packet_builder(results, draft):
+            return "PACKET: chapter 104"
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            persist_message=_async_append(persisted),
+            packet_builder=packet_builder,
+        )
+
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert result.final_text == "Candidate grounded in chapter 104."
+        assert persisted[-1].content == "Candidate grounded in chapter 104."
+        assert len(provider.calls) == 3
+
+    async def test_packet_builder_failure_publishes_validated_candidate(
+        self,
+    ) -> None:
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response("Candidate grounded in chapter 104."),
+        )
+
+        async def packet_builder(results, draft):
+            raise RuntimeError("packet unavailable")
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            packet_builder=packet_builder,
+        )
+
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert result.final_text == "Candidate grounded in chapter 104."
+        assert len(provider.calls) == 2
+
+    async def test_final_phase_provider_exception_publishes_candidate(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response("Candidate grounded in chapter 104."),
+        )
+        original_stream = provider.stream
+
+        async def fail_final_call(*args, **kwargs):
+            if len(provider.calls) == 2:
+                raise RuntimeError("provider unavailable")
+            async for event in original_stream(*args, **kwargs):
+                yield event
+
+        monkeypatch.setattr(provider, "stream", fail_final_call)
+
+        async def packet_builder(results, draft):
+            return "PACKET: chapter 104"
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            packet_builder=packet_builder,
+        )
+
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert result.final_text == "Candidate grounded in chapter 104."
+
+
+class TestCandidateValidation:
+    WORKING_NOTE_CASES = [
+        ("One moment, please.", "That single moment changed the battle."),
+        ("Give me a moment to confirm.", "Give Sunny time to recover."),
+        ("Let me look through the chapters.", "The look on his face gave it away."),
+        ("Let me search for that name.", "The search ended in chapter 12."),
+        ("Let me check the exact wording.", "Check chapter 12 for the wording."),
+        ("I'll search the later chapters.", "The search covered later chapters."),
+        ("I'll look for the scene.", "I looked at the scene in chapter 12."),
+        ("I'll check the passage.", "The passage checks out against chapter 12."),
+        ("I'll trace the name first.", "The trace remained on his soul."),
+        ("I'll open the best result.", "The best result opens in chapter 12."),
+        ("I need to verify that claim.", "The chapter verifies that claim."),
+        ("Reaching into the story map now.", "The story map resolves Auro."),
+        ("Searching the library now.", "The library search found chapter 12."),
+    ]
+
+    @pytest.mark.parametrize(
+        ("working_note", "legitimate_answer"),
+        WORKING_NOTE_CASES,
+    )
+    def test_working_note_markers_are_tight(
+        self,
+        working_note: str,
+        legitimate_answer: str,
+    ) -> None:
+        assert _is_working_note_candidate(working_note)
+        assert not _is_working_note_candidate(legitimate_answer)
+
+    @pytest.mark.parametrize(
+        "rejected",
+        [
+            "<echo: exact name>",
+            '<tool calls>\n```json\n[{"name":"echo","arguments":{}}]\n```',
+            "I'll trace the exact name first.",
+            "Give me a moment to check.",
+            "   \n",
+        ],
+        ids=["angle-bracket", "json", "narration", "placeholder", "empty"],
+    )
+    async def test_rejected_candidate_keeps_tools_and_can_dispatch_next_tool(
+        self,
+        rejected: str,
+    ) -> None:
+        layer, model, provider = scripted_layer(
+            stop_response(rejected),
+            tool_response(tool_call("c1", "echo", '{"message": "evidence"}')),
+            stop_response("Grounded answer from chapter 12."),
+        )
+        starts: dict[str, int] = {}
+        persisted: list = []
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(starts),
+            active_tools=("echo",),
+            persist_message=_async_append(persisted),
+        )
+
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert result.final_text == "Grounded answer from chapter 12."
+        assert starts == {"echo": 1}
+        assert provider.calls[1].request.tools
+        assert [message.kind for message in persisted] == [
+            "assistant",
+            "tool_call",
+            "tool_result",
+            "assistant",
+        ]
+        rejected_text = rejected.strip()
+        if rejected_text:
+            assert all(
+                rejected_text not in (getattr(message, "content", "") or "")
+                for message in persisted
+            )
+
+    async def test_repeated_tool_calls_keep_reasoning_content_in_context(
+        self,
+    ) -> None:
+        layer, model, provider = scripted_layer(
+            tool_response(
+                tool_call("c1", "echo", '{"message": "first"}'),
+                reasoning_content="first private reasoning",
+            ),
+            tool_response(
+                tool_call("c2", "echo", '{"message": "second"}'),
+                reasoning_content="second private reasoning",
+            ),
+            stop_response("Grounded answer."),
+        )
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+        )
+
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        second_request_reasoning = [
+            message.reasoning_content
+            for message in provider.calls[1].request.messages
+            if message.role == "assistant" and message.tool_calls
+        ]
+        final_candidate_reasoning = [
+            message.reasoning_content
+            for message in provider.calls[2].request.messages
+            if message.role == "assistant" and message.tool_calls
+        ]
+        assert second_request_reasoning == ["first private reasoning"]
+        assert final_candidate_reasoning == [
+            "first private reasoning",
+            "second private reasoning",
+        ]
+
+    async def test_working_note_rejection_limit_fails_without_persisting(
+        self,
+    ) -> None:
+        layer, model, _ = scripted_layer(
+            stop_response("Let me check."),
+            stop_response("I'll search."),
+            stop_response("One moment."),
+        )
+        persisted: list = []
+
+        result = await execute_turn(
+            layer,
+            model,
+            active_tools=("echo",),
+            persist_message=_async_append(persisted),
+        )
+
+        assert result.exit_reason == TurnExitReason.MODEL_FAILED
+        assert result.model_steps == 3
+        assert persisted == []
 
 
 class TestTextToolCallSlips:
@@ -1434,14 +1694,13 @@ class TestTextToolCallSlips:
             for m in persisted
         )
 
-    async def test_text_tool_call_on_synthesis_is_corrected_tools_stay_stripped(
+    async def test_text_tool_call_in_final_phase_falls_back_to_candidate(
         self,
     ) -> None:
         layer, model, provider = scripted_layer(
             tool_response(tool_call("c1", "echo", '{"message": "a"}')),
-            stop_response("Draft: found."),
+            stop_response("Candidate: found."),
             stop_response(self.SLIP),
-            stop_response("Final: the answer."),
         )
         persisted: list = []
 
@@ -1457,36 +1716,30 @@ class TestTextToolCallSlips:
             packet_builder=packet_builder,
         )
         assert result.exit_reason == TurnExitReason.COMPLETED
-        assert result.final_text == "Final: the answer."
-        assert len(provider.calls) == 4
-        # the corrective call is still the synthesis call: tools stripped,
-        # the packet still present, plus the correction message
-        corrective = provider.calls[3].request
-        assert corrective.tools == ()
+        assert result.final_text == "Candidate: found."
+        assert len(provider.calls) == 3
+        final_request = provider.calls[2].request
+        assert final_request.tools == ()
         assert any(
-            "PACKET: prose" in (m.content or "") for m in corrective.messages
+            "PACKET: prose" in (m.content or "")
+            for m in final_request.messages
         )
-        assert any(
-            "final answer phase" in (m.content or "").lower()
-            for m in corrective.messages
-        )
-        # only the final answer is persisted, never the slip
+        # The final-phase slip is never persisted and never gets a retry.
         assert [m.kind for m in persisted] == [
             "assistant",
             "tool_call",
             "tool_result",
             "assistant",
         ]
-        assert persisted[-1].content == "Final: the answer."
+        assert persisted[-1].content == "Candidate: found."
 
-    async def test_angle_bracket_tool_narration_is_corrected_on_synthesis(
+    async def test_angle_bracket_tool_narration_in_final_phase_uses_candidate(
         self,
     ) -> None:
         layer, model, provider = scripted_layer(
             tool_response(tool_call("c1", "echo", '{"message": "auro"}')),
-            stop_response("Draft: evidence found."),
-            stop_response(self.ANGLE_BRACKET_SLIP),
             stop_response("Auro was one of the Nine."),
+            stop_response(self.ANGLE_BRACKET_SLIP),
         )
         persisted: list = []
 
@@ -1504,12 +1757,8 @@ class TestTextToolCallSlips:
 
         assert result.exit_reason == TurnExitReason.COMPLETED
         assert result.final_text == "Auro was one of the Nine."
-        assert len(provider.calls) == 4
-        assert provider.calls[3].request.tools == ()
-        assert any(
-            "final answer phase" in (message.content or "").lower()
-            for message in provider.calls[3].request.messages
-        )
+        assert len(provider.calls) == 3
+        assert provider.calls[2].request.tools == ()
         assert all(
             "find_text" not in (getattr(message, "content", "") or "")
             for message in persisted

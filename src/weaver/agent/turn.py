@@ -62,7 +62,7 @@ TOOL_BUDGET_TIERS: dict[str, int] = {
 # Plan 15 (owner 2026-08-08): search/locate steps do not need the tier's
 # full reasoning effort. Thinking stays on for every call, but tool-call
 # steps (and a no-packet final answer) drop to low so the search loop is
-# fast; the heavy synthesis answer call keeps the tier effort (high/max).
+# fast; the final reading call keeps the tier effort (high/max).
 # DeepSeek flash documents reasoning_effort low/high/max.
 LOCATE_REASONING_EFFORT: ReasoningEffort = "low"
 
@@ -94,32 +94,42 @@ PacketBuilder = Callable[[list[ToolResult], str], Awaitable[str | None]]
 ToolEventCallback = Callable[[str, str, str], Awaitable[None]]
 
 
-async def _complete_streaming(
+async def _complete_buffered_stream(
     model_layer: ModelLayer,
     model: ModelSpec,
     request: ModelRequest,
     cancel_event: asyncio.Event,
-    on_delta: DeltaCallback,
-) -> ModelResponse:
-    """Drain the model stream, forwarding TEXT_DELTA events to on_delta.
+) -> tuple[ModelResponse, tuple[str, ...]]:
+    """Drain a model stream without exposing unvalidated text.
 
-    Mirrors ModelLayer.complete (same terminal-response validation) but
-    delivers each text chunk as it arrives.
+    The caller releases the buffered chunks only after deciding which
+    answer is safe to publish.
     """
     final_response: ModelResponse | None = None
+    text_deltas: list[str] = []
     async for event in model_layer.stream(model, request, cancel_event):
         if event.event_type == ModelStreamEventType.TEXT_DELTA and event.delta:
-            try:
-                await on_delta(event.delta)
-            except Exception:
-                logger.warning("delta callback failed", exc_info=True)
+            text_deltas.append(event.delta)
         elif event.event_type == ModelStreamEventType.RESPONSE_COMPLETE:
             final_response = event.response
     if final_response is None:
         raise ModelProtocolError(
             "A model stream completed without a final response."
         )
-    return final_response
+    return final_response, tuple(text_deltas)
+
+
+async def _publish_deltas(
+    deltas: tuple[str, ...],
+    on_delta: DeltaCallback | None,
+) -> None:
+    if on_delta is None:
+        return
+    for delta in deltas:
+        try:
+            await on_delta(delta)
+        except Exception:
+            logger.warning("delta callback failed", exc_info=True)
 
 
 # Plan 15 (owner 2026-08-08): the answer call must never truncate. The
@@ -131,7 +141,7 @@ async def _complete_streaming(
 # calls get headroom.
 ANSWER_MAX_OUTPUT_TOKENS = 16384
 
-# Plan 15 (owner 2026-08-08): the synthesis call must keep conversation
+# Plan 15 (owner 2026-08-08): the final reading call keeps conversation
 # continuity without letting an old exchange dominate. The window is the
 # last three owner/assistant exchanges (the immediate question plus two
 # previous Q&A pairs); anything older is dropped and only survives in
@@ -149,15 +159,42 @@ TEXT_TOOL_CORRECTION = (
     "mechanism attached to your reply, or, if you have enough to "
     "answer, write the answer directly."
 )
-FINAL_ANSWER_CORRECTION = (
-    "You are in the final answer phase. No tools are available and the "
-    "reading packet is complete. Do not name or describe tool calls, searches, "
-    "or future work. Answer the user directly from the evidence above."
+WORKING_NOTE_CORRECTION = (
+    "Your previous message was a placeholder or narrated work you had not "
+    "done. Call a tool now if you need evidence, or answer the user fully "
+    "and directly."
+)
+ZERO_EVIDENCE_CORRECTION = (
+    "You answered without opening any evidence this turn. The library is the "
+    "only source of truth: run at least one search or read, or say honestly "
+    "that the library does not cover it. If this is not a lore question, just "
+    "answer directly."
 )
 FINAL_ANSWER_INSTRUCTION = (
     "This is the final answer phase. The evidence packet above is complete and "
     "no tools are available. Answer the user directly, citing chapters. Do not "
     "name or describe searches, tool calls, or work you plan to do."
+)
+WORKING_NOTE_MARKERS = (
+    "one moment",
+    "give me a moment",
+    "let me look",
+    "let me search",
+    "let me check",
+    "i'll search",
+    "i'll look",
+    "i'll check",
+    "i'll trace",
+    "i'll open",
+    "i need to verify",
+    "reaching into the",
+    "searching the library",
+)
+FINAL_REFUSAL_MARKERS = (
+    "i can't answer",
+    "i cannot answer",
+    "i'm unable to answer",
+    "i am unable to answer",
 )
 KNOWN_READING_TOOL_NAMES = frozenset(
     {
@@ -189,6 +226,29 @@ def _is_textual_tool_call(content: str, tool_names: tuple[str, ...]) -> bool:
         if tag_name in known_tool_names:
             return True
     return False
+
+
+def _is_working_note_candidate(content: str) -> bool:
+    """True when a plain reply only promises or narrates future work."""
+    casefolded = content.casefold()
+    return any(marker in casefolded for marker in WORKING_NOTE_MARKERS)
+
+
+def _candidate_rejection_note(
+    content: str,
+    tool_names: tuple[str, ...],
+) -> str | None:
+    if _is_textual_tool_call(content, tool_names):
+        return TEXT_TOOL_CORRECTION
+    if not content.strip() or _is_working_note_candidate(content):
+        return WORKING_NOTE_CORRECTION
+    return None
+
+
+def _is_final_phase_refusal(content: str) -> bool:
+    """True for a direct refusal produced while enhancing a valid answer."""
+    casefolded = content.strip().casefold()
+    return any(casefolded.startswith(marker) for marker in FINAL_REFUSAL_MARKERS)
 
 
 class TurnExitReason(str, Enum):
@@ -301,7 +361,7 @@ def _recent_exchanges(
     """
     # Keep user messages and content-bearing assistant answers only.
     # Tool-use assistants from earlier turns (tool_calls, empty content)
-    # must never reach the synthesis wire: their tool results are skipped
+    # must never reach the final reading wire: their tool results are skipped
     # here, so keeping them orphaned the tool_calls and DeepSeek 400'd
     # (invalid_request) exactly when holding a conversation.
     messages = [
@@ -376,11 +436,10 @@ async def run_turn(
     max_model_steps: int = 5,
     tool_budget: int | None = None,
     reasoning: ReasoningEffort | None = None,
-    # Plan 15 two-phase seam: called with the turn's tool results and the
-    # model's draft answer when the model first stops without calling a
-    # tool. Returns the reading packet text, or None to accept the draft
-    # as final. A non-None packet triggers one final toolless synthesis
-    # call with the packet in context; the draft is never persisted.
+    # Plan 15 final reading seam: called after a candidate passes the
+    # mechanical checks. Returns the reading packet text, or None when
+    # there is no evidence to re-read. The candidate remains ephemeral
+    # until the final reading call succeeds or falls back to it.
     packet_builder: PacketBuilder | None = None,
 ) -> TurnResult:
     max_steps = min(max(max_model_steps, 1), _MAX_MODEL_STEPS)
@@ -402,10 +461,12 @@ async def run_turn(
     provider_name = ""
     completed_response = False
     exit_reason = TurnExitReason.COMPLETED
-    synthesis_packet: str | None = None
-    synthesis_requested = False
-    text_tool_slips = 0
-    text_tool_note: str | None = None
+    final_packet: str | None = None
+    validated_candidate: AssistantMessage | None = None
+    validated_candidate_deltas: tuple[str, ...] = ()
+    candidate_rejections = 0
+    candidate_note: str | None = None
+    zero_evidence_reprompted = False
 
     try:
         tool_schemas = tool_registry.active_schemas(active_tools)
@@ -424,6 +485,16 @@ async def run_turn(
     input_characters = _input_characters(initial_messages)
     known_call_ids = _known_call_ids(history)
 
+    async def persist_answer(
+        answer: AssistantMessage,
+        deltas: tuple[str, ...],
+    ) -> bool:
+        new_messages.append(answer)
+        persisted = await _persist(answer, persist_message)
+        if persisted:
+            await _publish_deltas(deltas, on_delta)
+        return persisted
+
     while model_steps < max_steps:
         if cancel_event.is_set():
             exit_reason = TurnExitReason.INTERRUPTED
@@ -433,51 +504,42 @@ async def run_turn(
         model_steps += 1
         # Plan 15: the budget is visible to the model so it can plan, and
         # the call after the last tool step is forced to be the answer.
-        forced_answer = tool_budget is not None and tool_steps_used >= tool_budget
-        synthesis_requested = False
+        in_final_phase = final_packet is not None and validated_candidate is not None
+        forced_answer = (
+            not in_final_phase
+            and tool_budget is not None
+            and tool_steps_used >= tool_budget
+        )
         request_messages = project_messages(
             system_prompt=system_prompt,
             history=history + new_messages,
         )
-        if synthesis_packet is not None:
-            # Plan 15: the packet is ephemeral context for the single
-            # synthesis call; tools are stripped so the model must write
-            # the answer from the packet.
-            #
-            # Owner 2026-08-08: the synthesis call must NOT carry the
+        if in_final_phase:
+            # The packet is ephemeral context for one fail-soft final
+            # reading call. This call must NOT carry the
             # whole conversation history (an older exchange's answer can
             # dominate the model and it replies to the wrong question),
             # but it also must not forget the conversation (follow-ups
             # like "and what about the 6th daemon?" need the previous
-            # exchange). Curate: the system prompt, the last few
-            # exchanges, the locate draft, and the packet.
+            # exchange). Curate the recent exchanges, validated candidate,
+            # and packet. Current-turn tool transcripts stay out because
+            # their evidence has already been folded into the packet.
             recent = _recent_exchanges(
                 history,
                 max_exchanges=SYNTHESIS_HISTORY_EXCHANGES,
             )
-            # Only the content-bearing final locate draft reaches the
-            # synthesis call. The locate tool-use drafts carry tool_calls
-            # with no following tool messages (and empty content), which
-            # DeepSeek rejects with a 400 invalid_request - reproduced
-            # live 2026-08-08 after the 'the thread broke' failure.
-            draft_messages = [
-                m
-                for m in new_messages
-                if m.kind == "assistant" and m.content
-            ]
             request_messages = project_messages(
                 system_prompt=system_prompt,
-                history=recent + draft_messages,
+                history=[*recent, validated_candidate],
             )
             request_messages = [
                 *request_messages,
                 ModelMessage(
                     role="system",
-                    content=synthesis_packet + "\n\n" + FINAL_ANSWER_INSTRUCTION,
+                    content=final_packet + "\n\n" + FINAL_ANSWER_INSTRUCTION,
                 ),
             ]
-            synthesis_requested = True
-        if tool_budget is not None:
+        if tool_budget is not None and not in_final_phase:
             remaining = tool_budget - tool_steps_used
             if forced_answer or remaining <= BUDGET_REMINDER_THRESHOLD:
                 reminder = (
@@ -490,37 +552,37 @@ async def run_turn(
                     *request_messages,
                     ModelMessage(role="system", content=reminder),
                 ]
-        if text_tool_note is not None:
+        if candidate_note is not None:
             request_messages = [
                 *request_messages,
-                ModelMessage(role="system", content=text_tool_note),
+                ModelMessage(role="system", content=candidate_note),
             ]
-            text_tool_note = None
+            candidate_note = None
         request = ModelRequest(
             messages=tuple(request_messages),
             # Plan 15: on the forced call the tools are stripped from the
             # request (hermes-style), so the model physically cannot call
             # one and must write the answer.
-            tools=() if (forced_answer or synthesis_packet is not None) else tuple(tool_schemas),
+            tools=() if (forced_answer or in_final_phase) else tuple(tool_schemas),
             # Plan 15: answer calls get headroom so a long answer with a
             # long thinking trace never truncates (see the daemons turn);
             # tool-call calls keep the model default (4096).
             max_output_tokens=(
                 ANSWER_MAX_OUTPUT_TOKENS
-                if (synthesis_packet is not None or forced_answer)
+                if (in_final_phase or forced_answer)
                 else None
             ),
             # Plan 15 (owner 2026-08-07): thinking stays on for every
             # tier; the tier only picks the reasoning effort. None keeps
             # the pre-tier behavior (thinking disabled, no effort).
-            # Plan 15 (owner 2026-08-08): answer calls (synthesis or the
-            # forced call) keep the tier effort; locate steps drop to low.
+            # Plan 15 (owner 2026-08-08): final reading and forced answer
+            # calls keep the tier effort; locate steps drop to low.
             reasoning=(
                 ModelReasoning(
                     enabled=True,
                     effort=(
                         reasoning
-                        if (synthesis_packet is not None or forced_answer)
+                        if (in_final_phase or forced_answer)
                         else LOCATE_REASONING_EFFORT
                     ),
                 )
@@ -529,6 +591,8 @@ async def run_turn(
             ),
         )
 
+        response: ModelResponse | None = None
+        response_deltas: tuple[str, ...] = ()
         try:
             if on_delta is None:
                 # Plan 008 behavior: drain the stream, no live preview.
@@ -538,14 +602,13 @@ async def run_turn(
                     cancel_event,
                 )
             else:
-                # Phase B: forward deltas as they arrive; the final
-                # response still comes back whole for persistence.
-                response = await _complete_streaming(
+                # Candidate text stays buffered until validation chooses
+                # the one answer that may reach the public callback.
+                response, response_deltas = await _complete_buffered_stream(
                     model_layer,
                     model,
                     request,
                     cancel_event,
-                    on_delta,
                 )
         except asyncio.CancelledError:
             exit_reason = TurnExitReason.INTERRUPTED
@@ -553,12 +616,64 @@ async def run_turn(
             break
         except Exception:
             logger.warning("model request failed", exc_info=True)
-            exit_reason = TurnExitReason.MODEL_FAILED
-            safe_failure = safe_error("model")
+            if not in_final_phase:
+                exit_reason = TurnExitReason.MODEL_FAILED
+                safe_failure = safe_error("model")
+                break
+
+        if response is None:
+            # The final reading pass only enhances an answer that already
+            # passed validation. A provider failure cannot erase it.
+            assert validated_candidate is not None
+            if not await persist_answer(
+                validated_candidate,
+                validated_candidate_deltas,
+            ):
+                exit_reason = TurnExitReason.PERSISTENCE_FAILED
+                safe_failure = safe_error("assistant_persistence")
+                break
+            final_text = validated_candidate.content
+            completed_response = True
             break
 
         model_name = response.model_id
         provider_name = response.provider_id
+
+        if in_final_phase:
+            if response.stop_reason == ModelStopReason.ABORTED:
+                exit_reason = TurnExitReason.INTERRUPTED
+                safe_failure = safe_error("interrupted")
+                break
+
+            assert validated_candidate is not None
+            answer = validated_candidate
+            answer_deltas = validated_candidate_deltas
+            if _response_matches_model(response, model):
+                response_message = response.assistant_message
+                rejection_note = _candidate_rejection_note(
+                    response_message.content or "",
+                    active_tools,
+                )
+                valid_final = (
+                    response.stop_reason == ModelStopReason.STOP
+                    and not response_message.tool_calls
+                    and rejection_note is None
+                    and not _is_final_phase_refusal(response_message.content or "")
+                )
+                if valid_final:
+                    answer = _assistant_message(
+                        turn_id=turn_id,
+                        response_message=response_message,
+                    )
+                    answer_deltas = response_deltas
+            if not await persist_answer(answer, answer_deltas):
+                exit_reason = TurnExitReason.PERSISTENCE_FAILED
+                safe_failure = safe_error("assistant_persistence")
+                break
+            final_text = answer.content
+            completed_response = True
+            break
+
         if not _response_matches_model(response, model):
             exit_reason = TurnExitReason.MODEL_FAILED
             safe_failure = safe_error("model_protocol")
@@ -591,6 +706,7 @@ async def run_turn(
                 exit_reason = TurnExitReason.PERSISTENCE_FAILED
                 safe_failure = safe_error("assistant_persistence")
                 break
+            await _publish_deltas(response_deltas, on_delta)
             exit_reason = TurnExitReason.INCOMPLETE
             final_text = interrupted.content
             safe_failure = safe_error("incomplete")
@@ -605,50 +721,54 @@ async def run_turn(
                 turn_id=turn_id,
                 response_message=response_message,
             )
-            # A text-form tool call is never an answer (2026-08-09 live
-            # turn: the model wrote '<tool calls>' plus JSON as the
-            # synthesis reply because tools were stripped). Correct and
-            # re-run: locate calls keep tools, the synthesis call stays
-            # stripped with its packet intact (synthesis_packet survives
-            # so the corrective call still sees the evidence). The slip
-            # is ephemeral, never persisted. On the forced call the
-            # reminder already said the steps are spent; a slip there is
-            # a refusal, not an answer.
-            if _is_textual_tool_call(assistant.content or "", active_tools):
+            rejection_note = _candidate_rejection_note(
+                assistant.content,
+                active_tools,
+            )
+            if rejection_note is not None:
                 if forced_answer:
                     exit_reason = TurnExitReason.LIMIT_REACHED
                     safe_failure = safe_error("limit")
                     break
-                if text_tool_slips >= TEXT_TOOL_SLIP_LIMIT:
+                if candidate_rejections >= TEXT_TOOL_SLIP_LIMIT:
                     exit_reason = TurnExitReason.MODEL_FAILED
                     safe_failure = safe_error("model_protocol")
                     break
-                text_tool_slips += 1
-                text_tool_note = (
-                    FINAL_ANSWER_CORRECTION
-                    if synthesis_requested
-                    else TEXT_TOOL_CORRECTION
-                )
-                new_messages.append(assistant)
+                candidate_rejections += 1
+                candidate_note = rejection_note
                 continue
-            # Plan 15 two-phase: the first no-tool draft is a locate
-            # summary, not the answer. Assemble the packet from the
-            # turn's evidence and run one final toolless synthesis call.
-            # Never on the forced-answer call (budget exhausted) and
-            # never twice.
-            if (
-                packet_builder is not None
-                and not synthesis_requested
-                and not forced_answer
-                and turn_tool_results
-            ):
-                packet = await packet_builder(turn_tool_results, assistant.content)
-                if packet:
-                    new_messages.append(assistant)  # ephemeral, never persisted
-                    synthesis_packet = packet
-                    continue
-            new_messages.append(assistant)
-            if not await _persist(assistant, persist_message):
+
+            if forced_answer:
+                if not await persist_answer(assistant, response_deltas):
+                    exit_reason = TurnExitReason.PERSISTENCE_FAILED
+                    safe_failure = safe_error("assistant_persistence")
+                    break
+                final_text = assistant.content
+                completed_response = True
+                break
+
+            if tool_steps_used == 0 and not zero_evidence_reprompted:
+                zero_evidence_reprompted = True
+                candidate_note = ZERO_EVIDENCE_CORRECTION
+                continue
+
+            packet: str | None = None
+            if packet_builder is not None:
+                try:
+                    packet = await packet_builder(
+                        turn_tool_results,
+                        assistant.content,
+                    )
+                except Exception:
+                    logger.warning("reading packet build failed", exc_info=True)
+
+            if packet and model_steps < max_steps:
+                validated_candidate = assistant
+                validated_candidate_deltas = response_deltas
+                final_packet = packet
+                continue
+
+            if not await persist_answer(assistant, response_deltas):
                 exit_reason = TurnExitReason.PERSISTENCE_FAILED
                 safe_failure = safe_error("assistant_persistence")
                 break
@@ -657,11 +777,6 @@ async def run_turn(
             break
 
         if response.stop_reason != ModelStopReason.TOOL_USE:
-            exit_reason = TurnExitReason.MODEL_FAILED
-            safe_failure = safe_error("model_protocol")
-            break
-        if synthesis_requested:
-            # tools were stripped; a tool call here is a protocol break
             exit_reason = TurnExitReason.MODEL_FAILED
             safe_failure = safe_error("model_protocol")
             break
