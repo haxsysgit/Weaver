@@ -508,7 +508,7 @@ def register_reading_tools(
             name="find_text",
             description=(
                 "Exact-text finder, like grep for the novel. mode 'phrase': every line "
-                "containing an exact phrase, case-sensitive, for names, quotes and "
+                "containing an exact phrase, case-insensitive, for names, quotes and "
                 "distinctive in-world words. mode 'speaker': where a character SPEAKS - "
                 "pass the name, get their dialogue lines with context. Use when meaning "
                 "search cannot rank the answer (e.g. 'where does Weaver speak'). Returns "

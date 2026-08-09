@@ -251,3 +251,18 @@ async def test_who_is_unknown_name_suggests(service: LibraryService):
     assert res["ok"] is True
     assert res["result"]["found"] is False
     assert "person:sunny" in res["result"]["suggestions"]
+
+
+@pytest.mark.asyncio
+async def test_find_text_phrase_is_case_insensitive(service: LibraryService):
+    # Plan 15 (2026-08-09): a reader says "noctis" lowercase and must
+    # still find "Noctis" in the text (the novel capitalizes names).
+    upper = await service.find_text({"query": "FAKE KUNAI", "mode": "phrase"}, ctx())
+    lower = await service.find_text({"query": "fake kunai", "mode": "phrase"}, ctx())
+    mixed = await service.find_text({"query": "FaKe KuNaI", "mode": "phrase"}, ctx())
+    assert upper["result"]["hits"] == lower["result"]["hits"]
+    assert lower["result"]["hits"] == mixed["result"]["hits"]
+    assert any(
+        h["text"] == "sunny kills the leader with the fake kunai"
+        for h in lower["result"]["hits"]
+    )

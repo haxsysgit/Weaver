@@ -197,8 +197,10 @@ class ChapterIndex:
         """Exact substring scan over raw chapter text, like grep.
 
         Line 1 (the title heading) is never story text and is skipped.
+        Case-insensitive: a reader saying "noctis" finds "Noctis".
         Returns [{chapter, line, text}] capped at limit.
         """
+        needle = query.casefold()
         hits: list[dict] = []
         for chapter, text in self._scan():
             if chapter < chapter_from:
@@ -208,7 +210,7 @@ class ChapterIndex:
             for i, line in enumerate(text.splitlines(), start=1):
                 if i == 1:
                     continue
-                if query in line:
+                if needle in line.casefold():
                     hits.append({"chapter": chapter, "line": i, "text": line})
                     if len(hits) >= limit:
                         return hits

@@ -10,13 +10,45 @@
   verbatim, non-dict evidence raises ValueError.
 - Committed as 6db3462 (full suite 292 green).
 
-## Slice 2: the 1-1000 retrieval experiment (v2, 35 questions)
+## Slice 2: the retrieval experiments
+
+> Correction (2026-08-09): the first v2 run below used a 35-question set
+> derived from notebook statements, which the owner called out as a fatal
+> flaw (the notebook is not the canon, the novel is). The 40-question
+> whole-novel set (questions-v2.json: 20 grounded in chapters 1-1000, 20
+> in 1001-3127, every statement_id null so the notebook gets no edge,
+> 30 paraphrased, phrased as a reader asks) is the canon test data. The
+> honest numbers, whole novel at ceiling 3127 (v2-3127 report):
+
+| arm | hit@1 | hit@5 | hit@10 | MRR |
+|---|---|---|---|---|
+| 2-exact-notebook-sparse | 0.07 | 0.35 | 0.38 | 0.16 |
+| 3-dense-novel (bge-large) | 0.15 | 0.23 | 0.40 | 0.13 |
+| 5-notebook-connections | 0.10 | 0.23 | 0.28 | 0.13 |
+| 4-hybrid-rrf | 0.13 | 0.20 | 0.33 | 0.12 |
+| 4-hybrid-dbsf | 0.08 | 0.17 | 0.33 | 0.15 |
+| 1-exact-novel-sparse | 0.07 | 0.12 | 0.15 | 0.09 |
+
+> Verdict on the honest set: no single arm is a reliable answer machine.
+> The notebook arm is structurally capped (zero statements beyond
+> ch1000) and still leads, dense meaning search gives leads not answers
+> (the ch2976 Vile Thieving Bird battle ranked the ch81 spawn-kill first).
+> This is why the product pivoted to finder-based retrieval (find_text,
+> browse, read) inside the two-phase loop instead of trusting any one
+> arm. The 35-question numbers below are kept only as a historical
+> record of the circular set and must never be quoted as evidence.
+
+## Slice 2 appendix: the superseded 35-question run (circular test data)
 
 Private run material (question set, full reports, Qdrant stores) lives
 under `.weaver/research/retrieval-experiment/` and is never committed.
 Only the numbers are public.
 
-Setup (v2, after the chunking bug fix):
+Private run material (question set, full reports, Qdrant stores) lives
+under `.weaver/research/retrieval-experiment/` and is never committed.
+Only the numbers are public.
+
+Setup (35-question set, after the chunking bug fix):
 - 35 questions, 21 paraphrased, anchored to verified notebook statements.
   15 questions (q21-q35) were harvested from r/ShadowSlave threads and
   grounded in notebook evidence; the harvest caught two real notebook
