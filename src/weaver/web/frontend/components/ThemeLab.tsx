@@ -57,7 +57,7 @@ const INITIAL_THREADS: LabThread[] = [
   },
   {
     archived: false,
-    dateGroup: "This week",
+    dateGroup: "Others",
     id: "memory-spheres",
     pinned: false,
     preview: "memory lights circling a lonely soul core",
@@ -66,7 +66,7 @@ const INITIAL_THREADS: LabThread[] = [
   },
   {
     archived: true,
-    dateGroup: "This week",
+    dateGroup: "Others",
     id: "seven-suns",
     pinned: false,
     preview: "a later Soul Sea state, hidden while spoiler protection is active",
@@ -91,13 +91,13 @@ const INITIAL_MESSAGES: LabMessage[] = [
 const INITIAL_PREFERENCES: LabPreferences = {
   chapter: 1000,
   density: "comfortable",
-  fontSize: "medium",
-  glass: "subtle",
-  runeMode: "voice",
+  fontSize: "small",
+  glass: "immersive",
+  runeMode: "particles",
   soulMode: "still",
   spoilerMode: "protect",
   starIntensity: "balanced",
-  theme: "crimson",
+  theme: "void",
   tier: "ascended",
   volume: 5,
 };
@@ -302,7 +302,12 @@ export function ThemeLab() {
       data-theme={preferences.theme}
       data-testid="spell-surface-lab"
     >
-      <SpellBackground className="lab-spell-background" mode="alive" threadAlpha={threadAlpha} />
+      <SpellBackground
+        className="lab-spell-background"
+        mode="alive"
+        paused={settingsOpen}
+        threadAlpha={threadAlpha}
+      />
       <div aria-hidden="true" className="lab-galactic-band" />
       <div aria-hidden="true" className="lab-purple-depth" />
       <div aria-hidden="true" className="lab-star-flare flare-one" />

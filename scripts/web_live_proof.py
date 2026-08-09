@@ -98,7 +98,8 @@ class BrowserPage:
 
 
 def wait_for_server(base_url: str) -> None:
-    for _ in range(40):
+    deadline = time.monotonic() + 120
+    while time.monotonic() < deadline:
         try:
             urllib.request.urlopen(base_url + "/", timeout=2)
             return
@@ -492,9 +493,17 @@ def run_browser_checks(page: BrowserPage) -> dict[str, object]:
 
     page.evaluate("location.reload(); true")
     wait_for_app(page)
-    time.sleep(0.5)
     results["reload kept active conversation"] = page.evaluate(
-        "document.querySelector('.lab-thread-row.active') !== null"
+        """
+        (async () => {
+          for (let attempt = 0; attempt < 80; attempt += 1) {
+            if (document.querySelector('.lab-thread-row.active')) return true;
+            await new Promise((resolve) => setTimeout(resolve, 100));
+          }
+          return false;
+        })()
+        """,
+        await_promise=True,
     )
 
     results["desktop rail toggle"] = page.evaluate(

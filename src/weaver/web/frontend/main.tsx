@@ -33,7 +33,6 @@ createRoot(rootElement).render(
   ) : (
     <SpellSurfaceChatApp
       api={createHttpChatApi()}
-      modeLabel={metaContent("weaver-mode")}
       privacyLabel={metaContent("weaver-privacy")}
     />
   ),

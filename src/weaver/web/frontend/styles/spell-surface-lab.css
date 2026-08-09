@@ -1999,3 +1999,180 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* Final interaction pass: fold older date groups without removing them. */
+.lab-thread-group-toggle {
+  display: grid;
+  width: 100%;
+  min-height: 30px;
+  grid-template-columns: minmax(0, 1fr) auto 14px;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 9px 5px;
+  color: #70717b;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-align: left;
+  text-transform: uppercase;
+  transition: color 120ms ease, background 120ms ease;
+}
+
+.lab-thread-group-toggle:hover {
+  color: #b5b4bc;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.lab-thread-group-toggle small {
+  color: #555760;
+  font-size: 9px;
+  font-weight: 500;
+}
+
+.lab-thread-group-toggle svg {
+  width: 10px;
+  transform: rotate(-90deg);
+  transition: transform 160ms var(--ease-weave);
+}
+
+.lab-thread-group-toggle[aria-expanded="true"] svg {
+  transform: rotate(0);
+}
+
+.lab-thread-group-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition: grid-template-rows 180ms var(--ease-weave), opacity 140ms ease;
+}
+
+.lab-thread-group-body > div {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.lab-thread-group-body.collapsed {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
+/* Make the sea a touch clearer without adding another filter pass. */
+.spell-surface-live > .lab-soul-sea {
+  opacity: 0.8;
+}
+
+/* The moving star web already supplies depth. Removing continuous backdrop
+   blur leaves the same visual hierarchy and frees the compositor. */
+.spell-surface-live .lab-rail,
+.spell-surface-live .composer-shell,
+.spell-surface-live .lab-settings-backdrop {
+  backdrop-filter: none;
+}
+
+.lab-settings-backdrop {
+  animation: lab-settings-backdrop-in 140ms ease-out both;
+}
+
+.lab-settings-panel {
+  contain: layout paint;
+  will-change: opacity, transform;
+  animation: lab-settings-panel-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.lab-settings-content .lab-settings-section {
+  animation: lab-settings-section-in 150ms ease-out both;
+}
+
+.lab-settings-nav button,
+.lab-choice-grid button,
+.lab-theme-grid button,
+.lab-segmented-control button {
+  transition:
+    color 120ms ease,
+    border-color 120ms ease,
+    background-color 120ms ease,
+    transform 150ms var(--ease-weave);
+}
+
+.lab-choice-grid button:hover,
+.lab-theme-grid button:hover {
+  transform: translateY(-1px);
+}
+
+@keyframes lab-settings-backdrop-in {
+  from { opacity: 0; }
+}
+
+@keyframes lab-settings-panel-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.988); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes lab-settings-section-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* The composer becomes a small thread gate on focus. The gold filament only
+   moves during interaction, so it adds character without idle animation. */
+.spell-surface-live .composer-shell::before {
+  right: 64px;
+  left: 64px;
+  background: linear-gradient(90deg, transparent, rgba(232, 192, 120, 0.8), transparent);
+  opacity: 0.24;
+  transform: scaleX(0.18);
+  transition: opacity 180ms ease, transform 360ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.spell-surface-live .composer-shell::after {
+  position: absolute;
+  right: 29px;
+  bottom: -2px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #e8c078;
+  box-shadow: 0 0 0 rgba(232, 192, 120, 0);
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.5);
+  transition: opacity 160ms ease, transform 220ms var(--ease-weave), box-shadow 220ms ease;
+}
+
+.spell-surface-live .composer-shell:focus-within::before {
+  opacity: 0.8;
+  transform: scaleX(1);
+}
+
+.spell-surface-live .composer-shell:focus-within::after {
+  opacity: 0.82;
+  box-shadow: 0 0 8px rgba(232, 192, 120, 0.7), 0 0 22px rgba(232, 192, 120, 0.28);
+  transform: scale(1);
+}
+
+.spell-surface-live .composer-shell textarea {
+  caret-color: #e8c078;
+}
+
+.spell-surface-live[data-theme="cosmos"] .composer-send {
+  border-color: rgba(108, 142, 219, 0.32);
+  background: linear-gradient(145deg, #40539a, #20184e);
+  box-shadow: 0 4px 18px rgba(70, 76, 171, 0.24);
+}
+
+.spell-surface-live[data-theme="starlight"] .composer-send {
+  border-color: rgba(222, 231, 247, 0.3);
+  background: linear-gradient(145deg, #717b8e, #292e38);
+  box-shadow: 0 4px 18px rgba(176, 192, 218, 0.16);
+}
+
+.spell-surface-live[data-theme="void"] .composer-send {
+  color: #ead29a;
+  border-color: rgba(232, 192, 120, 0.24);
+  background: linear-gradient(145deg, #292929, #0b0b0c);
+  box-shadow: 0 4px 18px rgba(232, 192, 120, 0.1);
+}

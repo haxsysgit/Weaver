@@ -8,6 +8,16 @@ vi.mock("./SpellBackground", () => ({
 }));
 
 describe("Spell Surface v2 lab", () => {
+  it("starts in the quiet Void reading mode", () => {
+    render(<ThemeLab />);
+
+    const surface = screen.getByTestId("spell-surface-lab");
+    expect(surface).toHaveAttribute("data-theme", "void");
+    expect(surface).toHaveAttribute("data-glass", "immersive");
+    expect(surface).toHaveAttribute("data-runes", "particles");
+    expect(surface).toHaveAttribute("data-font-size", "small");
+  });
+
   it("keeps theme and visual choices inside Customize settings", () => {
     render(<ThemeLab />);
 
@@ -58,6 +68,21 @@ describe("Spell Surface v2 lab", () => {
     expect(screen.queryByText("Azarax win conditions")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Archived/ }));
     expect(screen.getByText("Azarax win conditions")).toBeVisible();
+  });
+
+  it("shows three date groups and folds older chats", () => {
+    render(<ThemeLab />);
+
+    const today = screen.getByRole("button", { name: /Today/ });
+    const yesterday = screen.getByRole("button", { name: /Yesterday/ });
+    const others = screen.getByRole("button", { name: /Others/ });
+
+    expect(today).toHaveAttribute("aria-expanded", "true");
+    expect(yesterday).toHaveAttribute("aria-expanded", "false");
+    expect(others).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(yesterday);
+    expect(yesterday).toHaveAttribute("aria-expanded", "true");
   });
 
   it("opens the full settings surface and applies readable display controls", () => {

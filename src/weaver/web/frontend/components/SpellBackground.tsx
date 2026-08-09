@@ -244,7 +244,12 @@ export function StarWebScene(
   // degrade to nothing instead of crashing the whole chat.
   let renderer: THREE.WebGLRenderer;
   try {
-    renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true });
+    renderer = new THREE.WebGLRenderer({
+      alpha: true,
+      antialias: false,
+      canvas,
+      powerPreference: "high-performance",
+    });
   } catch {
     return () => undefined;
   }
@@ -461,6 +466,10 @@ export function StarWebScene(
   // reacting to the mouse.
   let lastRender = 0;
   const tick = (now: number) => {
+    if (document.hidden || canvas.dataset.paused === "true") {
+      raf = requestAnimationFrame(tick);
+      return;
+    }
     const t = clock.getElapsedTime();
     if (t - lastRender >= 1 / 30) {
       lastRender = t;
@@ -496,16 +505,25 @@ export function StarWebScene(
 
 export function SpellBackground({
   mode,
+  paused = false,
   transparent = false,
   threadAlpha,
   className = "spell-bg",
 }: {
   mode: SpellBgMode;
+  paused?: boolean;
   transparent?: boolean;
   threadAlpha?: number;
   className?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      canvas.dataset.paused = String(paused);
+    }
+  }, [paused]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

@@ -28,20 +28,19 @@ import "../styles/spell-surface-lab.css";
 
 interface SpellSurfaceChatAppProps {
   api: ChatApi;
-  modeLabel: string;
   privacyLabel: string;
 }
 
 const INITIAL_PREFERENCES: LabPreferences = {
   chapter: 1000,
   density: "comfortable",
-  fontSize: "medium",
-  glass: "subtle",
-  runeMode: "voice",
+  fontSize: "small",
+  glass: "immersive",
+  runeMode: "particles",
   soulMode: "still",
   spoilerMode: "protect",
   starIntensity: "balanced",
-  theme: "crimson",
+  theme: "void",
   tier: "ascended",
   volume: 5,
 };
@@ -68,13 +67,41 @@ function loadInitialPreferences(): LabPreferences {
     }
     return {
       ...INITIAL_PREFERENCES,
-      density: savedChoice(saved.density, ["compact", "comfortable"], INITIAL_PREFERENCES.density),
-      fontSize: savedChoice(saved.fontSize, ["small", "medium", "large"], INITIAL_PREFERENCES.fontSize),
-      glass: savedChoice(saved.glass, ["subtle", "immersive"], INITIAL_PREFERENCES.glass),
-      runeMode: savedChoice(saved.runeMode, ["particles", "voice", "threads"], INITIAL_PREFERENCES.runeMode),
-      soulMode: savedChoice(saved.soulMode, ["still", "living", "mirror"], INITIAL_PREFERENCES.soulMode),
-      starIntensity: savedChoice(saved.starIntensity, ["quiet", "balanced", "vivid"], INITIAL_PREFERENCES.starIntensity),
-      theme: savedChoice(saved.theme, ["crimson", "cosmos", "starlight", "void"], INITIAL_PREFERENCES.theme),
+      density: savedChoice(
+        saved.density,
+        ["compact", "comfortable"],
+        INITIAL_PREFERENCES.density,
+      ),
+      fontSize: savedChoice(
+        saved.fontSize,
+        ["small", "medium", "large"],
+        INITIAL_PREFERENCES.fontSize,
+      ),
+      glass: savedChoice(
+        saved.glass,
+        ["subtle", "immersive"],
+        INITIAL_PREFERENCES.glass,
+      ),
+      runeMode: savedChoice(
+        saved.runeMode,
+        ["particles", "voice", "threads"],
+        INITIAL_PREFERENCES.runeMode,
+      ),
+      soulMode: savedChoice(
+        saved.soulMode,
+        ["still", "living", "mirror"],
+        INITIAL_PREFERENCES.soulMode,
+      ),
+      starIntensity: savedChoice(
+        saved.starIntensity,
+        ["quiet", "balanced", "vivid"],
+        INITIAL_PREFERENCES.starIntensity,
+      ),
+      theme: savedChoice(
+        saved.theme,
+        ["crimson", "cosmos", "starlight", "void"],
+        INITIAL_PREFERENCES.theme,
+      ),
     };
   } catch {
     return INITIAL_PREFERENCES;
@@ -102,20 +129,23 @@ function volumeForChapter(chapter: number): number {
 
 function dateGroupFor(createdAt?: string): LabThread["dateGroup"] {
   if (!createdAt) {
-    return "This week";
+    return "Others";
   }
   const created = new Date(createdAt);
   if (Number.isNaN(created.getTime())) {
-    return "This week";
+    return "Others";
   }
-  const ageInDays = Math.floor((Date.now() - created.getTime()) / 86_400_000);
-  if (ageInDays <= 0) {
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const startOfYesterday = new Date(startOfToday);
+  startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+  if (created >= startOfToday) {
     return "Today";
   }
-  if (ageInDays === 1) {
+  if (created >= startOfYesterday) {
     return "Yesterday";
   }
-  return "This week";
+  return "Others";
 }
 
 function toApiPreferences(preferences: LabPreferences): UserPreferences {
@@ -128,7 +158,6 @@ function toApiPreferences(preferences: LabPreferences): UserPreferences {
 
 export function SpellSurfaceChatApp({
   api,
-  modeLabel,
   privacyLabel,
 }: SpellSurfaceChatAppProps) {
   const chat = useChatController(api, weaverProduct);
@@ -329,7 +358,12 @@ export function SpellSurfaceChatApp({
       data-theme={preferences.theme}
       data-testid="spell-surface-live"
     >
-      <SpellBackground className="lab-spell-background" mode="alive" threadAlpha={threadAlpha} />
+      <SpellBackground
+        className="lab-spell-background"
+        mode="alive"
+        paused={settingsOpen}
+        threadAlpha={threadAlpha}
+      />
       <div aria-hidden="true" className="lab-galactic-band" />
       <div aria-hidden="true" className="lab-purple-depth" />
       <div aria-hidden="true" className="lab-star-flare flare-one" />
@@ -362,7 +396,6 @@ export function SpellSurfaceChatApp({
           <button aria-label="Open threads" className="lab-mobile-rail" onClick={openRail} type="button">
             <RailOpenIcon />
           </button>
-          <span className="lab-live-mode">{modeLabel}</span>
           <button aria-label="Open Soul Sea settings from header" className="lab-header-settings" onClick={() => void openSettings()} type="button">
             <SettingsIcon />
           </button>

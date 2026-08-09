@@ -16,7 +16,7 @@ import { WeaverMark } from "./WeaverMark";
 
 export interface LabThread {
   archived: boolean;
-  dateGroup: "Today" | "Yesterday" | "This week";
+  dateGroup: "Today" | "Yesterday" | "Others";
   id: string;
   pinned: boolean;
   preview: string;
@@ -31,12 +31,14 @@ interface ThreadGroup {
   threads: LabThread[];
 }
 
+const DATE_GROUPS: LabThread["dateGroup"][] = ["Today", "Yesterday", "Others"];
+
 const GROUPING_OPTIONS: Array<{
   description: string;
   label: string;
   value: ThreadGrouping;
 }> = [
-  { description: "Today, yesterday, and this week", label: "By date", value: "date" },
+  { description: "Today, yesterday, and older threads", label: "By date", value: "date" },
   { description: "Every thread together", label: "In one list", value: "flat" },
   { description: "Use the Shadow Slave volume", label: "By volume", value: "volume" },
 ];
@@ -52,13 +54,18 @@ function groupThreads(threads: LabThread[], grouping: ThreadGrouping): ThreadGro
     return [{ label: null, threads }];
   }
 
+  if (grouping === "date") {
+    return DATE_GROUPS.map((label) => ({
+      label,
+      threads: threads.filter((thread) => thread.dateGroup === label),
+    }));
+  }
+
   const groups = new Map<string, LabThread[]>();
   for (const thread of threads) {
-    const label = grouping === "date"
-      ? thread.dateGroup
-      : thread.volume == null
-        ? "Volume unknown"
-        : `Vol ${thread.volume}`;
+    const label = thread.volume == null
+      ? "Volume unknown"
+      : `Vol ${thread.volume}`;
     const groupedThreads = groups.get(label) ?? [];
     groups.set(label, [...groupedThreads, thread]);
   }
@@ -111,6 +118,9 @@ export function SpellSurfaceRail({
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
   const [grouping, setGrouping] = useState<ThreadGrouping>("date");
   const [groupingMenuOpen, setGroupingMenuOpen] = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
+    () => new Set(["Yesterday", "Others"]),
+  );
 
   const visibleThreads = useMemo(() => {
     return threads
@@ -144,6 +154,18 @@ export function SpellSurfaceRail({
     window.setTimeout(() => {
       setConfirmingDelete((current) => current === threadId ? null : current);
     }, 3000);
+  }
+
+  function toggleGroup(groupLabel: string) {
+    setCollapsedGroups((current) => {
+      const next = new Set(current);
+      if (next.has(groupLabel)) {
+        next.delete(groupLabel);
+      } else {
+        next.add(groupLabel);
+      }
+      return next;
+    });
   }
 
   function renderThread(thread: LabThread) {
@@ -270,12 +292,36 @@ export function SpellSurfaceRail({
           </header>
 
           <nav aria-label="Threads" className="lab-thread-list">
-            {threadGroups.map((group) => (
-              <section className="lab-thread-group" key={group.label ?? "all"}>
-                {group.label && <h3>{group.label}</h3>}
-                <ul className="lab-thread-flat-list">{group.threads.map(renderThread)}</ul>
-              </section>
-            ))}
+            {threadGroups.map((group) => {
+              const groupLabel = group.label;
+              const groupCollapsed = groupLabel
+                ? collapsedGroups.has(groupLabel)
+                : false;
+              return (
+                <section className="lab-thread-group" key={groupLabel ?? "all"}>
+                  {groupLabel && (
+                    <button
+                      aria-expanded={!groupCollapsed}
+                      className="lab-thread-group-toggle"
+                      onClick={() => toggleGroup(groupLabel)}
+                      type="button"
+                    >
+                      <span>{groupLabel}</span>
+                      <small>{group.threads.length}</small>
+                      <ChevronDownIcon />
+                    </button>
+                  )}
+                  <div
+                    aria-hidden={groupCollapsed}
+                    className={`lab-thread-group-body ${groupCollapsed ? "collapsed" : ""}`}
+                  >
+                    <div>
+                      <ul className="lab-thread-flat-list">{group.threads.map(renderThread)}</ul>
+                    </div>
+                  </div>
+                </section>
+              );
+            })}
             {visibleThreads.length === 0 && (
               <div className="lab-thread-empty">
                 <span aria-hidden="true" />
