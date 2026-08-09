@@ -1,10 +1,10 @@
-"""The five reading tools: search_story, read_chapters, find_text,
+"""The five reading tools: semantic_search, read_chapters, find_text,
 find speaker clusters, browse_chapters and who_is.
 
 Thin surfaces over deterministic machinery (library.py). The tools
 contain no logic of their own beyond validation and formatting:
 
-- search_story: one meaning-search job; returns grouped notebook hits
+- semantic_search: one meaning-search job; returns grouped notebook hits
   and canonical (novel) hits with passage handles and scores. The
   whole novel is always searchable;
   the model; the optional chapter-range and surface refinements only
@@ -154,10 +154,10 @@ class LibraryService:
         return self.client
 
     # ------------------------------------------------------------------
-    # search_story
+    # semantic_search
     # ------------------------------------------------------------------
 
-    async def search_story(
+    async def semantic_search(
         self,
         arguments: dict[str, Any],
         context: ToolExecutionContext,
@@ -174,7 +174,7 @@ class LibraryService:
                 chapter_to=inp.chapter_to,
             )
         except Exception as exc:
-            logger.warning("search_story failed: %s", exc)
+            logger.warning("semantic_search failed: %s", exc)
             return {"ok": False, "error_category": "tool_failed", "error": "search failed"}
         return {"ok": True, "result": result}
 
@@ -470,7 +470,7 @@ def register_reading_tools(
     """Register the reading tools (Plan 15 tool design, 2026-08-07)."""
     registry.register(
         ToolDefinition(
-            name="search_story",
+            name="semantic_search",
             description=(
                 "Meaning search across the whole story (the novel and the story notebook). "
                 "Use to LOCATE where something happens when you do not know the exact words. "
@@ -481,7 +481,7 @@ def register_reading_tools(
                 "automatically and can only be narrowed."
             ),
             parameters=SearchStoryInput.model_json_schema(),
-            handler=service.search_story,
+            handler=service.semantic_search,
             max_result_chars=24_000,
             effect_kind=EffectKind.READ,
             retry_safe=True,
@@ -492,7 +492,7 @@ def register_reading_tools(
             name="read_chapters",
             description=(
                 "Read real novel text by passage handle (novel:NNNN:start-end) from "
-                "search_story, find_text or browse_chapters hits. Novel only, read-only. "
+                "semantic_search, find_text or browse_chapters hits. Novel only, read-only. "
                 "Use whenever the answer needs the actual prose: verify, quote, or follow "
                 "a scene to its end."
             ),

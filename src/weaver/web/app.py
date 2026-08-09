@@ -227,7 +227,7 @@ def _tool_preview(name: str, result: dict) -> tuple[str | None, list[str]]:
             f"ch {first.get('chapter')} - {first.get('title', '')}"[:140],
             [c["passage_handle"] for c in chapters[:3] if c.get("passage_handle")],
         )
-    if name == "search_story":
+    if name == "semantic_search":
         notebook = payload.get("notebook_hits") or []
         canonical = payload.get("canonical_hits") or []
         if notebook:

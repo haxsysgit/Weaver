@@ -21,7 +21,7 @@ interface MessageProps {
 }
 
 const SPELL_PHRASES: Record<string, { doing: string; done: string }> = {
-  search_story: { doing: "searching the library", done: "searched the library" },
+  semantic_search: { doing: "searching the library", done: "searched the library" },
   read_chapters: { doing: "recalling a passage", done: "recalled a passage" },
   find_text: { doing: "finding the words", done: "found the words" },
   browse_chapters: { doing: "browsing the chapters", done: "browsed the chapters" },

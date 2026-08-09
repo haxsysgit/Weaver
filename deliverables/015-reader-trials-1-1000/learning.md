@@ -15,7 +15,7 @@ skills.
   answers with spoiler care in the framing, never in the search.
 - 2026-08-07: tool budgets are ceilings, awakened 50 / ascended 70 /
   transcendent 90 (owner-set); thinking always on, tier picks the effort.
-- 2026-08-07: five reading tools (search_story, read_chapters, find_text,
+- 2026-08-07: five reading tools (semantic_search, read_chapters, find_text,
   browse_chapters, who_is); unix names rejected, descriptions carry the
   training benefit.
 - 2026-08-08: spoiler map = statement labels (1-1000) + verified volume

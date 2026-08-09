@@ -17,7 +17,7 @@ Owner asks this document answers:
 The failed turn did exactly two locate rounds (4 tool calls):
 
 1. `find_text "show you how gods die"` -> hits ch2411, ch2834
-2. `search_story "let me show you how gods die"` -> hits ch2124
+2. `semantic_search "let me show you how gods die"` -> hits ch2124
 3. `read_chapters novel:2411:90-110`
 4. `read_chapters novel:2834:80-105`
 

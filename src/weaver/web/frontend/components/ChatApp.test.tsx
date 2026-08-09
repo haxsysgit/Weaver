@@ -236,9 +236,9 @@ describe("ChatApp tool activity", () => {
     const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
     const api = createApi(
       (async function* (): AsyncGenerator<StreamEvent> {
-        yield { type: "tool", name: "search_story", status: "start", detail: "" };
+        yield { type: "tool", name: "semantic_search", status: "start", detail: "" };
         await sleep(60);
-        yield { type: "tool", name: "search_story", status: "done", detail: "ok" };
+        yield { type: "tool", name: "semantic_search", status: "done", detail: "ok" };
         await sleep(60);
         yield { type: "tool", name: "read_chapters", status: "start", detail: "" };
         await sleep(60);
@@ -276,8 +276,8 @@ describe("ChatApp tool activity", () => {
   it("clears activity on the next turn", async () => {
     const api = createApi(
       (async function* (): AsyncGenerator<StreamEvent> {
-        yield { type: "tool", name: "search_story", status: "start", detail: "" };
-        yield { type: "tool", name: "search_story", status: "done", detail: "ok" };
+        yield { type: "tool", name: "semantic_search", status: "start", detail: "" };
+        yield { type: "tool", name: "semantic_search", status: "done", detail: "ok" };
         yield { type: "completed", text: "First answer." };
       })(),
     );

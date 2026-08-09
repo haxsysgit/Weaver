@@ -68,7 +68,7 @@ the source of any claim.
 ## What this means for Weaver's tools
 
 - The reading toolset is now the five finders + readers (2026-08-07):
-  search_story (meaning search), find_text (exact phrase + speaker
+  semantic_search (meaning search), find_text (exact phrase + speaker
   mode), browse_chapters (range skim), who_is (entity map), read_chapters
   (open prose by handle). The old two-tool set (search_library,
   open_chapters) was renamed and extended into this set.

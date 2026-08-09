@@ -1,4 +1,4 @@
-"""Slice 3 tool tests: search_story and read_chapters on synthetic
+"""Slice 3 tool tests: semantic_search and read_chapters on synthetic
 data with a real in-memory Qdrant. No LLM, no network."""
 
 from __future__ import annotations
@@ -110,8 +110,8 @@ def ctx() -> ToolExecutionContext:
 
 
 @pytest.mark.asyncio
-async def test_search_story_returns_grouped_hits(service: LibraryService):
-    res = await service.search_story({"query": "who killed the hunting party leader"}, ctx())
+async def test_semantic_search_returns_grouped_hits(service: LibraryService):
+    res = await service.semantic_search({"query": "who killed the hunting party leader"}, ctx())
     assert res["ok"] is True
     result = res["result"]
     chapters = {h["chapter"] for h in result["canonical_hits"]}
@@ -123,10 +123,10 @@ async def test_search_story_returns_grouped_hits(service: LibraryService):
 
 @pytest.mark.asyncio
 async def test_surface_narrowing(service: LibraryService):
-    res = await service.search_story({"query": "kunai", "surface": "novel"}, ctx())
+    res = await service.semantic_search({"query": "kunai", "surface": "novel"}, ctx())
     assert res["result"]["notebook_hits"] == []
     assert res["result"]["canonical_hits"]
-    res = await service.search_story({"query": "kunai", "surface": "notebook"}, ctx())
+    res = await service.semantic_search({"query": "kunai", "surface": "notebook"}, ctx())
     assert res["result"]["canonical_hits"] == []
     assert res["result"]["notebook_hits"]
 
@@ -155,12 +155,12 @@ def test_registration(service: LibraryService):
 
     reg = ToolRegistry()
     register_reading_tools(reg, service)
-    expected = ["search_story", "read_chapters", "find_text", "browse_chapters", "who_is"]
+    expected = ["semantic_search", "read_chapters", "find_text", "browse_chapters", "who_is"]
     for name in expected:
         assert reg.has(name), name
     schemas = reg.active_schemas(tuple(expected))
     assert [s.name for s in schemas] == expected
-    assert reg._tools["search_story"].effect_kind is EffectKind.READ
+    assert reg._tools["semantic_search"].effect_kind is EffectKind.READ
 
 
 class _EmptySparse:
@@ -181,7 +181,7 @@ async def test_dense_first_when_embedder_present(service: LibraryService):
         embedder=FakeEmbedder(),
         sparse_encoder=_EmptySparse(),
     )
-    res = await svc.search_story({"query": "who killed the hunting party leader"}, ctx())
+    res = await svc.semantic_search({"query": "who killed the hunting party leader"}, ctx())
     assert res["ok"] is True
     hits = res["result"]["canonical_hits"]
     assert hits, "novel hits must come from the dense arm when sparse never matches"

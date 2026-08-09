@@ -632,7 +632,7 @@ def test_request_payload_sends_reasoning_content_back() -> None:
                 tool_calls=(
                     ModelToolCall(
                         call_id="c1",
-                        name="search_story",
+                        name="semantic_search",
                         arguments_json='{"query":"x"}',
                     ),
                 ),

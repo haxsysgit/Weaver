@@ -1,7 +1,7 @@
 """Slice 4: deterministic proof of the reading tools inside a real
 conversation turn, with a scripted fake model. No live model calls.
 
-The fake provider is scripted to: (1) emit a search_story tool call,
+The fake provider is scripted to: (1) emit a semantic_search tool call,
 (2) after the tool result, emit an read_chapters tool call, (3) finally
 answer with a cited reply. The test then asserts:
 - the turn completed with a cited answer;
@@ -56,10 +56,10 @@ def _scripted_provider() -> FakeModelProvider:
         "deepseek",
         models=(DEEPSEEK_FLASH,),
         responses=(
-            # step 1: call search_story
+            # step 1: call semantic_search
             _mk_response(
                 None,
-                (_tool_call("search_story", {"query": "who killed the hunting party leader"}, "c1"),),
+                (_tool_call("semantic_search", {"query": "who killed the hunting party leader"}, "c1"),),
                 ModelStopReason.TOOL_USE,
             ),
             # step 2: call read_chapters on a hit
@@ -128,7 +128,7 @@ async def _open_session(tmp_path: Path) -> SessionWeave:
         model=model_layer.get_model(DEEPSEEK_FLASH.provider_id, DEEPSEEK_FLASH.model_id),
         system_prompt="You are Weaver. Use the tools.",
         tool_registry=registry,
-        active_tools=("search_story", "read_chapters"),
+        active_tools=("semantic_search", "read_chapters"),
         execution_policy=ToolExecutionPolicy.read_only(),
     )
     await sw.open()
@@ -181,7 +181,7 @@ async def test_proof_two_phase_packet_drives_the_final_answer(tmp_path: Path) ->
             # step 1: search
             _mk_response(
                 None,
-                (_tool_call("search_story", {"query": "who killed the hunting party leader"}, "c1"),),
+                (_tool_call("semantic_search", {"query": "who killed the hunting party leader"}, "c1"),),
                 ModelStopReason.TOOL_USE,
             ),
             # step 2: open the hit
@@ -211,7 +211,7 @@ async def test_proof_two_phase_packet_drives_the_final_answer(tmp_path: Path) ->
         model=model_layer.get_model(DEEPSEEK_FLASH.provider_id, DEEPSEEK_FLASH.model_id),
         system_prompt="You are Weaver. Use the tools.",
         tool_registry=registry,
-        active_tools=("search_story", "read_chapters"),
+        active_tools=("semantic_search", "read_chapters"),
         execution_policy=ToolExecutionPolicy.read_only(),
     )
     await sw.open()

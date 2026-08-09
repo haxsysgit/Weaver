@@ -48,14 +48,14 @@ async def test_web_profile_has_reading_tools_and_read_only_policy(tmp_path) -> N
     try:
         assert runtime.surface == "web"
         assert runtime.session._active_tools == (
-            "search_story",
+            "semantic_search",
             "read_chapters",
             "find_text",
             "browse_chapters",
             "who_is",
         )
         registry = runtime.session._tool_registry
-        assert registry.has("search_story")
+        assert registry.has("semantic_search")
         assert registry.has("read_chapters")
         assert registry.has("find_text")
         assert registry.has("browse_chapters")
@@ -71,7 +71,7 @@ async def test_web_prompt_makes_library_claim_with_truth_rule(tmp_path) -> None:
     runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
     try:
         prompt = runtime.session._system_prompt
-        assert "search_story" in prompt
+        assert "semantic_search" in prompt
         assert "read_chapters" in prompt
         assert "find_text" in prompt
         assert "who_is" in prompt

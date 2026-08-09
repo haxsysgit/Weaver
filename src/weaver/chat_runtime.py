@@ -73,7 +73,7 @@ WEB_SYSTEM_PROMPT = (
     "<what_you_have>\n"
     "- The whole novel, chapters 1-3127, searchable and openable.\n"
     "- A story notebook: statements about the story, each with chapter evidence.\n"
-    "- Five tools: search_story (meaning search), read_chapters (read prose), \n"
+    "- Five tools: semantic_search (meaning search), read_chapters (read prose), \n"
     "  find_text (exact phrase + where a character speaks), browse_chapters (skim \n"
     "  a range), who_is (the story map: resolve names).\n"
     "</what_you_have>\n"
@@ -124,7 +124,7 @@ WEB_SYSTEM_PROMPT = (
     "\n"
     "<example>\n"
     "User: How did Sunny get Saint?\n"
-    "Good flow: search_story for how Sunny obtained the stone knight, read the "
+    "Good flow: semantic_search for how Sunny obtained the stone knight, read the "
     "notebook hits (one statement summarizes the whole thing), open the best "
     "chapter, then answer in one message: 'He killed the stone knight after she dealt "
     "with her own enemy, then claimed her as an Echo (ch104-105). No one-shot "
@@ -133,7 +133,7 @@ WEB_SYSTEM_PROMPT = (
 )
 
 WEB_ACTIVE_TOOLS: tuple[str, ...] = (
-    "search_story",
+    "semantic_search",
     "read_chapters",
     "find_text",
     "browse_chapters",
@@ -240,7 +240,7 @@ def _web_library_service():
 
 
 def _web_tool_registry() -> ToolRegistry:
-    """The five reading tools (Plan 15): search_story, read_chapters,
+    """The five reading tools (Plan 15): semantic_search, read_chapters,
     find_text, browse_chapters, who_is. READ-only, never touch the
     library. Built lazily per runtime so tests can point at synthetic
     data; empty registry when the novel is not on this machine.
