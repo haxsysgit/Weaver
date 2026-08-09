@@ -1331,3 +1331,51 @@ class TestTwoPhaseSynthesis:
                 assert m.content, "empty assistant message in synthesis request"
         drafts = [m for m in synthesis if m.role == "assistant"]
         assert [m.content for m in drafts] == ["Draft: found it."]
+
+    async def test_synthesis_window_drops_previous_tool_use_assistants(self) -> None:
+        # Multi-turn thread-broke (2026-08-09): the recent window kept the
+        # previous turn's tool-use assistant messages (tool_calls, empty
+        # content) but skipped their tool results, so the synthesis request
+        # carried orphaned tool_calls and DeepSeek 400'd
+        # (invalid_request/provider_error) exactly when holding a
+        # conversation. The window must keep only user messages and
+        # content-bearing assistant answers.
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response("Draft: found the passage."),
+            stop_response("Final: chapter 2729."),
+        )
+        history = [
+            UserMessage(message_id="q0", turn_id="t0", content="who told noctis the gods cant kill daemons"),
+            AssistantMessage(
+                message_id="a0-search",
+                turn_id="t0",
+                content="",
+                tool_calls=(tool_call("c0a", "echo", '{"q": "weaver noctis"}'),),
+            ),
+            AssistantMessage(
+                message_id="a0",
+                turn_id="t0",
+                content="Weaver told Noctis that Sun God cannot kill Hope.",
+            ),
+            UserMessage(message_id="q1", turn_id="t1", content="youre wrong, it was chapter 2729"),
+        ]
+
+        async def packet_builder(results, draft):
+            return "PACKET: ch2729"
+
+        await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            history=history,
+            packet_builder=packet_builder,
+        )
+        synthesis_request = provider.calls[-1].request
+        for m in synthesis_request.messages:
+            if m.role == "assistant":
+                assert not m.tool_calls, "previous turn tool calls leaked into synthesis"
+        joined = " ".join((m.content or "") for m in synthesis_request.messages)
+        assert "Weaver told Noctis" in joined  # continuity kept
+        assert "chapter 2729" in joined

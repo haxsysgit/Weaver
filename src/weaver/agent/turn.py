@@ -247,10 +247,20 @@ def _recent_exchanges(
     in the packet; carrying old tool transcripts bloats the context). The
     returned window always ends at the current question.
     """
+    # Keep user messages and content-bearing assistant answers only.
+    # Tool-use assistants from earlier turns (tool_calls, empty content)
+    # must never reach the synthesis wire: their tool results are skipped
+    # here, so keeping them orphaned the tool_calls and DeepSeek 400'd
+    # (invalid_request) exactly when holding a conversation.
     messages = [
         message
         for message in history
-        if message.kind in ("user", "assistant")
+        if message.kind == "user"
+        or (
+            message.kind == "assistant"
+            and message.content
+            and not message.tool_calls
+        )
     ]
     window: list[ConversationMessage] = []
     user_count = 0
