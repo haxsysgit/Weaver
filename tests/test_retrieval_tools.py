@@ -266,3 +266,162 @@ async def test_find_text_phrase_is_case_insensitive(service: LibraryService):
         h["text"] == "sunny kills the leader with the fake kunai"
         for h in lower["result"]["hits"]
     )
+
+
+@pytest.mark.asyncio
+async def test_find_text_hit_carries_the_next_line(service: LibraryService):
+    # the novel writes dialogue on its own line with the attribution on
+    # the NEXT line, so hits must carry the following line
+    res = await service.find_text({"query": "kunai", "mode": "phrase"}, ctx())
+    hit = [h for h in res["result"]["hits"] if h["chapter"] == 98][0]
+    assert hit["text"] == "sunny kills the leader with the fake kunai"
+    assert hit["next_text"] == ""  # last line of the chapter
+
+
+@pytest.mark.asyncio
+async def test_find_text_together_finds_chapters_where_all_groups_match(
+    service: LibraryService,
+):
+    # groups are AND across, OR inside: [["sunny"], ["kunai"]] -> ch98
+    res = await service.find_text(
+        {"mode": "together", "groups": [["sunny"], ["kunai"]]}, ctx()
+    )
+    assert res["ok"] is True
+    hits = res["result"]["hits"]
+    assert [h["chapter"] for h in hits] == [98]
+    hit = hits[0]
+    assert hit["distance"] == 0  # same line
+    assert hit["span_start"] == hit["span_end"]
+    # durable evidence carries the span handle, never prose
+    for h in res["durable_evidence"]["hits"]:
+        assert h["passage_handle"].startswith("novel:0098:")
+
+
+@pytest.mark.asyncio
+async def test_find_text_together_or_inside_a_group_and_proximity(
+    service: LibraryService,
+    tmp_path: Path,
+):
+    # a fresh chapter: weaver at the top, death far below - the closest
+    # cross-group pair is 28 lines apart
+    novel = tmp_path / "novel" / "0001-0100"
+    novel.mkdir(parents=True, exist_ok=True)
+    lines = ["Shadow Slave-Chapter 55 - 55: Fake"]
+    lines += ["Weaver spoke to Noctis by the fire"] + ["noise"] * 27
+    lines += ["He died there, a death of sparks"] + ["the crow watched"]
+    (novel / "chapter-0055.txt").write_text("\n".join(lines))
+
+    # OR inside the group: any death word counts
+    res = await service.find_text(
+        {
+            "mode": "together",
+            "groups": [["weaver"], ["died", "death", "killed"]],
+        },
+        ctx(),
+    )
+    assert res["ok"] is True
+    ch55 = [h for h in res["result"]["hits"] if h["chapter"] == 55][0]
+    assert ch55["distance"] == 28  # line 2 (weaver) to line 30 (death)
+    assert ch55["span_start"] == 2
+    assert ch55["span_end"] == 30
+
+    # within_lines drops chapters where the closest mentions are far apart
+    res = await service.find_text(
+        {
+            "mode": "together",
+            "groups": [["weaver"], ["death"]],
+            "within_lines": 5,
+        },
+        ctx(),
+    )
+    hits55 = [h for h in res["result"]["hits"] if h["chapter"] == 55]
+    assert hits55 == []  # 28 > 5, so the chapter is dropped
+
+
+@pytest.mark.asyncio
+async def test_find_text_together_is_case_insensitive(service: LibraryService):
+    res = await service.find_text(
+        {"mode": "together", "groups": [["WEAVER"], ["NOCTIS"]]}, ctx()
+    )
+    assert res["ok"] is True
+    # the fixture has no weaver/noctis chapter; shape must still validate
+    assert isinstance(res["result"]["hits"], list)
+
+
+@pytest.mark.asyncio
+async def test_find_text_together_requires_groups(service: LibraryService):
+    res = await service.find_text({"mode": "together"}, ctx())
+    assert res["ok"] is False
+    assert res["error_category"] == "validation"
+
+
+@pytest.mark.asyncio
+async def test_browse_titles_only_covers_a_whole_volume(service: LibraryService):
+    res = await service.browse_chapters(
+        {"start": 1, "end": 98, "titles_only": True}, ctx()
+    )
+    assert res["ok"] is True
+    titles = {c["chapter"]: c["title"] for c in res["result"]["titles"]}
+    assert titles[1] == "Fake"
+    assert titles[98] == "Fake"
+    assert 3 in titles  # missing chapters are simply absent
+    # durable evidence carries pointers only, never title text
+    assert all("chapter" in h for h in res["durable_evidence"]["chapters"])
+    assert "Fake" not in str(res["durable_evidence"])
+
+
+@pytest.mark.asyncio
+async def test_who_is_related_lists_graph_neighbors(tmp_path: Path) -> None:
+    nb = tmp_path / "nb"
+    for sub in ("people", "places", "powers", "items", "groups", "reading"):
+        (nb / sub).mkdir(parents=True)
+    (nb / "people" / "person-noctis.md").write_text(
+        "<!-- entity-id: person:noctis -->\n# Noctis\n"
+    )
+    (nb / "people" / "person-weaver.md").write_text(
+        "<!-- entity-id: person:weaver -->\n# Weaver\n"
+    )
+    rec = {
+        "chapter": 650,
+        "statements": [
+            {
+                "id": "statement:chapter-0650:01",
+                "kind": "confirmed_fact",
+                "statement": "Noctis and Weaver talk by the fire.",
+                "chapter": 650,
+                "evidence": [{"chapter": 650, "location": {"line_start": 2, "line_end": 6}}],
+                "links": ["person:noctis", "person:weaver"],
+                "first_known_chapter": 650,
+            }
+        ],
+    }
+    (nb / "reading" / "0650.json").write_text(json.dumps(rec))
+    conns = []
+    for target in ("person:noctis", "person:weaver"):
+        conns.append(
+            {
+                "id": f"conn-0650-{target.split(':')[1]}",
+                "source": "statement:chapter-0650:01",
+                "target": target,
+                "relation": "links",
+                "evidence": [{"chapter": 650}],
+                "first_known_chapter": 650,
+            }
+        )
+    (nb / "connections.jsonl").write_text(
+        "\n".join(json.dumps(c) for c in conns)
+    )
+
+    service = LibraryService(
+        novel_dir=tmp_path / "novel",
+        notebook_dir=nb,
+    )
+    res = await service.who_is({"name": "noctis", "related": True}, ctx())
+    assert res["ok"] is True
+    result = res["result"]
+    assert result["found"] is True
+    related = {e["entity_id"] for e in result["related_entities"]}
+    assert "person:weaver" in related
+
+    plain = await service.who_is({"name": "noctis"}, ctx())
+    assert "related_entities" not in plain["result"]

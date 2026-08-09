@@ -198,7 +198,9 @@ class ChapterIndex:
 
         Line 1 (the title heading) is never story text and is skipped.
         Case-insensitive: a reader saying "noctis" finds "Noctis".
-        Returns [{chapter, line, text}] capped at limit.
+        Returns [{chapter, line, text, next_text}] capped at limit, where
+        next_text is the following line (the novel writes dialogue on its
+        own line with the attribution on the NEXT line).
         """
         needle = query.casefold()
         hits: list[dict] = []
@@ -207,14 +209,108 @@ class ChapterIndex:
                 continue
             if chapter_to is not None and chapter > chapter_to:
                 continue
-            for i, line in enumerate(text.splitlines(), start=1):
+            lines = text.splitlines()
+            for i, line in enumerate(lines, start=1):
                 if i == 1:
                     continue
                 if needle in line.casefold():
-                    hits.append({"chapter": chapter, "line": i, "text": line})
+                    hits.append(
+                        {
+                            "chapter": chapter,
+                            "line": i,
+                            "text": line,
+                            "next_text": lines[i] if i < len(lines) else "",
+                        }
+                    )
                     if len(hits) >= limit:
                         return hits
         return hits
+
+    def find_text_together(
+        self,
+        groups: list[list[str]],
+        *,
+        chapter_from: int = 1,
+        chapter_to: int | None = None,
+        within_lines: int | None = None,
+        limit: int = 10,
+    ) -> list[dict]:
+        """Chapters where every group has at least one hit (AND across
+        groups, OR inside a group), with proximity.
+
+        groups = [["Weaver"], ["Noctis"]] finds chapters where both
+        appear. groups = [["Weaver"], ["died", "death", "killed"]]
+        finds chapters where Weaver and any death word co-occur - e.g.
+        "where did weaver die" without knowing the words. within_lines
+        keeps only chapters where the closest mentions from different
+        groups are at most that many lines apart ("weaver and noctis
+        near each other, not just in the same chapter").
+
+        Returns one entry per chapter: the closest cross-group distance,
+        the tightest span covering the closest pair, and every matched
+        line (capped per term).
+        """
+        folded = [[t.casefold() for t in g if t.strip()] for g in groups]
+        folded = [g for g in folded if g]
+        if len(folded) < 2:
+            return []
+        all_terms = {t for g in folded for t in g}
+        out: list[dict] = []
+        for chapter, text in self._scan():
+            if chapter < chapter_from:
+                continue
+            if chapter_to is not None and chapter > chapter_to:
+                continue
+            lines = text.splitlines()
+            found: dict[str, list[tuple[int, str]]] = {}
+            for i, line in enumerate(lines, start=1):
+                if i == 1:
+                    continue
+                folded_line = line.casefold()
+                for term in all_terms:
+                    if term in folded_line:
+                        found.setdefault(term, []).append((i, line))
+            if not all(any(t in found for t in g) for g in folded):
+                continue
+            # closest cross-group pair and the tightest span over it
+            pairs = [
+                (line, g_idx)
+                for g_idx, g in enumerate(folded)
+                for t in g
+                for line, _ in found.get(t, [])
+            ]
+            best: tuple[int, int, int] | None = None  # (distance, lo, hi)
+            for a in range(len(pairs)):
+                for b in range(a + 1, len(pairs)):
+                    if pairs[a][1] == pairs[b][1]:
+                        continue
+                    la, lb = pairs[a][0], pairs[b][0]
+                    lo, hi = min(la, lb), max(la, lb)
+                    if best is None or hi - lo < best[0]:
+                        best = (hi - lo, lo, hi)
+            if best is None:
+                continue
+            distance, span_start, span_end = best
+            if within_lines is not None and distance > within_lines:
+                continue
+            matches = [
+                {"term": term, "line": line, "text": line_text}
+                for term in all_terms
+                for line, line_text in found.get(term, [])[:12]
+            ]
+            matches.sort(key=lambda m: m["line"])
+            out.append(
+                {
+                    "chapter": chapter,
+                    "distance": distance,
+                    "span_start": span_start,
+                    "span_end": span_end,
+                    "matches": matches,
+                }
+            )
+            if len(out) >= limit:
+                return out
+        return out
 
     def speaker_clusters(
         self,
@@ -268,8 +364,12 @@ class ChapterIndex:
                     return out
         return out
 
-    def browse(self, start: int, end: int) -> list[dict]:
-        """Skim a chapter range: title, length and opening lines."""
+    def browse(self, start: int, end: int, *, titles_only: bool = False) -> list[dict]:
+        """Skim a chapter range: title, length and opening lines.
+
+        titles_only returns just [{chapter, title}] - enough to orient
+        across a whole volume in one call.
+        """
         out: list[dict] = []
         for chapter in range(start, end + 1):
             path = self._path(chapter)
@@ -278,6 +378,9 @@ class ChapterIndex:
             lines = path.read_text(encoding="utf-8").splitlines()
             heading = lines[0] if lines else ""
             title = heading.split(":", 1)[1].strip() if ":" in heading else heading
+            if titles_only:
+                out.append({"chapter": chapter, "title": title})
+                continue
             preview = "\n".join(lines[1 : min(7, len(lines))])
             out.append(
                 {
