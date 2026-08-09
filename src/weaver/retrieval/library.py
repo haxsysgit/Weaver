@@ -27,7 +27,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ENTITY_MARKER = re.compile(r"<!--\s*entity-id:\s*([^\s]+)\s*-->")
-ALIAS_MARKER = re.compile(r"<!--\s*alias:\s*([^\s]+)\s*-->")
+ALIAS_MARKER = re.compile(r"<!--\s*alias:\s*([^<\s]+(?:\s+[^<\s]+)*)\s*-->")
 FIRST_KNOWN_RE = re.compile(r"first known:\s*chapter\s*(\d+)", re.IGNORECASE)
 QUOTE_STARTS = ("\"", "'", "\u201c", "\u2018")
 TITLE_PREFIX = "Shadow Slave-Chapter"
@@ -308,9 +308,9 @@ class ChapterIndex:
                     "matches": matches,
                 }
             )
-            if len(out) >= limit:
-                return out
-        return out
+        # tightest co-occurrence first; chapter order breaks ties
+        out.sort(key=lambda h: (h["distance"], h["chapter"]))
+        return out[:limit]
 
     def speaker_clusters(
         self,
@@ -455,7 +455,10 @@ class EntityMap:
             return None
         canon = None
         for key, cid in self.canonical.items():
-            if key.lower() == needle or key.split(":", 1)[1].lower() == needle:
+            short = key.split(":", 1)
+            if key.lower() == needle or (
+                len(short) > 1 and short[1].lower() == needle
+            ):
                 canon = cid
                 break
         if canon is None:
@@ -526,6 +529,39 @@ class ConnectionGraph:
             if chapter is not None:
                 self.chapter_of.setdefault(source, int(chapter))
                 self.chapter_of.setdefault(target, int(chapter))
+
+    def shortest_path(self, start: str, end: str, *, max_hops: int = 8) -> list[str] | None:
+        """Shortest hop path between two nodes (BFS, deterministic).
+
+        Returns the node id list start -> ... -> end, or None when no
+        path exists within max_hops. Neighbors are walked in sorted
+        order so the same graph always yields the same path.
+        """
+        if start == end:
+            return [start]
+        if start not in self.adj or end not in self.adj:
+            return None
+        frontier = [start]
+        prev: dict[str, str] = {}
+        seen = {start}
+        for _ in range(max_hops):
+            nxt: list[str] = []
+            for node in frontier:
+                for neighbor in sorted(self.adj.get(node, [])):
+                    if neighbor in seen:
+                        continue
+                    seen.add(neighbor)
+                    prev[neighbor] = node
+                    if neighbor == end:
+                        path = [end]
+                        while path[-1] != start:
+                            path.append(prev[path[-1]])
+                        return list(reversed(path))
+                    nxt.append(neighbor)
+            if not nxt:
+                return None
+            frontier = nxt
+        return None
 
     def neighbors(self, node: str) -> list[str]:
         """Adjacent statement ids (undirected)."""

@@ -128,8 +128,10 @@ class FindTextInput(BaseModel):
     @model_validator(mode="after")
     def _check_mode(self) -> "FindTextInput":
         if self.mode == "together":
-            if not self.groups or len(self.groups) < 2 or any(not g for g in self.groups):
-                raise ValueError("mode 'together' needs groups: at least two non-empty term groups")
+            if not self.groups or len(self.groups) < 2:
+                raise ValueError("mode 'together' needs groups: at least two term groups")
+            if any(not any(t.strip() for t in g) for g in self.groups):
+                raise ValueError("mode 'together' groups need at least one real term each")
         else:
             if self.mode not in ("phrase", "speaker"):
                 raise ValueError("mode must be one of: phrase, speaker, together")
@@ -158,9 +160,24 @@ class BrowseChaptersInput(BaseModel):
 
 class WhoIsInput(BaseModel):
     name: str = Field(min_length=1, max_length=200, description="A name from the story: person, place, power, item, or group.")
-    related: bool = Field(
-        default=False,
-        description="Also return entities directly connected to this one in the story graph (who it appears with).",
+
+
+class LorePathInput(BaseModel):
+    from_name: str = Field(
+        min_length=1,
+        max_length=200,
+        description="Starting name (person, place, power, item, or group).",
+    )
+    to_name: str = Field(
+        min_length=1,
+        max_length=200,
+        description="Target name to connect to.",
+    )
+    max_hops: int = Field(
+        default=8,
+        ge=2,
+        le=12,
+        description="Longest connection chain to accept (default 8 hops).",
     )
 
 
@@ -554,40 +571,78 @@ class LibraryService:
                 "result": {
                     "found": False,
                     "name": inp.name,
-                    "note": "not in the story map",
+                    "note": "not in the story map (the map covers chapters 1-1000; "
+                    "if the name is older than that, try find_text instead)",
                     "suggestions": self.entities.suggest(inp.name),
                 },
             }
-        result: dict[str, Any] = {"found": True, "entity": found}
-        if inp.related:
-            result["related_entities"] = self.related_entities(found["entity_id"])
-        return {"ok": True, "result": result}
+        return {"ok": True, "result": {"found": True, "entity": found}}
 
-    def related_entities(self, entity_id: str, *, limit: int = 12) -> list[dict]:
-        """Entities the story graph connects to this one (who it appears
-        with), via shared statements, closest first. Pure traversal -
-        no model reasoning involved."""
-        reached = self.graph.reachable([entity_id], depth=3, max_nodes=400)
-        out: list[dict] = []
-        for node in reached:
-            if node == entity_id:
-                continue
-            kind = node.split(":", 1)[0]
-            if kind not in ("person", "place", "power", "item", "group"):
-                continue
-            page = self.entities.lookup(node)
-            if page is None:
-                continue
-            out.append(
-                {
-                    "entity_id": node,
-                    "title": page["title"],
-                    "first_known_chapter": page["first_known_chapter"],
-                }
-            )
-            if len(out) >= limit:
-                break
-        return out
+    async def lore_path(
+        self,
+        arguments: dict[str, Any],
+        context: ToolExecutionContext,
+    ) -> dict[str, Any]:
+        inp = LorePathInput.model_validate(arguments)
+        start = self.entities.lookup(inp.from_name)
+        end = self.entities.lookup(inp.to_name)
+        if start is None or end is None:
+            missing = [
+                n for n, r in ((inp.from_name, start), (inp.to_name, end)) if r is None
+            ]
+            return {
+                "ok": True,
+                "result": {
+                    "found": False,
+                    "note": "name(s) not in the story map: "
+                    + ", ".join(missing)
+                    + " (the map covers chapters 1-1000; try find_text for older names)",
+                },
+            }
+        start_id, end_id = start["entity_id"], end["entity_id"]
+        path = self.graph.shortest_path(start_id, end_id, max_hops=inp.max_hops)
+        if path is None:
+            return {
+                "ok": True,
+                "result": {
+                    "found": False,
+                    "note": f"no connection found within {inp.max_hops} hops",
+                    "from": inp.from_name,
+                    "to": inp.to_name,
+                },
+            }
+        steps: list[dict[str, Any]] = []
+        for node in path:
+            if node.startswith("statement:"):
+                stmt = self.notebook.by_id.get(node)
+                steps.append(
+                    {
+                        "id": node,
+                        "kind": "statement",
+                        "chapter": self.graph.chapter_of.get(node),
+                        "text": (stmt.get("statement") if stmt else None),
+                    }
+                )
+            else:
+                page = self.entities.lookup(node)
+                steps.append(
+                    {
+                        "id": node,
+                        "kind": "entity",
+                        "title": page["title"] if page else node,
+                    }
+                )
+        return {
+            "ok": True,
+            "result": {
+                "found": True,
+                "from": inp.from_name,
+                "to": inp.to_name,
+                "hops": len(path) - 1,
+                "path": path,
+                "steps": steps,
+            },
+        }
 
 
 def register_reading_tools(
@@ -679,13 +734,34 @@ def register_reading_tools(
             name="who_is",
             description=(
                 "The story map: resolve any name to its canonical identity - person, place, "
-                "power, item or group. Returns the entity's biography page, aliases, and first "
-                "known chapter. With related=true, also returns the entities the story graph "
-                "connects it to (who it appears with). Use before searching when you do not "
-                "recognize a name, or to refresh who someone is."
+                "power, item or group - and read that entity's full profile: biography page, "
+                "canonical stats, aliases, and first known chapter. Demon of Dread is Ariel, "
+                "Lost from Light is Sunny, Mongrel is Sunny. Use before searching when you do "
+                "not recognize a name, or to refresh who someone is. The map covers chapters "
+                "1-1000; when a name does not resolve it may simply be beyond the map, so "
+                "fall back to find_text. For who two entities are CONNECTED THROUGH, use "
+                "lore_path instead."
             ),
             parameters=WhoIsInput.model_json_schema(),
             handler=service.who_is,
+            max_result_chars=24_000,
+            effect_kind=EffectKind.READ,
+            retry_safe=True,
+        )
+    )
+    registry.register(
+        ToolDefinition(
+            name="lore_path",
+            description=(
+                "The shortest connection between two entities through the story map, "
+                "with the statements that actually make the connection (entity -> "
+                "statement -> entity chains). Use for 'how is X connected to Y' - the "
+                "steps show WHY they are linked, so you can judge whether the relation "
+                "is meaningful or incidental. The map covers chapters 1-1000; names "
+                "beyond it do not resolve (fall back to find_text)."
+            ),
+            parameters=LorePathInput.model_json_schema(),
+            handler=service.lore_path,
             max_result_chars=24_000,
             effect_kind=EffectKind.READ,
             retry_safe=True,

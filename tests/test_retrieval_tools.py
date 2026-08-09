@@ -12,7 +12,7 @@ from qdrant_client import QdrantClient, models
 
 from weaver.agent.tools import ToolExecutionContext
 from weaver.retrieval.library import make_passage_handle
-from weaver.retrieval.tools import LibraryService, register_reading_tools
+from weaver.retrieval.tools import LibraryService, WhoIsInput, register_reading_tools
 
 
 class FakeEmbedder:
@@ -370,8 +370,248 @@ async def test_browse_titles_only_covers_a_whole_volume(service: LibraryService)
     assert "Fake" not in str(res["durable_evidence"])
 
 
+# ---------------------------------------------------------------------------
+# find_text 'together': a varied story fixture, many different questions
+# ---------------------------------------------------------------------------
+
+
+def _story_chapters(tmp_path: Path) -> LibraryService:
+    """A small novel where every chapter answers a different question."""
+    novel = tmp_path / "story-novel"
+    (novel / "0001-0100").mkdir(parents=True)
+    chapters = {
+        10: [
+            "Shadow Slave-Chapter 10 - 10: The Gates",
+            "sunny arrives at the academy gates",
+            "the guards say nothing",
+            "nephis stands in the courtyard",
+        ],
+        11: [
+            "Shadow Slave-Chapter 11 - 11: Training",
+            "sunny trains alone in the hall",
+        ]
+        + ["noise"] * 80
+        + ["nephis walks past the far window"],
+        12: [
+            "Shadow Slave-Chapter 12 - 12: The Truth",
+            "cassie asks about the truth",
+            "the wind answers",
+            "sunny says nothing",
+            "the wind answers again",
+            "the wind answers once more",
+            "the wind answers yet again",
+            "the wind answers forever",
+            "nephis watches them",
+            "the truth stays buried",
+        ],
+        20: [
+            "Shadow Slave-Chapter 20 - 20: The Weave",
+            "weaver wove the spell",
+            "the sky split",
+            "the spell binds all dreams",
+        ],
+        21: [
+            "Shadow Slave-Chapter 21 - 21: Memories",
+            "memories are shaped by the spell",
+            "forged from fragments of dreams",
+            "created when a nightmare ends",
+        ],
+        30: [
+            "Shadow Slave-Chapter 30 - 30: The Hunt",
+            "the mountain king roars",
+            "the valley shakes",
+            "sunny strikes the mountain king down",
+            "the dust settles",
+            "effie watches the mountain king die",
+            "the mountain king is slain",
+        ],
+        31: [
+            "Shadow Slave-Chapter 31 - 31: Alone",
+            "effie hunts alone in the valley",
+        ],
+        40: [
+            "Shadow Slave-Chapter 40 - 40: The Seven",
+            "weaver spoke first",
+            "nether answered",
+            "hope laughed",
+            "ariel stayed silent",
+            "the rest did not speak",
+        ],
+        41: [
+            "Shadow Slave-Chapter 41 - 41: Alone",
+            "weaver speaks of nothing at all",
+        ],
+        50: [
+            "Shadow Slave-Chapter 50 - 50: The Dragon's Lair",
+            "the cave is empty",
+            "nothing moves",
+        ],
+        51: [
+            "Shadow Slave-Chapter 51 - 51: Quiet",
+            "the dragon sleeps beneath the hill",
+        ],
+        60: [
+            "Shadow Slave-Chapter 60 - 60: Dusk",
+            "the shadow stretches long",
+        ],
+    }
+    for num, lines in chapters.items():
+        (novel / "0001-0100" / f"chapter-{num:04d}.txt").write_text("\n".join(lines))
+    return LibraryService(novel_dir=novel, notebook_dir=tmp_path / "empty-nb")
+
+
+@pytest.fixture()
+def story(tmp_path: Path) -> LibraryService:
+    return _story_chapters(tmp_path)
+
+
+async def _together(
+    service: LibraryService, args: dict
+) -> dict:
+    return await service.find_text({"mode": "together", **args}, ctx())
+
+
 @pytest.mark.asyncio
-async def test_who_is_related_lists_graph_neighbors(tmp_path: Path) -> None:
+async def test_together_first_meeting_uses_proximity(story: LibraryService):
+    # 'where did sunny and nephis first meet?' - the tight co-occurrence
+    # wins; chapters where they are both present but far apart are dropped
+    res = await _together(story, {"groups": [["sunny"], ["nephis"]], "within_lines": 4})
+    assert res["ok"] is True
+    hits = res["result"]["hits"]
+    assert [h["chapter"] for h in hits] == [10]
+    assert hits[0]["distance"] == 2  # lines 2 and 4
+    assert hits[0]["span_start"] == 2
+    assert hits[0]["span_end"] == 4
+
+
+@pytest.mark.asyncio
+async def test_together_without_proximity_orders_by_distance(
+    story: LibraryService,
+):
+    # no bound: every co-mention chapter, tightest pair FIRST
+    res = await _together(story, {"groups": [["sunny"], ["nephis"]]})
+    assert [h["chapter"] for h in res["result"]["hits"]] == [10, 12, 11]
+    by_ch = {h["chapter"]: h for h in res["result"]["hits"]}
+    assert by_ch[11]["distance"] == 81  # far apart in the same chapter
+    by_ch = {h["chapter"]: h for h in res["result"]["hits"]}
+    assert by_ch[11]["distance"] == 81  # far apart in the same chapter
+
+
+@pytest.mark.asyncio
+async def test_together_who_was_there_when_it_happened(story: LibraryService):
+    # 'who was with sunny when the mountain king died?' - three groups,
+    # OR inside the event group
+    res = await _together(
+        story,
+        {"groups": [["sunny"], ["mountain king"], ["died", "killed", "slain", "die"]]},
+    )
+    assert [h["chapter"] for h in res["result"]["hits"]] == [30]
+
+
+@pytest.mark.asyncio
+async def test_together_synonym_group_for_unfamiliar_wording(
+    story: LibraryService,
+):
+    # 'where does the story explain how memories are made?' - the exact
+    # verb is unknown, so the event group carries synonyms
+    res = await _together(
+        story, {"groups": [["memories"], ["forge", "crafted", "created"]]}
+    )
+    assert [h["chapter"] for h in res["result"]["hits"]] == [21]
+    assert res["result"]["hits"][0]["distance"] == 1  # lines 2 and 3
+
+
+@pytest.mark.asyncio
+async def test_together_all_groups_must_appear(story: LibraryService):
+    # 'which chapter lists the daemons?' - a chapter mentioning only one
+    # of the four names must NOT match
+    res = await _together(
+        story, {"groups": [["weaver"], ["nether"], ["hope"], ["ariel"]]}
+    )
+    assert [h["chapter"] for h in res["result"]["hits"]] == [40]
+
+
+@pytest.mark.asyncio
+async def test_together_title_only_terms_do_not_count(story: LibraryService):
+    # chapter 50 mentions the dragon only in its title heading - line 1
+    # is never story text, so it must not match
+    res = await _together(story, {"groups": [["dragon"], ["sleeps"]]})
+    assert [h["chapter"] for h in res["result"]["hits"]] == [51]
+
+
+@pytest.mark.asyncio
+async def test_together_limit_takes_the_nearest_first(story: LibraryService):
+    res = await _together(story, {"groups": [["sunny"], ["nephis"]], "limit": 2})
+    assert [h["chapter"] for h in res["result"]["hits"]] == [10, 12]
+
+
+@pytest.mark.asyncio
+async def test_together_usage_loop_opens_the_span(story: LibraryService):
+    # the real usage: together locates, then read_chapters opens the
+    # tight span - the passage must actually contain both terms
+    res = await _together(story, {"groups": [["sunny"], ["nephis"]], "within_lines": 4})
+    hit = res["result"]["hits"][0]
+    handle = make_passage_handle(hit["chapter"], hit["span_start"], hit["span_end"])
+    opened = await story.read_chapters({"handle": handle}, ctx())
+    assert opened["ok"] is True
+    text = opened["result"]["text"].lower()
+    assert "sunny" in text and "nephis" in text
+
+
+@pytest.mark.asyncio
+async def test_together_rejects_whitespace_groups(story: LibraryService):
+    res = await _together(story, {"groups": [["   "], ["sunny"]]})
+    assert res["ok"] is False
+    assert res["error_category"] == "validation"
+
+
+# ---------------------------------------------------------------------------
+# who_is: name resolution only (aliases, incl. multi-word names)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_who_is_resolves_multi_word_aliases(tmp_path: Path) -> None:
+    nb = tmp_path / "nb"
+    for sub in ("people", "places", "powers", "items", "groups", "reading"):
+        (nb / sub).mkdir(parents=True)
+    (nb / "people" / "person-ariel.md").write_text(
+        "<!-- entity-id: person:ariel -->\n"
+        "<!-- alias: Demon of Dread -->\n"
+        "# Ariel\n"
+    )
+    (nb / "people" / "person-sunny.md").write_text(
+        "<!-- entity-id: person:sunny -->\n"
+        "<!-- alias: Lost from Light -->\n"
+        "# Sunny\n"
+    )
+    service = LibraryService(novel_dir=tmp_path / "novel", notebook_dir=nb)
+
+    for name, expected in [
+        ("demon of dread", "person:ariel"),
+        ("DEMON OF DREAD", "person:ariel"),
+        ("ariel", "person:ariel"),
+        ("lost from light", "person:sunny"),
+        ("sunny", "person:sunny"),
+    ]:
+        found = service.entities.lookup(name)
+        assert found is not None, name
+        assert found["entity_id"] == expected, name
+
+
+@pytest.mark.asyncio
+async def test_who_is_is_name_resolution_only(tmp_path: Path) -> None:
+    # the tool carries no relation machinery - just the name field
+    schema = WhoIsInput.model_json_schema()
+    assert list(schema["properties"].keys()) == ["name"]
+
+
+# ---------------------------------------------------------------------------
+# lore_path: shortest connections through the story map
+# ---------------------------------------------------------------------------
+
+
+def _path_notebook(tmp_path: Path) -> Path:
     nb = tmp_path / "nb"
     for sub in ("people", "places", "powers", "items", "groups", "reading"):
         (nb / sub).mkdir(parents=True)
@@ -380,6 +620,12 @@ async def test_who_is_related_lists_graph_neighbors(tmp_path: Path) -> None:
     )
     (nb / "people" / "person-weaver.md").write_text(
         "<!-- entity-id: person:weaver -->\n# Weaver\n"
+    )
+    (nb / "people" / "person-sunny.md").write_text(
+        "<!-- entity-id: person:sunny -->\n# Sunny\n"
+    )
+    (nb / "people" / "person-cassie.md").write_text(
+        "<!-- entity-id: person:cassie -->\n# Cassie\n"
     )
     rec = {
         "chapter": 650,
@@ -392,36 +638,115 @@ async def test_who_is_related_lists_graph_neighbors(tmp_path: Path) -> None:
                 "evidence": [{"chapter": 650, "location": {"line_start": 2, "line_end": 6}}],
                 "links": ["person:noctis", "person:weaver"],
                 "first_known_chapter": 650,
-            }
+            },
+            {
+                "id": "statement:chapter-0650:02",
+                "kind": "confirmed_fact",
+                "statement": "Sunny listens to the fire talk.",
+                "chapter": 650,
+                "evidence": [{"chapter": 650, "location": {"line_start": 8, "line_end": 9}}],
+                "links": ["person:sunny", "person:weaver"],
+                "first_known_chapter": 650,
+            },
+            {
+                "id": "statement:chapter-0650:03",
+                "kind": "confirmed_fact",
+                "statement": "Cassie waits outside.",
+                "chapter": 650,
+                "evidence": [{"chapter": 650, "location": {"line_start": 11, "line_end": 12}}],
+                "links": ["person:cassie"],
+                "first_known_chapter": 650,
+            },
         ],
     }
     (nb / "reading" / "0650.json").write_text(json.dumps(rec))
     conns = []
-    for target in ("person:noctis", "person:weaver"):
+    for i, (source, target) in enumerate(
+        [
+            ("statement:chapter-0650:01", "person:noctis"),
+            ("statement:chapter-0650:01", "person:weaver"),
+            ("statement:chapter-0650:02", "person:sunny"),
+            ("statement:chapter-0650:02", "person:weaver"),
+            ("statement:chapter-0650:03", "person:cassie"),
+        ]
+    ):
         conns.append(
             {
-                "id": f"conn-0650-{target.split(':')[1]}",
-                "source": "statement:chapter-0650:01",
+                "id": f"conn-0650-{i}",
+                "source": source,
                 "target": target,
                 "relation": "links",
                 "evidence": [{"chapter": 650}],
                 "first_known_chapter": 650,
             }
         )
-    (nb / "connections.jsonl").write_text(
-        "\n".join(json.dumps(c) for c in conns)
-    )
+    (nb / "connections.jsonl").write_text("\n".join(json.dumps(c) for c in conns))
+    return nb
 
-    service = LibraryService(
-        novel_dir=tmp_path / "novel",
-        notebook_dir=nb,
-    )
-    res = await service.who_is({"name": "noctis", "related": True}, ctx())
+
+@pytest.mark.asyncio
+async def test_lore_path_shortest_chain_with_connecting_statements(
+    tmp_path: Path,
+) -> None:
+    nb = _path_notebook(tmp_path)
+    service = LibraryService(novel_dir=tmp_path / "novel", notebook_dir=nb)
+    res = await service.lore_path({"from_name": "noctis", "to_name": "weaver"}, ctx())
     assert res["ok"] is True
     result = res["result"]
     assert result["found"] is True
-    related = {e["entity_id"] for e in result["related_entities"]}
-    assert "person:weaver" in related
+    assert result["hops"] == 2
+    assert result["path"] == [
+        "person:noctis",
+        "statement:chapter-0650:01",
+        "person:weaver",
+    ]
+    # the connecting statement text is in the steps, so the model can
+    # judge whether the relation is meaningful or incidental
+    step_text = [s for s in result["steps"] if s["kind"] == "statement"][0]
+    assert step_text["text"] == "Noctis and Weaver talk by the fire."
+    assert step_text["chapter"] == 650
 
-    plain = await service.who_is({"name": "noctis"}, ctx())
-    assert "related_entities" not in plain["result"]
+
+@pytest.mark.asyncio
+async def test_lore_path_longer_chain(tmp_path: Path) -> None:
+    nb = _path_notebook(tmp_path)
+    service = LibraryService(novel_dir=tmp_path / "novel", notebook_dir=nb)
+    # sunny -> weaver -> noctis is 4 hops through two statements
+    res = await service.lore_path({"from_name": "sunny", "to_name": "noctis"}, ctx())
+    assert res["result"]["found"] is True
+    assert res["result"]["hops"] == 4
+    assert res["result"]["path"] == [
+        "person:sunny",
+        "statement:chapter-0650:02",
+        "person:weaver",
+        "statement:chapter-0650:01",
+        "person:noctis",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_lore_path_no_connection_and_unresolved_names(
+    tmp_path: Path,
+) -> None:
+    nb = _path_notebook(tmp_path)
+    service = LibraryService(novel_dir=tmp_path / "novel", notebook_dir=nb)
+    # cassie has no shared statements: no path
+    res = await service.lore_path({"from_name": "cassie", "to_name": "sunny"}, ctx())
+    assert res["result"]["found"] is False
+    assert "no connection" in res["result"]["note"]
+    # a name the story map does not know at all
+    res = await service.lore_path({"from_name": "noctis", "to_name": "mordret"}, ctx())
+    assert res["result"]["found"] is False
+    assert "not in the story map" in res["result"]["note"]
+
+
+@pytest.mark.asyncio
+async def test_lore_path_max_hops_bound(tmp_path: Path) -> None:
+    nb = _path_notebook(tmp_path)
+    service = LibraryService(novel_dir=tmp_path / "novel", notebook_dir=nb)
+    # the 4-hop sunny->noctis chain is rejected under max_hops 2
+    res = await service.lore_path(
+        {"from_name": "sunny", "to_name": "noctis", "max_hops": 2}, ctx()
+    )
+    assert res["result"]["found"] is False
+    assert "within 2 hops" in res["result"]["note"]

@@ -110,6 +110,8 @@ async def test_fake_smoke_writes_complete_safe_receipt(tmp_path) -> None:
     manifest = json.loads((result.run_dir / "manifest.json").read_text())
     responses = json.loads((result.run_dir / "response.json").read_text())
     assert manifest["outcome"] == "passed"
+    assert manifest["settings"]["retry_policy"] == "provider-managed"
+    assert manifest["settings"]["maximum_model_calls"] == 3
     assert len(manifest["calls"]) == 3
     assert responses[0]["model_id"] == "deepseek-v4-flash"
     assert responses[2]["model_id"] == "deepseek-v4-flash"
@@ -149,10 +151,12 @@ async def test_provider_contract_receipt_is_private_and_metadata_only(
         assert stat.S_IMODE(path.stat().st_mode) == 0o600
 
     manifest = json.loads((result.run_dir / "manifest.json").read_text())
+    request_receipt = json.loads((result.run_dir / "request.json").read_text())
     assert manifest["experiment"] == "provider-tool-contract"
     assert manifest["settings"]["thinking_enabled"] is False
-    assert manifest["settings"]["max_retries"] == 0
-    assert manifest["settings"]["maximum_api_requests"] == 2
+    assert manifest["settings"]["retry_policy"] == "provider-managed"
+    assert manifest["settings"]["maximum_model_calls"] == 2
+    assert request_receipt["maximum_model_calls_per_model"] == 2
     assert [model["model_id"] for model in manifest["models"]] == [
         "deepseek-v4-flash",
     ]

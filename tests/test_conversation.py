@@ -1300,6 +1300,10 @@ class _RaisingProvider(FakeModelProvider):
     """A provider whose stream explodes, to drive a MODEL_FAILED turn."""
 
     async def stream(self, model, request, cancel_event, *, max_output_tokens):
+        yield self._raise_inference_error()
+
+    @staticmethod
+    def _raise_inference_error() -> ModelStreamEvent:
         raise RuntimeError("inference exploded")
 
 

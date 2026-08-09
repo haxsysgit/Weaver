@@ -67,11 +67,25 @@ the source of any claim.
 
 ## What this means for Weaver's tools
 
-- The reading toolset is now the five finders + readers (2026-08-07):
-  semantic_search (meaning search), find_text (exact phrase + speaker
-  mode), browse_chapters (range skim), who_is (entity map), read_chapters
-  (open prose by handle). The old two-tool set (search_library,
-  open_chapters) was renamed and extended into this set.
+- The reading toolset is now the six finders + readers (2026-08-07):
+  semantic_search (meaning search), find_text (exact phrase + speaker +
+  together co-occurrence modes), browse_chapters (range skim, plus
+  titles_only volume orientation), who_is (entity profile from the story
+  map), lore_path (shortest connection between two entities, with the
+  statements that make it), read_chapters (open prose by handle). The
+  old two-tool set (search_library, open_chapters) was renamed and
+  extended into this set.
+- who_is and lore_path run on the story notebook, which currently
+  covers chapters 1-1000 only. Names or connections beyond the map do
+  not resolve; the tools say so and the model falls back to find_text.
+  Once the reading continuation completes the notebook, both tools
+  cover the whole novel.
+- Deferred (2026-08-09): story_position(chapter) - return the volume,
+  arc and beat labels for any chapter so answers can frame themselves
+  ('that's Volume 7, the Tomb of Ariel arc') without spoiling. The
+  volume boundaries are already verified canon (95/350/600/750/1060/
+  1230/1590/1840/2260/2720/3000); the tool is deferred until the live
+  trial shows the model actually needs the framing.
 - The Ariel Reader Trial depends on this exact capability. "Find where
   Ariel fought the Unholy Titan" was answered by grepping "Unholy
   Titan" across the corpus (co-occurrence at ch1247/1248/1319/1482/

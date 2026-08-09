@@ -50,7 +50,7 @@ CHAPTER_JSON_PATTERN = re.compile(r"^(\d{4})\.json$")
 CHAPTER_NOTE_PATTERN = re.compile(r"^(\d{4})\.md$")
 CHAPTER_HEADING_PATTERN = re.compile(r"^#\s+Chapter\s+(\d{1,4})\s*$")
 ENTITY_MARKER_PATTERN = re.compile(r"<!--\s*entity-id:\s*([^\s]+)\s*-->")
-ALIAS_MARKER_PATTERN = re.compile(r"<!--\s*alias:\s*([^\s]+)\s*-->")
+ALIAS_MARKER_PATTERN = re.compile(r"<!--\s*alias:\s*([^<\s]+(?:\s+[^<\s]+)*)\s*-->")
 STATEMENT_MARKER_PATTERN = re.compile(
     r"<!--\s*statement-id:\s*([^\s]+)\s*-->"
 )

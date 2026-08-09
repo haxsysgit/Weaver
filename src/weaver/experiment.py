@@ -344,7 +344,7 @@ async def run_provider_tool_contract(
             "models": [asdict(model) for model in models],
             "tool_name": _CONTRACT_TOOL_NAME,
             "thinking_enabled": False,
-            "maximum_requests_per_model": 2,
+            "maximum_model_calls_per_model": 2,
         },
     )
 
@@ -393,8 +393,8 @@ async def run_provider_tool_contract(
             "settings": {
                 "stream": True,
                 "thinking_enabled": False,
-                "max_retries": 0,
-                "maximum_api_requests": len(models) * 2,
+                "retry_policy": "provider-managed",
+                "maximum_model_calls": len(models) * 2,
                 "timeout_seconds": timeout_seconds,
             },
             "outcome": outcome,
@@ -689,7 +689,8 @@ async def run_model_smoke(
         "finished_at": utc_now(),
         "settings": {
             "stream": True,
-            "max_retries": 0,
+            "retry_policy": "provider-managed",
+            "maximum_model_calls": len(requests),
             "timeout_seconds": timeout_seconds,
         },
         "outcome": outcome,

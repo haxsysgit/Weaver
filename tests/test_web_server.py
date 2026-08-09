@@ -112,13 +112,21 @@ async def test_ephemeral_uvicorn_create_stream_and_transcript_flow(tmp_path) -> 
             assert created.status_code == 201
             conversation_id = created.json()["conversation_id"]
 
-            streamed = await client.post(
+            started = await client.post(
                 f"/api/conversations/{conversation_id}/turns",
                 json={"message": "ephemeral server proof"},
             )
-            assert streamed.status_code == 200
-            assert "event: delta" in streamed.text
-            assert "event: completed" in streamed.text
+            assert started.status_code == 202
+
+            async with client.stream(
+                "GET",
+                f"/api/conversations/{conversation_id}/stream",
+            ) as streamed:
+                assert streamed.status_code == 200
+                stream_body = (await streamed.aread()).decode()
+
+            assert "event: delta" in stream_body
+            assert "event: completed" in stream_body
 
             transcript = await client.get(
                 f"/api/conversations/{conversation_id}/messages"

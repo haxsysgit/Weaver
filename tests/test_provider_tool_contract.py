@@ -258,6 +258,7 @@ def sdk_backed_layer(
         api_key="test-only-key",
         base_url="https://deepseek.invalid/v1",
         http_client=http_client,
+        # Keep SDK retries off so this test sees only Weaver's provider policy.
         max_retries=0,
         timeout=1.0,
     )
@@ -517,6 +518,7 @@ async def test_real_sdk_serializes_and_parses_complete_tool_contract(
         {
             "role": "assistant",
             "content": None,
+            "reasoning_content": "",
             "tool_calls": [
                 {
                     "id": "call-synthetic-001",
@@ -535,7 +537,13 @@ async def test_real_sdk_serializes_and_parses_complete_tool_contract(
         },
     ]
     assert second_body["messages"][:2] == first_body["messages"]
-    assert "reasoning_content" not in json.dumps(request_bodies)
+    assistant_messages = [
+        message
+        for request_body in request_bodies
+        for message in request_body["messages"]
+        if message["role"] == "assistant"
+    ]
+    assert [message["reasoning_content"] for message in assistant_messages] == [""]
 
     record = json.loads((result.run_dir / "response.json").read_text())[0]
     assert record["first_finish_reason"] == "tool_use"
@@ -547,7 +555,7 @@ async def test_real_sdk_serializes_and_parses_complete_tool_contract(
 
 
 @pytest.mark.asyncio
-async def test_real_sdk_has_no_retry_or_second_request_after_provider_error(
+async def test_real_sdk_retries_provider_error_without_starting_second_call(
     tmp_path: Path,
 ) -> None:
     requests: list[httpx.Request] = []
@@ -578,4 +586,12 @@ async def test_real_sdk_has_no_retry_or_second_request_after_provider_error(
 
     assert result.outcome == "failed"
     assert result.error_category == CAT_FIRST_PROVIDER
-    assert len(requests) == 1
+    assert len(requests) == DeepSeekProvider.RETRY_MAX_ATTEMPTS
+
+    request_bodies = [json.loads(request.content) for request in requests]
+    assert all("tool_choice" in body for body in request_bodies)
+    assert all(body == request_bodies[0] for body in request_bodies)
+
+    manifest = json.loads((result.run_dir / "manifest.json").read_text())
+    assert manifest["settings"]["retry_policy"] == "provider-managed"
+    assert manifest["settings"]["maximum_model_calls"] == 2
