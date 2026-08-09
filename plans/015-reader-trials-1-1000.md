@@ -46,29 +46,38 @@ tool-level position filter.
 
 ### The flow (what happens on send)
 
-1. **Locate.** The tool loop under the tier budget. The model
-   decides its own steps; per-question budgets and a router call are
-   explicitly rejected (owner 2026-08-08: the model knows what to do).
-   `search_story` first (notebook statements read first, they often
-   carry the answer), `find_text` for exact phrases and "where does X
-   speak", `who_is` for names. Triage to 1-3 candidate passages plus
-   notebook statements. The model's first no-tool response is a locate
-   draft, never the answer.
-2. **Packet assembly (machinery, not the model).** `read_chapters` `search_story` first (notebook
-   statements read first, they often carry the answer), `find_text` for
-   exact phrases and "where does X speak", `who_is` for names. Triage to
-   1-3 candidate passages plus notebook statements.
-3. **Packet assembly (machinery, not the model).** `read_chapters` with
-   expanded windows, labels + first_known_chapter, volume/arc context,
-   skill pack, user position and mode. Ephemeral 50-200K tokens, never
-   persisted (temp-vs-durable split).
-4. **Judge gate (machinery).** Deterministic pass over the packet's
-   citations.
-5. **Synthesis.** One heavy toolless call (tools stripped, hermes-style)
-   with the packet in context. Answers cite chapters. Framing comes from
-   the judge. The draft is ephemeral; only the final answer persists.
-6. **Verify (transcendent only).** Re-read the cited passages, check the
-   claims, refine.
+1. **Open reading loop.** Every normal model call keeps the registered
+   reading tools. The model chooses when to search, open another passage,
+   or stop. The tier budgets remain ceilings of 50 / 70 / 90 tool steps.
+2. **Answer candidate.** A plain response with no structured tool call is
+   a candidate. It is never published automatically. The server rejects
+   empty replies, written-out tool calls, placeholders, and narration of
+   work the model still plans to do. Rejected text stays ephemeral, the
+   model receives one corrective note, and the loop continues with tools.
+   Two rejected candidates are corrected; the third fails honestly.
+3. **Zero-evidence check.** When a candidate arrives before any tool call,
+   the server asks once for evidence or an honest no-coverage answer. If
+   the next candidate also uses zero tools, it can publish. This is a
+   bounded process check, not a lore classifier.
+4. **Final reading phase.** After a candidate passes validation, machinery
+   builds the packet from opened passages, wider windows, notebook
+   statements, story beats, spoiler framing, and the reader position. The
+   bounded recent conversation plus the candidate and packet go through
+   one heavy toolless call. Awakened and ascended use high reasoning;
+   transcendent uses max. The call gets 16384 output tokens.
+5. **Fail-soft publish.** A valid final output replaces the candidate. A
+   final slip, empty reply, refusal, or provider failure publishes the
+   validated candidate instead. When the packet builder returns no
+   evidence, the candidate publishes without a final call. Packets,
+   candidates, rejects, correction notes, and raw reasoning never enter
+   the conversation store.
+6. **Real ceiling.** Once the tool budget is spent, Weaver makes the one
+   existing forced toolless call and answers from gathered evidence or
+   reports that the library does not cover the question. A slip there is
+   `LIMIT_REACHED`, and there is no final reading phase afterward.
+
+There is no `submit_answer` tool, finish tool, or `tool_choice`. Readiness
+is signaled by a plain response, the same way the other agent loops work.
 
 ### Judge outcomes
 
@@ -97,8 +106,9 @@ classification call) returns with them, and it never assigned budgets.
    loader) — DONE 2026-08-08 (9924716)
 2. Preferences store + web UI knob (chapter field + spoiler toggle)
    — DONE 2026-08-08 (3cfcf1e)
-3. Two-phase loop (locate, then packet, then toolless synthesis)
-   — DONE 2026-08-08 (aeb977a)
+3. Open reading loop (tools stay available until a validated candidate,
+   followed by one fail-soft final reading phase)
+   - DONE 2026-08-10 (aeb977a original packet slice, b8bc7d0 open-loop repair)
 4. Label pass over the 1-1000 statements — DONE 2026-08-08 (7f17f9d + this slice); labels
    private at `.weaver/knowledge/shadow-slave/spoiler-labels.json` (33 statements) plus the
    semantic beat map `spoiler-beats.json` (32 story beats with chapter ranges, labels and
@@ -128,9 +138,8 @@ takes) is the second half of Plan 15, after the front half works live.
 
 ## Unchanged
 
-The five reading tools, the whole-novel index, the durable split, the
-50/70/90 tool budgets, the always-on reasoning tiers (high/high/max), the
-web system prompt.
+The reading tools, the whole-novel index, the durable split, the 50/70/90
+tool budgets, and the always-on reasoning tiers (high/high/max).
 
 ## Verification
 
