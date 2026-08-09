@@ -430,11 +430,8 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         retry: bool = False,
         regenerate: bool = False,
     ) -> None:
-        """Run the send (or the last-turn retry/regenerate), streaming
-        deltas, then the terminal event."""
-
-        async def on_delta(text: str) -> None:
-            stream.emit("delta", {"text": text})
+        """Run the send (or the last-turn retry/regenerate), then emit
+        only the validated terminal answer."""
 
         # Plan 014 live-trial seam: tool activity as SSE 'tool' events so
         # the UI can render search/open lines. Plan 15 slice 5: on
@@ -484,7 +481,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 regenerated = await runtime.session.regenerate_last_turn(
                     conversation_id,
                     cancel_event=stream.cancel_event,
-                    on_delta=on_delta,
+                    on_delta=None,
                     on_tool_event=on_tool_event,
                     tool_budget=TOOL_BUDGET_TIERS[tier],
                     reasoning=REASONING_TIERS[tier],
@@ -504,7 +501,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 retried = await runtime.session.retry_last_turn(
                     conversation_id,
                     cancel_event=stream.cancel_event,
-                    on_delta=on_delta,
+                    on_delta=None,
                     on_tool_event=on_tool_event,
                     tool_budget=TOOL_BUDGET_TIERS[tier],
                     reasoning=REASONING_TIERS[tier],
@@ -522,7 +519,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                     conversation_id,
                     message,
                     cancel_event=stream.cancel_event,
-                    on_delta=on_delta,
+                    on_delta=None,
                     on_tool_event=on_tool_event,
                     # Plan 15: the tier is a user preference (the mode
                     # selector). Tool calls are capped at 50/70/90; the final

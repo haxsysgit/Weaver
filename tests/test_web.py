@@ -176,11 +176,11 @@ async def _run_turn(client, conv: str, message: str) -> tuple[list[str], list[di
     return events, payloads
 
 
-async def test_turn_streams_delta_before_completed(client) -> None:
+async def test_web_holds_model_prose_until_the_final_answer(client) -> None:
     conv = (await client.post("/api/conversations")).json()["conversation_id"]
     events, payloads = await _run_turn(client, conv, "hello")
-    assert events[0] == "delta"
-    assert "completed" in events
+    assert "delta" not in events
+    assert events[0] == "completed"
     assert "failed" not in events
     assert "interrupted" not in events
     assert payloads[-1]["text"]
@@ -191,7 +191,7 @@ async def test_stream_replays_the_full_log_for_a_fresh_client(client) -> None:
     # that connects fresh (or reconnects) gets every event in order.
     conv = (await client.post("/api/conversations")).json()["conversation_id"]
     events, payloads = await _run_turn(client, conv, "hello")
-    assert events[0] == "delta"
+    assert events[0] == "completed"
     assert "completed" in events
 
 
@@ -880,7 +880,7 @@ async def test_retry_route_reruns_and_streams(tmp_path) -> None:
                     events.append(line.split(":", 1)[1].strip())
                 elif line.startswith("data:"):
                     payloads.append(json.loads(line.split(":", 1)[1].strip()))
-        assert events[0] == "delta"
+        assert events[0] == "completed"
         assert events[-1] == "completed"
         assert payloads[-1]["text"] == "retried answer"
     await runtime.close()
@@ -971,7 +971,7 @@ async def test_regenerate_route_reanswers_in_place_and_streams(tmp_path) -> None
                     events.append(line.split(":", 1)[1].strip())
                 elif line.startswith("data:"):
                     payloads.append(json.loads(line.split(":", 1)[1].strip()))
-        assert events[0] == "delta"
+        assert events[0] == "completed"
         assert events[-1] == "completed"
         assert payloads[-1]["text"] == "fresh answer"
     await runtime.close()

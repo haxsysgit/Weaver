@@ -125,7 +125,7 @@ async def test_ephemeral_uvicorn_create_stream_and_transcript_flow(tmp_path) -> 
                 assert streamed.status_code == 200
                 stream_body = (await streamed.aread()).decode()
 
-            assert "event: delta" in stream_body
+            assert "event: delta" not in stream_body
             assert "event: completed" in stream_body
 
             transcript = await client.get(

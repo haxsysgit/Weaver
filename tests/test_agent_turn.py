@@ -1391,6 +1391,11 @@ class TestTextToolCallSlips:
         "<tool calls>\n```json\n"
         '[{"name": "echo", "arguments": {"message": "x"}}]\n```'
     )
+    ANGLE_BRACKET_SLIP = (
+        "<reaching into the story map...>\n\n"
+        '<find_text: "Auro of the Nine", exact phrase>\n\n'
+        "I'll trace the name through the manuscript first."
+    )
 
     async def test_text_tool_call_draft_is_corrected_not_answered(self) -> None:
         layer, model, provider = scripted_layer(
@@ -1462,7 +1467,7 @@ class TestTextToolCallSlips:
             "PACKET: prose" in (m.content or "") for m in corrective.messages
         )
         assert any(
-            "wrote a tool call as plain text" in (m.content or "")
+            "final answer phase" in (m.content or "").lower()
             for m in corrective.messages
         )
         # only the final answer is persisted, never the slip
@@ -1473,6 +1478,42 @@ class TestTextToolCallSlips:
             "assistant",
         ]
         assert persisted[-1].content == "Final: the answer."
+
+    async def test_angle_bracket_tool_narration_is_corrected_on_synthesis(
+        self,
+    ) -> None:
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "auro"}')),
+            stop_response("Draft: evidence found."),
+            stop_response(self.ANGLE_BRACKET_SLIP),
+            stop_response("Auro was one of the Nine."),
+        )
+        persisted: list = []
+
+        async def packet_builder(results, draft):
+            return "PACKET: evidence only"
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            persist_message=_async_append(persisted),
+            packet_builder=packet_builder,
+        )
+
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert result.final_text == "Auro was one of the Nine."
+        assert len(provider.calls) == 4
+        assert provider.calls[3].request.tools == ()
+        assert any(
+            "final answer phase" in (message.content or "").lower()
+            for message in provider.calls[3].request.messages
+        )
+        assert all(
+            "find_text" not in (getattr(message, "content", "") or "")
+            for message in persisted
+        )
 
     async def test_text_tool_call_slip_limit_fails_honestly(self) -> None:
         layer, model, provider = scripted_layer(

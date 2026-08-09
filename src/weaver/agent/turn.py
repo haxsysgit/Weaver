@@ -149,16 +149,46 @@ TEXT_TOOL_CORRECTION = (
     "mechanism attached to your reply, or, if you have enough to "
     "answer, write the answer directly."
 )
+FINAL_ANSWER_CORRECTION = (
+    "You are in the final answer phase. No tools are available and the "
+    "reading packet is complete. Do not name or describe tool calls, searches, "
+    "or future work. Answer the user directly from the evidence above."
+)
+FINAL_ANSWER_INSTRUCTION = (
+    "This is the final answer phase. The evidence packet above is complete and "
+    "no tools are available. Answer the user directly, citing chapters. Do not "
+    "name or describe searches, tool calls, or work you plan to do."
+)
+KNOWN_READING_TOOL_NAMES = frozenset(
+    {
+        "semantic_search",
+        "read_chapters",
+        "find_text",
+        "browse_chapters",
+        "who_is",
+        "lore_path",
+    }
+)
 
 
-def _is_textual_tool_call(content: str) -> bool:
+def _is_textual_tool_call(content: str, tool_names: tuple[str, ...]) -> bool:
     """True when the model wrote a tool call as prose instead of using
-    the structured tool-call mechanism (a known thinking-model slip:
-    '<tool calls>' plus a JSON block in the content)."""
+    the structured tool-call mechanism."""
     stripped = content.lstrip()
     if stripped.startswith("<tool calls>") or stripped.startswith("<tool_calls>"):
         return True
-    return "```json" in content and '"name"' in content and '"arguments"' in content
+    if "```json" in content and '"name"' in content and '"arguments"' in content:
+        return True
+
+    known_tool_names = KNOWN_READING_TOOL_NAMES.union(tool_names)
+    for line in content.splitlines():
+        tag = line.strip()
+        if not tag.startswith("<") or not tag.endswith(">"):
+            continue
+        tag_name = tag[1:-1].split(":", 1)[0].split(None, 1)[0]
+        if tag_name in known_tool_names:
+            return True
+    return False
 
 
 class TurnExitReason(str, Enum):
@@ -443,7 +473,7 @@ async def run_turn(
                 *request_messages,
                 ModelMessage(
                     role="system",
-                    content=synthesis_packet + "\n\nAnswer now, citing chapters.",
+                    content=synthesis_packet + "\n\n" + FINAL_ANSWER_INSTRUCTION,
                 ),
             ]
             synthesis_requested = True
@@ -584,7 +614,7 @@ async def run_turn(
             # is ephemeral, never persisted. On the forced call the
             # reminder already said the steps are spent; a slip there is
             # a refusal, not an answer.
-            if _is_textual_tool_call(assistant.content or ""):
+            if _is_textual_tool_call(assistant.content or "", active_tools):
                 if forced_answer:
                     exit_reason = TurnExitReason.LIMIT_REACHED
                     safe_failure = safe_error("limit")
@@ -594,7 +624,11 @@ async def run_turn(
                     safe_failure = safe_error("model_protocol")
                     break
                 text_tool_slips += 1
-                text_tool_note = TEXT_TOOL_CORRECTION
+                text_tool_note = (
+                    FINAL_ANSWER_CORRECTION
+                    if synthesis_requested
+                    else TEXT_TOOL_CORRECTION
+                )
                 new_messages.append(assistant)
                 continue
             # Plan 15 two-phase: the first no-tool draft is a locate
