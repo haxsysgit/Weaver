@@ -3,12 +3,11 @@ import { config } from "@fortawesome/fontawesome-svg-core";
 import "@fortawesome/fontawesome-svg-core/styles.css";
 import { createRoot } from "react-dom/client";
 
-import { ChatApp } from "./components/ChatApp";
+import { SpellSurfaceChatApp } from "./components/SpellSurfaceChatApp";
 import { createHttpChatApi } from "./lib/chatApi";
 import "./styles/tokens.css";
 import "./styles/app.css";
 
-// three.js is only needed for the dev theme-lab page, never for the chat
 const ThemeLab = lazy(() =>
   import("./components/ThemeLab").then((m) => ({ default: m.ThemeLab })),
 );
@@ -32,7 +31,7 @@ createRoot(rootElement).render(
       <ThemeLab />
     </Suspense>
   ) : (
-    <ChatApp
+    <SpellSurfaceChatApp
       api={createHttpChatApi()}
       modeLabel={metaContent("weaver-mode")}
       privacyLabel={metaContent("weaver-privacy")}

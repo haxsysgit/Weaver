@@ -1603,3 +1603,399 @@
   .lab-chat-controls { right: 10px; left: 10px; justify-content: space-between; }
   .lab-transcript-column { padding-top: 68px; }
 }
+
+/* Production Spell Surface. The blood-red cast is Weaver's identity layer;
+   gold stays reserved for divine cores, runes, and deliberate focus. */
+.spell-surface-live {
+  --lab-glass-strong: rgba(24, 7, 10, 0.6);
+  --lab-glass-soft: rgba(25, 7, 10, 0.4);
+  --lab-glass-message: rgba(20, 5, 9, 0.18);
+  background:
+    radial-gradient(circle at 8% 40%, rgba(104, 17, 22, 0.3), transparent 34rem),
+    radial-gradient(circle at 82% -15%, rgba(117, 24, 27, 0.22), transparent 38rem),
+    radial-gradient(circle at 55% 105%, rgba(67, 12, 21, 0.2), transparent 42rem),
+    #050406;
+}
+
+.spell-surface-live[data-glass="immersive"] {
+  --lab-glass-strong: rgba(20, 5, 8, 0.4);
+  --lab-glass-soft: rgba(19, 4, 8, 0.22);
+  --lab-glass-message: rgba(17, 3, 7, 0.05);
+}
+
+.spell-surface-live .lab-purple-depth {
+  background:
+    radial-gradient(circle at 76% 8%, rgba(126, 24, 29, 0.19), transparent 36%),
+    radial-gradient(circle at 40% 84%, rgba(72, 13, 27, 0.17), transparent 52%);
+}
+
+.spell-surface-live .lab-rail {
+  border-right-color: rgba(154, 47, 50, 0.25);
+  background:
+    radial-gradient(circle at 4% 0, rgba(151, 37, 40, 0.23), transparent 19rem),
+    radial-gradient(circle at 100% 72%, rgba(91, 17, 25, 0.18), transparent 22rem),
+    linear-gradient(180deg, rgba(27, 8, 11, 0.9), rgba(10, 5, 8, 0.86));
+  box-shadow: 18px 0 64px rgba(29, 0, 4, 0.32);
+}
+
+.spell-surface-live .lab-new-thread,
+.spell-surface-live .lab-rail-footer > button {
+  border-color: rgba(171, 62, 64, 0.2);
+  background: rgba(78, 15, 21, 0.12);
+}
+
+.spell-surface-live .lab-thread-row.active {
+  background:
+    linear-gradient(90deg, rgba(123, 30, 34, 0.28), rgba(66, 13, 22, 0.1));
+}
+
+.spell-surface-live .lab-grouping-menu {
+  border-color: rgba(174, 68, 69, 0.28);
+  background: rgba(28, 8, 12, 0.97);
+}
+
+.spell-surface-live .lab-chat-main::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  background:
+    linear-gradient(110deg, rgba(74, 10, 17, 0.12), transparent 34%),
+    radial-gradient(circle at 100% 52%, rgba(93, 16, 23, 0.1), transparent 32rem);
+}
+
+.spell-surface-live .lab-live-mode {
+  padding: 5px 8px;
+  color: rgba(211, 154, 151, 0.72);
+  border: 1px solid rgba(157, 56, 59, 0.18);
+  border-radius: 999px;
+  background: rgba(68, 12, 18, 0.13);
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.spell-surface-live .lab-transcript-column {
+  gap: 20px;
+}
+
+.spell-surface-live .message {
+  width: 100%;
+  margin-top: 0;
+}
+
+.spell-surface-live .message-owner {
+  padding-left: 18%;
+}
+
+.spell-surface-live .owner-bubble {
+  padding: 16px 19px;
+  border-color: rgba(190, 91, 94, 0.25);
+  border-radius: 15px;
+  background:
+    linear-gradient(130deg, rgba(102, 28, 35, 0.16), transparent 46%),
+    var(--lab-glass-message);
+  color: #f3f1f4;
+  font-size: 1rem;
+  line-height: 1.67;
+  box-shadow: 0 14px 40px rgba(24, 0, 4, 0.16);
+  backdrop-filter: blur(var(--lab-blur));
+}
+
+.spell-surface-live .message-weaver {
+  gap: 10px;
+  padding-right: 0;
+}
+
+.spell-surface-live .message-weaver::before {
+  display: none;
+}
+
+.spell-surface-live .weaver-avatar {
+  width: 31px;
+  height: 31px;
+  flex-basis: 31px;
+  border-color: rgba(171, 66, 69, 0.24);
+  background: rgba(20, 5, 9, 0.64);
+  color: #d7b3ae;
+}
+
+.spell-surface-live .weaver-avatar svg {
+  width: 17px;
+  height: 17px;
+}
+
+.spell-surface-live .weaver-message-content {
+  max-width: min(680px, 88%);
+  padding: 17px 20px;
+  border-color: rgba(182, 84, 86, 0.2);
+  border-radius: 15px;
+  background:
+    radial-gradient(circle at 0 0, rgba(106, 22, 29, 0.11), transparent 42%),
+    var(--lab-glass-message);
+  box-shadow: 0 16px 48px rgba(20, 0, 4, 0.17);
+  backdrop-filter: blur(var(--lab-blur));
+}
+
+.spell-surface-live .message-role {
+  color: var(--lab-gold);
+  font-size: 9px;
+}
+
+.spell-surface-live .markdown-body {
+  color: #f3f1f4;
+  font-family: var(--font-display);
+  font-size: 1.08rem;
+  line-height: 1.72;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.96), 0 0 16px rgba(0, 0, 0, 0.72);
+}
+
+.spell-surface-live .message-actions button {
+  border-color: rgba(165, 68, 72, 0.2);
+  background: rgba(24, 7, 11, 0.9);
+}
+
+.spell-surface-live .recovery-panel,
+.spell-surface-live .boot-error {
+  border-color: rgba(185, 70, 72, 0.28);
+  background: rgba(42, 9, 14, 0.72);
+}
+
+.spell-surface-live .lab-composer-dock {
+  background: linear-gradient(transparent, rgba(18, 4, 8, 0.6));
+}
+
+.spell-surface-live .composer-wrap {
+  width: min(760px, 100%);
+}
+
+.spell-surface-live .composer-shell {
+  border-color: rgba(184, 82, 84, 0.25);
+  border-radius: 16px;
+  background:
+    linear-gradient(110deg, rgba(126, 28, 34, 0.12), transparent 38%),
+    var(--lab-glass-strong);
+  box-shadow: 0 18px 52px rgba(25, 0, 4, 0.3);
+  backdrop-filter: blur(var(--lab-blur));
+}
+
+.spell-surface-live .composer-shell:focus-within {
+  border-color: rgba(202, 102, 101, 0.42);
+  box-shadow: 0 18px 52px rgba(25, 0, 4, 0.3), 0 0 0 2px rgba(147, 38, 42, 0.08);
+}
+
+.spell-surface-live .tier-pill,
+.spell-surface-live .tier-menu {
+  border-color: rgba(174, 67, 70, 0.22);
+  background: rgba(31, 7, 12, 0.92);
+}
+
+.spell-surface-live .lab-settings-panel {
+  border-color: rgba(184, 75, 77, 0.3);
+  background:
+    radial-gradient(circle at 0 0, rgba(127, 27, 34, 0.2), transparent 30rem),
+    rgba(19, 6, 10, 0.96);
+  box-shadow: 0 34px 100px rgba(29, 0, 4, 0.68), inset 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.spell-surface-live .lab-settings-nav button.on,
+.spell-surface-live .lab-choice-grid button.on,
+.spell-surface-live .lab-segmented-control button.on {
+  border-color: rgba(201, 102, 101, 0.36);
+  background: linear-gradient(120deg, rgba(134, 31, 37, 0.2), rgba(224, 189, 120, 0.05));
+}
+
+.spell-surface-live .passage-panel {
+  border-color: rgba(184, 75, 77, 0.3);
+  background: rgba(24, 7, 11, 0.97);
+}
+
+@media (max-width: 767px) {
+  .spell-surface-live .lab-live-mode {
+    display: none;
+  }
+}
+
+/* Surface identities. Crimson remains Weaver's default; the other palettes
+   change the atmosphere without recolouring the 91 divine cores. */
+.spell-surface-lab[data-theme="crimson"] {
+  --surface-accent: rgba(166, 48, 53, 0.3);
+  --surface-edge: rgba(174, 67, 70, 0.26);
+  --surface-haze-a: rgba(117, 24, 27, 0.22);
+  --surface-haze-b: rgba(67, 12, 21, 0.2);
+  --surface-panel-a: rgba(27, 8, 11, 0.9);
+  --surface-panel-b: rgba(10, 5, 8, 0.86);
+  --surface-root: #050406;
+}
+
+.spell-surface-lab[data-theme="cosmos"] {
+  --surface-accent: rgba(83, 69, 164, 0.31);
+  --surface-edge: rgba(95, 128, 204, 0.28);
+  --surface-haze-a: rgba(55, 41, 122, 0.28);
+  --surface-haze-b: rgba(24, 67, 119, 0.22);
+  --surface-panel-a: rgba(13, 9, 34, 0.91);
+  --surface-panel-b: rgba(5, 8, 21, 0.88);
+  --surface-root: #03040a;
+}
+
+.spell-surface-lab[data-theme="starlight"] {
+  --surface-accent: rgba(184, 198, 224, 0.21);
+  --surface-edge: rgba(211, 221, 239, 0.25);
+  --surface-haze-a: rgba(157, 174, 204, 0.2);
+  --surface-haze-b: rgba(94, 112, 145, 0.17);
+  --surface-panel-a: rgba(25, 29, 39, 0.88);
+  --surface-panel-b: rgba(8, 10, 15, 0.88);
+  --surface-root: #080a0f;
+}
+
+.spell-surface-lab[data-theme="void"] {
+  --surface-accent: rgba(255, 255, 255, 0.07);
+  --surface-edge: rgba(255, 255, 255, 0.12);
+  --surface-haze-a: rgba(255, 255, 255, 0.025);
+  --surface-haze-b: rgba(255, 255, 255, 0.012);
+  --surface-panel-a: rgba(5, 5, 5, 0.94);
+  --surface-panel-b: rgba(0, 0, 0, 0.94);
+  --surface-root: #000;
+}
+
+.spell-surface-lab[data-theme] {
+  background:
+    radial-gradient(circle at 82% -15%, var(--surface-haze-a), transparent 38rem),
+    radial-gradient(circle at 55% 105%, var(--surface-haze-b), transparent 42rem),
+    var(--surface-root);
+}
+
+.spell-surface-lab[data-theme] .lab-purple-depth {
+  background:
+    radial-gradient(circle at 76% 8%, var(--surface-haze-a), transparent 36%),
+    radial-gradient(circle at 40% 84%, var(--surface-haze-b), transparent 52%);
+}
+
+.spell-surface-lab[data-theme] .lab-rail {
+  border-right-color: var(--surface-edge);
+  background:
+    radial-gradient(circle at 4% 0, var(--surface-accent), transparent 19rem),
+    radial-gradient(circle at 100% 72%, var(--surface-haze-b), transparent 22rem),
+    linear-gradient(180deg, var(--surface-panel-a), var(--surface-panel-b));
+}
+
+.spell-surface-lab[data-theme] .lab-new-thread,
+.spell-surface-lab[data-theme] .lab-rail-footer > button,
+.spell-surface-lab[data-theme] .lab-live-mode {
+  border-color: var(--surface-edge);
+  background-color: var(--surface-accent);
+}
+
+.spell-surface-lab[data-theme] .lab-thread-row.active {
+  background: linear-gradient(90deg, var(--surface-accent), transparent);
+}
+
+.spell-surface-lab[data-theme] .lab-grouping-menu,
+.spell-surface-lab[data-theme] .tier-menu {
+  border-color: var(--surface-edge);
+  background: var(--surface-panel-a);
+}
+
+.spell-surface-lab[data-theme] .lab-chat-main::before {
+  background:
+    linear-gradient(110deg, var(--surface-haze-b), transparent 34%),
+    radial-gradient(circle at 100% 52%, var(--surface-haze-a), transparent 32rem);
+}
+
+.spell-surface-lab[data-theme] .composer-shell {
+  border-color: var(--surface-edge);
+  background:
+    linear-gradient(110deg, var(--surface-accent), transparent 38%),
+    var(--lab-glass-strong);
+}
+
+.spell-surface-live[data-theme] .owner-bubble,
+.spell-surface-live[data-theme] .weaver-message-content {
+  border-color: var(--surface-edge);
+  background:
+    radial-gradient(circle at 0 0, var(--surface-accent), transparent 46%),
+    var(--lab-glass-message);
+}
+
+.spell-surface-lab[data-theme] .lab-settings-panel {
+  border-color: var(--surface-edge);
+  background:
+    radial-gradient(circle at 0 0, var(--surface-accent), transparent 30rem),
+    var(--surface-panel-a);
+}
+
+.spell-surface-lab[data-theme] .lab-settings-nav button.on,
+.spell-surface-lab[data-theme] .lab-choice-grid button.on,
+.spell-surface-lab[data-theme] .lab-segmented-control button.on,
+.spell-surface-lab[data-theme] .lab-theme-grid button.on {
+  border-color: var(--surface-edge);
+  background: linear-gradient(120deg, var(--surface-accent), rgba(224, 189, 120, 0.04));
+}
+
+.lab-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.lab-theme-grid button {
+  min-width: 0;
+  padding: 11px;
+  color: var(--lab-silver);
+  border: 1px solid var(--lab-faint);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.018);
+  cursor: pointer;
+  text-align: left;
+}
+
+.lab-theme-grid button > strong,
+.lab-theme-grid button > span:last-child {
+  display: block;
+}
+
+.lab-theme-grid button > strong {
+  margin-top: 9px;
+  color: #e1dfe6;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.lab-theme-grid button > span:last-child {
+  margin-top: 5px;
+  color: #858794;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.lab-theme-swatches {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  height: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+}
+
+.lab-theme-swatches i {
+  display: block;
+}
+
+/* Immersive means no message surface at all. Text keeps its readable shadow,
+   but the star web is uninterrupted behind both sides of the conversation. */
+.spell-surface-lab[data-glass="immersive"] .lab-message-body,
+.spell-surface-lab[data-glass="immersive"] .lab-message-owner .lab-message-body,
+.spell-surface-live[data-glass="immersive"] .owner-bubble,
+.spell-surface-live[data-glass="immersive"] .weaver-message-content {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+@media (max-width: 920px) {
+  .lab-theme-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

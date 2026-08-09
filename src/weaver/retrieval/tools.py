@@ -290,7 +290,7 @@ class LibraryService:
                 limit=MAX_CANONICAL_HITS,
                 with_payload=True,
             )
-            hits = [self._canonical_from_point(p) for p in res.points]
+            hits = [h for h in (self._canonical_from_point(p) for p in res.points) if h.score > 0.0]
         if not hits and self.sparse_encoder is not None:
             res = client.query_points(
                 "novel_chunks",
@@ -345,6 +345,8 @@ class LibraryService:
         )
         out = []
         for p in res.points:
+            if p.score <= 0.0:
+                continue  # zero similarity means nothing matched
             payload = p.payload
             st = self.notebook.by_id.get(payload.get("statement_id", ""), {})
             out.append(
@@ -583,7 +585,10 @@ class LibraryService:
         arguments: dict[str, Any],
         context: ToolExecutionContext,
     ) -> dict[str, Any]:
-        inp = LorePathInput.model_validate(arguments)
+        try:
+            inp = LorePathInput.model_validate(arguments)
+        except Exception as exc:
+            return {"ok": False, "error_category": "validation", "error": str(exc)}
         start = self.entities.lookup(inp.from_name)
         end = self.entities.lookup(inp.to_name)
         if start is None or end is None:

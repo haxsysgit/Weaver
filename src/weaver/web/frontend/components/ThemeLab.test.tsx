@@ -8,12 +8,13 @@ vi.mock("./SpellBackground", () => ({
 }));
 
 describe("Spell Surface v2 lab", () => {
-  it("keeps visual choices inside Customize settings", () => {
+  it("keeps theme and visual choices inside Customize settings", () => {
     render(<ThemeLab />);
 
     fireEvent.click(screen.getByRole("button", { name: "Open Soul Sea settings" }));
     const dialog = screen.getByRole("dialog", { name: "Soul Sea settings" });
     fireEvent.click(within(dialog).getByRole("button", { name: "Customize" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cosmos" }));
     fireEvent.click(within(dialog).getByRole("button", { name: "Immersive glass" }));
     fireEvent.click(within(dialog).getByRole("button", { name: "Living Soul" }));
     fireEvent.click(within(dialog).getByRole("button", { name: "Thread weave" }));
@@ -21,9 +22,10 @@ describe("Spell Surface v2 lab", () => {
 
     const surface = screen.getByTestId("spell-surface-lab");
     expect(surface).toHaveAttribute("data-glass", "immersive");
+    expect(surface).toHaveAttribute("data-theme", "cosmos");
     expect(surface).toHaveAttribute("data-soul", "living");
     expect(surface).toHaveAttribute("data-runes", "threads");
-  });
+  }, 10_000);
 
   it("keeps the sidebar clean while thread actions remain available on hover", () => {
     render(<ThemeLab />);

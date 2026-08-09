@@ -97,6 +97,7 @@ const INITIAL_PREFERENCES: LabPreferences = {
   soulMode: "still",
   spoilerMode: "protect",
   starIntensity: "balanced",
+  theme: "crimson",
   tier: "ascended",
   volume: 5,
 };
@@ -298,6 +299,7 @@ export function ThemeLab() {
       data-runes={preferences.runeMode}
       data-soul={preferences.soulMode}
       data-star-intensity={preferences.starIntensity}
+      data-theme={preferences.theme}
       data-testid="spell-surface-lab"
     >
       <SpellBackground className="lab-spell-background" mode="alive" threadAlpha={threadAlpha} />

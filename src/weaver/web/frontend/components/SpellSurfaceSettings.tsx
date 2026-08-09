@@ -8,6 +8,7 @@ export type Density = "compact" | "comfortable";
 export type FontSize = "small" | "medium" | "large";
 export type GlassMode = "subtle" | "immersive";
 export type StarIntensity = "quiet" | "balanced" | "vivid";
+export type SurfaceTheme = "crimson" | "cosmos" | "starlight" | "void";
 export type Tier = "awakened" | "ascended" | "transcendent";
 
 export interface LabPreferences {
@@ -19,6 +20,7 @@ export interface LabPreferences {
   soulMode: SoulSeaMode;
   spoilerMode: "protect" | "none";
   starIntensity: StarIntensity;
+  theme: SurfaceTheme;
   tier: Tier;
   volume: number;
 }
@@ -70,6 +72,38 @@ const SETTINGS_SECTIONS: Array<{
 ];
 
 const SOUL_MODES: SoulSeaMode[] = ["still", "living", "mirror"];
+
+const SURFACE_THEMES: Array<{
+  description: string;
+  label: string;
+  swatches: string[];
+  value: SurfaceTheme;
+}> = [
+  {
+    description: "Weaver's dark blood-red identity.",
+    label: "Crimson Spell",
+    swatches: ["#26080d", "#761d26", "#d7a6a2"],
+    value: "crimson",
+  },
+  {
+    description: "Deep cosmic purple and cold blue.",
+    label: "Cosmos",
+    swatches: ["#0b071b", "#34296f", "#5e8fdc"],
+    value: "cosmos",
+  },
+  {
+    description: "Silver-white starlight over deep space.",
+    label: "Starlight",
+    swatches: ["#10131a", "#747e91", "#eef3ff"],
+    value: "starlight",
+  },
+  {
+    description: "Pitch black with almost no color cast.",
+    label: "Void",
+    swatches: ["#000000", "#101010", "#686868"],
+    value: "void",
+  },
+];
 
 export function SpellSurfaceSettings({
   initial,
@@ -243,7 +277,31 @@ export function SpellSurfaceSettings({
                 <section className="lab-settings-section lab-customize-section">
                   <div className="lab-setting-title">
                     <h3>Customize the Spell</h3>
-                    <span>Keep the red surface, then tune how alive and transparent it feels.</span>
+                    <span>Choose its identity, then tune how alive and transparent it feels.</span>
+                  </div>
+
+                  <div className="lab-customize-block">
+                    <h4>Surface theme</h4>
+                    <div className="lab-theme-grid">
+                      {SURFACE_THEMES.map((theme) => (
+                        <button
+                          aria-label={theme.label}
+                          aria-pressed={preferences.theme === theme.value}
+                          className={preferences.theme === theme.value ? "on" : ""}
+                          key={theme.value}
+                          onClick={() => update("theme", theme.value)}
+                          type="button"
+                        >
+                          <span aria-hidden="true" className="lab-theme-swatches">
+                            {theme.swatches.map((swatch) => (
+                              <i key={swatch} style={{ background: swatch }} />
+                            ))}
+                          </span>
+                          <strong>{theme.label}</strong>
+                          <span>{theme.description}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   <div className="lab-customize-block">
@@ -278,8 +336,8 @@ export function SpellSurfaceSettings({
                         <span>A faint surface behind the words for easier reading.</span>
                       </button>
                       <button aria-label="Immersive glass" aria-pressed={preferences.glass === "immersive"} className={preferences.glass === "immersive" ? "on" : ""} onClick={() => update("glass", "immersive")} type="button">
-                        <strong>Immersive glass</strong>
-                        <span>Write almost directly on the nightmare Spell.</span>
+                        <strong>Immersive · no surface</strong>
+                        <span>Remove message fills, borders, shadows, and blur completely.</span>
                       </button>
                     </div>
                   </div>

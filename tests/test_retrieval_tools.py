@@ -794,3 +794,207 @@ async def test_find_text_phrase_durable_evidence_keeps_working(tmp_path: Path) -
     hit = res["durable_evidence"]["hits"][0]
     assert hit["line_start"] == 2
     assert hit["line_end"] == 2
+
+
+# ---------------------------------------------------------------------------
+# argument coverage: every parameter of every tool is exercised
+# ---------------------------------------------------------------------------
+
+
+def _quoted_novel(tmp_path: Path) -> LibraryService:
+    """ch70 has Nephis dialogue, ch71 has no quotes at all."""
+    novel = tmp_path / "novel"
+    (novel / "0001-0100").mkdir(parents=True)
+    (novel / "0001-0100" / "chapter-0070.txt").write_text(
+        "Shadow Slave-Chapter 70 - 70: The Warning\n"
+        '"Leave the city tonight," Nephis said.\n'
+        "sunny stared at her\n"
+        "the gate guards shifted\n"
+        '"I will," he said at last.\n'
+    )
+    (novel / "0001-0100" / "chapter-0071.txt").write_text(
+        "Shadow Slave-Chapter 71 - 71: Quiet\n"
+        "Nephis walked the empty street alone\n"
+        "no one spoke\n"
+    )
+    return LibraryService(novel_dir=novel, notebook_dir=tmp_path / "nb")
+
+
+@pytest.mark.asyncio
+async def test_speaker_returns_the_quote_cluster(tmp_path: Path) -> None:
+    svc = _quoted_novel(tmp_path)
+    res = await svc.find_text({"query": "nephis", "mode": "speaker"}, ctx())
+    assert res["ok"] is True
+    hits = res["result"]["hits"]
+    assert [h["chapter"] for h in hits] == [70]
+    cluster = hits[0]
+    assert cluster["line_start"] == 2
+    assert cluster["line_end"] == 2  # the name line IS the quote line
+    assert "Leave the city" in cluster["text"]
+
+
+@pytest.mark.asyncio
+async def test_speaker_skips_mention_only_chapters(tmp_path: Path) -> None:
+    # ch71 mentions Nephis but nobody speaks: no cluster
+    svc = _quoted_novel(tmp_path)
+    res = await svc.find_text({"query": "nephis", "mode": "speaker"}, ctx())
+    assert res["ok"] is True
+    assert [h["chapter"] for h in res["result"]["hits"]] == [70]
+
+
+@pytest.mark.asyncio
+async def test_speaker_narrows_by_chapter_range(tmp_path: Path) -> None:
+    svc = _quoted_novel(tmp_path)
+    res = await svc.find_text(
+        {"query": "nephis", "mode": "speaker", "chapter_from": 71}, ctx()
+    )
+    assert res["result"]["hits"] == []
+    res = await svc.find_text(
+        {"query": "nephis", "mode": "speaker", "chapter_to": 70}, ctx()
+    )
+    assert [h["chapter"] for h in res["result"]["hits"]] == [70]
+
+
+@pytest.mark.asyncio
+async def test_speaker_limit_and_case_insensitivity(tmp_path: Path) -> None:
+    svc = _quoted_novel(tmp_path)
+    res = await svc.find_text(
+        {"query": "NEPHIS", "mode": "speaker", "limit": 1}, ctx()
+    )
+    assert res["ok"] is True
+    assert len(res["result"]["hits"]) <= 1
+    assert res["result"]["hits"][0]["chapter"] == 70
+
+
+@pytest.mark.asyncio
+async def test_speaker_unknown_name_is_graceful(tmp_path: Path) -> None:
+    svc = _quoted_novel(tmp_path)
+    res = await svc.find_text({"query": "zargothrax", "mode": "speaker"}, ctx())
+    assert res["ok"] is True
+    assert res["result"]["hits"] == []
+
+
+@pytest.mark.asyncio
+async def test_phrase_narrows_by_chapter_range_and_limit(
+    service: LibraryService,
+):
+    res = await service.find_text(
+        {"query": "fake", "mode": "phrase", "chapter_from": 3}, ctx()
+    )
+    chapters = {h["chapter"] for h in res["result"]["hits"]}
+    assert chapters == {3, 98}  # ch1 excluded
+    res = await service.find_text(
+        {"query": "fake", "mode": "phrase", "limit": 1}, ctx()
+    )
+    assert len(res["result"]["hits"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_semantic_search_surface_isolates_arms(service: LibraryService):
+    novel = await service.semantic_search(
+        {"query": "kunai", "surface": "novel"}, ctx()
+    )
+    assert novel["result"]["canonical_hits"]
+    assert novel["result"]["notebook_hits"] == []
+    notebook = await service.semantic_search(
+        {"query": "kunai", "surface": "notebook"}, ctx()
+    )
+    assert notebook["result"]["canonical_hits"] == []
+    assert notebook["result"]["notebook_hits"]
+
+
+@pytest.mark.asyncio
+async def test_semantic_search_chapter_range_narrows(service: LibraryService):
+    narrowed = await service.semantic_search(
+        {"query": "dragon", "surface": "novel", "chapter_to": 1}, ctx()
+    )
+    assert narrowed["result"]["canonical_hits"]
+    assert all(h["chapter"] == 1 for h in narrowed["result"]["canonical_hits"])
+    empty = await service.semantic_search(
+        {"query": "dragon", "surface": "novel", "chapter_from": 2}, ctx()
+    )
+    assert empty["result"]["canonical_hits"] == []
+
+
+@pytest.mark.asyncio
+async def test_semantic_search_rejects_bad_surface(service: LibraryService):
+    res = await service.semantic_search({"query": "x", "surface": "wikipedia"}, ctx())
+    assert res["ok"] is False
+    assert res["error_category"] == "validation"
+
+
+@pytest.mark.asyncio
+async def test_read_chapters_lines_opens_only_the_first_lines(
+    service: LibraryService,
+):
+    res = await service.read_chapters({"handle": "novel:0098:2-4", "lines": 1}, ctx())
+    assert res["ok"] is True
+    assert res["result"]["line_start"] == 2
+    assert res["result"]["line_end"] == 2
+    assert "sneers" in res["result"]["text"]
+    # a lines count beyond the range opens the whole range
+    res = await service.read_chapters({"handle": "novel:0098:2-4", "lines": 99}, ctx())
+    assert res["result"]["line_end"] == 4
+
+
+@pytest.mark.asyncio
+async def test_read_chapters_rejects_zero_lines(service: LibraryService):
+    res = await service.read_chapters({"handle": "novel:0098:2-4", "lines": 0}, ctx())
+    assert res["ok"] is False
+    assert res["error_category"] == "validation"
+
+
+@pytest.mark.asyncio
+async def test_browse_chapters_rejects_start_after_end(service: LibraryService):
+    res = await service.browse_chapters({"start": 5, "end": 3}, ctx())
+    assert res["ok"] is False
+    assert res["error_category"] == "validation"
+
+
+@pytest.mark.asyncio
+async def test_browse_chapters_single_chapter_and_span_caps(
+    service: LibraryService,
+):
+    one = await service.browse_chapters({"start": 1, "end": 1}, ctx())
+    assert [c["chapter"] for c in one["result"]["chapters"]] == [1]
+    # titles_only allows a 100-chapter span...
+    wide = await service.browse_chapters(
+        {"start": 1, "end": 100, "titles_only": True}, ctx()
+    )
+    assert wide["ok"] is True
+    # ...but not 101
+    too_wide = await service.browse_chapters(
+        {"start": 1, "end": 101, "titles_only": True}, ctx()
+    )
+    assert too_wide["ok"] is False
+    assert too_wide["error_category"] == "validation"
+
+
+@pytest.mark.asyncio
+async def test_lore_path_same_entity_is_zero_hops(tmp_path: Path) -> None:
+    from tests.test_retrieval_tools import _path_notebook
+
+    nb = _path_notebook(tmp_path)
+    service = LibraryService(novel_dir=tmp_path / "novel", notebook_dir=nb)
+    res = await service.lore_path({"from_name": "noctis", "to_name": "noctis"}, ctx())
+    assert res["result"]["found"] is True
+    assert res["result"]["hops"] == 0
+    assert res["result"]["path"] == ["person:noctis"]
+
+
+@pytest.mark.asyncio
+async def test_lore_path_rejects_out_of_range_max_hops(tmp_path: Path) -> None:
+    from tests.test_retrieval_tools import _path_notebook
+
+    nb = _path_notebook(tmp_path)
+    service = LibraryService(novel_dir=tmp_path / "novel", notebook_dir=nb)
+    res = await service.lore_path(
+        {"from_name": "noctis", "to_name": "weaver", "max_hops": 1}, ctx()
+    )
+    assert res["ok"] is False
+    assert res["error_category"] == "validation"
+    res = await service.lore_path(
+        {"from_name": "noctis", "to_name": "weaver", "max_hops": 99}, ctx()
+    )
+    assert res["ok"] is False
+    assert res["error_category"] == "validation"
