@@ -48,6 +48,7 @@ export interface ChatApi {
   loadMessages(conversationId: string): Promise<StoredMessage[]>;
   streamTurn(conversationId: string, message: string): AsyncIterable<StreamEvent>;
   retryTurn(conversationId: string): AsyncIterable<StreamEvent>;
+  regenerateTurn(conversationId: string): AsyncIterable<StreamEvent>;
   cancelTurn(conversationId: string): Promise<"cancelling" | "idle">;
   deleteConversation(conversationId: string): Promise<{ deleted: string }>;
   getPassage(handle: string): Promise<Passage>;
@@ -276,6 +277,21 @@ export function createHttpChatApi(fetcher: typeof fetch = fetch): ChatApi {
       );
       if (!response.ok) {
         throw new Error(`Retrying failed (${response.status})`);
+      }
+      yield* openTurnStream(conversationId);
+    },
+
+    // Regenerate (2026-08-09): re-answers the last question in place.
+    // The client sends no text - the server reloads the question from
+    // the store and supersedes the old answer - so the question is never
+    // re-sent as a new message.
+    async *regenerateTurn(conversationId) {
+      const response = await fetcher(
+        `/api/conversations/${encodeURIComponent(conversationId)}/regenerate`,
+        { method: "POST" },
+      );
+      if (!response.ok) {
+        throw new Error(`Regenerating failed (${response.status})`);
       }
       yield* openTurnStream(conversationId);
     },

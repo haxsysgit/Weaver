@@ -918,3 +918,94 @@ async def test_retry_route_reports_nothing_to_retry(tmp_path) -> None:
         assert "event: failed" in body
         assert "nothing to retry" in body
     await runtime.close()
+
+
+async def test_regenerate_route_reanswers_in_place_and_streams(tmp_path) -> None:
+    # Regenerate (2026-08-09): re-answers the last question server-side
+    # under the same 202 + GET /stream contract - the client never sends
+    # text, so the question can never be duplicated as a new message.
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+
+    async def fake_regenerate(
+        conversation_id,
+        cancel_event=None,
+        on_delta=None,
+        on_tool_event=None,
+        tool_budget=None,
+        reasoning=None,
+        packet_builder=None,
+    ):
+        if on_delta:
+            await on_delta("fresh answer")
+        return (
+            TurnResult(
+                turn_id="turn-r",
+                exit_reason=TurnExitReason.COMPLETED,
+                final_text="fresh answer",
+            ),
+            "Who is Azarax?",
+        )
+
+    runtime.session.regenerate_last_turn = fake_regenerate  # type: ignore[method-assign]
+    app = create_app(runtime)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://127.0.0.1",
+        headers=SAME_ORIGIN_HEADERS,
+    ) as client:
+        conv = (await client.post("/api/conversations")).json()["conversation_id"]
+        assert (
+            await client.post("/api/conversations/nope/regenerate")
+        ).status_code == 404
+        resp = await client.post(f"/api/conversations/{conv}/regenerate")
+        assert resp.status_code == 202
+        events: list[str] = []
+        payloads: list[dict] = []
+        async with client.stream(
+            "GET", f"/api/conversations/{conv}/stream"
+        ) as stream_resp:
+            assert stream_resp.status_code == 200
+            async for line in stream_resp.aiter_lines():
+                if line.startswith("event:"):
+                    events.append(line.split(":", 1)[1].strip())
+                elif line.startswith("data:"):
+                    payloads.append(json.loads(line.split(":", 1)[1].strip()))
+        assert events[0] == "delta"
+        assert events[-1] == "completed"
+        assert payloads[-1]["text"] == "fresh answer"
+    await runtime.close()
+
+
+async def test_regenerate_route_reports_nothing_to_regenerate(tmp_path) -> None:
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+
+    async def fake_regenerate(
+        conversation_id,
+        cancel_event=None,
+        on_delta=None,
+        on_tool_event=None,
+        tool_budget=None,
+        reasoning=None,
+        packet_builder=None,
+    ):
+        return None
+
+    runtime.session.regenerate_last_turn = fake_regenerate  # type: ignore[method-assign]
+    app = create_app(runtime)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://127.0.0.1",
+        headers=SAME_ORIGIN_HEADERS,
+    ) as client:
+        conv = (await client.post("/api/conversations")).json()["conversation_id"]
+        resp = await client.post(f"/api/conversations/{conv}/regenerate")
+        assert resp.status_code == 202
+        async with client.stream(
+            "GET", f"/api/conversations/{conv}/stream"
+        ) as stream_resp:
+            body = (await stream_resp.aread()).decode()
+        assert "event: failed" in body
+        assert "nothing to regenerate" in body
+    await runtime.close()

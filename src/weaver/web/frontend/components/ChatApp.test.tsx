@@ -73,6 +73,7 @@ function createApi(stream: AsyncIterable<StreamEvent>): ChatApi {
     }),
     streamTurn: vi.fn().mockReturnValue(stream),
     retryTurn: vi.fn().mockReturnValue(stream),
+    regenerateTurn: vi.fn().mockReturnValue(stream),
   };
 }
 
@@ -453,3 +454,39 @@ it("retries a broken turn from the recovery panel", async () => {
   expect(screen.queryByText("The thread broke.")).toBeNull();
   expect(api.retryTurn).toHaveBeenCalledTimes(1);
 });
+
+  it("regenerates the answer in place without re-sending the question", async () => {
+    localStorage.setItem("weaver.active-conversation", "thread-1");
+    const first = deferredStream();
+    const api = createApi(first.stream);
+    render(<ChatApp api={api} modeLabel="fake" privacyLabel="Local fake mode" />);
+
+    const composer = await screen.findByRole("textbox", {
+      name: "Message Weaver",
+    });
+    fireEvent.change(composer, {
+      target: { value: "Could Asterion beat Azarax?" },
+    });
+    fireEvent.keyDown(composer, { key: "Enter" });
+    await act(async () => {
+      first.release({ type: "completed", text: "Old answer." });
+    });
+
+    const regenButton = await screen.findByRole("button", {
+      name: "Regenerate reply",
+    });
+    (api.regenerateTurn as ReturnType<typeof vi.fn>).mockReturnValue(
+      (async function* () {
+        yield { type: "delta" as const, text: "Fresh answer." };
+        yield { type: "completed" as const, text: "Fresh answer." };
+      })(),
+    );
+    fireEvent.click(regenButton);
+
+    expect(await screen.findByText("Fresh answer.")).toBeVisible();
+    expect(screen.queryByText("Old answer.")).toBeNull();
+    // the question renders exactly once: regenerate never re-sends it
+    expect(screen.getAllByText("Could Asterion beat Azarax?").length).toBe(1);
+    expect(api.regenerateTurn).toHaveBeenCalledTimes(1);
+    expect(api.streamTurn).toHaveBeenCalledTimes(1);
+  });

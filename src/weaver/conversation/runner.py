@@ -111,15 +111,23 @@ class ConversationRunner:
         tool_budget: int | None = None,
         reasoning: ReasoningEffort | None = None,
         packet_builder: PacketBuilder | None = None,
+        exclude_run_ids: set[str] | None = None,
     ) -> TurnResult:
         """Run one bounded model/tool turn inside an existing run.
 
         History is every item currently in the conversation: prior turns
         plus this run's owner item (the current user message). Items written
         during this turn get higher sequences and are never re-loaded here —
-        run_turn tracks them in its own new_messages.
+        run_turn tracks them in its own new_messages. exclude_run_ids drops
+        a superseded attempt's items from context entirely (regenerate),
+        so the model answers fresh instead of anchoring on its own
+        previous answer.
         """
         items = await self._repo.load_items(conversation_id)
+        if exclude_run_ids:
+            items = [
+                item for item in items if item.run_id not in exclude_run_ids
+            ]
         # The assembler always runs (Phase D count-only mode when no budget
         # is configured), so the snapshot is always available.
         items, snapshot = await self._assembler.assemble(items)

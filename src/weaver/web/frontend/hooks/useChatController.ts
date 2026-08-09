@@ -316,10 +316,24 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
     }
   }
 
-  function regenerateReply() {
-    if (lastOwnerText && turnState === "idle") {
-      void sendMessage(lastOwnerText);
+  // Regenerate (2026-08-09): re-answers the LAST question in place.
+  // The old answer bubble is removed and replaced by the fresh stream -
+  // the question stays exactly once, never re-sent as a new message.
+  async function regenerateReply() {
+    if (!conversationId || turnState !== "idle" || !liveReplyId) {
+      return;
     }
+    const oldReplyId = liveReplyId;
+    const replyId = localMessageId("assistant");
+    setLiveReplyId(null);
+    setRecoveryMessage(null);
+    setActivity([]);
+    setTurnState("streaming");
+    setMessages((current) => [
+      ...current.filter((message) => message.id !== oldReplyId),
+      { id: replyId, role: "weaver", content: "", streaming: true },
+    ]);
+    await drainTurnStream(replyId, api.regenerateTurn(conversationId));
   }
 
   // Plan 15 retry (2026-08-09): the dead-end refusal after a broken turn
@@ -338,11 +352,20 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
       ...current,
       { id: replyId, role: "weaver", content: "", streaming: true },
     ]);
+    await drainTurnStream(replyId, api.retryTurn(conversationId));
+  }
 
+  // Shared turn loop for retry and regenerate: drain the SSE stream into
+  // the reply bubble, then settle the state (recovery message on failure,
+  // conversation list refresh either way).
+  async function drainTurnStream(
+    replyId: string,
+    stream: AsyncIterable<StreamEvent>,
+  ) {
     let partialReply = "";
     let terminalEventReceived = false;
     try {
-      for await (const event of api.retryTurn(conversationId)) {
+      for await (const event of stream) {
         const result = handleStreamEvent(event, replyId, partialReply);
         partialReply = result.text;
         terminalEventReceived = result.terminal;
@@ -351,11 +374,15 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
         }
       }
       if (!terminalEventReceived) {
-        setMessages((current) => updateReply(current, replyId, partialReply, false));
+        setMessages((current) =>
+          updateReply(current, replyId, partialReply, false),
+        );
         setRecoveryMessage(product.incompleteTurnMessage);
       }
     } catch (error) {
-      setMessages((current) => updateReply(current, replyId, partialReply, false));
+      setMessages((current) =>
+        updateReply(current, replyId, partialReply, false),
+      );
       const message =
         error instanceof Error ? error.message : product.connectionLostMessage;
       setRecoveryMessage(

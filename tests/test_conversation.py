@@ -1559,3 +1559,106 @@ async def test_retry_last_turn_reruns_the_failed_message_and_unblocks_sends():
             assert await sw.retry_last_turn(conv_id) is None
         finally:
             await sw.close()
+
+
+async def test_regenerate_last_turn_replaces_the_answer_in_place():
+    """Regenerate re-answers the last question: the old run is superseded
+    (its answer vanishes from the transcript), a fresh run re-persists the
+    question exactly once, and the old answer never reaches the model
+    context (no anchoring, no duplicated question)."""
+    from weaver.agent.tools import ToolExecutionPolicy
+
+    import weaver.conversation.runner as runner_module
+
+    seen_histories: list[list] = []
+    real_run_turn = runner_module.run_turn
+
+    async def recording_run_turn(**kwargs):
+        seen_histories.append(kwargs["history"])
+        return await real_run_turn(**kwargs)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        layer, model, provider = _fake_layer(
+            _stop_response("First answer."),
+            _stop_response("Second answer."),
+            _stop_response("Regenerated answer."),
+        )
+        registry = _echo_registry()
+        sw = SessionWeave(
+            Path(tmp) / ".weaver" / "state",
+            model_layer=layer,
+            model=model,
+            system_prompt="You are Weaver.",
+            tool_registry=registry,
+            active_tools=("echo",),
+            execution_policy=ToolExecutionPolicy.read_only(),
+        )
+        runner_module.run_turn = recording_run_turn
+        try:
+            await sw.open()
+            conv_id = await sw.start_conversation("")
+            assert (await sw.send(conv_id, "Who is Asterion?")).exit_reason == "completed"
+            assert (await sw.send(conv_id, "Who is Azarax?")).exit_reason == "completed"
+            before = await sw.load_transcript(conv_id)
+            assert [i["role"] for i in before] == ["owner", "weaver", "owner", "weaver"]
+            assert [i["content"] for i in before if i["role"] == "weaver"] == [
+                "First answer.",
+                "Second answer.",
+            ]
+
+            result, message = await sw.regenerate_last_turn(conv_id)
+            assert message == "Who is Azarax?"
+            assert result.exit_reason == "completed"
+            assert result.final_text == "Regenerated answer."
+
+            after = await sw.load_transcript(conv_id)
+            runs = await sw.repo.load_runs(conv_id)
+            dead = {r.id for r in runs if r.phase in ("interrupted", "superseded")}
+            visible = [i for i in after if i["run_id"] not in dead]
+            owners = [i["content"] for i in visible if i["role"] == "owner"]
+            answers = [i["content"] for i in visible if i["role"] == "weaver"]
+            assert owners == ["Who is Asterion?", "Who is Azarax?"]
+            assert answers == ["First answer.", "Regenerated answer."]
+
+            # the regenerated turn's model context: question once, old
+            # answer never
+            regen_history = seen_histories[-1]
+            contents = [(m.content or "") for m in regen_history]
+            assert contents.count("Who is Azarax?") == 1
+            assert "Second answer." not in contents
+
+            # run bookkeeping: old run superseded, new run completed
+            assert [r.phase for r in runs] == [
+                "queued",
+                "completed",
+                "superseded",
+                "completed",
+            ]
+            assert runs[-1].attempt == runs[-2].attempt + 1
+        finally:
+            runner_module.run_turn = real_run_turn
+            await sw.close()
+
+
+async def test_regenerate_last_turn_nothing_to_regenerate_returns_none():
+    from weaver.agent.tools import ToolExecutionPolicy
+
+    with tempfile.TemporaryDirectory() as tmp:
+        layer, model, provider = _fake_layer(_stop_response("Done."))
+        registry = _echo_registry()
+        sw = SessionWeave(
+            Path(tmp) / ".weaver" / "state",
+            model_layer=layer,
+            model=model,
+            system_prompt="You are Weaver.",
+            tool_registry=registry,
+            active_tools=("echo",),
+            execution_policy=ToolExecutionPolicy.read_only(),
+        )
+        await sw.open()
+        try:
+            conv_id = await sw.start_conversation("")
+            # only the empty opener run exists: nothing to regenerate
+            assert await sw.regenerate_last_turn(conv_id) is None
+        finally:
+            await sw.close()

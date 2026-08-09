@@ -423,10 +423,15 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         ]
 
     async def _run_turn(
-        conversation_id: str, message: str, stream: TurnStream, *, retry: bool = False
+        conversation_id: str,
+        message: str,
+        stream: TurnStream,
+        *,
+        retry: bool = False,
+        regenerate: bool = False,
     ) -> None:
-        """Run the send (or the last-turn retry), streaming deltas, then
-        the terminal event."""
+        """Run the send (or the last-turn retry/regenerate), streaming
+        deltas, then the terminal event."""
 
         async def on_delta(text: str) -> None:
             stream.emit("delta", {"text": text})
@@ -475,7 +480,27 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
             is_first_turn = (
                 len(await runtime.session.load_transcript(conversation_id)) == 0
             )
-            if retry:
+            if regenerate:
+                regenerated = await runtime.session.regenerate_last_turn(
+                    conversation_id,
+                    cancel_event=stream.cancel_event,
+                    on_delta=on_delta,
+                    on_tool_event=on_tool_event,
+                    tool_budget=TOOL_BUDGET_TIERS[tier],
+                    reasoning=REASONING_TIERS[tier],
+                    packet_builder=on_packet,
+                )
+                if regenerated is None:
+                    stream.emit(
+                        "failed",
+                        {
+                            "code": "regenerate",
+                            "message": "There is nothing to regenerate.",
+                        },
+                    )
+                    return
+                result, regenerated_message = regenerated
+            elif retry:
                 retried = await runtime.session.retry_last_turn(
                     conversation_id,
                     cancel_event=stream.cancel_event,
@@ -514,7 +539,9 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                         _name_thread(
                             runtime,
                             conversation_id,
-                            retried_message if retry else message,
+                            regenerated_message
+                            if regenerate
+                            else (retried_message if retry else message),
                             result.final_text,
                         )
                     )
@@ -620,6 +647,41 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                     break
         stream.task = asyncio.create_task(
             _run_turn(conversation_id, "", stream, retry=True)
+        )
+        return Response(
+            status_code=202,
+            content=json.dumps({"conversation_id": conversation_id}),
+            media_type="application/json",
+        )
+
+    @app.post(
+        "/api/conversations/{conversation_id}/regenerate",
+        dependencies=[Depends(_check_local)],
+    )
+    async def regenerate_last_turn(conversation_id: str) -> Response:
+        """Re-answer the last question in place.
+
+        Regenerate never takes text from the client and never creates a
+        new user message: the session reloads the last owner message from
+        the store, supersedes the run that answered it (so the old answer
+        vanishes from the transcript), and re-answers the same question.
+        Same 202 + GET /stream contract as the turns route.
+        """
+        if not await runtime.session.conversation_exists(conversation_id):
+            raise HTTPException(status_code=404, detail="unknown conversation")
+        stream = active.get(conversation_id)
+        if stream is not None and not stream.finished:
+            raise HTTPException(status_code=409, detail="a turn is already running")
+
+        stream = TurnStream(conversation_id)
+        active[conversation_id] = stream
+        if len(active) > 32:
+            for stale_id, stale in list(active.items()):
+                if stale.finished:
+                    active.pop(stale_id, None)
+                    break
+        stream.task = asyncio.create_task(
+            _run_turn(conversation_id, "", stream, regenerate=True)
         )
         return Response(
             status_code=202,
