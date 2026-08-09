@@ -514,7 +514,7 @@ async def test_service_worker_served_at_root_scope(client) -> None:
     assert resp.status_code == 200
     assert resp.headers.get("service-worker-allowed", "").strip() == "/"
     assert "caches.open" in resp.text
-    assert 'const CACHE_NAME = "weaver-shell-v5"' in resp.text
+    assert 'const CACHE_NAME = "weaver-shell-v6"' in resp.text
     assert 'request.mode === "navigate"' in resp.text
     assert "await fetch(request)" in resp.text
     assert 'requestUrl.pathname.startsWith("/api/")' in resp.text

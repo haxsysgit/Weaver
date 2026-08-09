@@ -73,6 +73,7 @@ interface SpellSurfaceRailProps {
   activeThreadId: string;
   archivedOpen: boolean;
   collapsed: boolean;
+  drawerOpen: boolean;
   onArchive: (threadId: string) => void;
   onClose: () => void;
   onCreate: () => void;
@@ -91,6 +92,7 @@ export function SpellSurfaceRail({
   activeThreadId,
   archivedOpen,
   collapsed,
+  drawerOpen,
   onArchive,
   onClose,
   onCreate,
@@ -117,6 +119,7 @@ export function SpellSurfaceRail({
   }, [archivedOpen, threads]);
   const threadGroups = groupThreads(visibleThreads, grouping);
   const archivedCount = threads.filter((thread) => thread.archived).length;
+  const railVisible = drawerOpen || !collapsed;
 
   function startRename(thread: LabThread) {
     setRenamingId(thread.id);
@@ -213,12 +216,12 @@ export function SpellSurfaceRail({
         <span className="lab-brand-mark"><WeaverMark compact /></span>
         <span><strong>weaver</strong></span>
         <button
-          aria-label={collapsed ? "Open threads" : "Close threads"}
+          aria-label={railVisible ? "Close threads" : "Open threads"}
           className="lab-rail-close"
-          onClick={collapsed ? onOpen : onClose}
+          onClick={railVisible ? onClose : onOpen}
           type="button"
         >
-          {collapsed ? <RailOpenIcon /> : <RailCloseIcon />}
+          {railVisible ? <RailCloseIcon /> : <RailOpenIcon />}
         </button>
       </header>
 

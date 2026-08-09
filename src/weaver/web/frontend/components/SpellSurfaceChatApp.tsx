@@ -46,6 +46,53 @@ const INITIAL_PREFERENCES: LabPreferences = {
   volume: 5,
 };
 
+const VISUAL_PREFERENCES_KEY = "weaver.spell-surface";
+
+function savedChoice<T extends string>(
+  value: unknown,
+  choices: readonly T[],
+  fallback: T,
+): T {
+  return typeof value === "string" && choices.includes(value as T)
+    ? value as T
+    : fallback;
+}
+
+function loadInitialPreferences(): LabPreferences {
+  try {
+    const saved = JSON.parse(
+      window.localStorage.getItem(VISUAL_PREFERENCES_KEY) ?? "null",
+    ) as Partial<LabPreferences> | null;
+    if (!saved) {
+      return INITIAL_PREFERENCES;
+    }
+    return {
+      ...INITIAL_PREFERENCES,
+      density: savedChoice(saved.density, ["compact", "comfortable"], INITIAL_PREFERENCES.density),
+      fontSize: savedChoice(saved.fontSize, ["small", "medium", "large"], INITIAL_PREFERENCES.fontSize),
+      glass: savedChoice(saved.glass, ["subtle", "immersive"], INITIAL_PREFERENCES.glass),
+      runeMode: savedChoice(saved.runeMode, ["particles", "voice", "threads"], INITIAL_PREFERENCES.runeMode),
+      soulMode: savedChoice(saved.soulMode, ["still", "living", "mirror"], INITIAL_PREFERENCES.soulMode),
+      starIntensity: savedChoice(saved.starIntensity, ["quiet", "balanced", "vivid"], INITIAL_PREFERENCES.starIntensity),
+      theme: savedChoice(saved.theme, ["crimson", "cosmos", "starlight", "void"], INITIAL_PREFERENCES.theme),
+    };
+  } catch {
+    return INITIAL_PREFERENCES;
+  }
+}
+
+function saveVisualPreferences(preferences: LabPreferences) {
+  window.localStorage.setItem(VISUAL_PREFERENCES_KEY, JSON.stringify({
+    density: preferences.density,
+    fontSize: preferences.fontSize,
+    glass: preferences.glass,
+    runeMode: preferences.runeMode,
+    soulMode: preferences.soulMode,
+    starIntensity: preferences.starIntensity,
+    theme: preferences.theme,
+  }));
+}
+
 const VOLUME_ENDS = [95, 350, 600, 750, 1060, 1230, 1590, 1840, 2260, 2720, 3000, 3127];
 
 function volumeForChapter(chapter: number): number {
@@ -85,7 +132,7 @@ export function SpellSurfaceChatApp({
   privacyLabel,
 }: SpellSurfaceChatAppProps) {
   const chat = useChatController(api, weaverProduct);
-  const [preferences, setPreferences] = useState(INITIAL_PREFERENCES);
+  const [preferences, setPreferences] = useState(loadInitialPreferences);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [railOpen, setRailOpen] = useState(false);
   const [desktopRailCollapsed, setDesktopRailCollapsed] = useState(false);
@@ -295,6 +342,7 @@ export function SpellSurfaceChatApp({
         activeThreadId={chat.conversationId ?? ""}
         archivedOpen={archivedOpen}
         collapsed={desktopRailCollapsed}
+        drawerOpen={railOpen}
         onArchive={(threadId) => toggleSet(setArchivedIds, threadId)}
         onClose={closeRail}
         onCreate={() => void createThread()}
@@ -401,6 +449,7 @@ export function SpellSurfaceChatApp({
           onClose={() => setSettingsOpen(false)}
           onSave={(nextPreferences) => {
             setPreferences(nextPreferences);
+            saveVisualPreferences(nextPreferences);
             setSettingsOpen(false);
             announce("[Your soul answers the change.]");
             void api.savePreferences(toApiPreferences(nextPreferences));

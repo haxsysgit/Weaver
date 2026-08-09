@@ -315,6 +315,7 @@ export function ThemeLab() {
         activeThreadId={activeThreadId}
         archivedOpen={archivedOpen}
         collapsed={desktopRailCollapsed}
+        drawerOpen={railOpen}
         onArchive={archiveThread}
         onClose={closeRail}
         onCreate={createThread}
