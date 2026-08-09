@@ -81,6 +81,24 @@ def _parser() -> argparse.ArgumentParser:
         help="Browse and manage Weaver's novel library.",
     )
 
+    refresh = subcommands.add_parser(
+        "refresh",
+        help="Keep the library fresh: fetch missing chapters and probe "
+        "for new ones until the source stops serving them (preview by "
+        "default, --apply performs the refresh).",
+    )
+    refresh.add_argument(
+        "--through",
+        dest="through_chapter",
+        type=int,
+        help="Cap the refresh at this chapter number.",
+    )
+    refresh.add_argument(
+        "--apply",
+        action="store_true",
+        help="Perform the refresh; the default is a preview.",
+    )
+
     web = subcommands.add_parser(
         "web",
         help="Serve the local browser chat (live DeepSeek by default).",
@@ -155,6 +173,73 @@ async def _run_web(state_dir: Path, *, live: bool, port: int) -> int:
         await runtime.close()
 
 
+def _firecrawl_api_key() -> str | None:
+    """FIRECRAWL_API_KEY from the environment (already fed from the
+    repo .env by load_startup_config), falling back to the firecrawl
+    CLI's own credentials file so `weaver refresh` works on a machine
+    that has run `firecrawl login`."""
+    key = os.environ.get("FIRECRAWL_API_KEY")
+    if key:
+        return key
+    credentials = Path.home() / ".config" / "firecrawl-cli" / "credentials.json"
+    try:
+        return json.loads(credentials.read_text()).get("apiKey")
+    except (OSError, ValueError):
+        return None
+
+
+def _run_refresh(*, apply: bool, through_chapter: int | None) -> int:
+    """The standing shelf-refresh automation: fill local gaps, then
+    probe consecutive chapter URLs until the source 404s (Plan 002
+    machinery behind `weaver library update`)."""
+    if apply:
+        key = _firecrawl_api_key()
+        if not key:
+            print(
+                "ERROR live refresh needs FIRECRAWL_API_KEY: put it in the "
+                "repo .env, or run `firecrawl login` so the CLI credentials "
+                "file can be used."
+            )
+            return 2
+        os.environ.setdefault("FIRECRAWL_API_KEY", key)
+    try:
+        result = asyncio.run(
+            update_novel_corpus(
+                "shadow-slave",
+                through_chapter=through_chapter,
+                preview=not apply,
+            )
+        )
+    except CorpusError as exc:
+        print(f"ERROR {exc.category.value}: {safe_error_message(exc.category)}")
+        return 1
+    counts = result.get("action_counts", {})
+    if result.get("preview"):
+        print(
+            "refresh preview: "
+            f"{counts.get('previewed', 0)} chapter action(s) up to the "
+            "known last chapter"
+        )
+    else:
+        print(
+            f"refresh done: fetched {counts.get('fetched', 0)}, "
+            f"skipped {counts.get('skipped', 0)}"
+        )
+        stopped = result.get("stopped_at_chapter")
+        if stopped:
+            print(f"stopped at chapter {stopped} ({result.get('stop_reason')})")
+    receipt = result.get("receipt_path")
+    if receipt:
+        print(f"receipt: {receipt}")
+    failed = {"failed", "conflict"}
+    statuses = {action.get("status") for action in result.get("actions", [])}
+    return (
+        1
+        if statuses & failed or any(counts.get(status, 0) for status in failed)
+        else 0
+    )
+
+
 def run(argv: Sequence[str] | None = None) -> int:
     parser = _parser()
     args = parser.parse_args(argv)
@@ -176,6 +261,12 @@ def run(argv: Sequence[str] | None = None) -> int:
                 marker = "WARN"
             print(f"{marker} {check['name']}: {check['detail']}")
         return 0 if all(bool(check["ok"]) for check in checks) else 1
+
+    if args.command == "refresh":
+        return _run_refresh(
+            apply=args.apply,
+            through_chapter=args.through_chapter,
+        )
 
     if args.command == "library":
         try:

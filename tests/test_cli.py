@@ -1,4 +1,6 @@
 import json
+import os
+from pathlib import Path
 
 from weaver import cli
 
@@ -175,3 +177,136 @@ def test_corpus_fetch_cli_defaults_to_preview(monkeypatch, capsys) -> None:
         "preview": True,
     }
     assert '"operation": "fetch_novel_chapters"' in capsys.readouterr().out
+
+
+def test_refresh_defaults_to_preview(monkeypatch, capsys) -> None:
+    captured = {}
+
+    async def fake_update(novel_id, through_chapter=None, preview=True):
+        captured.update(
+            novel_id=novel_id,
+            through_chapter=through_chapter,
+            preview=preview,
+        )
+        return {
+            "operation": "update_novel_corpus",
+            "preview": True,
+            "actions": [{"status": "previewed"}],
+            "action_counts": {"previewed": 1},
+        }
+
+    monkeypatch.setattr(cli, "update_novel_corpus", fake_update)
+
+    exit_code = cli.run(["refresh"])
+
+    assert exit_code == 0
+    assert captured == {
+        "novel_id": "shadow-slave",
+        "through_chapter": None,
+        "preview": True,
+    }
+
+
+def test_refresh_apply_runs_the_live_loop(monkeypatch, tmp_path, capsys) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("FIRECRAWL_API_KEY", raising=False)
+    captured = {}
+
+    async def fake_update(novel_id, through_chapter=None, preview=True):
+        captured.update(preview=preview, through_chapter=through_chapter)
+        return {
+            "operation": "update_novel_corpus",
+            "preview": False,
+            "actions": [{"status": "fetched"}],
+            "action_counts": {"fetched": 1},
+            "stopped_at_chapter": 3129,
+            "stop_reason": "first_404",
+            "receipt_path": "/tmp/receipt.json",
+        }
+
+    monkeypatch.setattr(cli, "update_novel_corpus", fake_update)
+
+    exit_code = cli.run(["refresh", "--apply"])
+
+    assert exit_code == 0
+    assert captured == {"preview": False, "through_chapter": None}
+    out = capsys.readouterr().out
+    assert "fetched 1" in out
+    assert "stopped at chapter 3129" in out
+
+
+def test_refresh_through_cap_is_passed(monkeypatch, tmp_path) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("FIRECRAWL_API_KEY", raising=False)
+    captured = {}
+
+    async def fake_update(novel_id, through_chapter=None, preview=True):
+        captured.update(through_chapter=through_chapter)
+        return {
+            "operation": "update_novel_corpus",
+            "preview": False,
+            "actions": [],
+            "action_counts": {},
+        }
+
+    monkeypatch.setattr(cli, "update_novel_corpus", fake_update)
+
+    exit_code = cli.run(["refresh", "--apply", "--through", "3148"])
+
+    assert exit_code == 0
+    assert captured == {"through_chapter": 3148}
+
+
+def test_refresh_live_without_api_key_exits_2_before_any_call(
+    monkeypatch,
+    tmp_path,
+    capsys,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("FIRECRAWL_API_KEY", raising=False)
+    monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path / "no-home"))
+    called = []
+
+    async def fake_update(novel_id, through_chapter=None, preview=True):
+        called.append(1)
+        return {"operation": "update_novel_corpus", "actions": [], "action_counts": {}}
+
+    monkeypatch.setattr(cli, "update_novel_corpus", fake_update)
+
+    exit_code = cli.run(["refresh", "--apply"])
+
+    assert exit_code == 2
+    assert called == []
+    assert "FIRECRAWL_API_KEY" in capsys.readouterr().out
+
+
+def test_refresh_uses_firecrawl_cli_credentials_fallback(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    home = tmp_path / "home"
+    credentials = home / ".config" / "firecrawl-cli" / "credentials.json"
+    credentials.parent.mkdir(parents=True)
+    credentials.write_text('{"apiKey": "fc-test-key", "apiUrl": "https://api.firecrawl.dev"}')
+    monkeypatch.setattr(Path, "home", staticmethod(lambda: home))
+    monkeypatch.delenv("FIRECRAWL_API_KEY", raising=False)
+    captured = {}
+
+    async def fake_update(novel_id, through_chapter=None, preview=True):
+        captured.update(preview=preview)
+        return {
+            "operation": "update_novel_corpus",
+            "preview": False,
+            "actions": [],
+            "action_counts": {},
+        }
+
+    monkeypatch.setattr(cli, "update_novel_corpus", fake_update)
+
+    exit_code = cli.run(["refresh", "--apply"])
+
+    assert exit_code == 0
+    assert captured == {"preview": False}
+    assert os.environ.get("FIRECRAWL_API_KEY") == "fc-test-key"
+    os.environ.pop("FIRECRAWL_API_KEY", None)
