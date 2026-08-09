@@ -1,11 +1,15 @@
 import {
   faArrowUp,
+  faBoxArchive,
   faBarsStaggered,
   faChevronDown,
   faGear,
   faChevronLeft,
   faCopy,
   faLink,
+  faMagnifyingGlass,
+  faPen,
+  faThumbtack,
   faPlus,
   faRotateRight,
   faSquare,
@@ -65,4 +69,20 @@ export function QuoteIcon(props: IconProps) {
 
 export function ChevronDownIcon(props: IconProps) {
   return <FontAwesomeIcon aria-hidden="true" icon={faChevronDown} {...props} />;
+}
+
+export function ArchiveIcon(props: IconProps) {
+  return <FontAwesomeIcon aria-hidden="true" icon={faBoxArchive} {...props} />;
+}
+
+export function EditIcon(props: IconProps) {
+  return <FontAwesomeIcon aria-hidden="true" icon={faPen} {...props} />;
+}
+
+export function PinIcon(props: IconProps) {
+  return <FontAwesomeIcon aria-hidden="true" icon={faThumbtack} {...props} />;
+}
+
+export function SearchIcon(props: IconProps) {
+  return <FontAwesomeIcon aria-hidden="true" icon={faMagnifyingGlass} {...props} />;
 }
