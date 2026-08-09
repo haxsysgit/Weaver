@@ -240,18 +240,23 @@ describe("ChatApp", () => {
   });
 });
 
-describe("ChatApp tool activity", () => {
-  it("shows one tool call at a time and clears when the answer streams", async () => {
+describe("ChatApp private tool activity", () => {
+  it("shows the fate loader without exposing tool calls", async () => {
     const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+    let toolEventReached = false;
     const api = createApi(
       (async function* (): AsyncGenerator<StreamEvent> {
-        yield { type: "tool", name: "semantic_search", status: "start", detail: "" };
+        yield {
+          type: "tool",
+          name: "semantic_search",
+          status: "start",
+          detail: "private-library-path",
+          preview: "private chapter text",
+          handles: ["private:0098:3-81"],
+        };
+        toolEventReached = true;
         await sleep(60);
         yield { type: "tool", name: "semantic_search", status: "done", detail: "ok" };
-        await sleep(60);
-        yield { type: "tool", name: "read_chapters", status: "start", detail: "" };
-        await sleep(60);
-        yield { type: "tool", name: "read_chapters", status: "done", detail: "ok" };
         await sleep(60);
         yield { type: "delta", text: "Sunny slew the leader with the kunai." };
         yield { type: "completed", text: "Sunny slew the leader with the kunai." };
@@ -265,21 +270,23 @@ describe("ChatApp tool activity", () => {
     fireEvent.change(composer, { target: { value: "who killed the leader" } });
     fireEvent.keyDown(composer, { key: "Enter" });
 
-    // one tool call at a time, shown inside the live reply box
-    expect(await screen.findByText(/is recalling a passage/)).toBeTruthy();
+    expect(
+      await screen.findByRole("status", { name: "Weaver is weaving an answer" }),
+    ).toBeVisible();
     await waitFor(() => {
-      expect(screen.getByText(/has recalled a passage/)).toBeTruthy();
+      expect(toolEventReached).toBe(true);
     });
-    expect(screen.queryByText(/is searching the library/)).toBeNull();
-    expect(screen.queryByText(/has searched the library/)).toBeNull();
+    expect(screen.queryByText(/semantic_search/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/private-library-path/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/private chapter text/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/private:0098:3-81/)).not.toBeInTheDocument();
 
-    // the answer streaming clears the spell line entirely
     expect(
       await screen.findByText("Sunny slew the leader with the kunai."),
-    ).toBeTruthy();
-    await waitFor(() => {
-      expect(screen.queryByText(/has recalled a passage/)).toBeNull();
-    });
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("status", { name: "Weaver is weaving an answer" }),
+    ).not.toBeInTheDocument();
   });
 
   it("clears activity on the next turn", async () => {
@@ -383,8 +390,9 @@ describe("ChatApp weave management", () => {
     expect(listMock.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("tapping a recalled-passage chip summons the passage panel", async () => {
+  it("keeps passage previews and handles private", async () => {
     const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+    let passageEventReached = false;
     const api = createApi(
       (async function* () {
         yield {
@@ -395,7 +403,8 @@ describe("ChatApp weave management", () => {
           preview: "The kunai spun in the dark",
           handles: ["novel:0098:3-81"],
         };
-        await sleep(400);
+        passageEventReached = true;
+        await sleep(100);
         yield { type: "delta", text: "Sunny slew the leader." };
         yield { type: "completed", text: "Sunny slew the leader." };
       })(),
@@ -407,15 +416,14 @@ describe("ChatApp weave management", () => {
     fireEvent.change(composer, { target: { value: "who killed the leader" } });
     fireEvent.keyDown(composer, { key: "Enter" });
 
-    const viewButton = await screen.findByRole("button", {
-      name: "View the recalled passage",
+    await waitFor(() => {
+      expect(passageEventReached).toBe(true);
     });
-    fireEvent.click(viewButton);
-    expect(
-      await screen.findByRole("dialog", { name: "Summoned passage" }),
-    ).toBeTruthy();
-    expect(await screen.findByText(/chapter 98/)).toBeTruthy();
-    expect(api.getPassage).toHaveBeenCalledWith("novel:0098:3-81");
+    expect(screen.queryByText(/The kunai spun in the dark/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/novel:0098:3-81/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /recalled passage/i })).not.toBeInTheDocument();
+    expect(await screen.findByText("Sunny slew the leader.")).toBeVisible();
+    expect(api.getPassage).not.toHaveBeenCalled();
   });
 });
 

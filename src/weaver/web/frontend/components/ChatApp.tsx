@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ComponentType } from "react";
 
-import { useChatController, type ToolActivity } from "../hooks/useChatController";
+import { useChatController } from "../hooks/useChatController";
 import type { ChatApi } from "../lib/chatApi";
 import { weaverProduct, type ChatProduct } from "../lib/product";
 import { Composer, type ReadingTier } from "./Composer";
@@ -9,7 +9,6 @@ import { RailOpenIcon } from "./Icons";
 import { SettingsModal } from "./SettingsModal";
 import { Message } from "./Message";
 import { SpellBackground } from "./SpellBackground";
-import { PassageModal } from "./PassageModal";
 import { RecoveryPanel } from "./RecoveryPanel";
 import { WeaverMark, type WeaverMarkProps } from "./WeaverMark";
 
@@ -38,7 +37,6 @@ export function ChatApp({
     spoiler_mode: "protect" | "none";
     tier: "awakened" | "ascended" | "transcendent";
   }>({ reader_chapter: null, spoiler_mode: "protect", tier: "ascended" });
-  const [passageHandle, setPassageHandle] = useState<string | null>(null);
   const returnFocusToRailToggle = useRef(false);
   const railToggleRef = useRef<HTMLButtonElement>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
@@ -113,9 +111,6 @@ export function ChatApp({
     setDesktopRailCollapsed(true);
   }
 
-  const liveActivity: ToolActivity | null =
-    chat.activity.length > 0 ? chat.activity[chat.activity.length - 1] : null;
-
   return (
     <div
       className={`chat-app ${desktopRailCollapsed ? "chat-app-rail-collapsed" : ""}`}
@@ -189,7 +184,6 @@ export function ChatApp({
             {chat.messages.map((message) => (
               <Message
                 Mark={Mark}
-                activity={message.streaming ? liveActivity : null}
                 assistantName={product.assistantName}
                 key={message.id}
                 message={message}
@@ -199,7 +193,6 @@ export function ChatApp({
                     ? chat.regenerateReply
                     : undefined
                 }
-                onViewPassage={(handle) => setPassageHandle(handle)}
                 regenerateLabel={product.regenerateLabel}
               />
             ))}
@@ -253,13 +246,6 @@ export function ChatApp({
             await api.savePreferences(prefs);
             setSettingsPrefs(prefs);
           }}
-        />
-      )}
-      {passageHandle && (
-        <PassageModal
-          handle={passageHandle}
-          loadPassage={chat.loadPassage}
-          onClose={() => setPassageHandle(null)}
         />
       )}
     </div>

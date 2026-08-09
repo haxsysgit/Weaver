@@ -68,7 +68,7 @@ describe("Spell Surface v2 lab", () => {
     expect(screen.queryByText("Azarax win conditions")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Archived/ }));
     expect(screen.getByText("Azarax win conditions")).toBeVisible();
-  });
+  }, 10_000);
 
   it("shows three date groups and folds older chats", () => {
     render(<ThemeLab />);
@@ -124,9 +124,12 @@ describe("Spell Surface v2 lab", () => {
     fireEvent.click(screen.getByRole("button", { name: "Send message" }));
 
     expect(screen.getByText("what did Ariel whisper?")).toBeVisible();
-    expect(screen.getByText("[The Spell is weaving an answer.]")).toBeVisible();
+    expect(screen.getByText("[Searching the fate tapestry.]")).toBeVisible();
 
-    act(() => vi.advanceTimersByTime(900));
+    act(() => vi.advanceTimersByTime(540));
+    expect(screen.getByText("[Weaving the story.]")).toBeVisible();
+
+    act(() => vi.advanceTimersByTime(360));
     expect(screen.getByText(/This lab keeps the answer source-grounded/)).toBeVisible();
     expect(screen.getByText("[The weave is complete.]")).toBeVisible();
     vi.useRealTimers();

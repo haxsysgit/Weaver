@@ -849,38 +849,6 @@ a:focus-visible {
   height: 15px;
 }
 
-.thinking-thread {
-  display: block;
-  width: 72px;
-  height: 2px;
-  margin-top: 15px;
-  overflow: hidden;
-  border-radius: 99px;
-  background: var(--shadow-pressed);
-}
-
-.thinking-thread::after {
-  display: block;
-  width: 30px;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, transparent, var(--accent-bright), transparent);
-  content: "";
-  animation: thread-pulse 1.1s ease-in-out infinite;
-}
-
-.message-streaming .markdown-body::after {
-  display: inline-block;
-  width: 5px;
-  height: 15px;
-  margin-left: 4px;
-  border-radius: 2px;
-  background: var(--accent-bright);
-  content: "";
-  animation: cursor-blink 850ms steps(2, jump-none) infinite;
-  vertical-align: -2px;
-}
-
 .recovery-panel,
 .boot-error {
   display: flex;
@@ -1392,37 +1360,84 @@ a:focus-visible {
   }
 }
 
-/* ---- the thinking thread is woven of gold ---- */
+/* ---- loose threads cross and knot while Weaver prepares the answer ---- */
 
-.thinking-thread {
-  position: relative;
-  margin-bottom: 18px;
-  background:
-    linear-gradient(90deg, transparent, rgba(217, 180, 92, 0.7), transparent),
-    var(--shadow-pressed);
+.fate-weaving-loader {
+  width: 128px;
+  height: 36px;
+  margin: 7px 0 9px;
+  color: var(--accent-gold);
 }
 
-.thinking-thread::after {
-  background: linear-gradient(
-    90deg,
-    transparent,
-    var(--accent-gold),
-    var(--accent-bright),
-    transparent
-  );
-  animation: thread-pulse 1.15s ease-in-out infinite;
+.fate-weaving-loader svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
 }
 
-.thinking-thread::before {
-  position: absolute;
-  top: 10px;
-  left: 0;
-  color: var(--ash);
-  content: "weaving…";
-  font-family: var(--font-ui);
-  font-size: 11px;
-  font-style: italic;
-  letter-spacing: 0.05em;
+.fate-loader-thread {
+  fill: none;
+  stroke: currentcolor;
+  stroke-dasharray: 0.22 0.08;
+  stroke-dashoffset: 1;
+  stroke-linecap: round;
+  stroke-width: 0.9;
+  opacity: 0.32;
+  animation: fate-thread-weave 1.8s var(--ease-weave) infinite;
+}
+
+.fate-loader-thread-two {
+  animation-delay: 180ms;
+  opacity: 0.58;
+}
+
+.fate-loader-thread-three {
+  animation-delay: 360ms;
+  opacity: 0.42;
+}
+
+.fate-loader-core {
+  fill: var(--accent-bright);
+  opacity: 0.18;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: fate-core-knot 1.8s ease-in-out infinite;
+}
+
+.fate-loader-core-two {
+  animation-delay: 220ms;
+}
+
+.fate-loader-core-three {
+  animation-delay: 440ms;
+}
+
+@keyframes fate-thread-weave {
+  0% {
+    stroke-dashoffset: 1;
+    opacity: 0.12;
+  }
+  48% {
+    stroke-dashoffset: 0.42;
+    opacity: 0.72;
+  }
+  100% {
+    stroke-dashoffset: -0.16;
+    opacity: 0.18;
+  }
+}
+
+@keyframes fate-core-knot {
+  0%,
+  100% {
+    opacity: 0.18;
+    transform: scale(0.72);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.12);
+  }
 }
 
 .recovery-knot {
@@ -1713,12 +1728,6 @@ a:focus-visible {
   }
   to {
     transform: translateX(78px);
-  }
-}
-
-@keyframes cursor-blink {
-  50% {
-    opacity: 0.18;
   }
 }
 

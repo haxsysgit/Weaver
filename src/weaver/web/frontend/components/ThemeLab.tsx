@@ -247,9 +247,10 @@ export function ThemeLab() {
       ...current,
       { content: message, id: makeMessageId("owner"), role: "owner" },
     ]);
-    announce(freshThread ? "[The Spell has noticed a new soul.]" : "[The Spell is weaving an answer.]");
+    announce(freshThread ? "[The Spell has noticed a new soul.]" : "[Searching the fate tapestry.]");
 
     schedule(() => setSoulState("weaving"), 180);
+    schedule(() => announce("[Weaving the story.]"), 540);
     schedule(() => {
       setMessages((current) => [
         ...current,

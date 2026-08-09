@@ -7,13 +7,13 @@ import {
   type SetStateAction,
 } from "react";
 
-import { useChatController, type ToolActivity } from "../hooks/useChatController";
+import { useChatController } from "../hooks/useChatController";
 import type { ChatApi, ConversationSummary, UserPreferences } from "../lib/chatApi";
 import { weaverProduct } from "../lib/product";
+import { runeMessageForActivity } from "../lib/runePhases";
 import { Composer, type ReadingTier } from "./Composer";
 import { RailOpenIcon, SettingsIcon } from "./Icons";
 import { Message } from "./Message";
-import { PassageModal } from "./PassageModal";
 import { RecoveryPanel } from "./RecoveryPanel";
 import { SpellBackground } from "./SpellBackground";
 import { SpellSurfaceRail, type LabThread } from "./SpellSurfaceRail";
@@ -169,7 +169,6 @@ export function SpellSurfaceChatApp({
   const [archivedIds, setArchivedIds] = useState<Set<string>>(new Set());
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set());
   const [threadNames, setThreadNames] = useState<Map<string, string>>(new Map());
-  const [passageHandle, setPassageHandle] = useState<string | null>(null);
   const [soulState, setSoulState] = useState<SoulSeaState>("idle");
   const [announcement, setAnnouncement] = useState("[The Spell listens.]");
   const [announcementKey, setAnnouncementKey] = useState(0);
@@ -177,6 +176,7 @@ export function SpellSurfaceChatApp({
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
   const previousTurnActive = useRef(false);
+  const answerPhaseAnnounced = useRef(false);
   const completionTimer = useRef<number | null>(null);
 
   const threads = useMemo(
@@ -238,8 +238,23 @@ export function SpellSurfaceChatApp({
     if (!activity) {
       return;
     }
-    announce(activityAnnouncement(activity));
+    const message = runeMessageForActivity(activity);
+    if (message) {
+      announce(message);
+    }
   }, [chat.activity]);
+
+  const streamingReplyHasText = chat.messages.some(
+    (message) => message.role === "weaver" && message.streaming && message.content.length > 0,
+  );
+
+  useEffect(() => {
+    if (!chat.turnActive || !streamingReplyHasText || answerPhaseAnnounced.current) {
+      return;
+    }
+    answerPhaseAnnounced.current = true;
+    announce("[Weaving the story.]");
+  }, [chat.turnActive, streamingReplyHasText]);
 
   useEffect(() => () => {
     if (completionTimer.current) {
@@ -322,12 +337,14 @@ export function SpellSurfaceChatApp({
   }
 
   function sendMessage(message: string) {
+    answerPhaseAnnounced.current = false;
     setSoulState("rippling");
-    announce("[The Spell is weaving an answer.]");
+    announce("[The Spell reaches for the first thread.]");
     void chat.sendMessage(message);
   }
 
   function regenerateReply() {
+    answerPhaseAnnounced.current = false;
     setSoulState("weaving");
     announce("[The Spell takes up the thread once more.]");
     chat.regenerateReply();
@@ -339,8 +356,6 @@ export function SpellSurfaceChatApp({
     : preferences.starIntensity === "vivid"
       ? 0.56
       : 0.36;
-  const liveActivity = chat.activity.at(-1) ?? null;
-
   return (
     <div
       className={[
@@ -415,7 +430,6 @@ export function SpellSurfaceChatApp({
             {chat.messages.map((message) => (
               <Message
                 Mark={WeaverMark}
-                activity={message.streaming ? liveActivity : null}
                 assistantName={weaverProduct.assistantName}
                 key={message.id}
                 message={message}
@@ -428,7 +442,6 @@ export function SpellSurfaceChatApp({
                     ? regenerateReply
                     : undefined
                 }
-                onViewPassage={setPassageHandle}
                 regenerateLabel={weaverProduct.regenerateLabel}
               />
             ))}
@@ -490,18 +503,6 @@ export function SpellSurfaceChatApp({
         />
       )}
 
-      {passageHandle && (
-        <PassageModal
-          handle={passageHandle}
-          loadPassage={chat.loadPassage}
-          onClose={() => setPassageHandle(null)}
-        />
-      )}
     </div>
   );
-}
-
-function activityAnnouncement(activity: ToolActivity): string {
-  const action = activity.status === "start" ? activity.detail || activity.name : "done";
-  return `[The Spell is ${action}.]`;
 }
