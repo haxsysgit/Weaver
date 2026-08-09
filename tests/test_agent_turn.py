@@ -1525,6 +1525,48 @@ class TestFinalReadingPhase:
         assert result.exit_reason == TurnExitReason.COMPLETED
         assert result.final_text == "Candidate grounded in chapter 104."
 
+    async def test_cancellation_wins_over_final_phase_provider_failure(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response("Candidate grounded in chapter 104."),
+        )
+        cancel_event = asyncio.Event()
+        original_stream = provider.stream
+
+        async def cancel_during_final_call(*args, **kwargs):
+            if len(provider.calls) == 2:
+                cancel_event.set()
+                raise RuntimeError("provider stopped during cancellation")
+            async for event in original_stream(*args, **kwargs):
+                yield event
+
+        monkeypatch.setattr(provider, "stream", cancel_during_final_call)
+        persisted: list = []
+
+        async def packet_builder(results, draft):
+            return "PACKET: chapter 104"
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            cancel_event=cancel_event,
+            persist_message=_async_append(persisted),
+            packet_builder=packet_builder,
+        )
+
+        assert result.exit_reason == TurnExitReason.INTERRUPTED
+        assert result.final_text == ""
+        assert [message.kind for message in persisted] == [
+            "assistant",
+            "tool_call",
+            "tool_result",
+        ]
+
 
 class TestCandidateValidation:
     WORKING_NOTE_CASES = [
@@ -1657,11 +1699,13 @@ class TestCandidateValidation:
             stop_response("Grounded answer."),
         )
 
+        persisted: list = []
         result = await execute_turn(
             layer,
             model,
             registry=make_registry(),
             active_tools=("echo",),
+            persist_message=_async_append(persisted),
         )
 
         assert result.exit_reason == TurnExitReason.COMPLETED
@@ -1680,6 +1724,14 @@ class TestCandidateValidation:
             "first private reasoning",
             "second private reasoning",
         ]
+        assert all(
+            not getattr(message, "reasoning_content", "")
+            for message in persisted
+        )
+        assert all(
+            not getattr(message, "reasoning_content", "")
+            for message in result.new_messages
+        )
 
     async def test_working_note_rejection_limit_fails_without_persisting(
         self,

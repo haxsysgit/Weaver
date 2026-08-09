@@ -1307,9 +1307,8 @@ class _RaisingProvider(FakeModelProvider):
         raise RuntimeError("inference exploded")
 
 
-def test_assistant_reasoning_content_round_trips_through_items():
-    """DeepSeek thinking-mode contract: tool-call assistant messages keep
-    their reasoning_content through the durable item store."""
+def test_assistant_reasoning_content_is_not_written_to_items():
+    """Private model reasoning never enters the durable item store."""
     from weaver.agent.messages import AssistantMessage
     from weaver.conversation.items import items_to_messages, message_to_item
 
@@ -1335,10 +1334,10 @@ def test_assistant_reasoning_content_round_trips_through_items():
         created_at="2026-07-31T00:00:00",
     )
     body = json.loads(item.body)
-    assert body["reasoning_content"] == "the user wants the weather"
+    assert "reasoning_content" not in body
     restored = items_to_messages([item])[0]
     assert isinstance(restored, AssistantMessage)
-    assert restored.reasoning_content == "the user wants the weather"
+    assert restored.reasoning_content == ""
 
 
 @pytest.mark.asyncio
@@ -1366,9 +1365,8 @@ async def test_model_failure_records_a_run_failed_event(tmp_path):
         await sw.close()
 
 
-def test_assistant_reasoning_content_round_trips():
-    """DeepSeek thinking-mode requirement: reasoning_content survives the
-    persist -> replay cycle (and old rows without it replay as '')."""
+def test_legacy_reasoning_content_is_dropped_on_replay():
+    """Old private reasoning fields are ignored instead of replayed."""
     import json as _json
 
     from weaver.agent.messages import AssistantMessage
@@ -1402,15 +1400,22 @@ def test_assistant_reasoning_content_round_trips():
         created_at="2026-08-08T00:00:00",
     )
     body = _json.loads(item.body)
-    assert body["reasoning_content"] == "the stored thinking trace"
+    assert "reasoning_content" not in body
 
     replayed = items_to_messages(
-        [round_trip(body, "itm1")]
+        [
+            round_trip(
+                {
+                    "content": "old",
+                    "reasoning_content": "legacy private trace",
+                },
+                "itm1",
+            )
+        ]
     )
-    assert replayed[0].reasoning_content == "the stored thinking trace"
+    assert replayed[0].reasoning_content == ""
 
-    # pre-fix rows have no reasoning_content: replay as "" (still sent back
-    # as "" by the provider, satisfying the API's presence check).
+    # Rows without the old field also replay as an empty presence marker.
     legacy = items_to_messages([round_trip({"content": "old"}, "itm2")])
     assert legacy[0].reasoning_content == ""
 

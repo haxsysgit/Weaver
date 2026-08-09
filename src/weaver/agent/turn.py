@@ -7,7 +7,7 @@ import json
 import logging
 import uuid
 from collections.abc import Awaitable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum
 from typing import Callable
 
@@ -311,6 +311,14 @@ def _message_id() -> str:
     return uuid.uuid4().hex[:12]
 
 
+def _without_private_reasoning(
+    message: ConversationMessage,
+) -> ConversationMessage:
+    if isinstance(message, AssistantMessage) and message.reasoning_content:
+        return replace(message, reasoning_content="")
+    return message
+
+
 async def _persist(
     message: ConversationMessage,
     callback: PersistCallback | None,
@@ -318,7 +326,7 @@ async def _persist(
     if callback is None:
         return True
     try:
-        await callback(message)
+        await callback(_without_private_reasoning(message))
         return True
     except Exception:
         logger.warning(
@@ -646,6 +654,10 @@ async def run_turn(
             break
         except Exception:
             logger.warning("model request failed", exc_info=True)
+            if cancel_event.is_set():
+                exit_reason = TurnExitReason.INTERRUPTED
+                safe_failure = safe_error("interrupted")
+                break
             if not in_final_phase:
                 exit_reason = TurnExitReason.MODEL_FAILED
                 safe_failure = safe_error("model")
@@ -670,7 +682,10 @@ async def run_turn(
         provider_name = response.provider_id
 
         if in_final_phase:
-            if response.stop_reason == ModelStopReason.ABORTED:
+            if (
+                response.stop_reason == ModelStopReason.ABORTED
+                or cancel_event.is_set()
+            ):
                 exit_reason = TurnExitReason.INTERRUPTED
                 safe_failure = safe_error("interrupted")
                 break
@@ -928,7 +943,10 @@ async def run_turn(
         final_text=final_text,
         model_steps=model_steps,
         tool_starts=tool_starts,
-        new_messages=new_messages,
+        new_messages=[
+            _without_private_reasoning(message)
+            for message in new_messages
+        ],
         safe_failure=safe_failure,
         model_name=model_name,
         provider_name=provider_name,
