@@ -209,7 +209,7 @@ def test_refresh_defaults_to_preview(monkeypatch, capsys) -> None:
 
 def test_refresh_apply_runs_the_live_loop(monkeypatch, tmp_path, capsys) -> None:
     monkeypatch.chdir(tmp_path)
-    monkeypatch.delenv("FIRECRAWL_API_KEY", raising=False)
+    monkeypatch.setenv("FIRECRAWL_API_KEY", "fc-test-key")
     captured = {}
 
     async def fake_update(novel_id, through_chapter=None, preview=True):
@@ -237,7 +237,7 @@ def test_refresh_apply_runs_the_live_loop(monkeypatch, tmp_path, capsys) -> None
 
 def test_refresh_through_cap_is_passed(monkeypatch, tmp_path) -> None:
     monkeypatch.chdir(tmp_path)
-    monkeypatch.delenv("FIRECRAWL_API_KEY", raising=False)
+    monkeypatch.setenv("FIRECRAWL_API_KEY", "fc-test-key")
     captured = {}
 
     async def fake_update(novel_id, through_chapter=None, preview=True):

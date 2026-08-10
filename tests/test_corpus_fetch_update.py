@@ -48,6 +48,36 @@ async def test_fetch_preview_selects_exact_range_without_source_calls(
 
 
 @pytest.mark.asyncio
+async def test_update_preview_selects_gaps_without_source_calls(tmp_path) -> None:
+    """The refresh (update) preview must report every missing/broken
+    chapter and touch neither the source nor the shelf."""
+    make_project(tmp_path, [1, 2, 3])
+    write_chapter(tmp_path, 1)
+    write_chapter(
+        tmp_path,
+        2,
+        value=b"[Chapter not available]\n",
+    )
+    source = FakeChapterSource({})
+    service = CorpusService(project_root=tmp_path, source=source)
+
+    result = await service.update_novel_corpus(
+        UpdateNovelCorpusInput(novel_id="shadow-slave")
+    )
+
+    assert source.calls == []
+    assert result.preview is True
+    assert {action.chapter for action in result.actions} == {2, 3, 4}
+    assert all(action.status.value == "previewed" for action in result.actions)
+    by_chapter = {action.chapter: action for action in result.actions}
+    assert by_chapter[4].action == "probe_consecutive_urls_until_first_404"
+    assert not (tmp_path / "novels/shadow-slave/0001-0100/chapter-0003.txt").exists()
+    assert (
+        tmp_path / "novels/shadow-slave/0001-0100/chapter-0002.txt"
+    ).read_bytes() == b"[Chapter not available]\n"
+
+
+@pytest.mark.asyncio
 async def test_broken_preview_exposes_only_old_hash_and_size(tmp_path) -> None:
     make_project(tmp_path, [1])
     write_chapter(
