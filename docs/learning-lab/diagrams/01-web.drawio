@@ -1,0 +1,55 @@
+<mxfile host="app.diagrams.net" agent="weaver-learning-lab">
+  <diagram id="lab-01" name="01-web">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="800" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="band1" value="ONE MESSAGE, CLIENT SIDE (web/frontend)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#9E9E9E;verticalAlign=top;fontSize=11;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="1120" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="userBox" value="user types&#xa;&quot;tell me about the fake knight&quot;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1976D2;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="70" y="80" width="170" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="controllerBox" value="useChatController.ts&#xa;TurnState: idle → streaming → idle&#xa;(cancelling while POST /cancel is in flight)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1976D2;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="300" y="80" width="250" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="apiBox" value="chatApi.ts&#xa;streamTurn(): POST /turns (202)&#xa;then EventSource on /stream&#xa;StreamEvent = delta | completed |&#xa;interrupted | failed | tool" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1976D2;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="610" y="80" width="250" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="eventsourceBox" value="EventSource keeps the connection open;&#xa;reconnects with Last-Event-ID so&#xa;nothing is replayed" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1976D2;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="900" y="80" width="230" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#1976D2" edge="1" parent="1" source="userBox" target="controllerBox"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#1976D2" edge="1" parent="1" source="controllerBox" target="apiBox"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#1976D2" edge="1" parent="1" source="apiBox" target="eventsourceBox"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="band2" value="SERVER SIDE (web/app.py)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F9FF;strokeColor=#1976D2;verticalAlign=top;fontSize=11;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="40" y="230" width="1120" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="restBox" value="POST /api/conversations/{id}/turns&#xa;→ validates (≤ MAX_MESSAGE_CHARS 32_000)&#xa;→ 202 accepted: turn runs server-side&#xa;→ reply arrives over GET /stream" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1976D2;fontSize=11;align=left" vertex="1" parent="1">
+          <mxGeometry x="70" y="270" width="330" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="streamBox" value="GET /api/conversations/{id}/stream&#xa;SSE text/event-stream&#xa;asyncio.Queue per stream, one owned&#xa;background task per send; entry stays&#xa;until the task truly finishes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1976D2;fontSize=11;align=left" vertex="1" parent="1">
+          <mxGeometry x="450" y="270" width="330" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="originBox" value="LOCAL_HOSTS origin checks:&#xa;requests from outside 127.0.0.1&#xa;are refused" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1976D2;fontSize=11;align=left" vertex="1" parent="1">
+          <mxGeometry x="830" y="270" width="300" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="cancelBox" value="POST /api/conversations/{id}/cancel&#xa;→ 202 cancelling / 200 idle / 404&#xa;cooperative cancel event, never task.cancel()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1976D2;fontSize=11;align=left" vertex="1" parent="1">
+          <mxGeometry x="830" y="350" width="300" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="band3" value="WHAT THE CLIENT RECEIVES (evidence/01-web-turn/03-sse.stream.txt)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FDF8F3;strokeColor=#E65100;verticalAlign=top;fontSize=11;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="40" y="530" width="1120" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="frameBox" value="id: 1&#xa;event: completed&#xa;data: {&#xa;  &quot;text&quot;: &quot;I read you. This is a fake-mode reply…&quot;,&#xa;  &quot;token_count&quot;: 1150,&#xa;  &quot;token_budget&quot;: 200000&#xa;}" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#E65100;fontSize=12;fontFamily=monospace;align=left;spacing=10" vertex="1" parent="1">
+          <mxGeometry x="70" y="570" width="420" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="notesBox" value="• id: line = SSE event id (hermes-webui resume pattern)&#xa;• event: delta for streamed text, tool for tool events,&#xa;  completed/interrupted/failed for turn endings&#xa;• data: JSON payload the frontend renders&#xa;• token_count/budget surface the context meter&#xa;  (assembler snapshot → module 03)&#xa;• the same log replays fully for a fresh client" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#E65100;fontSize=11;align=left;spacing=8" vertex="1" parent="1">
+          <mxGeometry x="560" y="570" width="570" height="170" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

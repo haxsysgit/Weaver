@@ -1,0 +1,18 @@
+[
+  {
+    "id": "{id}",
+    "turn_id": "{id}",
+    "attempt": 1,
+    "phase": "queued",
+    "interrupted_run_id": null,
+    "created_at": "{ts}"
+  },
+  {
+    "id": "{id}",
+    "turn_id": "{id}",
+    "attempt": 1,
+    "phase": "completed",
+    "interrupted_run_id": null,
+    "created_at": "{ts}"
+  }
+]

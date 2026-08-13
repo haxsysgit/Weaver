@@ -1,0 +1,32 @@
+[
+  {
+    "id": "{id}",
+    "conversation_id": "{id}",
+    "sequence": 1,
+    "turn_id": "{id}",
+    "run_id": "{id}",
+    "kind": "owner",
+    "body": "{\"content\": \"\"}",
+    "created_at": "{ts}"
+  },
+  {
+    "id": "{id}",
+    "conversation_id": "{id}",
+    "sequence": 2,
+    "turn_id": "{id}",
+    "run_id": "{id}",
+    "kind": "owner",
+    "body": "{\"content\": \"Tell me about the fake knight in chapter 1.\"}",
+    "created_at": "{ts}"
+  },
+  {
+    "id": "{id}",
+    "conversation_id": "{id}",
+    "sequence": 3,
+    "turn_id": "{id}",
+    "run_id": "{id}",
+    "kind": "assistant",
+    "body": "{\"content\": \"I read you. This is a fake-mode reply (--fake), no real model is running. Set DEEPSEEK_KEY and start again to talk to the real Weaver.\"}",
+    "created_at": "{ts}"
+  }
+]

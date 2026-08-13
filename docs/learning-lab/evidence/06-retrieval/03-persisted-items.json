@@ -1,0 +1,129 @@
+[
+  {
+    "sequence": 1,
+    "kind": "owner",
+    "body": {
+      "content": "Who killed the hunting party leader?"
+    }
+  },
+  {
+    "sequence": 2,
+    "kind": "owner",
+    "body": {
+      "content": "Who killed the hunting party leader?"
+    }
+  },
+  {
+    "sequence": 3,
+    "kind": "assistant",
+    "body": {
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "c1",
+          "name": "semantic_search",
+          "arguments": "{\"query\": \"who killed the hunting party leader\", \"limit\": 3}"
+        }
+      ]
+    }
+  },
+  {
+    "sequence": 4,
+    "kind": "tool_call",
+    "body": {
+      "tool_call_id": "c1",
+      "name": "semantic_search",
+      "arguments": "{\"query\": \"who killed the hunting party leader\", \"limit\": 3}"
+    }
+  },
+  {
+    "sequence": 5,
+    "kind": "tool_result",
+    "body": {
+      "tool_call_id": "c1",
+      "name": "semantic_search",
+      "result": {
+        "ok": true,
+        "result": {
+          "query": "who killed the hunting party leader",
+          "canonical_hits": [
+            {
+              "chapter": 98,
+              "line_start": 2,
+              "line_end": 4,
+              "score": 0.6064784253653812,
+              "passage_handle": "novel:0098:2-4",
+              "source_hash": "d9a88a7dc09c6daa"
+            },
+            {
+              "chapter": 1,
+              "line_start": 2,
+              "line_end": 4,
+              "score": 0.24019222387246142,
+              "passage_handle": "novel:0001:2-4",
+              "source_hash": "9ec6f01bd7a79c52"
+            }
+          ],
+          "notebook_hits": [
+            {
+              "statement_id": "statement:chapter-0098:05",
+              "kind": "confirmed_fact",
+              "chapter": 98,
+              "text": "Sunny kills the hunting party leader with a kunai.",
+              "links": [
+                "person:sunny"
+              ],
+              "score": 1.1507283449172974
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "sequence": 6,
+    "kind": "assistant",
+    "body": {
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "c2",
+          "name": "read_chapters",
+          "arguments": "{\"handle\": \"novel:0098:3-4\"}"
+        }
+      ]
+    }
+  },
+  {
+    "sequence": 7,
+    "kind": "tool_call",
+    "body": {
+      "tool_call_id": "c2",
+      "name": "read_chapters",
+      "arguments": "{\"handle\": \"novel:0098:3-4\"}"
+    }
+  },
+  {
+    "sequence": 8,
+    "kind": "tool_result",
+    "body": {
+      "tool_call_id": "c2",
+      "name": "read_chapters",
+      "result": {
+        "source_kind": "novel",
+        "chapter": 98,
+        "line_start": 3,
+        "line_end": 4,
+        "source_hash": "d9a88a7dc09c6daa",
+        "passage_handle": "novel:0098:3-4"
+      }
+    }
+  },
+  {
+    "sequence": 9,
+    "kind": "assistant",
+    "body": {
+      "content": "Sunny killed the leader himself with the kunai (chapter 98)."
+    }
+  }
+]

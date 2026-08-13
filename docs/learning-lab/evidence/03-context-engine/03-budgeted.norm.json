@@ -1,0 +1,35 @@
+{
+  "mode": "budgeted",
+  "budget": 1191,
+  "system_prompt_tokens": 1139,
+  "block_token_counts": [
+    3,
+    9,
+    6,
+    92,
+    12,
+    7
+  ],
+  "kept_sequences": [
+    7,
+    8
+  ],
+  "dropped_sequences": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "snapshot": {
+    "id": "{id}",
+    "conversation_id": "conv-fake-knight",
+    "first_item_id": "item-07",
+    "last_item_id": "item-08",
+    "item_count": 2,
+    "token_count": 1158,
+    "token_budget": 1191,
+    "created_at": "{ts}"
+  }
+}

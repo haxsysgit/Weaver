@@ -1,0 +1,160 @@
+{
+  "semantic_search": {
+    "ok": true,
+    "result": {
+      "query": "who killed the hunting party leader",
+      "canonical_hits": [
+        {
+          "chapter": 98,
+          "line_start": 2,
+          "line_end": 4,
+          "score": 0.6064784253653812,
+          "passage_handle": "novel:0098:2-4",
+          "source_hash": "d9a88a7dc09c6daa"
+        },
+        {
+          "chapter": 1,
+          "line_start": 2,
+          "line_end": 4,
+          "score": 0.24019222387246142,
+          "passage_handle": "novel:0001:2-4",
+          "source_hash": "9ec6f01bd7a79c52"
+        }
+      ],
+      "notebook_hits": [
+        {
+          "statement_id": "statement:chapter-0098:05",
+          "kind": "confirmed_fact",
+          "chapter": 98,
+          "text": "Sunny kills the hunting party leader with a kunai.",
+          "links": [
+            "person:sunny"
+          ],
+          "score": 1.1507283449172974
+        }
+      ]
+    }
+  },
+  "read_chapters": {
+    "ok": true,
+    "durable_evidence": {
+      "source_kind": "novel",
+      "chapter": 98,
+      "line_start": 3,
+      "line_end": 4,
+      "source_hash": "d9a88a7dc09c6daa",
+      "passage_handle": "novel:0098:3-4"
+    },
+    "result": {
+      "chapter": 98,
+      "line_start": 3,
+      "line_end": 4,
+      "source_hash": "d9a88a7dc09c6daa",
+      "text": "\nsunny kills the leader with the fake kunai"
+    }
+  },
+  "find_text": {
+    "ok": true,
+    "durable_evidence": {
+      "source_kind": "novel",
+      "kind": "find_text:phrase",
+      "hits": [
+        {
+          "chapter": 1,
+          "line_start": 2,
+          "line_end": 2,
+          "source_hash": "9ec6f01bd7a79c52",
+          "passage_handle": "novel:0001:2-2"
+        },
+        {
+          "chapter": 3,
+          "line_start": 2,
+          "line_end": 2,
+          "source_hash": "6190c55ac9f25c49",
+          "passage_handle": "novel:0003:2-2"
+        }
+      ]
+    },
+    "result": {
+      "query": "fake knight",
+      "mode": "phrase",
+      "hits": [
+        {
+          "chapter": 1,
+          "line": 2,
+          "text": "the fake knight fights the fake dragon",
+          "next_text": ""
+        },
+        {
+          "chapter": 3,
+          "line": 2,
+          "text": "the fake knight sneaks through the ruins",
+          "next_text": ""
+        }
+      ]
+    }
+  },
+  "browse_chapters": {
+    "ok": true,
+    "durable_evidence": {
+      "source_kind": "novel",
+      "kind": "browse_chapters:titles",
+      "chapters": [
+        {
+          "chapter": 1,
+          "line_start": 2,
+          "line_end": 2,
+          "source_hash": "9ec6f01bd7a79c52",
+          "passage_handle": "novel:0001:2-2"
+        },
+        {
+          "chapter": 3,
+          "line_start": 2,
+          "line_end": 2,
+          "source_hash": "6190c55ac9f25c49",
+          "passage_handle": "novel:0003:2-2"
+        }
+      ]
+    },
+    "result": {
+      "start": 1,
+      "end": 5,
+      "titles": [
+        {
+          "chapter": 1,
+          "title": "Fake"
+        },
+        {
+          "chapter": 3,
+          "title": "Fake"
+        }
+      ]
+    }
+  },
+  "who_is": {
+    "ok": true,
+    "result": {
+      "found": true,
+      "entity": {
+        "entity_id": "person:sunny",
+        "kind": "person",
+        "title": "Sunny",
+        "aliases": [
+          "person:mongrel"
+        ],
+        "first_known_chapter": null,
+        "body": "<!-- entity-id: person:sunny -->\n<!-- alias: person:mongrel -->\n# Sunny\n"
+      }
+    }
+  },
+  "read_chapters_bad_handle": {
+    "ok": false,
+    "error_category": "validation",
+    "error": "passage 98:99-100 outside chapter (4 lines)"
+  },
+  "find_text_bad_mode": {
+    "ok": false,
+    "error_category": "validation",
+    "error": "1 validation error for FindTextInput\n  Value error, mode must be one of: phrase, speaker, together [type=value_error, input_value={'query': 'fake knight', 'mode': 'nonsense'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error"
+  }
+}

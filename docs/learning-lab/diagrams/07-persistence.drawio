@@ -1,0 +1,61 @@
+<mxfile host="app.diagrams.net" agent="weaver-learning-lab">
+  <diagram id="lab-07" name="07-persistence">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="800" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="band1" value="THE SQLITE SCHEMA (conversation/schema.py + repository.py)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F3F9F3;strokeColor=#2E7D32;verticalAlign=top;fontSize=11;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="1120" height="330" as="geometry" />
+        </mxCell>
+        <mxCell id="rel" value="relationship&#xa;id, created_at" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#2E7D32;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="70" y="90" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="conv" value="conversation&#xa;id, relationship_id, created_at&#xa;title, reader_chapter" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#2E7D32;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="330" y="90" width="220" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="turn" value="turn&#xa;id, conversation_id, sequence, created_at" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#2E7D32;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="610" y="90" width="220" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="run" value="run&#xa;id, turn_id, attempt, phase,&#xa;interrupted_run_id, created_at&#xa;phases: queued → running → completed" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#2E7D32;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="890" y="90" width="250" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="evt" value="run_event&#xa;id, conversation_id, sequence, run_id,&#xa;kind, body, created_at&#xa;run_queued / run_completed / run_failed" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#2E7D32;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="890" y="230" width="250" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="item" value="conversation_item&#xa;id, conversation_id, sequence, turn_id,&#xa;run_id, kind, body, created_at&#xa;kind: owner | assistant | tool_call | tool_result&#xa;body: JSON; tool prose never persisted" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#2E7D32;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="70" y="230" width="300" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#2E7D32" edge="1" parent="1" source="rel" target="conv"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#2E7D32" edge="1" parent="1" source="conv" target="turn"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#2E7D32" edge="1" parent="1" source="turn" target="run"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#2E7D32;dashed=1" edge="1" parent="1" source="turn" target="item"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="band2" value="EVERY WRITE IS ONE TRANSACTION (coordinator.py _tx)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#9E9E9E;verticalAlign=top;fontSize=11;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="40" y="410" width="1120" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="txBox" value="BEGIN IMMEDIATE → writes → commit; any exception → rollback&#xa;start_conversation_and_turn creates relationship + conversation +&#xa;turn + run atomically&#xa;dangling transactions brick the connection — _tx is the only path" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#9E9E9E;fontSize=11;align=left" vertex="1" parent="1">
+          <mxGeometry x="70" y="440" width="700" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="band3" value="INTERRUPT &amp; RESTART SAFETY (session.py)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FDF8F3;strokeColor=#E65100;verticalAlign=top;fontSize=11;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="40" y="570" width="1120" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="i1" value="turn interrupted (ctrl-c / cancel)&#xa;→ run marked interrupted,&#xa;phase stays incomplete" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#E65100;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="70" y="610" width="260" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="i2" value="new send() finds an interrupted run&#xa;→ safe error, never auto-continue&#xa;(INTERRUPTED_RUN_EXISTS)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#E65100;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="380" y="610" width="260" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="i3" value="continue_interrupted / retry_interrupted&#xa;/ retry_last_turn / regenerate_last_turn&#xa;are the explicit recovery paths" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#E65100;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="690" y="610" width="260" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="i4" value="process restart: transcript, runs and events&#xa;reload from SQLite; subprocess restart test&#xa;proves the whole flow (tests/test_conversation.py)&#xa;&#xa;evidence: 01-web-turn/07-sqlite-runs.json&#xa;(attempt 1, phase completed)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#E65100;fontSize=11;align=left" vertex="1" parent="1">
+          <mxGeometry x="70" y="700" width="380" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#E65100" edge="1" parent="1" source="i1" target="i2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#E65100" edge="1" parent="1" source="i2" target="i3"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

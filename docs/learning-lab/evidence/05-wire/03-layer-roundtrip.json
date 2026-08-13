@@ -1,0 +1,51 @@
+{
+  "recorded_request": {
+    "model": "deepseek-v4-flash",
+    "messages": [
+      {
+        "role": "user",
+        "content": "who is the fake knight?",
+        "tool_call_id": null,
+        "tool_calls": []
+      },
+      {
+        "role": "assistant",
+        "content": null,
+        "tool_call_id": null,
+        "tool_calls": [
+          {
+            "id": "call-001",
+            "name": "semantic_search",
+            "arguments_json": "{\"limit\": 3, \"query\": \"the fake knight\"}"
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "content": "Tool `semantic_search` returned a result.",
+        "tool_call_id": "call-001",
+        "tool_calls": []
+      },
+      {
+        "role": "assistant",
+        "content": "the fake knight fought the fake dragon.",
+        "tool_call_id": null,
+        "tool_calls": []
+      }
+    ],
+    "tool_count": 1,
+    "reasoning": {
+      "enabled": true,
+      "effort": "low"
+    }
+  },
+  "events": [
+    {
+      "event_type": "response_complete",
+      "response": {
+        "stop_reason": "tool_use",
+        "content": null
+      }
+    }
+  ]
+}

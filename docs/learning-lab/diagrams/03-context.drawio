@@ -1,0 +1,57 @@
+<mxfile host="app.diagrams.net" agent="weaver-learning-lab">
+  <diagram id="lab-03" name="03-context">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="800" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="band1" value="INPUT: the conversation store (conversation_item rows)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#9E9E9E;verticalAlign=top;fontSize=11;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="1120" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="itemBox" value="ItemRecord: id, conversation_id, sequence,&#xa;turn_id, run_id, kind, body, created_at&#xa;kinds: owner | assistant | tool_call | tool_result" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1976D2;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="70" y="70" width="330" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="exBox" value="seq 1 owner &quot;hello weaver&quot;&#xa;seq 2 assistant &quot;hello…&quot;&#xa;seq 3-6 owner + search exchange (3 items)&#xa;seq 7 assistant answer&#xa;seq 8 owner (the pin)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1976D2;fontSize=11;align=left" vertex="1" parent="1">
+          <mxGeometry x="450" y="70" width="330" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="band2" value="ASSEMBLER INTERNALS (conversation/assembler.py)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FDF8F3;strokeColor=#E65100;verticalAlign=top;fontSize=11;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="40" y="190" width="1120" height="380" as="geometry" />
+        </mxCell>
+        <mxCell id="groupBox" value="1. _group_blocks&#xa;blocks start at owner/assistant;&#xa;tool_call/tool_result join the block&#xa;they follow (atomic exchanges)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#E65100;fontSize=11;align=left" vertex="1" parent="1">
+          <mxGeometry x="70" y="230" width="250" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="countBox" value="2. _count_messages per block&#xa;tokens at the project_messages boundary&#xa;(cl100k_base ≈ DeepSeek tokenizer);&#xa;system prompt counted once,&#xa;tool schemas never counted" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#E65100;fontSize=11;align=left" vertex="1" parent="1">
+          <mxGeometry x="360" y="230" width="250" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="pinBox" value="3. pin the newest owner message&#xa;walk blocks from the newest end;&#xa;the pin and everything newer&#xa;are never dropped" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#E65100;fontSize=11;align=left" vertex="1" parent="1">
+          <mxGeometry x="650" y="230" width="250" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="dropBox" value="4. drop oldest blocks until budget holds&#xa;5. if the pin still overflows: return the&#xa;pin alone, token_count &gt; token_budget&#xa;(never raise, never drop the pin)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#E65100;fontSize=11;align=left" vertex="1" parent="1">
+          <mxGeometry x="70" y="340" width="250" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="snapBox" value="6. ContextSnapshot: first_item_id,&#xa;last_item_id, item_count, token_count,&#xa;token_budget, created_at&#xa;→ context meter in the UI&#xa;   (evidence 01-web-turn token_count 1150)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#E65100;fontSize=11;align=left" vertex="1" parent="1">
+          <mxGeometry x="360" y="340" width="250" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="evidenceBox" value="evidence/03-context-engine/:&#xa;01-block-anatomy.json — block &amp; boundary tokens&#xa;02-count-only.json — everything fits&#xa;03-budgeted.json — drop-oldest, first_item_id&#xa;04-pin-fallback.json — pin alone, over budget" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#E65100;fontSize=11;align=left" vertex="1" parent="1">
+          <mxGeometry x="650" y="340" width="480" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#1976D2" edge="1" parent="1" source="itemBox" target="groupBox"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#E65100" edge="1" parent="1" source="groupBox" target="countBox"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#E65100" edge="1" parent="1" source="countBox" target="pinBox"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#E65100" edge="1" parent="1" source="pinBox" target="dropBox"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="band3" value="OUTPUT: the working brief + snapshot" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F3F9F3;strokeColor=#2E7D32;verticalAlign=top;fontSize=11;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="40" y="610" width="1120" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="outBox" value="kept items → project_messages →&#xa;ModelRequest messages (module 05)&#xa;the model sees only the brief" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#2E7D32;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="70" y="640" width="330" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="outBox2" value="the pin alone can come back over budget;&#xa;the turn still runs — a tiny context is&#xa;worse than an empty one" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#2E7D32;fontSize=11" vertex="1" parent="1">
+          <mxGeometry x="450" y="640" width="330" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#2E7D32" edge="1" parent="1" source="dropBox" target="outBox"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

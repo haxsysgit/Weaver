@@ -1,0 +1,22 @@
+{
+  "mode": "pin-fallback",
+  "budget": 1141,
+  "system_prompt_tokens": 1139,
+  "kept_sequences": [
+    8
+  ],
+  "token_count_vs_budget": {
+    "token_count": 1146,
+    "token_budget": 1141
+  },
+  "snapshot": {
+    "id": "{id}",
+    "conversation_id": "conv-fake-knight",
+    "first_item_id": "item-08",
+    "last_item_id": "item-08",
+    "item_count": 1,
+    "token_count": 1146,
+    "token_budget": 1141,
+    "created_at": "{ts}"
+  }
+}

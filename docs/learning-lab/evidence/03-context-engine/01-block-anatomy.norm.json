@@ -1,0 +1,125 @@
+[
+  {
+    "block": 1,
+    "items": [
+      "seq=1 owner"
+    ],
+    "messages": [
+      {
+        "role": "system",
+        "content": "",
+        "tool_calls": []
+      },
+      {
+        "role": "user",
+        "content": "hello weaver",
+        "tool_calls": []
+      }
+    ],
+    "tokens_at_boundary": 3
+  },
+  {
+    "block": 2,
+    "items": [
+      "seq=2 assistant"
+    ],
+    "messages": [
+      {
+        "role": "system",
+        "content": "",
+        "tool_calls": []
+      },
+      {
+        "role": "assistant",
+        "content": "hello. what do you want to read?",
+        "tool_calls": []
+      }
+    ],
+    "tokens_at_boundary": 9
+  },
+  {
+    "block": 3,
+    "items": [
+      "seq=3 owner"
+    ],
+    "messages": [
+      {
+        "role": "system",
+        "content": "",
+        "tool_calls": []
+      },
+      {
+        "role": "user",
+        "content": "who is the fake knight?",
+        "tool_calls": []
+      }
+    ],
+    "tokens_at_boundary": 6
+  },
+  {
+    "block": 4,
+    "items": [
+      "seq=4 assistant",
+      "seq=5 tool_call",
+      "seq=6 tool_result"
+    ],
+    "messages": [
+      {
+        "role": "system",
+        "content": "",
+        "tool_calls": []
+      },
+      {
+        "role": "assistant",
+        "content": "",
+        "tool_calls": [
+          "semantic_search({\"query\": \"the fake knight\", \"limit\": 3})"
+        ]
+      },
+      {
+        "role": "tool",
+        "content": "{\"durable_evidence\":{\"chapter\":\"Shadow S",
+        "tool_calls": []
+      }
+    ],
+    "tokens_at_boundary": 92
+  },
+  {
+    "block": 5,
+    "items": [
+      "seq=7 assistant"
+    ],
+    "messages": [
+      {
+        "role": "system",
+        "content": "",
+        "tool_calls": []
+      },
+      {
+        "role": "assistant",
+        "content": "the fake knight is a construct who fight",
+        "tool_calls": []
+      }
+    ],
+    "tokens_at_boundary": 12
+  },
+  {
+    "block": 6,
+    "items": [
+      "seq=8 owner"
+    ],
+    "messages": [
+      {
+        "role": "system",
+        "content": "",
+        "tool_calls": []
+      },
+      {
+        "role": "user",
+        "content": "what happened in chapter 2?",
+        "tool_calls": []
+      }
+    ],
+    "tokens_at_boundary": 7
+  }
+]

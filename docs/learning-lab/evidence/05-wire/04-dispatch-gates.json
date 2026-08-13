@@ -1,0 +1,38 @@
+[
+  {
+    "tool": "no_such_tool",
+    "arguments": "{}",
+    "ok": false,
+    "error_code": "unknown_tool",
+    "error": "Tool 'no_such_tool' is not registered.",
+    "result": null
+  },
+  {
+    "tool": "mark_read",
+    "arguments": "{}",
+    "ok": false,
+    "error_code": "effect_not_allowed",
+    "error": "Tool effect is not allowed in this session.",
+    "result": null
+  },
+  {
+    "tool": "echo",
+    "arguments": "not json",
+    "ok": false,
+    "error_code": "malformed_arguments",
+    "error": "Tool arguments are not valid JSON.",
+    "result": null
+  },
+  {
+    "tool": "echo",
+    "arguments": "{\"message\": \"hello\"}",
+    "ok": true,
+    "error_code": null,
+    "error": null,
+    "result": {
+      "echo": {
+        "message": "hello"
+      }
+    }
+  }
+]

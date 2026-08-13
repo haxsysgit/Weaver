@@ -1,0 +1,4 @@
+id: 1
+event: completed
+data: {"text": "I read you. This is a fake-mode reply (--fake), no real model is running. Set DEEPSEEK_KEY and start again to talk to the real Weaver.", "token_count": 1150, "token_budget": 200000}
+

@@ -1,0 +1,57 @@
+<mxfile host="app.diagrams.net" agent="weaver-learning-lab">
+  <diagram id="lab-06" name="06-retrieval">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="800" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="band1" value="THE FIVE READING TOOLS (retrieval/tools.py — all READ, never touch the library)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#9E9E9E;verticalAlign=top;fontSize=11;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="1120" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="t1" value="semantic_search&#xa;dense-first hybrid over&#xa;chapters + notebook&#xa;hits carry passage handles" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1976D2;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="70" y="80" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="t2" value="read_chapters&#xa;open lines by passage&#xa;handle, verify source&#xa;hash (immutable source)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1976D2;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="280" y="80" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="t3" value="find_text&#xa;phrase / speaker / together&#xa;(AND across groups,&#xa;OR inside a group)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1976D2;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="490" y="80" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="t4" value="browse_chapters&#xa;skim titles or bodies,&#xa;49 chapters per call&#xa;(99 titles-only)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1976D2;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="700" y="80" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="t5" value="who_is&#xa;entity lookup: people,&#xa;places, powers, items,&#xa;groups (+ aliases)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1976D2;fontSize=10" vertex="1" parent="1">
+          <mxGeometry x="910" y="80" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="t6" value="deterministic machinery: ChapterIndex, EntityMap,&#xa;ConnectionGraph (library.py) — no LLM calls inside tools" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1976D2;fontSize=10;align=left" vertex="1" parent="1">
+          <mxGeometry x="70" y="175" width="700" height="30" as="geometry" />
+        </mxCell>
+
+        <mxCell id="band2" value="THE DURABLE-EVIDENCE SPLIT (Plan 014 slice 1)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FDF8F3;strokeColor=#E65100;verticalAlign=top;fontSize=11;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="40" y="260" width="1120" height="300" as="geometry" />
+        </mxCell>
+        <mxCell id="proseBox" value="IN MEMORY — the model reads it this turn&#xa;read_chapters result carries the passage text&#xa;+ durable_evidence key (chapter, line range,&#xa;source hash, source kind, passage handle)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#E65100;fontSize=11;align=left" vertex="1" parent="1">
+          <mxGeometry x="70" y="300" width="460" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="dbBox" value="PERSISTED — the pointer only&#xa;message_to_item → _durable_result strips&#xa;everything except the evidence record;&#xa;the conversation DB never holds novel prose&#xa;→ evidence/06-retrieval/03-persisted-items.json&#xa;   (seq 8: no &quot;text&quot; key)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#2E7D32;fontSize=11;align=left" vertex="1" parent="1">
+          <mxGeometry x="590" y="300" width="460" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="searchBox" value="semantic_search persists fully: its hits are pointers&#xa;already (chapter, score, passage_handle, source_hash)&#xa;→ evidence/06-retrieval/03-persisted-items.json seq 5" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#2E7D32;fontSize=11;align=left" vertex="1" parent="1">
+          <mxGeometry x="70" y="420" width="460" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="packetBox" value="final answer phase: build_packet collects durable_evidence&#xa;from tool results, caps by tier (PACKET_CHAR_CAPS&#xa;180k/360k/700k), EXPAND_LINES = 20, MAX_NOTEBOOK_STATEMENTS&#xa;= 5, MAX_OPENED_PASSAGES = 12" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#E65100;fontSize=11;align=left" vertex="1" parent="1">
+          <mxGeometry x="590" y="420" width="460" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#E65100" edge="1" parent="1" source="proseBox" target="dbBox"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#E65100;dashed=1" edge="1" parent="1" source="t2" target="proseBox"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="band3" value="THE FULL TURN (evidence/06-retrieval/02-turn-result.json)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F5F9FF;strokeColor=#1976D2;verticalAlign=top;fontSize=11;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="40" y="600" width="1120" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="flowBox" value="semantic_search(&quot;who killed the hunting party leader&quot;) →&#xa;read_chapters(&quot;novel:0098:3-4&quot;) → final answer&#xa;model_steps 3, tool_starts 2, exit completed&#xa;&#xa;search hit: score 0.606, passage_handle novel:0098:2-4, source_hash d9a88a7d…" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1976D2;fontSize=11;align=left" vertex="1" parent="1">
+          <mxGeometry x="70" y="630" width="1060" height="80" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

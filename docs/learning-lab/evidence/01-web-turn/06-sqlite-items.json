@@ -1,0 +1,32 @@
+[
+  {
+    "id": "db927afbe97742f2a4b94b0cbac0739a",
+    "conversation_id": "56c4586a4b78405e882ac0061efad0f3",
+    "sequence": 1,
+    "turn_id": "fb78a0eb6f624a51be333345c6eb574e",
+    "run_id": "4e0f78820a0b44af9e94662bd7e2c12d",
+    "kind": "owner",
+    "body": "{\"content\": \"\"}",
+    "created_at": "2026-08-13T18:37:44.247407+00:00"
+  },
+  {
+    "id": "6332a0fb16364da99abce94df8200aeb",
+    "conversation_id": "56c4586a4b78405e882ac0061efad0f3",
+    "sequence": 2,
+    "turn_id": "da50839693214f00971444e05fa03dc0",
+    "run_id": "63450441d4264afb9e97d2a2f2b16b61",
+    "kind": "owner",
+    "body": "{\"content\": \"Tell me about the fake knight in chapter 1.\"}",
+    "created_at": "2026-08-13T18:37:44.292401+00:00"
+  },
+  {
+    "id": "95a0a4ede7924014b73fdf9176b70540",
+    "conversation_id": "56c4586a4b78405e882ac0061efad0f3",
+    "sequence": 3,
+    "turn_id": "da50839693214f00971444e05fa03dc0",
+    "run_id": "63450441d4264afb9e97d2a2f2b16b61",
+    "kind": "assistant",
+    "body": "{\"content\": \"I read you. This is a fake-mode reply (--fake), no real model is running. Set DEEPSEEK_KEY and start again to talk to the real Weaver.\"}",
+    "created_at": "2026-08-13T18:37:44.343245+00:00"
+  }
+]

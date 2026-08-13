@@ -1,0 +1,1 @@
+[{"message_id":"{id}","turn_id":"{id}","role":"owner","content":"Tell me about the fake knight in chapter 1.","created_at":"{ts}"},{"message_id":"{id}","turn_id":"{id}","role":"weaver","content":"I read you. This is a fake-mode reply (--fake), no real model is running. Set DEEPSEEK_KEY and start again to talk to the real Weaver.","created_at":"{ts}"}]
