@@ -8,7 +8,8 @@
 
 ## Status
 
-- State: Admitted 2026-08-07 (owner re-scope); implementing 2026-08-08
+- State: Closed 2026-08-14 (accepted with scope cut; skills, task/prompt
+  classification, and compaction deferred to after v1)
 - Priority P2, Effort L, Risk Medium
 - Depends on: Plan 014 accepted and closed (done 2026-08-07)
 
@@ -128,10 +129,11 @@ classification call) returns with them, and it never assigned budgets.
    budget + reasoning; Spell-themed tokens, send coalescing animation, tool
    activity as bracketed Spell announcements. Verified: live proof green
    (turn, rail, mobile, PWA), 147 backend + 16 vitest green.
-6. Live trial (owner go required)
-7. Verify pass — only if the live trial shows the synthesis call failing
-   (owner-directed ordering 2026-08-08)
-8. Skills + router — deferred until after the live trial
+6. Live trial — PUSHED OUT 2026-08-11 (owner decision): a full dedicated live
+   trial is deferred to Plan 18 (or the v1 release plan), not run inside Plan 15.
+7. Verify pass — folded into the Plan 18 live trial; build it only if that
+   trial shows the synthesis call failing (owner-directed ordering 2026-08-08)
+8. Skills + router — deferred until after the live trial (Plan 18+)
 
 Compaction (labeled context, living story-state note, graph-anchored user
 takes) is the second half of Plan 15, after the front half works live.

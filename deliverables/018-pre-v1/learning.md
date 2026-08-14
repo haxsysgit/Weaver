@@ -2,9 +2,9 @@
 
 ## Gate status
 
-**Drafted 2026-08-11. Awaiting owner admission.**
+**Drafted 2026-08-14. Awaiting owner admission.**
 
-## Locked decisions (owner-confirmed 2026-08-11)
+## Locked decisions (owner-confirmed 2026-08-14)
 
 1. Plan 018 is the pre-v1 plan: close Plan 015, repo cleanup, docs
    audit + standard docs (README, architecture, CONTRIBUTING.md),

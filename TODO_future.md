@@ -38,11 +38,11 @@ Open questions for the owner when this plan is admitted:
 - User-facing Memories vault: quote-sized items with rank flavor (per the
   no-bulk-reproduction product rule)?
 
-## Roadmap (plan order, owner-set 2026-08-10, updated 2026-08-11)
+## Roadmap (plan order, owner-set 2026-08-10, updated 2026-08-14)
 
 - Plan 16: done, owner-accepted (refresh the shelf safely).
 - Plan 17: done, owner-accepted (notebook read through chapter 3148).
-- Plan 018: the pre-v1 plan (drafted 2026-08-11, awaiting admission). It
+- Plan 018: the pre-v1 plan (drafted 2026-08-14, awaiting admission). It
   closes Plan 015 with a scope decision, cleans stale repo context, audits
   and standardizes docs (README, architecture, CONTRIBUTING.md), records
   the no-chapter-links decision, and audits the retrieval stack.
@@ -94,7 +94,7 @@ Open questions for the owner when this plan is admitted:
 - Auth and multi-user (users, accounts, where conversations live).
 - Memory panel design for the chat UI.
 - Spoiler-free mode.
-- Chapter-link integration: DECIDED OUT (2026-08-11). No chapter links in
+- Chapter-link integration: DECIDED OUT (2026-08-14). No chapter links in
   the product. Weaver references the chapter number and quotes prose in a
   `>` blockquote when asked; novel sources stay server-side and invisible.
 - More model providers: openai, anthropic claude, gemini, grok (deepseek
