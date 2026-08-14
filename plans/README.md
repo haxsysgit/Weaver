@@ -30,8 +30,7 @@ evidence, review, and human decision gates must also be complete.
 
 ## Execution order
 
-Plans 001-010 are complete (007.5 applied). The checkpoint before Plan 011 is
-recorded in `docs/process/checkpoint-001-010.md`. The next sequence is:
+Plans 001-010 are complete (007.5 applied). The next sequence is:
 
 1. **011**: appraise chat behaviour, stop at the owner gate, then prove one
    local browser conversation.

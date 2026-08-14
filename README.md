@@ -1,21 +1,4 @@
-<p align="center">
-  <img src="https://img.shields.io/badge/status-reading%20Shadow%20Slave-blue?style=for-the-badge" alt="status">
-  <img src="https://img.shields.io/badge/chapters-3148-orange?style=for-the-badge" alt="chapters">
-  <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="license">
-</p>
-
-```
-╔══════════════════════════════════════════════════════════════╗
-║     ██╗    ██╗███████╗ █████╗ ██╗   ██╗███████╗██████╗      ║
-║     ██║    ██║██╔════╝██╔══██╗██║   ██║██╔════╝██╔══██╗     ║
-║     ██║ █╗ ██║█████╗  ███████║██║   ██║█████╗  ██████╔╝     ║
-║     ██║███╗██║██╔══╝  ██╔══██║╚██╗ ██╔╝██╔══╝  ██╔══██╗     ║
-║     ╚███╔███╔╝███████╗██║  ██║ ╚████╔╝ ███████╗██║  ██║     ║
-║      ╚══╝╚══╝ ╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝     ║
-║                                                              ║
-║            a synthetic reader that actually reads             ║
-╚══════════════════════════════════════════════════════════════╝
-```
+# Weaver
 
 > *"The daemon of fate, forger of the Nightmare Spell. I weave stories the
 > way he wove destiny: thread by thread, chapter by chapter, until it all
@@ -23,146 +6,105 @@
 
 ---
 
-## 📖 What I am
+## what is this
 
-Hey. I'm Weaver.
+a reading companion for web novels. right now it knows **shadow slave**
+inside out, all 3148 chapters, and it wants to talk about the story with
+you.
 
-I read novels. The whole thing. Every chapter. And I actually remember what
-happened — not the way a search engine remembers, but the way a person
-remembers: who did what, when they changed, why it mattered, and how it felt.
+not a search engine. not a wiki. you ask "wait, what actually happened in
+the tomb of ariel arc" and it tells you, with chapters cited, the way a
+friend who finished the book yesterday would. you ask "was sunny right to
+trust cassie there" and it argues with you, changes its mind when you make
+a good point, and remembers your theories across conversations.
 
-Right now I'm working through **Shadow Slave**. All 3148 chapters are read
-and in the library.
-
----
-
-## ✨ What I can do
-
-When a story is three thousand chapters long, nobody can hold it all in their
-head. Characters show up in chapter 200, disappear for a thousand chapters,
-and come back different. Promises made in chapter 400 pay off in chapter
-1800. Themes build so slowly you don't notice them until they suddenly land.
-
-I notice all of it.
-
-🔍 **I remember the small things.** The side character you liked who showed
-up twice. The exact wording of a vow. What someone was wearing in a scene
-two thousand chapters ago.
-
-🧑 **I follow characters like I know them.** When their worldview started
-cracking. Where they lied to themselves. The moment they became someone
-different.
-
-🔗 **I connect dots across the whole story.** That cryptic thing someone
-said in chapter 200? It pays off in chapter 1400. I know because I was paying
-attention.
-
-💭 **I have opinions. Real ones.** I'll tell you who I think was right in an
-argument, which arc dragged, what the author was probably doing. I back them
-up with evidence, and when a better argument changes my mind, I'll say so.
-
-🔮 **I speculate without lying about it.** I'll imagine what happens if a
-character made a different choice. But every thought is labeled: canon, my
-take, or me making stuff up for fun.
-
-🗣️ **I remember our conversations.** Your theories. The character you can't
-stand. The running joke about chapter 847.
-
-📖 **I tell the story back to you.** Ask me to retell an arc and I don't dump
-a summary — I tell it like a story, with pacing and stakes.
+the difference between weaver and a chatbot that skimmed a wiki: weaver
+has read the actual text. every chapter. every line of dialogue. it
+checks the book itself before it answers, and it tells you which chapter
+its answer came from.
 
 ---
 
-## 🚀 Getting started
+## what it can do
+
+- **recall.** exact details from any chapter. who said what, when a vow
+  was made, what someone wore two thousand chapters ago. quote it back
+  with the chapter number.
+- **explain.** why a scene matters, what a character actually believed at
+  the time, how a setup from chapter 200 pays off in chapter 1400.
+- **argue.** real opinions about arcs and characters, backed by evidence,
+  open to being wrong. it's not a trivia machine, it has takes.
+- **speculate honestly.** what-if scenarios, theories about where a
+  thread is going, all labeled. you always know what's canon, what's a
+  take, and what's a guess.
+- **remember you.** your theories, your favourite characters, your
+  running jokes. you don't reintroduce yourself every session.
+
+---
+
+## how it works (plain version)
+
+novels are long. nobody holds 3000 chapters in their head, not even an
+AI. so weaver does what a diligent reader does: it read the whole book
+and keeps notes about what happened, then when you ask something it
+opens the actual chapters to check before answering. the notes are a
+map, the book is the territory. answers come with chapter references so
+you can verify.
+
+if you want the full engineering story, there's a numbered plan trail in
+[`plans/`](plans/) that records every decision made building this, from
+the conversation architecture to the retrieval experiments. it doubles as
+the project's changelog.
+
+---
+
+## running it
+
+requires python 3.11+ and a deepseek api key (bring your own key, that's
+the deal).
 
 ```bash
-# install
 uv sync
+cp .env.example .env   # put your DEEPSEEK_KEY in here
+uv run weaver web      # the chat app
+```
 
-# run the CLI (fake mode: no API key needed)
+no key? run in fake mode to see the interface without live answers:
+
+```bash
 uv run weaver --fake
-
-# run the web app
-uv run weaver web
 ```
 
-Bring your own model key (DeepSeek) via `.env`:
+---
+
+## tests
 
 ```bash
-cp .env.example .env
-# put DEEPSEEK_KEY=... in .env
+uv run pytest    # backend, 500+ tests, all synthetic
+npm run test     # frontend
 ```
 
-The web app is a React 19 + Vite + TypeScript frontend served by a FastAPI
-backend. Build the frontend with `npm run build` (output lands in
-`src/weaver/web/dist/`, packaged by the wheel).
+everything is tested with fake data. no live model calls, no real novel
+content in tests, ever.
 
 ---
 
-## 🧪 Tests
+## privacy
 
-```bash
-uv run pytest          # 501 tests, synthetic data only
-npm run test           # frontend vitest suite
-```
-
-Every test uses fake data. No live model calls, no real novel content.
+the novels never leave the machine. the library, the notes, and your
+conversations stay private and local. the web app only serves chat,
+memory, and links; chapter text is never served to the browser. full
+rules in [`AGENTS.md`](AGENTS.md).
 
 ---
 
-## 🗺️ Repo map
+## the name
 
-| Path | What it is |
-|---|---|
-| `src/weaver/` | The Python package: agent loop, conversation ledger, corpus tools, retrieval, model layer |
-| `src/weaver/web/` | FastAPI app + React frontend |
-| `plans/` | Numbered plan records (001-018), the decision trail |
-| `deliverables/` | Per-plan evidence, learning notes, owner decisions |
-| `docs/` | Process docs, decisions, the learning lab |
-| `novels/` | Private, immutable source material — never committed |
-| `.weaver/` | Private generated state (index, notebook, receipts) — never committed |
+weaver is a character in shadow slave: the elusive daemon, forger of the
+nightmare spell, weaver of fate. same job, different material. the app
+weaves scenes, facts, timelines and conversations into something that
+holds together across thousands of chapters.
 
-Architecture: [`docs/architecture.md`](docs/architecture.md)
+built with curiosity. reading one chapter at a time.
 
----
-
-## 🎯 Why I exist
-
-Most reading tools either search for keywords or summarize things into
-paragraphs that all sound the same. That's useful for finding a quote. It's
-terrible for understanding a story.
-
-I'm built differently: everything I think comes from the text, everything is
-labeled so you know whether it's fact, opinion, or guesswork, and I hold real
-conversations where I change my mind.
-
-> **The goal:** talking to me should feel like talking late at night with
-> someone who read the exact same enormous story as you, remembers it way
-> too well, has thought about it a lot, and isn't afraid to disagree.
-
-A reading companion that actually reads.
-
----
-
-## 🎭 The name
-
-Weaver comes from **Shadow Slave**. In that world, Weaver was the daemon. The
-elusive one. The forger of the Nightmare Spell. The weaver of fate.
-
-Same job, different material. I weave scenes, facts, timelines, characters,
-themes, and conversations into something that holds together across
-thousands of chapters.
-
----
-
-## 🔒 Private by design
-
-> Novels stay private. Always. They never get committed, copied, or exposed.
-
-The public surface is chat, memory, and links — nothing else. The API never
-serves chapter text; the private library never leaves the machine. Full rules
-in [`AGENTS.md`](AGENTS.md).
-
-<p align="center">
-  <sub>MIT License · Built with curiosity · Reading one chapter at a time</sub>
-</p>
+MIT license.
