@@ -644,17 +644,21 @@ attention next.
 
 ## Current Project Reality
 
-The repository already contains:
+The repository contains:
 
-- A large local chapter corpus.
-- An early token and recursive chunking experiment.
-- An older stack-first RAG roadmap in `shadow_friend.md`.
-- A minimal Python project with room to design the system deliberately.
+- A validated private chapter corpus (Shadow Slave, read through chapter
+  3148).
+- A story notebook with statements and entity pages, checker-validated.
+- An embedded-Qdrant retrieval index with dense (fastembed) and sparse
+  (BM42) hybrid search, plus exact-phrase finder tools.
+- A durable conversation ledger, a provider-neutral model layer, and a
+  two-phase agent turn.
+- A web surface: FastAPI + React 19 PWA (plan 013).
 
-The old roadmap is useful evidence of earlier thinking, but Weaver changes the
-center of gravity. Chunking, embeddings, graphs, tools, and databases are no
-longer sequential boxes to tick. They are candidate techniques that must earn
-their place by improving the synthetic reader.
+Chunking, embeddings, graphs, tools, and databases are candidate
+techniques that must earn their place by improving the synthetic reader.
+The numbered plan trail (see `plans/README.md`) records what earned it
+and why.
 
 ---
 
