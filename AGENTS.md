@@ -6,8 +6,6 @@
   only under the `arinze-plans` skill rules (disjoint files, serial owner
   gates, budget cap).
 - Read the smallest relevant repository slice.
-- Do not treat `shadow_friend.md` or `chunking_practice.py` as current
-  architecture.
 
 ## Planning workflow
 
