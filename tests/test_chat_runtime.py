@@ -78,6 +78,8 @@ async def test_web_prompt_makes_library_claim_with_truth_rule(tmp_path) -> None:
         assert "source of truth" in prompt
         assert "<find_text: ...>" in prompt
         assert "angle-bracket stage directions" in prompt
+        assert "blockquote" in prompt
+        assert "line starting with '>'" in prompt
     finally:
         await runtime.close()
 

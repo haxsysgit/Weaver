@@ -108,4 +108,13 @@ they would own the loop and the data model.
 ## Later owner gates
 
 - Later: auth and multi-user, memory panel design, spoiler-free mode,
-  chapter-link integration, hosting.
+  hosting.
+
+## Chapter references (decision 2026-08-14)
+
+No chapter-link engineering in the product. Weaver references the chapter
+number in answers and quotes the novel's prose in a `>` blockquote when
+asked; novel sources stay server-side and invisible. The frontend markdown
+parser already renders blockquotes (`lib/markdown.ts` ->
+`components/Markdown.tsx`), and the system prompt now instructs the model
+to use them.
