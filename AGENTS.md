@@ -2,10 +2,28 @@
 
 ## Scope
 
-- Work on one explicitly admitted numbered plan at a time.
+- Work on one explicitly admitted numbered plan at a time. Parallel plans
+  only under the `arinze-plans` skill rules (disjoint files, serial owner
+  gates, budget cap).
 - Read the smallest relevant repository slice.
 - Do not treat `shadow_friend.md` or `chunking_practice.py` as current
   architecture.
+
+## Planning workflow
+
+- The numbered-plan system is codified in the `arinze-plans` skill:
+  lifecycle, gates, plan anatomy, deliverables, budgets, parallel rules.
+  Load it before drafting, admitting, or closing any plan.
+- Status ladder has three states only: drafted → admitted → closed.
+  Implementation and review happen inside admitted; there is no separate
+  status for them.
+- New plans start from `plans/_TEMPLATE.md` via
+  `uv run python scripts/scaffold_plan.py NNN slug` (creates the plan doc
+  and the six deliverable files). Fill every section; no plan doc from
+  memory.
+- Every plan carries a Budget (estimated tokens + cost, fake vs live) in
+  its Status block. Subagents are the default executor where available;
+  on a tight budget, run sequential and solo.
 
 ## Learning and decisions
 
