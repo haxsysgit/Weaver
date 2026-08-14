@@ -11,7 +11,7 @@
 
 - **Tooling:** repo commands via `uv`; the notebook checker via
   `uv run python scripts/check_story_notebook.py`.
-- **State:** Admitted 2026-08-10 by owner directive ("draft a plan 17
+- **State:** Completed and owner-accepted 2026-08-11.
   for the reading we are doing till chp 3148, then continue the reading
   and dont stop till chp 3148"). In implementation.
 - **Depends on:** Plan 012 (the notebook, its checker schema, and the
