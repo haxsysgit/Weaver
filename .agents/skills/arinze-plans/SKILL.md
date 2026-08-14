@@ -82,6 +82,14 @@ Copy `references/plan-template.md` in this skill, or the repo's
 (`uv run python scripts/scaffold_plan.py NNN slug`), which creates the
 plan doc and the deliverables set.
 
+## Commits
+
+Every commit message starts with the plan prefix: `Plan NNN: ...`
+(for numberless plans: `Plan v1: ...`). No other prefix is acceptable;
+generic prefixes (`fix:`, `chore:`, `refactor:`, `feat:`) are never used
+in plan-driven work. The prefix is the trace: any commit can be mapped
+back to the plan that produced it.
+
 ## Budget awareness
 
 Every plan carries a **Budget** in its Status block: estimated tokens and

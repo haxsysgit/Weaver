@@ -42,11 +42,11 @@ Open questions for the owner when this plan is admitted:
 
 - Plan 16: done, owner-accepted (refresh the shelf safely).
 - Plan 17: done, owner-accepted (notebook read through chapter 3148).
-- Plan 018: the pre-v1 plan (admitted 2026-08-14, closing). It
+- Plan 018: the pre-v1 plan, accepted and closed 2026-08-14. It
   closed Plan 015 with a scope decision, cleaned stale repo context,
   audited and standardized docs (README, architecture, CONTRIBUTING.md),
   recorded the no-chapter-links decision, and audited the retrieval
-  stack.
+  stack. Next: v1.
 - Then v1: a numberless plan, deployment and CI/CD for seamless updates
   (Docker, EC2, CI, release). Do not draft it before 018 closes; plans go
   one by one.
