@@ -24,6 +24,7 @@ evidence, review, and human decision gates must also be complete.
 | [015 - Weaver the agent (context + agentic parts)](015-reader-trials-1-1000.md) | Re-scoped 2026-08-07; implementing 2026-08-08 | Plan 014 accepted | Whole-novel search (ceiling dead), spoiler map + judge, preferences, router + two-phase read, skills; compaction second half |
 | [016 - Refresh the shelf safely](016-refresh-the-shelf-safely.md) | Completed and owner-accepted 2026-08-10 | Plan 014 accepted | `weaver refresh`: preview-first (no network, no shelf writes), explicit `--apply` confirmation, Plan 002 validation and atomic repair, metadata-only receipts, never a model tool |
 | [017 - Reading continuation to 3148](017-reading-continuation.md) | Completed and owner-accepted 2026-08-11 | Plan 012, 014, 016 | Direct sequential source reading of Shadow Slave 1501-3148 into the private story notebook, checker at milestones 2000/2500/3000/3148, no stopping until the shelf end |
+| [018 - Pre-v1 cleanup and standard docs](018-pre-v1.md) | Drafted 2026-08-11, awaiting owner admission | Plan 015 decision, Plan 017 | Close 015, repo cleanup, docs audit + standard docs (README, architecture, CONTRIBUTING), chapter-links decision, retrieval stack audit |
 | Later - Founding Reader Trials | Not yet drafted | Reading continuation | The finished-product bar: Ariel and the Unholy Titan, Sunny 3120+ versus Azarax, Anvil versus Azarax what-if |
 | Later - Durable reader memory | Not yet drafted | Founding trials | Reader opinions, favorites, theories, and unresolved disagreements kept separately from canon |
 
@@ -43,8 +44,9 @@ recorded in `docs/process/checkpoint-001-010.md`. The next sequence is:
    winner.
 5. **015**: weaver as a full agentic product: spoiler map + judge, two-phase read, router + skills, then compaction.
 6. **016**: refresh the shelf safely with preview and confirmation — closed 2026-08-10 as the `weaver refresh` CLI command (owner-directed 2026-08-09), verification audit green, live run fetched 3129-3148 and repaired chapter 2843.
-7. **Later**: reading continuation 1001-3200, then the founding Reader
-   Trials, then durable reader memory.
+7. **018**: pre-v1 cleanup and standard docs (close 015, repo cleanup, docs audit, standard docs, chapter-links decision, retrieval audit).
+8. **v1 (numberless)**: deployment and CI/CD for seamless updates.
+9. **Later**: the founding Reader Trials, then durable reader memory.
 
 Native Android and iOS remain deferred until Plan 013 proves a concrete PWA
 limitation.
