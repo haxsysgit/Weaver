@@ -7,9 +7,11 @@
   <img src="https://img.shields.io/badge/Qdrant-1A1A2E?style=for-the-badge" alt="Qdrant">
 </p>
 
-> *"The daemon of fate, forger of the Nightmare Spell. I weave stories the
-> way he wove destiny: thread by thread, chapter by chapter, until it all
-> holds together."*
+> *"The agent of the nightmare spell. I read every chapter, thread by
+> thread, so when you ask, I open the book itself and answer with the
+> chapter in hand. I remember your theories, argue your takes, and weave
+> the whole story together the way the Spell weaves Memories: piece by
+> piece, until it holds."*
 
 ---
 
