@@ -62,6 +62,10 @@
 
 ## Scope
 
+- Private-state cleanup: delete dead experiment indexes and browser
+  junk from `.weaver/` (v2-openai 207M, v2-bge 20M, chatgpt-ui 4.2M,
+  weaver-chatgpt-appraisal 53M), keeping the small reports that
+  justified plan 014's choices. Recorded in results.md.
 - Prod-bundle tool: export exactly what the server needs (corpus,
   retrieval index, knowledge notebook), sized and verified, then ship to
   the box over scp/rsync over SSH (via tailscale or public IP).
@@ -132,9 +136,11 @@
 
 1. **Plan and admit** — this doc, learning gate (quantization lesson
    plan), index rows, deliverable scaffold, admission commit.
-2. **Prod bundle tool** — script that exports corpus + retrieval +
-   knowledge to a staging dir with a manifest and size report; verify
-   nothing private leaks; fake-mode smoke.
+2. **Cleanup + prod bundle tool** — delete dead experiment indexes and
+   browser junk from `.weaver/` (list above, ~284MB), keep the small
+   reports; then build the bundle script (corpus + retrieval + knowledge
+   with manifest and size report), verify nothing private leaks,
+   fake-mode smoke.
 3. **BYOK + device scoping** — backend (per-request key, device header,
    conversation filtering) + frontend (key in localStorage, settings
    UI) + tests for both.
