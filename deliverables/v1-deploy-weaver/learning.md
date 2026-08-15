@@ -24,3 +24,9 @@ Owner-confirmed decisions (quoted from the admission discussion):
 8. Private state never leaves the machine except the prod bundle
    (~165MB: corpus + retrieval + knowledge). No novel content, receipts,
    or reasoning in git, image, CI, or public surface (standing rules).
+
+9. Learning-first execution (2026-08-14): "I don't mean I'll do
+   everything... AI agents can easily do it, but it's important for me to
+   know the WHY and HOW to do it and any other basic lessons. you can do
+   everything but you need to be transparent and teach me." The agent
+   executes; every step ships with teaching; lessons recorded per slice.

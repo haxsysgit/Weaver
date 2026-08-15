@@ -59,6 +59,14 @@
 9. **Reading stays server-side** (2026-08-10): the web app never serves
    chapter text; it holds conversation about the story. Blockquote
    quoting for prose (plan 018).
+10. **Learning-first execution (2026-08-14)**: the owner's goal is
+    becoming an AI engineer; the deployed app is the byproduct. The
+    agent executes everything (the owner does not run commands), but
+    every step ships with teaching: plain-words explanation of the
+    concept, why it matters, how it works, what the command does, what
+    to look for in the output, and failure modes. Each slice records
+    its lesson in the deliverables (study notes). The v1 build is the
+    first architecture teaching series.
 
 ## Scope
 
