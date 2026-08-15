@@ -25,8 +25,25 @@ from pydantic import BaseModel, Field
 from weaver.agent.errors import safe_error
 from weaver.agent.turn import REASONING_TIERS, TOOL_BUDGET_TIERS, TurnExitReason
 from weaver.chat_runtime import ChatRuntime
+from weaver.model_layer.deepseek import current_api_key
 
 MAX_MESSAGE_CHARS = 32_000
+
+# Plan v1 slice 3 (BYOK + device scoping): the browser sends its
+# per-user DeepSeek key and its device id on every request.
+KEY_HEADER = "x-weaver-key"
+DEVICE_HEADER = "x-device-id"
+
+
+def _device_id(request: Request) -> str:
+    """The browser's device id (empty when absent)."""
+    return (request.headers.get(DEVICE_HEADER) or "").strip()[:128]
+
+
+def _request_key(request: Request) -> str | None:
+    """The per-request DeepSeek key (None when absent/blank)."""
+    key = (request.headers.get(KEY_HEADER) or "").strip()
+    return key or None
 
 FRONTEND_DIST = Path(__file__).with_name("dist")
 
@@ -281,6 +298,19 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
     )
     app.state.runtime = runtime
 
+    async def _own_conversation(conversation_id: str, request: Request) -> None:
+        """404 unless the conversation exists AND belongs to this device.
+
+        Device scoping (plan v1 slice 3): a browser only ever sees its
+        own conversations. Unknown ids and other devices' conversations
+        are indistinguishable on purpose (404, not 403, so no existence
+        oracle).
+        """
+        if not await runtime.session.conversation_owned_by(
+            conversation_id, _device_id(request)
+        ):
+            raise HTTPException(status_code=404, detail="unknown conversation")
+
     from weaver.retrieval.packet import build_packet
     from weaver.spoilers.judge import SpoilerJudge, load_beats, load_labels
 
@@ -324,8 +354,9 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         }
 
     @app.get("/api/conversations")
-    async def list_conversations() -> list[dict]:
-        rows = await runtime.session.list_conversations()
+    async def list_conversations(request: Request) -> list[dict]:
+        device = _device_id(request)
+        rows = await runtime.session.list_conversations(device_id=device)
         stored = await runtime.prefs.titles() if runtime.prefs is not None else {}
         return [
             {
@@ -341,15 +372,17 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
     @app.post(
         "/api/conversations", status_code=201, dependencies=[Depends(_check_local)]
     )
-    async def create_conversation() -> dict:
-        conversation_id = await runtime.session.start_conversation("")
+    async def create_conversation(request: Request) -> dict:
+        device = _device_id(request)
+        conversation_id = await runtime.session.start_conversation("", device)
         return {"conversation_id": conversation_id}
 
     @app.delete(
         "/api/conversations/{conversation_id}",
         dependencies=[Depends(_check_local)],
     )
-    async def delete_conversation(conversation_id: str) -> dict:
+    async def delete_conversation(conversation_id: str, request: Request) -> dict:
+        await _own_conversation(conversation_id, request)
         stream = active.get(conversation_id)
         if stream is not None and not stream.finished:
             raise HTTPException(status_code=409, detail="a turn is running in this conversation")
@@ -399,9 +432,8 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         }
 
     @app.get("/api/conversations/{conversation_id}/messages")
-    async def get_messages(conversation_id: str) -> list[dict]:
-        if not await runtime.session.conversation_exists(conversation_id):
-            raise HTTPException(status_code=404, detail="unknown conversation")
+    async def get_messages(conversation_id: str, request: Request) -> list[dict]:
+        await _own_conversation(conversation_id, request)
         # Dead attempts (interrupted or retried runs) never render: a retry
         # re-persists the owner message under a new run, so hiding the old
         # run's items keeps the transcript free of duplicates.
@@ -429,9 +461,16 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         *,
         retry: bool = False,
         regenerate: bool = False,
+        request_key: str | None = None,
     ) -> None:
         """Run the send (or the last-turn retry/regenerate), then emit
         only the validated terminal answer."""
+        # BYOK (plan v1 slice 3): bind this turn's per-request key. The
+        # contextvar is task-local, so a concurrent turn in another task
+        # keeps its own key; None falls back to the server env key.
+        key_token = (
+            current_api_key.set(request_key) if request_key is not None else None
+        )
 
         # Plan 014 live-trial seam: tool activity as SSE 'tool' events so
         # the UI can render search/open lines. Plan 15 slice 5: on
@@ -581,6 +620,8 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
             # terminal has been served. A size cap bounds streams whose
             # client never came back.
             stream.finished = True
+            if key_token is not None:
+                current_api_key.reset(key_token)
 
     @app.post(
         "/api/conversations/{conversation_id}/turns",
@@ -589,9 +630,9 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
     async def start_turn(
         conversation_id: str,
         body: TurnBody,
+        request: Request,
     ) -> Response:
-        if not await runtime.session.conversation_exists(conversation_id):
-            raise HTTPException(status_code=404, detail="unknown conversation")
+        await _own_conversation(conversation_id, request)
         _reject_blank(body.message)
         stream = active.get(conversation_id)
         if stream is not None and not stream.finished:
@@ -605,7 +646,12 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                     active.pop(stale_id, None)
                     break
         stream.task = asyncio.create_task(
-            _run_turn(conversation_id, body.message, stream)
+            _run_turn(
+                conversation_id,
+                body.message,
+                stream,
+                request_key=_request_key(request),
+            )
         )
         # The turn runs server-side; the reply is streamed over the GET
         # /stream route (EventSource with Last-Event-ID resume), so a
@@ -620,7 +666,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         "/api/conversations/{conversation_id}/retry",
         dependencies=[Depends(_check_local)],
     )
-    async def retry_last_turn(conversation_id: str) -> Response:
+    async def retry_last_turn(conversation_id: str, request: Request) -> Response:
         """Re-run the last interrupted turn with its own message.
 
         The web layer never takes the message from the client: the
@@ -628,8 +674,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         retry cannot be steered. Same 202 + GET /stream contract as the
         turns route.
         """
-        if not await runtime.session.conversation_exists(conversation_id):
-            raise HTTPException(status_code=404, detail="unknown conversation")
+        await _own_conversation(conversation_id, request)
         stream = active.get(conversation_id)
         if stream is not None and not stream.finished:
             raise HTTPException(status_code=409, detail="a turn is already running")
@@ -642,7 +687,13 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                     active.pop(stale_id, None)
                     break
         stream.task = asyncio.create_task(
-            _run_turn(conversation_id, "", stream, retry=True)
+            _run_turn(
+                conversation_id,
+                "",
+                stream,
+                retry=True,
+                request_key=_request_key(request),
+            )
         )
         return Response(
             status_code=202,
@@ -654,7 +705,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         "/api/conversations/{conversation_id}/regenerate",
         dependencies=[Depends(_check_local)],
     )
-    async def regenerate_last_turn(conversation_id: str) -> Response:
+    async def regenerate_last_turn(conversation_id: str, request: Request) -> Response:
         """Re-answer the last question in place.
 
         Regenerate never takes text from the client and never creates a
@@ -663,8 +714,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         vanishes from the transcript), and re-answers the same question.
         Same 202 + GET /stream contract as the turns route.
         """
-        if not await runtime.session.conversation_exists(conversation_id):
-            raise HTTPException(status_code=404, detail="unknown conversation")
+        await _own_conversation(conversation_id, request)
         stream = active.get(conversation_id)
         if stream is not None and not stream.finished:
             raise HTTPException(status_code=409, detail="a turn is already running")
@@ -677,7 +727,13 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                     active.pop(stale_id, None)
                     break
         stream.task = asyncio.create_task(
-            _run_turn(conversation_id, "", stream, regenerate=True)
+            _run_turn(
+                conversation_id,
+                "",
+                stream,
+                regenerate=True,
+                request_key=_request_key(request),
+            )
         )
         return Response(
             status_code=202,
@@ -697,8 +753,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         live until the terminal event. A disconnect never cancels the
         turn.
         """
-        if not await runtime.session.conversation_exists(conversation_id):
-            raise HTTPException(status_code=404, detail="unknown conversation")
+        await _own_conversation(conversation_id, request)
         stream = active.get(conversation_id)
         if stream is None:
             raise HTTPException(status_code=404, detail="no turn stream")
@@ -752,9 +807,8 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         "/api/conversations/{conversation_id}/cancel",
         dependencies=[Depends(_check_local)],
     )
-    async def cancel_turn(conversation_id: str) -> Response:
-        if not await runtime.session.conversation_exists(conversation_id):
-            raise HTTPException(status_code=404, detail="unknown conversation")
+    async def cancel_turn(conversation_id: str, request: Request) -> Response:
+        await _own_conversation(conversation_id, request)
         stream = active.get(conversation_id)
         if stream is None or stream.finished:
             return Response(status_code=200, content="idle")

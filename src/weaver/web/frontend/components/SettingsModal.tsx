@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import type { UserPreferences } from "../lib/chatApi";
+import { getApiKey, setApiKey } from "../lib/identity";
 
 export interface SettingsModalProps {
   onClose: () => void;
@@ -20,6 +21,7 @@ export function SettingsModal({ onClose, onSave, initial }: SettingsModalProps) 
     initial.spoiler_mode,
   );
   const [tier, setTier] = useState<UserPreferences["tier"]>(initial.tier);
+  const [apiKey, setApiKeyState] = useState(getApiKey());
   const [saving, setSaving] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -29,6 +31,7 @@ export function SettingsModal({ onClose, onSave, initial }: SettingsModalProps) 
 
   async function handleSave() {
     setSaving(true);
+    setApiKey(apiKey);
     const parsed = readerChapter.trim() === "" ? null : Number(readerChapter);
     await onSave({
       reader_chapter: parsed && parsed >= 1 && parsed <= 3127 ? parsed : null,
@@ -82,6 +85,26 @@ export function SettingsModal({ onClose, onSave, initial }: SettingsModalProps) 
               1-3127. Leave empty if you do not want to say.
             </span>
           </div>
+
+          <fieldset className="soul-sphere">
+            <legend className="soul-sphere-label">
+              <span className="soul-sphere-name">Your DeepSeek key</span>
+            </legend>
+            <input
+              autoComplete="off"
+              className="settings-input"
+              id="api-key"
+              onChange={(event) => setApiKeyState(event.target.value)}
+              placeholder="sk-..."
+              spellCheck={false}
+              type="password"
+              value={apiKey}
+            />
+            <span className="settings-hint">
+              Stored only in this browser. Sent per request, never saved
+              by the server. Leave empty to use the server&apos;s key.
+            </span>
+          </fieldset>
 
           <fieldset className="soul-sphere">
             <legend className="soul-sphere-label">

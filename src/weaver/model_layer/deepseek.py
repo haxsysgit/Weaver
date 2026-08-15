@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 from collections.abc import AsyncIterator
+from contextvars import ContextVar
 from typing import Any
 
 import openai
@@ -23,6 +24,13 @@ from .types import (
 )
 
 logger = logging.getLogger(__name__)
+
+# BYOK (plan v1 slice 3): set per web turn by the request layer when the
+# browser sends X-Weaver-Key. The provider reads it at call time, so
+# concurrent turns in different tasks each use their own key.
+current_api_key: ContextVar[str | None] = ContextVar(
+    "weaver_current_api_key", default=None
+)
 
 DEEPSEEK_FLASH = ModelSpec(
     provider_id="deepseek",
@@ -82,6 +90,27 @@ class DeepSeekProvider:
             timeout=timeout_seconds,
             max_retries=0,
         )
+        # BYOK (plan v1 slice 3): a per-request key may arrive after
+        # construction. It lives in a contextvar (per task, so concurrent
+        # turns keep their own key) and is read at call time. Clients are
+        # cached per key so the common case (one key per browser) builds
+        # a single client; the construction-time key is the fallback.
+        self._api_key = api_key
+        self._timeout_seconds = timeout_seconds
+        self._clients: dict[str, Any] = {api_key: self._client}
+
+    def _client_for(self, key: str) -> Any:
+        """Return the sdk client for a key, building it on first use."""
+        client = self._clients.get(key)
+        if client is None:
+            client = AsyncOpenAI(
+                api_key=key,
+                base_url=DEEPSEEK_BASE_URL,
+                timeout=self._timeout_seconds,
+                max_retries=0,
+            )
+            self._clients[key] = client
+        return client
 
     async def _create_with_retry(
         self,
@@ -97,8 +126,10 @@ class DeepSeekProvider:
         """
         attempt = 0
         while True:
+            key = current_api_key.get() or self._api_key
+            client = self._client_for(key)
             try:
-                return await self._client.chat.completions.create(**payload), None
+                return await client.chat.completions.create(**payload), None
             except openai.APITimeoutError:
                 category = "timeout"
             except openai.APIConnectionError:

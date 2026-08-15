@@ -1,3 +1,5 @@
+import { weaverHeaders } from "./identity";
+
 export interface ConversationSummary {
   conversation_id: string;
   title: string;
@@ -204,28 +206,42 @@ async function* openTurnStream(
 }
 
 export function createHttpChatApi(fetcher: typeof fetch = fetch): ChatApi {
+  // Plan v1 slice 3: every call carries the device id (always) and the
+  // user's DeepSeek key (when set). Merged into a wrapper so no caller
+  // can forget the headers.
+  const authed = (
+    input: string | URL | Request,
+    init?: RequestInit,
+  ): Promise<Response> =>
+    authed(input, {
+      ...init,
+      headers: {
+        ...weaverHeaders(),
+        ...(init?.headers as Record<string, string> | undefined),
+      },
+    });
   return {
     async getPreferences() {
-      const response = await fetcher("/api/preferences");
+      const response = await authed("/api/preferences");
       return requireJson<UserPreferences>(response, "Loading preferences");
     },
 
     async deleteConversation(conversationId: string) {
-      const response = await fetcher(`/api/conversations/${conversationId}`, {
+      const response = await authed(`/api/conversations/${conversationId}`, {
         method: "DELETE",
       });
       return requireJson<{ deleted: string }>(response, "Deleting conversation");
     },
 
     async getPassage(handle: string) {
-      const response = await fetcher(
+      const response = await authed(
         `/api/passages?handle=${encodeURIComponent(handle)}`,
       );
       return requireJson<Passage>(response, "Loading passage");
     },
 
     async savePreferences(prefs) {
-      const response = await fetcher("/api/preferences", {
+      const response = await authed("/api/preferences", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(prefs),
@@ -234,12 +250,12 @@ export function createHttpChatApi(fetcher: typeof fetch = fetch): ChatApi {
     },
 
     async listConversations() {
-      const response = await fetcher("/api/conversations");
+      const response = await authed("/api/conversations");
       return requireJson<ConversationSummary[]>(response, "Loading conversations");
     },
 
     async createConversation() {
-      const response = await fetcher("/api/conversations", { method: "POST" });
+      const response = await authed("/api/conversations", { method: "POST" });
       return requireJson<{ conversation_id: string }>(
         response,
         "Creating a conversation",
@@ -247,14 +263,14 @@ export function createHttpChatApi(fetcher: typeof fetch = fetch): ChatApi {
     },
 
     async loadMessages(conversationId) {
-      const response = await fetcher(
+      const response = await authed(
         `/api/conversations/${encodeURIComponent(conversationId)}/messages`,
       );
       return requireJson<StoredMessage[]>(response, "Loading the conversation");
     },
 
     async *streamTurn(conversationId, message) {
-      const response = await fetcher(
+      const response = await authed(
         `/api/conversations/${encodeURIComponent(conversationId)}/turns`,
         {
           method: "POST",
@@ -271,7 +287,7 @@ export function createHttpChatApi(fetcher: typeof fetch = fetch): ChatApi {
     // Plan 15 retry (2026-08-09): the server reloads the failed turn's
     // own message from the store, so the client never re-sends text.
     async *retryTurn(conversationId) {
-      const response = await fetcher(
+      const response = await authed(
         `/api/conversations/${encodeURIComponent(conversationId)}/retry`,
         { method: "POST" },
       );
@@ -286,7 +302,7 @@ export function createHttpChatApi(fetcher: typeof fetch = fetch): ChatApi {
     // the store and supersedes the old answer - so the question is never
     // re-sent as a new message.
     async *regenerateTurn(conversationId) {
-      const response = await fetcher(
+      const response = await authed(
         `/api/conversations/${encodeURIComponent(conversationId)}/regenerate`,
         { method: "POST" },
       );
@@ -297,7 +313,7 @@ export function createHttpChatApi(fetcher: typeof fetch = fetch): ChatApi {
     },
 
     async cancelTurn(conversationId) {
-      const response = await fetcher(
+      const response = await authed(
         `/api/conversations/${encodeURIComponent(conversationId)}/cancel`,
         { method: "POST" },
       );

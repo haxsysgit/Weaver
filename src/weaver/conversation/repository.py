@@ -60,11 +60,12 @@ class ConversationRepository:
         )
 
     async def _insert_conversation(
-        self, id: str, relationship_id: str, created_at: str
+        self, id: str, relationship_id: str, created_at: str, device_id: str = ""
     ) -> None:
         await self._db.execute(
-            "INSERT INTO conversation (id, relationship_id, created_at) VALUES (?, ?, ?)",
-            (id, relationship_id, created_at),
+            "INSERT INTO conversation (id, relationship_id, device_id, created_at) "
+            "VALUES (?, ?, ?, ?)",
+            (id, relationship_id, device_id, created_at),
         )
 
     async def _insert_turn(
@@ -250,9 +251,14 @@ class ConversationRepository:
         ]
 
     async def load_conversations(
-        self, limit: int = 12
+        self, limit: int = 12, device_id: str = ""
     ) -> list[tuple[str, str, str | None]]:
-        """Newest-first conversations: (id, created_at, last owner body)."""
+        """Newest-first conversations: (id, created_at, last owner body).
+
+        device_id filters to conversations owned by that device; the
+        empty string is the legacy catch-all (pre-device-scoping rows
+        and tests that do not pass a device).
+        """
         async with self._db.execute(
             """
             SELECT c.id, c.created_at, (
@@ -261,13 +267,23 @@ class ConversationRepository:
                 ORDER BY i.sequence DESC LIMIT 1
             ) AS last_owner
             FROM conversation c
+            WHERE c.device_id = ?
             ORDER BY c.created_at DESC
             LIMIT ?
             """,
-            (limit,),
+            (device_id, limit),
         ) as cur:
             rows = await cur.fetchall()
         return [(r[0], r[1], r[2]) for r in rows]
+
+    async def conversation_owner(self, conversation_id: str) -> str | None:
+        """The device id that owns a conversation, or None when missing."""
+        async with self._db.execute(
+            "SELECT device_id FROM conversation WHERE id = ?",
+            (conversation_id,),
+        ) as cur:
+            row = await cur.fetchone()
+        return row[0] if row is not None else None
 
     async def delete_conversation(self, conversation_id: str) -> bool:
         """Hard-delete a conversation and everything under it.

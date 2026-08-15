@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import aiosqlite
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 SCHEMA = """
 CREATE TABLE _migration (
@@ -19,6 +19,7 @@ CREATE TABLE relationship (
 CREATE TABLE conversation (
     id TEXT PRIMARY KEY,
     relationship_id TEXT NOT NULL REFERENCES relationship(id),
+    device_id TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL
 );
 
@@ -72,13 +73,26 @@ PRAGMAS = [
 
 
 async def migrate(db: aiosqlite.Connection) -> None:
-    """Run schema if not already applied."""
+    """Run schema if not already applied, then bump to the latest."""
     cursor = await db.execute(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='_migration'"
     )
     row = await cursor.fetchone()
-    if row is not None:
+    if row is None:
+        await db.executescript(SCHEMA)
+        await db.execute("INSERT INTO _migration (version) VALUES (?)", (SCHEMA_VERSION,))
+        await db.commit()
         return
-    await db.executescript(SCHEMA)
-    await db.execute("INSERT INTO _migration (version) VALUES (?)", (SCHEMA_VERSION,))
-    await db.commit()
+    cursor = await db.execute("SELECT version FROM _migration ORDER BY version DESC LIMIT 1")
+    row = await cursor.fetchone()
+    version = row[0] if row else 1
+    if version < 2:
+        # v2: conversations carry the device id that owns them (v1 BYOK
+        # device scoping, plan v1 slice 3).
+        await db.execute(
+            "ALTER TABLE conversation ADD COLUMN device_id TEXT NOT NULL DEFAULT ''"
+        )
+        await db.execute(
+            "INSERT INTO _migration (version) VALUES (?)", (2,)
+        )
+        await db.commit()

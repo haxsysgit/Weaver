@@ -618,6 +618,45 @@ class TestReasoningPassbackAndRetry:
         assert events[-1].response.error_category == "invalid_request"
 
 
+async def test_byok_contextvar_picks_per_request_key() -> None:
+    """Plan v1 slice 3: current_api_key overrides the construction key
+    per task, so concurrent turns never share a key."""
+    from weaver.model_layer.deepseek import current_api_key
+
+    seen_keys: list[str] = []
+
+    def recording_client(key: str):
+        seen_keys.append(key)
+        completions = StubCompletions([chunk(content="ok")])
+        return sdk_with(completions)
+
+    provider = DeepSeekProvider(
+        "server-env-key",
+        sdk_client=None,  # bypassed when the contextvar is set
+    )
+    # Patch the per-key client builder so no network is touched.
+    provider._client_for = lambda key: recording_client(key)  # type: ignore[method-assign]
+
+    async def run(key: str | None) -> None:
+        token = current_api_key.set(key) if key is not None else None
+        try:
+            async for _event in provider.stream(
+                DEEPSEEK_FLASH,
+                ModelRequest(messages=(ModelMessage(role="user", content="x"),)),
+                asyncio.Event(),
+                max_output_tokens=64,
+            ):
+                pass
+        finally:
+            if token is not None:
+                current_api_key.reset(token)
+
+    await run("sk-browser-a")
+    await run("sk-browser-b")
+    await run(None)  # falls back to the construction-time key
+    assert seen_keys == ["sk-browser-a", "sk-browser-b", "server-env-key"], seen_keys
+
+
 
 def test_request_payload_sends_reasoning_content_back() -> None:
     """Assistant messages sent to DeepSeek with thinking on always carry

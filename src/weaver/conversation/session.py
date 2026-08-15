@@ -193,21 +193,27 @@ class SessionWeave:
             packet_builder=packet_builder,
         )
 
-    async def start_conversation(self, owner_text: str) -> str:
+    async def start_conversation(self, owner_text: str, device_id: str = "") -> str:
         """Create relationship + conversation + first turn in one transaction.
         Returns conversation_id."""
         assert self._coordinator is not None
-        conv_id, _, _ = await self._coordinator.start_conversation_and_turn(owner_text)
+        conv_id, _, _ = await self._coordinator.start_conversation_and_turn(
+            owner_text, device_id
+        )
         return conv_id
 
-    async def list_conversations(self, limit: int = 12) -> list[dict]:
+    async def list_conversations(
+        self, limit: int = 12, device_id: str = ""
+    ) -> list[dict]:
         """Recent conversations, newest first, with the last owner message.
 
         Each entry: conversation_id, created_at, last_owner_text (may be
         empty when the conversation has no owner item yet).
+        device_id scopes to that device's conversations (empty = legacy
+        catch-all, matching pre-device-scoping rows).
         """
         assert self._repo is not None
-        rows = await self._repo.load_conversations(limit)
+        rows = await self._repo.load_conversations(limit, device_id)
         out = []
         for conv_id, created_at, last_owner in rows:
             text = ""
@@ -234,6 +240,20 @@ class SessionWeave:
         """Distinguish an empty persisted chat from an unknown ID."""
         assert self._repo is not None
         return await self._repo.conversation_exists(conversation_id)
+
+    async def conversation_owned_by(
+        self, conversation_id: str, device_id: str
+    ) -> bool:
+        """True when the conversation belongs to this device.
+
+        Empty device_id (no header, legacy rows) always matches: pre-
+        scoping conversations have no owner and stay reachable.
+        """
+        assert self._repo is not None
+        owner = await self._repo.conversation_owner(conversation_id)
+        if owner is None:
+            return False
+        return device_id == "" or owner == device_id
 
     async def load_transcript(
         self, conversation_id: str

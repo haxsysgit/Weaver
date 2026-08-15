@@ -132,6 +132,89 @@ async def test_unknown_conversation_404(client) -> None:
     assert resp.status_code == 404
 
 
+async def test_device_scoping_isolates_conversations(client) -> None:
+    """Plan v1 slice 3: two devices never see each other's threads."""
+    device_a = {"X-Device-Id": "device-a"}
+    device_b = {"X-Device-Id": "device-b"}
+
+    conv_a = (
+        await client.post("/api/conversations", headers=device_a)
+    ).json()["conversation_id"]
+    conv_b = (
+        await client.post("/api/conversations", headers=device_b)
+    ).json()["conversation_id"]
+
+    listed_a = await client.get("/api/conversations", headers=device_a)
+    assert [i["conversation_id"] for i in listed_a.json()] == [conv_a]
+    listed_b = await client.get("/api/conversations", headers=device_b)
+    assert [i["conversation_id"] for i in listed_b.json()] == [conv_b]
+
+    # Cross-device access is indistinguishable from an unknown id.
+    hidden = await client.get(
+        f"/api/conversations/{conv_b}/messages", headers=device_a
+    )
+    assert hidden.status_code == 404
+    hidden = await client.post(
+        f"/api/conversations/{conv_b}/turns",
+        headers=device_a,
+        json={"message": "intrude"},
+    )
+    assert hidden.status_code == 404
+    hidden = await client.post(
+        f"/api/conversations/{conv_a}/cancel", headers=device_b
+    )
+    assert hidden.status_code == 404
+
+    # Delete by the owner works; delete by another device does not.
+    gone = await client.delete(
+        f"/api/conversations/{conv_b}", headers=device_a
+    )
+    assert gone.status_code == 404
+    gone = await client.delete(
+        f"/api/conversations/{conv_b}", headers=device_b
+    )
+    assert gone.status_code == 200
+    await _no_canaries(hidden.text)
+
+
+async def test_byok_key_header_used_and_never_persisted(client, tmp_path) -> None:
+    """Plan v1 slice 3: the browser key rides the header, is consumed
+    for the turn, and never lands in any stored body (no-log rule)."""
+    key = "sk-browser-secret-12345"
+    device = {"X-Device-Id": "key-holder", "X-Weaver-Key": key}
+    conv = (
+        await client.post("/api/conversations", headers=device)
+    ).json()["conversation_id"]
+    resp = await client.post(
+        f"/api/conversations/{conv}/turns",
+        headers=device,
+        json={"message": "hello weaver"},
+    )
+    assert resp.status_code == 202
+    assert key not in resp.text
+
+    # The turn runs (fake model in tests), then nothing anywhere stores
+    # the key: not the transcript, not the conversations list, not the
+    # persisted sqlite file.
+    messages = await client.get(
+        f"/api/conversations/{conv}/messages", headers=device
+    )
+    assert messages.status_code == 200
+    assert key not in messages.text
+
+    listed = await client.get("/api/conversations", headers=device)
+    assert key not in listed.text
+
+    # The key never reached the sqlite file either: scan the raw bytes
+    # of the runtime's state database.
+    hits = []
+    for db_path in tmp_path.glob("*.sqlite3*"):
+        raw = db_path.read_bytes()
+        if key.encode() in raw:
+            hits.append(str(db_path))
+    assert hits == [], f"key leaked into: {hits}"
+
+
 async def test_empty_messages_rejected_422(client) -> None:
     conv = (await client.post("/api/conversations")).json()["conversation_id"]
     for bad in ("", "   ", "\n\t"):
