@@ -26,3 +26,24 @@
   (owner-approved 2026-08-15: weaver self-served except the model).
 
 ## Slices 5-9 - not started
+
+## Slice 5 - eval data + embed speed benchmark (2026-08-15)
+
+- Eval data recovered from disk (never deleted): questions-colab.json,
+  questions-v2.json, questions-slice-200.json, colab-sweep-bge-40wins.md
+  (baseline: 40-line chunks, dense hit@5 0.57), all in
+  .weaver/research/retrieval-experiment/.
+- The colab scripts themselves are NOT restored: they were a parallel
+  copy that drifted; the native chunker + build_library_index is the
+  single source of truth.
+- Speed measured (this machine, CPU-only onnxruntime 1.28):
+  - chunking only: 0.1s per 200 chapters (negligible)
+  - fp32 embed via real build path: 3.23 s/chunk -> ~6.2 h full novel
+  - int8 self-quantized: 53 ms/chunk vs 80 ms fp32 (1.51x), full ~5 h
+- Quantization reality check (corrects earlier 4x-speed folklore):
+  - Qdrant/bge-large-en-v1.5-onnx-Q is FP16 (668MB), not int8; fp16 on
+    CPU is SLOWER (0.73x) - rejected.
+  - Real int8: self-quantize trusted fp32 in-house via quantize_dynamic
+    (26s, 1337->431 MB, cos(fp32,int8) ~0.97). No community models.
+  - Space rule proven: index and query MUST use the same model; mixed
+    setups silently degrade ranking (no error).
