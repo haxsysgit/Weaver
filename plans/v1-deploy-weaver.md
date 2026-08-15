@@ -11,7 +11,8 @@
 
 - **Tooling:** repo commands via `uv` (pytest, ruff, pip check); docker +
   docker compose; GitHub Actions; AWS console/CLI; tailscale.
-- **State:** drafted (awaiting owner admission).
+- **State:** admitted (2026-08-14), learning gate approved (live
+  quantization calls allowed).
 - **Depends on:** Plan 018 closed (2026-08-14) — repo cleanup and docs
   done, retrieval audit recorded the risks this plan sequences.
 - **Priority:** P1

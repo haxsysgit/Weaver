@@ -1,6 +1,6 @@
 # Learning: Plan v1 (Deploy Weaver)
 
-Gate status: **Drafted 2026-08-14. Awaiting owner admission.**
+Gate status: **Admitted 2026-08-14. Learning gate approved (live quantization calls allowed).**
 
 Owner-confirmed decisions (quoted from the admission discussion):
 

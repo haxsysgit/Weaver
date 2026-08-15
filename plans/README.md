@@ -45,7 +45,7 @@ Plans 001-010 are complete (007.5 applied). The next sequence is:
 6. **016**: refresh the shelf safely with preview and confirmation — closed 2026-08-10 as the `weaver refresh` CLI command (owner-directed 2026-08-09), verification audit green, live run fetched 3129-3148 and repaired chapter 2843.
 7. **018**: pre-v1 cleanup and standard docs (close 015, repo cleanup, docs audit, standard docs, chapter-links decision, retrieval audit).
 8. **v1 (numberless)**: deployment and CI/CD for seamless updates.
-   Drafted 2026-08-14, awaiting admission (`plans/v1-deploy-weaver.md`).
+   Admitted 2026-08-14 (`plans/v1-deploy-weaver.md`).
 9. **Later**: the founding Reader Trials, then durable reader memory.
 
 Native Android and iOS remain deferred until Plan 013 proves a concrete PWA
