@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import httpx
 import pytest
 
 from weaver.corpus.errors import CorpusError
 from weaver.corpus.models import ErrorCategory
-from weaver.corpus.source import FirecrawlChapterSource
+from weaver.corpus.source import DirectHttpChapterSource, FirecrawlChapterSource
 from weaver.corpus.spec import SHADOW_SLAVE
 import weaver.corpus.source as source_module
 
@@ -186,3 +187,152 @@ async def test_hard_failures_are_not_retried() -> None:
         with pytest.raises(CorpusError):
             await source.fetch(1, SHADOW_SLAVE.url_for(1))
         assert len(sdk.calls) == 1, error
+
+
+# ---------------------------------------------------------------------------
+# DirectHttpChapterSource (Plan 018.5 slice 2.5)
+# ---------------------------------------------------------------------------
+
+
+class StubAsyncClient:
+    """Injected httpx.AsyncClient stand-in: returns queued responses."""
+
+    def __init__(self, responses=()) -> None:
+        self.responses = list(responses)
+        self.calls = []
+
+    async def get(self, url, **kwargs):
+        self.calls.append(url)
+        if self.responses:
+            response = self.responses.pop(0)
+            if isinstance(response, Exception):
+                raise response
+            return response
+        raise AssertionError("no queued response for direct fetch")
+
+    async def aclose(self) -> None:
+        pass
+
+
+def http_response(
+    *,
+    status=200,
+    body=None,
+    final_url=None,
+):
+    return SimpleNamespace(
+        status_code=status,
+        text=body if body is not None else "<html></html>",
+        url=final_url or SHADOW_SLAVE.url_for(1),
+    )
+
+
+@pytest.mark.asyncio
+async def test_direct_adapter_returns_fresh_page_with_browser_headers() -> None:
+    client = StubAsyncClient([http_response(body="<html>story</html>")])
+    source = DirectHttpChapterSource(
+        spec=SHADOW_SLAVE,
+        timeout_seconds=2,
+        client=client,  # type: ignore[arg-type]
+    )
+
+    result = await source.fetch(1, SHADOW_SLAVE.url_for(1))
+
+    assert result.status_code == 200
+    assert result.raw_html == "<html>story</html>"
+    assert result.final_url == SHADOW_SLAVE.url_for(1)
+    assert client.calls == [SHADOW_SLAVE.url_for(1)]
+
+
+@pytest.mark.asyncio
+async def test_direct_adapter_classifies_status_codes() -> None:
+    cases = [
+        (404, ErrorCategory.NOT_FOUND, 1),  # hard: no retry
+        (403, ErrorCategory.AUTHENTICATION, 1),  # hard: no retry
+        (429, ErrorCategory.PROVIDER, 3),  # transient: retried
+        (500, ErrorCategory.PROVIDER, 3),  # transient: retried
+    ]
+    for status, category, attempts in cases:
+        client = StubAsyncClient([http_response(status=status)] * attempts)
+        source = DirectHttpChapterSource(
+            spec=SHADOW_SLAVE,
+            timeout_seconds=2,
+            max_attempts=3,
+            backoff_base_seconds=0.01,
+            client=client,  # type: ignore[arg-type]
+        )
+        with pytest.raises(CorpusError) as captured:
+            await source.fetch(1, SHADOW_SLAVE.url_for(1))
+        assert captured.value.category is category, status
+        assert len(client.calls) == attempts, status
+
+
+@pytest.mark.asyncio
+async def test_direct_adapter_refuses_arbitrary_url() -> None:
+    source = DirectHttpChapterSource(
+        spec=SHADOW_SLAVE,
+        timeout_seconds=2,
+        client=StubAsyncClient(),  # type: ignore[arg-type]
+    )
+    with pytest.raises(CorpusError) as captured:
+        await source.fetch(1, "https://example.com/chapter-1")
+    assert captured.value.category is ErrorCategory.SECURITY
+
+
+@pytest.mark.asyncio
+async def test_direct_adapter_retries_transient_then_succeeds() -> None:
+    client = StubAsyncClient(
+        [
+            httpx.ConnectTimeout("blip"),
+            httpx.ReadTimeout("blip"),
+            http_response(body="<html>story</html>"),
+        ]
+    )
+    source = DirectHttpChapterSource(
+        spec=SHADOW_SLAVE,
+        timeout_seconds=2,
+        max_attempts=3,
+        backoff_base_seconds=0.01,
+        client=client,  # type: ignore[arg-type]
+    )
+
+    result = await source.fetch(1, SHADOW_SLAVE.url_for(1))
+
+    assert result.status_code == 200
+    assert len(client.calls) == 3
+
+
+@pytest.mark.asyncio
+async def test_direct_adapter_gives_up_after_max_attempts() -> None:
+    client = StubAsyncClient([httpx.ReadTimeout("blip")] * 3)
+    source = DirectHttpChapterSource(
+        spec=SHADOW_SLAVE,
+        timeout_seconds=2,
+        max_attempts=3,
+        backoff_base_seconds=0.01,
+        client=client,  # type: ignore[arg-type]
+    )
+
+    with pytest.raises(CorpusError) as captured:
+        await source.fetch(1, SHADOW_SLAVE.url_for(1))
+
+    assert captured.value.category is ErrorCategory.TIMEOUT
+    assert len(client.calls) == 3
+
+
+@pytest.mark.asyncio
+async def test_direct_adapter_does_not_retry_hard_errors() -> None:
+    client = StubAsyncClient([http_response(status=403)])
+    source = DirectHttpChapterSource(
+        spec=SHADOW_SLAVE,
+        timeout_seconds=2,
+        max_attempts=3,
+        backoff_base_seconds=0.01,
+        client=client,  # type: ignore[arg-type]
+    )
+
+    with pytest.raises(CorpusError) as captured:
+        await source.fetch(1, SHADOW_SLAVE.url_for(1))
+
+    assert captured.value.category is ErrorCategory.AUTHENTICATION
+    assert len(client.calls) == 1

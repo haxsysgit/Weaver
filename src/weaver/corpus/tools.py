@@ -25,22 +25,29 @@ from .models import (
     UpdateNovelCorpusInput,
 )
 from .service import CorpusService
-from .source import FirecrawlChapterSource
+from .source import DirectHttpChapterSource, FirecrawlChapterSource
 from .spec import SHADOW_SLAVE
 
 InputModel = TypeVar("InputModel", bound=StrictModel)
 
 
-def service_from_environment(*, live_source: bool) -> CorpusService:
+def service_from_environment(
+    *,
+    live_source: bool,
+    source_name: str = "firecrawl",
+) -> CorpusService:
     project_root = Path(os.environ.get("WEAVER_PROJECT_ROOT", Path.cwd()))
     configured_state = os.environ.get("WEAVER_CORPUS_STATE_DIR")
     state_root = Path(configured_state) if configured_state else None
     source = None
     if live_source:
-        source = FirecrawlChapterSource(
-            api_key=os.environ.get("FIRECRAWL_API_KEY"),
-            spec=SHADOW_SLAVE,
-        )
+        if source_name == "direct":
+            source = DirectHttpChapterSource(spec=SHADOW_SLAVE)
+        else:
+            source = FirecrawlChapterSource(
+                api_key=os.environ.get("FIRECRAWL_API_KEY"),
+                spec=SHADOW_SLAVE,
+            )
     return CorpusService(
         project_root=project_root,
         state_root=state_root,
@@ -79,6 +86,7 @@ async def update_novel_corpus(
     novel_id: str,
     through_chapter: int | None = None,
     preview: bool = True,
+    source: str = "firecrawl",
 ) -> dict[str, Any]:
     request = UpdateNovelCorpusInput(
         novel_id=novel_id,
@@ -86,7 +94,8 @@ async def update_novel_corpus(
         preview=preview,
     )
     result = await service_from_environment(
-        live_source=not preview
+        live_source=not preview,
+        source_name=source,
     ).update_novel_corpus(request)
     return result.model_dump(mode="json")
 

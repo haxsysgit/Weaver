@@ -98,6 +98,15 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Perform the refresh; the default is a preview.",
     )
+    refresh.add_argument(
+        "--source",
+        choices=("direct", "firecrawl"),
+        default="firecrawl",
+        help="Fetch adapter: 'direct' is self-served plain HTTP with "
+        "browser headers (no external service); 'firecrawl' is the "
+        "external scraping API (default). Plan 018.5 slice 2.5: "
+        "direct becomes the default once it survives a live batch.",
+    )
 
     web = subcommands.add_parser(
         "web",
@@ -188,26 +197,40 @@ def _firecrawl_api_key() -> str | None:
         return None
 
 
-def _run_refresh(*, apply: bool, through_chapter: int | None) -> int:
+def _run_refresh(
+    *,
+    apply: bool,
+    through_chapter: int | None,
+    source: str = "firecrawl",
+) -> int:
     """The standing shelf-refresh automation: fill local gaps, then
     probe consecutive chapter URLs until the source 404s (Plan 002
-    machinery behind `weaver library update`)."""
+    machinery behind `weaver library update`).
+
+    source selects the fetch adapter (Plan 018.5 slice 2.5):
+    'direct' needs no FIRECRAWL_API_KEY (self-served), 'firecrawl'
+    needs the key from env or the firecrawl CLI credentials file.
+    """
     if apply:
-        key = _firecrawl_api_key()
-        if not key:
-            print(
-                "ERROR live refresh needs FIRECRAWL_API_KEY: put it in the "
-                "repo .env, or run `firecrawl login` so the CLI credentials "
-                "file can be used."
-            )
-            return 2
-        os.environ.setdefault("FIRECRAWL_API_KEY", key)
+        if source == "direct":
+            os.environ.pop("FIRECRAWL_API_KEY", None)
+        else:
+            key = _firecrawl_api_key()
+            if not key:
+                print(
+                    "ERROR live refresh needs FIRECRAWL_API_KEY: put it in the "
+                    "repo .env, or run `firecrawl login` so the CLI credentials "
+                    "file can be used."
+                )
+                return 2
+            os.environ.setdefault("FIRECRAWL_API_KEY", key)
     try:
         result = asyncio.run(
             update_novel_corpus(
                 "shadow-slave",
                 through_chapter=through_chapter,
                 preview=not apply,
+                source=source,
             )
         )
     except CorpusError as exc:
@@ -272,6 +295,7 @@ def run(argv: Sequence[str] | None = None) -> int:
         return _run_refresh(
             apply=args.apply,
             through_chapter=args.through_chapter,
+            source=args.source,
         )
 
     if args.command == "library":

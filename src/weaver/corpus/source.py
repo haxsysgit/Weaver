@@ -1,4 +1,10 @@
-"""Chapter-source protocol and the one admitted Firecrawl adapter."""
+"""Chapter-source protocol and the two admitted fetch adapters.
+
+FirecrawlChapterSource (external API) and DirectHttpChapterSource
+(no external service, self-served: plain HTTP with browser headers,
+Plan 018.5 slice 2.5). Both implement the same protocol, classify
+failures the same way, and retry transient errors with backoff.
+"""
 
 from __future__ import annotations
 
@@ -6,6 +12,7 @@ import asyncio
 import time
 from typing import Any, Protocol
 
+import httpx
 from firecrawl import AsyncFirecrawl
 
 from .errors import CorpusError
@@ -15,6 +22,29 @@ from .spec import ShadowSlaveSpec
 
 class ChapterSource(Protocol):
     async def fetch(self, chapter: int, url: str) -> FetchedPage: ...
+
+
+#: A plausible desktop Chrome request set. Cloudflare keys on
+#: fingerprint (TLS + headers), not just the UA line: sending the UA
+#: alone is what gets bots flagged. Direct fetching lives or dies by
+#: how well this set mirrors a real browser (Plan 018.5 slice 2.5).
+_BROWSER_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+    ),
+    "Accept": (
+        "text/html,application/xhtml+xml,application/xml;q=0.9,"
+        "image/avif,image/webp,image/apng,*/*;q=0.8"
+    ),
+    "Accept-Language": "en-US,en;q=0.9",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
+    "Upgrade-Insecure-Requests": "1",
+    "Referer": "https://novelfire.net/",
+}
 
 
 class FirecrawlChapterSource:
@@ -157,4 +187,139 @@ class FirecrawlChapterSource:
             return ErrorCategory.TIMEOUT
         if "404" in lowered or "not found" in lowered:
             return ErrorCategory.NOT_FOUND
+        return ErrorCategory.PROVIDER
+
+
+class DirectHttpChapterSource:
+    """Fetch one fixed NovelFire chapter URL with plain HTTP - no
+    external scraping service (Plan 018.5 slice 2.5).
+
+    Uses httpx (already a transitive dep) with a desktop-Chrome header
+    set over HTTP/2. Same retry contract as FirecrawlChapterSource:
+    transient categories retried with backoff, hard errors raised
+    immediately. The site is Cloudflare-fronted, so this adapter lives
+    or dies by its fingerprint; the CLI keeps firecrawl as fallback via
+    --source direct|firecrawl.
+    """
+
+    RETRYABLE_CATEGORIES = frozenset(
+        {ErrorCategory.TIMEOUT, ErrorCategory.PROVIDER}
+    )
+
+    def __init__(
+        self,
+        *,
+        spec: ShadowSlaveSpec,
+        timeout_seconds: float = 30.0,
+        min_interval_seconds: float = 3.0,
+        max_attempts: int = 3,
+        backoff_base_seconds: float = 2.0,
+        http2: bool = True,
+        client: httpx.AsyncClient | None = None,
+    ) -> None:
+        if max_attempts < 1:
+            raise ValueError("max_attempts must be at least 1")
+        self._spec = spec
+        self._timeout_seconds = timeout_seconds
+        self._min_interval_seconds = max(min_interval_seconds, 0.0)
+        self._max_attempts = max_attempts
+        self._backoff_base_seconds = max(backoff_base_seconds, 0.0)
+        self._last_started_at: float | None = None
+        self._rate_lock = asyncio.Lock()
+        self._client = client or httpx.AsyncClient(
+            http2=http2,
+            timeout=timeout_seconds,
+            follow_redirects=True,
+            headers=_BROWSER_HEADERS,
+        )
+
+    async def fetch(self, chapter: int, url: str) -> FetchedPage:
+        expected = self._spec.url_for(chapter)
+        if url != expected:
+            raise CorpusError(
+                "The requested URL is outside the fixed novel specification.",
+                ErrorCategory.SECURITY,
+                detail_code="url_outside_spec",
+            )
+        last_error: CorpusError | None = None
+        for attempt in range(self._max_attempts):
+            try:
+                return await self._fetch_once(chapter, url)
+            except CorpusError as exc:
+                last_error = exc
+                is_final = attempt + 1 >= self._max_attempts
+                if exc.category not in self.RETRYABLE_CATEGORIES or is_final:
+                    raise
+                await asyncio.sleep(
+                    self._backoff_base_seconds * (2**attempt)
+                )
+        raise last_error  # pragma: no cover
+
+    async def _fetch_once(self, chapter: int, url: str) -> FetchedPage:
+        try:
+            async with self._rate_lock:
+                if self._last_started_at is not None:
+                    remaining = (
+                        self._min_interval_seconds
+                        - (time.monotonic() - self._last_started_at)
+                    )
+                    if remaining > 0:
+                        await asyncio.sleep(remaining)
+                self._last_started_at = time.monotonic()
+                response = await asyncio.wait_for(
+                    self._client.get(url),
+                    timeout=self._timeout_seconds,
+                )
+        except (asyncio.TimeoutError, TimeoutError) as exc:
+            raise CorpusError(
+                "The direct request timed out.",
+                ErrorCategory.TIMEOUT,
+                detail_code="http_timeout",
+            ) from exc
+        except httpx.HTTPError as exc:
+            raise CorpusError(
+                "The direct request failed.",
+                self._category_for_exception(exc),
+                detail_code=f"http_{type(exc).__name__}",
+            ) from exc
+
+        if response.status_code == 404:
+            raise CorpusError(
+                "The requested chapter returned 404.",
+                ErrorCategory.NOT_FOUND,
+                status_code=404,
+                detail_code="http_404",
+            )
+        if response.status_code in {401, 403}:
+            raise CorpusError(
+                "The chapter source refused the request.",
+                ErrorCategory.AUTHENTICATION,
+                status_code=response.status_code,
+                detail_code="http_blocked",
+            )
+        if response.status_code == 429:
+            raise CorpusError(
+                "The chapter source rate-limited the request.",
+                ErrorCategory.PROVIDER,
+                status_code=429,
+                detail_code="http_rate_limited",
+            )
+        if not (200 <= response.status_code < 300):
+            raise CorpusError(
+                "The chapter source returned a non-success status.",
+                ErrorCategory.PROVIDER,
+                status_code=response.status_code,
+                detail_code="http_non_success",
+            )
+        return FetchedPage(
+            url=url,
+            final_url=str(response.url),
+            status_code=response.status_code,
+            raw_html=response.text,
+        )
+
+    @staticmethod
+    def _category_for_exception(exc: Exception) -> ErrorCategory:
+        if isinstance(exc, httpx.TimeoutException):
+            return ErrorCategory.TIMEOUT
         return ErrorCategory.PROVIDER

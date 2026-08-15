@@ -182,7 +182,7 @@ def test_corpus_fetch_cli_defaults_to_preview(monkeypatch, capsys) -> None:
 def test_refresh_defaults_to_preview(monkeypatch, capsys) -> None:
     captured = {}
 
-    async def fake_update(novel_id, through_chapter=None, preview=True):
+    async def fake_update(novel_id, through_chapter=None, preview=True, source="firecrawl"):
         captured.update(
             novel_id=novel_id,
             through_chapter=through_chapter,
@@ -212,7 +212,7 @@ def test_refresh_apply_runs_the_live_loop(monkeypatch, tmp_path, capsys) -> None
     monkeypatch.setenv("FIRECRAWL_API_KEY", "fc-test-key")
     captured = {}
 
-    async def fake_update(novel_id, through_chapter=None, preview=True):
+    async def fake_update(novel_id, through_chapter=None, preview=True, source="firecrawl"):
         captured.update(preview=preview, through_chapter=through_chapter)
         return {
             "operation": "update_novel_corpus",
@@ -240,7 +240,7 @@ def test_refresh_through_cap_is_passed(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("FIRECRAWL_API_KEY", "fc-test-key")
     captured = {}
 
-    async def fake_update(novel_id, through_chapter=None, preview=True):
+    async def fake_update(novel_id, through_chapter=None, preview=True, source="firecrawl"):
         captured.update(through_chapter=through_chapter)
         return {
             "operation": "update_novel_corpus",
@@ -267,7 +267,7 @@ def test_refresh_live_without_api_key_exits_2_before_any_call(
     monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path / "no-home"))
     called = []
 
-    async def fake_update(novel_id, through_chapter=None, preview=True):
+    async def fake_update(novel_id, through_chapter=None, preview=True, source="firecrawl"):
         called.append(1)
         return {"operation": "update_novel_corpus", "actions": [], "action_counts": {}}
 
@@ -293,7 +293,7 @@ def test_refresh_uses_firecrawl_cli_credentials_fallback(
     monkeypatch.delenv("FIRECRAWL_API_KEY", raising=False)
     captured = {}
 
-    async def fake_update(novel_id, through_chapter=None, preview=True):
+    async def fake_update(novel_id, through_chapter=None, preview=True, source="firecrawl"):
         captured.update(preview=preview)
         return {
             "operation": "update_novel_corpus",
