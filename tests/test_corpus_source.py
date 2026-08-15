@@ -12,13 +12,16 @@ import weaver.corpus.source as source_module
 
 
 class StubSdk:
-    def __init__(self, *, document=None, error=None) -> None:
+    def __init__(self, *, document=None, error=None, errors=()) -> None:
         self.document = document
         self.error = error
+        self.errors = list(errors)  # consumed one per scrape call
         self.calls = []
 
     async def scrape(self, url, **kwargs):
         self.calls.append((url, kwargs))
+        if self.errors:
+            raise self.errors.pop(0)
         if self.error is not None:
             raise self.error
         return self.document
@@ -120,3 +123,66 @@ async def test_firecrawl_adapter_classifies_safe_failures(error, category) -> No
     with pytest.raises(CorpusError) as captured:
         await source.fetch(1, SHADOW_SLAVE.url_for(1))
     assert captured.value.category is category
+
+
+@pytest.mark.asyncio
+async def test_transient_failures_are_retried_until_success() -> None:
+    """Plan 018.5 slice 2: a timeout blip then a provider blip must not
+    abort the refresh; the fetch retries and succeeds."""
+    sdk = StubSdk(
+        document=document(),
+        errors=[TimeoutError(), RuntimeError("provider exploded")],
+    )
+    source = FirecrawlChapterSource(
+        api_key="test-only",
+        spec=SHADOW_SLAVE,
+        timeout_seconds=2,
+        max_attempts=3,
+        backoff_base_seconds=0.01,
+        sdk_client=sdk,
+    )
+
+    result = await source.fetch(1, SHADOW_SLAVE.url_for(1))
+
+    assert result.status_code == 200
+    assert len(sdk.calls) == 3  # two failures, then success
+
+
+@pytest.mark.asyncio
+async def test_persistent_transient_failure_gives_up_after_max_attempts() -> None:
+    """Plan 018.5 slice 2: a source that keeps timing out must give up
+    after max_attempts instead of retrying forever."""
+    sdk = StubSdk(error=TimeoutError())
+    source = FirecrawlChapterSource(
+        api_key="test-only",
+        spec=SHADOW_SLAVE,
+        timeout_seconds=2,
+        max_attempts=3,
+        backoff_base_seconds=0.01,
+        sdk_client=sdk,
+    )
+
+    with pytest.raises(CorpusError) as captured:
+        await source.fetch(1, SHADOW_SLAVE.url_for(1))
+
+    assert captured.value.category is ErrorCategory.TIMEOUT
+    assert len(sdk.calls) == 3
+
+
+@pytest.mark.asyncio
+async def test_hard_failures_are_not_retried() -> None:
+    """Plan 018.5 slice 2: not-found and auth errors are deterministic -
+    retrying them would just hide the real problem or burn quota."""
+    for error in (RuntimeError("404 not found"), RuntimeError("unauthorized")):
+        sdk = StubSdk(error=error)
+        source = FirecrawlChapterSource(
+            api_key="test-only",
+            spec=SHADOW_SLAVE,
+            timeout_seconds=2,
+            max_attempts=3,
+            backoff_base_seconds=0.01,
+            sdk_client=sdk,
+        )
+        with pytest.raises(CorpusError):
+            await source.fetch(1, SHADOW_SLAVE.url_for(1))
+        assert len(sdk.calls) == 1, error

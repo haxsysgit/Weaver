@@ -166,6 +166,136 @@ async def test_default_update_repairs_known_files_and_stops_at_first_404(
 
 
 @pytest.mark.asyncio
+async def test_probe_retries_transient_then_continues_to_404(
+    tmp_path,
+) -> None:
+    """Plan 018.5 slice 2: the probe composes with source-level retries -
+    one transient blip (handled inside the source) must not abort the
+    refresh; the probe continues to the first 404."""
+    make_project(tmp_path, [1])
+    write_chapter(tmp_path, 1)
+
+    class FlakySource:
+        """Mirrors FirecrawlChapterSource's retry contract (unit-tested
+        in test_corpus_source.py): transient categories retried with
+        backoff inside fetch, hard errors raised immediately. The probe
+        loop sees only the retried outcome."""
+
+        RETRYABLE = {ErrorCategory.TIMEOUT, ErrorCategory.PROVIDER}
+
+        def __init__(self, inner, blip_chapters, blips=2):
+            self.inner = inner
+            self.blip_chapters = set(blip_chapters)
+            self.remaining = {c: blips for c in blip_chapters}
+            self.calls = []
+
+        async def fetch(self, chapter, url):
+            while True:
+                self.calls.append(chapter)
+                try:
+                    if (
+                        chapter in self.blip_chapters
+                        and self.remaining[chapter] > 0
+                    ):
+                        self.remaining[chapter] -= 1
+                        raise CorpusError("blip", ErrorCategory.TIMEOUT)
+                    return await self.inner.fetch(chapter, url)
+                except CorpusError as exc:
+                    if exc.category not in self.RETRYABLE:
+                        raise
+
+    source = FlakySource(
+        FakeChapterSource(
+            {
+                2: fetched_page(2),
+                3: fetched_page(3),
+                4: fetched_page(4, status_code=404, html=""),
+            }
+        ),
+        blip_chapters=[2],
+    )
+    service = CorpusService(project_root=tmp_path, source=source)
+
+    result = await service.update_novel_corpus(
+        UpdateNovelCorpusInput(novel_id="shadow-slave", preview=False)
+    )
+
+    assert source.calls == [2, 2, 2, 3, 4]  # two retries, then onward
+    assert result.stop_reason == "first_404"
+    assert result.stopped_at_chapter == 4
+    assert {a.chapter for a in result.actions} == {2, 3, 4}
+    assert all(
+        a.status.value == "saved" or a.status.value == "not_found"
+        for a in result.actions
+    )
+
+
+@pytest.mark.asyncio
+async def test_probe_persistent_failure_stops_after_retries_keeping_saves(
+    tmp_path,
+) -> None:
+    """Plan 018.5 slice 2: when the source stays down past its retries the
+    refresh stops honestly (stop_reason=timeout) and everything saved
+    before the failure survives on disk and in urls.md for resume."""
+    make_project(tmp_path, [1])
+    write_chapter(tmp_path, 1)
+
+    class DownSource:
+        """A source whose retries are all consumed: every fetch of
+        chapter 2 fails with timeout."""
+
+        def __init__(self, inner):
+            self.inner = inner
+            self.calls = []
+
+        async def fetch(self, chapter, url):
+            self.calls.append(chapter)
+            if chapter == 2:
+                raise CorpusError("blip", ErrorCategory.TIMEOUT)
+            return await self.inner.fetch(chapter, url)
+
+    inner = FakeChapterSource(
+        {
+            2: fetched_page(2),
+            3: fetched_page(3),
+            4: fetched_page(4, status_code=404, html=""),
+        }
+    )
+    down = DownSource(inner)
+    service = CorpusService(project_root=tmp_path, source=down)
+
+    result = await service.update_novel_corpus(
+        UpdateNovelCorpusInput(novel_id="shadow-slave", preview=False)
+    )
+
+    assert result.stop_reason == "timeout"
+    assert result.stopped_at_chapter == 2
+    assert (
+        tmp_path / "novels/shadow-slave/0001-0100/chapter-0002.txt"
+    ).exists() is False
+    assert (
+        tmp_path / "novels/shadow-slave/0001-0100/chapter-0003.txt"
+    ).exists() is False
+
+    # Resume: fix the blip, rerun, and the probe continues from 2.
+    service = CorpusService(project_root=tmp_path, source=inner)
+    rerun = await service.update_novel_corpus(
+        UpdateNovelCorpusInput(novel_id="shadow-slave", preview=False)
+    )
+    assert rerun.stop_reason == "first_404"
+    assert rerun.stopped_at_chapter == 4
+    assert {"saved", "skipped", "not_found"}.issuperset(
+        {a.status.value for a in rerun.actions}
+    )
+    assert (
+        tmp_path / "novels/shadow-slave/0001-0100/chapter-0002.txt"
+    ).read_bytes() == chapter_text(2).encode()
+    assert (
+        tmp_path / "novels/shadow-slave/0001-0100/chapter-0003.txt"
+    ).read_bytes() == chapter_text(3).encode()
+
+
+@pytest.mark.asyncio
 async def test_bounded_update_fetches_nothing_past_upper_bound(tmp_path) -> None:
     make_project(tmp_path, [1])
     write_chapter(tmp_path, 1)

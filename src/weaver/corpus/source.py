@@ -18,7 +18,21 @@ class ChapterSource(Protocol):
 
 
 class FirecrawlChapterSource:
-    """Fetch raw HTML for one fixed NovelFire chapter URL."""
+    """Fetch raw HTML for one fixed NovelFire chapter URL.
+
+    Transient failures (timeout, provider hiccup, rate limit) are
+    retried with backoff up to max_attempts; hard failures (auth,
+    config, not-found, security) raise immediately. Retrying lives here
+    so every fetch path - gap repair, first-404 probing, single fetch -
+    gets the same resilience (Plan 018.5 slice 2).
+    """
+
+    #: error categories worth retrying: a blip now may succeed in a
+    #: moment. Everything else is deterministic and retrying it just
+    #: hides the real problem.
+    RETRYABLE_CATEGORIES = frozenset(
+        {ErrorCategory.TIMEOUT, ErrorCategory.PROVIDER}
+    )
 
     def __init__(
         self,
@@ -27,6 +41,8 @@ class FirecrawlChapterSource:
         spec: ShadowSlaveSpec,
         timeout_seconds: float = 45.0,
         min_interval_seconds: float = 7.0,
+        max_attempts: int = 3,
+        backoff_base_seconds: float = 2.0,
         sdk_client: Any | None = None,
     ) -> None:
         if not api_key or not api_key.strip():
@@ -35,9 +51,13 @@ class FirecrawlChapterSource:
                 ErrorCategory.CONFIGURATION,
                 detail_code="credential_missing",
             )
+        if max_attempts < 1:
+            raise ValueError("max_attempts must be at least 1")
         self._spec = spec
         self._timeout_seconds = timeout_seconds
         self._min_interval_seconds = max(min_interval_seconds, 0.0)
+        self._max_attempts = max_attempts
+        self._backoff_base_seconds = max(backoff_base_seconds, 0.0)
         self._last_started_at: float | None = None
         self._rate_lock = asyncio.Lock()
         self._client = sdk_client or AsyncFirecrawl(
@@ -54,6 +74,21 @@ class FirecrawlChapterSource:
                 ErrorCategory.SECURITY,
                 detail_code="url_outside_spec",
             )
+        last_error: CorpusError | None = None
+        for attempt in range(self._max_attempts):
+            try:
+                return await self._fetch_once(chapter, url)
+            except CorpusError as exc:
+                last_error = exc
+                is_final = attempt + 1 >= self._max_attempts
+                if exc.category not in self.RETRYABLE_CATEGORIES or is_final:
+                    raise
+                await asyncio.sleep(
+                    self._backoff_base_seconds * (2**attempt)
+                )
+        raise last_error  # pragma: no cover - loop above always raises or returns
+
+    async def _fetch_once(self, chapter: int, url: str) -> FetchedPage:
         try:
             async with self._rate_lock:
                 if self._last_started_at is not None:

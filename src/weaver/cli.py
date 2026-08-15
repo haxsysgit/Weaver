@@ -227,8 +227,13 @@ def _run_refresh(*, apply: bool, through_chapter: int | None) -> int:
             f"skipped {counts.get('skipped', 0)}"
         )
         stopped = result.get("stopped_at_chapter")
+        reason = result.get("stop_reason")
         if stopped:
-            print(f"stopped at chapter {stopped} ({result.get('stop_reason')})")
+            print(f"stopped at chapter {stopped} ({reason})")
+        if reason == "first_404" and stopped:
+            # The probe asks until the source 404s: the last real
+            # chapter is the one before the 404 (Plan 018.5 slice 2).
+            print(f"last known chapter: {stopped - 1}")
     receipt = result.get("receipt_path")
     if receipt:
         print(f"receipt: {receipt}")
