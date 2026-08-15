@@ -24,7 +24,7 @@ evidence, review, and human decision gates must also be complete.
 | [015 - Weaver the agent (context + agentic parts)](015-reader-trials-1-1000.md) | Closed 2026-08-14 (accepted, scope cut) | Plan 014 accepted | Whole-novel search, spoiler map + judge, preferences, two-phase turn, spell surface. Skills / router / compaction deferred after v1 |
 | [016 - Refresh the shelf safely](016-refresh-the-shelf-safely.md) | Completed and owner-accepted 2026-08-10 | Plan 014 accepted | `weaver refresh`: preview-first (no network, no shelf writes), explicit `--apply` confirmation, Plan 002 validation and atomic repair, metadata-only receipts, never a model tool |
 | [017 - Reading continuation to 3148](017-reading-continuation.md) | Completed and owner-accepted 2026-08-14 | Plan 012, 014, 016 | Direct sequential source reading of Shadow Slave 1501-3148 into the private story notebook, checker at milestones 2000/2500/3000/3148, no stopping until the shelf end |
-| [018 - Pre-v1 cleanup and standard docs](018-pre-v1.md) | Closed 2026-08-14 | Plan 015 decision, Plan 017 | Close 015, repo cleanup, docs audit + standard docs (README, architecture, CONTRIBUTING), chapter-links decision, retrieval stack audit |
+| [018.5 - Refresh stabilization + full re-embed](018.5-refresh-and-reembed.md) | Drafted 2026-08-15, awaiting admission | v1 slices 1-3 (side plan, disjoint files) | Stabilize `weaver refresh` (retries, first-404, last-chapter report), live refresh to shelf end, recover colab machinery, fix ceiling bug, re-embed whole novel, sweep baseline |
 | Later - Founding Reader Trials | Not yet drafted | Reading continuation | The finished-product bar: Ariel and the Unholy Titan, Sunny 3120+ versus Azarax, Anvil versus Azarax what-if |
 | Later - Durable reader memory | Not yet drafted | Founding trials | Reader opinions, favorites, theories, and unresolved disagreements kept separately from canon |
 
@@ -46,7 +46,12 @@ Plans 001-010 are complete (007.5 applied). The next sequence is:
 7. **018**: pre-v1 cleanup and standard docs (close 015, repo cleanup, docs audit, standard docs, chapter-links decision, retrieval audit).
 8. **v1 (numberless)**: deployment and CI/CD for seamless updates.
    Admitted 2026-08-14 (`plans/v1-deploy-weaver.md`).
-9. **Later**: the founding Reader Trials, then durable reader memory.
+9. **018.5 (side plan)**: refresh stabilization (retries, first-404
+   probe, last-chapter reporting) + full local re-embed redo of the
+   colab skirmish + sweep baseline before quantization. Drafted
+   2026-08-15 (`plans/018.5-refresh-and-reembed.md`), awaiting
+   admission.
+10. **Later**: the founding Reader Trials, then durable reader memory.
 
 Native Android and iOS remain deferred until Plan 013 proves a concrete PWA
 limitation.

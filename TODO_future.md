@@ -50,6 +50,11 @@ Open questions for the owner when this plan is admitted:
 - Then v1: a numberless plan, deployment and CI/CD for seamless updates
   (Docker, EC2, CI, release). Admitted 2026-08-14;
   plans go one by one.
+- Side plan 018.5 (2026-08-15, owner decision): refresh stabilization
+  (retries, first-404 probe, last-chapter reporting) + full local
+  re-embed redo of the colab skirmish + question-sweep baseline before
+  quantization. Too big for a pre-v1 slice; runs alongside v1 with
+  disjoint files. Drafted, awaiting admission.
 
 ## Standing series (no plan number, runs across plans)
 
