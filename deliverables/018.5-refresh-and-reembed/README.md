@@ -7,3 +7,6 @@
 | results.md | Deterministic observations and commands | Not started |
 | review-ledger.md | Independent findings, repairs, rechecks | Not started |
 | decision.md | Final accept/reject (status, date, reason) | Pending owner decision |
+| scripts/weaver-full-reembed.ipynb | Colab notebook: fp32 + int8 full-novel rebuild | Ready 2026-08-15 |
+| scripts/colab_build_runner.py | Real runner the notebook executes (no drift) | Ready 2026-08-15 |
+| deliverables/018.5-refresh-and-reembed/colab-guide.md | Step-by-step colab walkthrough | Ready 2026-08-15 |

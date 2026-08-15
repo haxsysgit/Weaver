@@ -664,7 +664,13 @@ def build_library_index(
 
     statements = []
     for n in range(1, ceiling + 1):
-        rec = json.loads((notebook_dir / "reading" / f"{n:04d}.json").read_text(encoding="utf-8"))
+        rec_path = notebook_dir / "reading" / f"{n:04d}.json"
+        if not rec_path.exists():
+            # Reading lags novels by design (the gated human step):
+            # chapters fetched but not yet read/notebooked simply
+            # contribute no statements (Plan 018.5 colab rebuild).
+            continue
+        rec = json.loads(rec_path.read_text(encoding="utf-8"))
         for st in rec.get("statements", []):
             st = dict(st)
             st["chapter"] = n
