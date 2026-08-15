@@ -48,8 +48,8 @@ Open questions for the owner when this plan is admitted:
   recorded the no-chapter-links decision, and audited the retrieval
   stack. Next: v1.
 - Then v1: a numberless plan, deployment and CI/CD for seamless updates
-  (Docker, EC2, CI, release). Do not draft it before 018 closes; plans go
-  one by one.
+  (Docker, EC2, CI, release). Drafted 2026-08-14, awaiting admission;
+  plans go one by one.
 
 ## Standing series (no plan number, runs across plans)
 
