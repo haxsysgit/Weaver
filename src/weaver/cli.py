@@ -101,11 +101,11 @@ def _parser() -> argparse.ArgumentParser:
     refresh.add_argument(
         "--source",
         choices=("direct", "firecrawl"),
-        default="firecrawl",
+        default="direct",
         help="Fetch adapter: 'direct' is self-served plain HTTP with "
-        "browser headers (no external service); 'firecrawl' is the "
-        "external scraping API (default). Plan 018.5 slice 2.5: "
-        "direct becomes the default once it survives a live batch.",
+        "browser headers (no external service, default since 2026-08-15 "
+        "live batch survived Cloudflare); 'firecrawl' is the external "
+        "scraping API fallback.",
     )
 
     web = subcommands.add_parser(
@@ -201,7 +201,7 @@ def _run_refresh(
     *,
     apply: bool,
     through_chapter: int | None,
-    source: str = "firecrawl",
+    source: str = "direct",
 ) -> int:
     """The standing shelf-refresh automation: fill local gaps, then
     probe consecutive chapter URLs until the source 404s (Plan 002

@@ -34,7 +34,7 @@ InputModel = TypeVar("InputModel", bound=StrictModel)
 def service_from_environment(
     *,
     live_source: bool,
-    source_name: str = "firecrawl",
+    source_name: str = "direct",
 ) -> CorpusService:
     project_root = Path(os.environ.get("WEAVER_PROJECT_ROOT", Path.cwd()))
     configured_state = os.environ.get("WEAVER_CORPUS_STATE_DIR")
@@ -86,7 +86,7 @@ async def update_novel_corpus(
     novel_id: str,
     through_chapter: int | None = None,
     preview: bool = True,
-    source: str = "firecrawl",
+    source: str = "direct",
 ) -> dict[str, Any]:
     request = UpdateNovelCorpusInput(
         novel_id=novel_id,

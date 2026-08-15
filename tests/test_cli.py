@@ -262,6 +262,8 @@ def test_refresh_live_without_api_key_exits_2_before_any_call(
     tmp_path,
     capsys,
 ) -> None:
+    """The firecrawl fallback still requires a key; the direct source
+    (default since 2026-08-15) does not."""
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("FIRECRAWL_API_KEY", raising=False)
     monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path / "no-home"))
@@ -273,11 +275,34 @@ def test_refresh_live_without_api_key_exits_2_before_any_call(
 
     monkeypatch.setattr(cli, "update_novel_corpus", fake_update)
 
-    exit_code = cli.run(["refresh", "--apply"])
+    exit_code = cli.run(["refresh", "--apply", "--source", "firecrawl"])
 
     assert exit_code == 2
     assert called == []
     assert "FIRECRAWL_API_KEY" in capsys.readouterr().out
+
+
+def test_refresh_defaults_to_direct_source_without_api_key(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    """Plan 018.5 slice 2.5: direct is the default, so an apply with no
+    firecrawl key must proceed (the fake update sees source='direct')."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("FIRECRAWL_API_KEY", raising=False)
+    monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path / "no-home"))
+    seen = {}
+
+    async def fake_update(novel_id, through_chapter=None, preview=True, source="direct"):
+        seen.update(source=source, preview=preview)
+        return {"operation": "update_novel_corpus", "actions": [], "action_counts": {}}
+
+    monkeypatch.setattr(cli, "update_novel_corpus", fake_update)
+
+    exit_code = cli.run(["refresh", "--apply"])
+
+    assert exit_code == 0
+    assert seen == {"source": "direct", "preview": False}
 
 
 def test_refresh_uses_firecrawl_cli_credentials_fallback(
@@ -294,7 +319,7 @@ def test_refresh_uses_firecrawl_cli_credentials_fallback(
     captured = {}
 
     async def fake_update(novel_id, through_chapter=None, preview=True, source="firecrawl"):
-        captured.update(preview=preview)
+        captured.update(preview=preview, source=source)
         return {
             "operation": "update_novel_corpus",
             "preview": False,
@@ -304,9 +329,9 @@ def test_refresh_uses_firecrawl_cli_credentials_fallback(
 
     monkeypatch.setattr(cli, "update_novel_corpus", fake_update)
 
-    exit_code = cli.run(["refresh", "--apply"])
+    exit_code = cli.run(["refresh", "--apply", "--source", "firecrawl"])
 
     assert exit_code == 0
-    assert captured == {"preview": False}
+    assert captured == {"preview": False, "source": "firecrawl"}
     assert os.environ.get("FIRECRAWL_API_KEY") == "fc-test-key"
     os.environ.pop("FIRECRAWL_API_KEY", None)
