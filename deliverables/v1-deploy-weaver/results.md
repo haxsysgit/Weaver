@@ -60,3 +60,52 @@ plant detection). Real bundle: **12,685 files, 137.0 MiB**.
 The bundle contains raw novel text (novels/). It ships to the owner's
 own server over SSH only — it is never committed, never public. Same
 rule as the local state.
+
+## Slice 3: BYOK + device scoping
+
+Date: 2026-08-14. Status: complete (504 tests green, frontend build ok).
+
+### Device scoping (backend)
+
+- Schema v1 -> v2 migration: `conversation.device_id TEXT NOT NULL
+  DEFAULT ''`. Verified both paths: fresh DB builds v2, legacy v1 DB
+  upgrades in place (ALTER TABLE + version row).
+- Repository: `_insert_conversation` carries device_id;
+  `load_conversations(limit, device_id)` filters by owner;
+  `conversation_owner(id)` lookup added.
+- Session/coordinator: `start_conversation(owner_text, device_id="")`,
+  `list_conversations(limit, device_id="")`,
+  `conversation_owned_by(id, device)`.
+- Web layer: `_own_conversation` guard on every conversation route
+  (list, create, messages, turns, retry, regenerate, stream, cancel,
+  delete). Other-device ids and unknown ids are both 404 (no existence
+  oracle). Empty device id (no header) matches legacy rows.
+
+### BYOK (backend)
+
+- `current_api_key` contextvar in model_layer/deepseek.py; provider
+  resolves it at call time per task, falling back to the construction
+  (env) key. Clients cached per key.
+- Web layer: `X-Weaver-Key` header read per turn request, bound to the
+  turn task's contextvar, reset in finally. Header never enters
+  request bodies or stored text.
+- No-log rule proven by test: a full turn with a fake browser key
+  leaves the key in zero API responses and zero sqlite bytes.
+
+### Frontend
+
+- `lib/identity.ts`: device id minted once (crypto.randomUUID) in
+  localStorage; api key stored/cleared in localStorage; weaverHeaders()
+  attaches X-Device-Id always + X-Weaver-Key when set.
+- chatApi.ts: single `authed` wrapper adds headers to every call.
+- SettingsModal: "Your DeepSeek key" password field, stored locally,
+  hint text explains the browser-only storage and server fallback.
+
+### Tests added
+
+- test_web.py: device isolation (two devices see disjoint lists, 404
+  cross-access, owner-only delete); BYOK no-log (key absent from
+  responses and sqlite bytes).
+- test_deepseek_provider.py: contextvar picks per-request key per task
+  (a/b/server-env sequence), proving concurrent turns keep their own
+  keys.
