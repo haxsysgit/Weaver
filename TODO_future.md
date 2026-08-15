@@ -54,7 +54,7 @@ Open questions for the owner when this plan is admitted:
   (retries, first-404 probe, last-chapter reporting) + full local
   re-embed redo of the colab skirmish + question-sweep baseline before
   quantization. Too big for a pre-v1 slice; runs alongside v1 with
-  disjoint files. Drafted, awaiting admission.
+  disjoint files. Admitted 2026-08-15.
 
 ## Standing series (no plan number, runs across plans)
 

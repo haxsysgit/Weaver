@@ -1,6 +1,6 @@
 # Plan 018.5 learning
 
-Gate status: **Drafted 2026-08-15. Awaiting owner admission.**
+Gate status: **Admitted 2026-08-15.**
 
 ## Owner-confirmed decisions
 
