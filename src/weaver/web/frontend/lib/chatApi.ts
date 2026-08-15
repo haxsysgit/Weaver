@@ -213,7 +213,7 @@ export function createHttpChatApi(fetcher: typeof fetch = fetch): ChatApi {
     input: string | URL | Request,
     init?: RequestInit,
   ): Promise<Response> =>
-    authed(input, {
+    fetcher(input, {
       ...init,
       headers: {
         ...weaverHeaders(),
