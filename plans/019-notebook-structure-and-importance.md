@@ -9,7 +9,7 @@
 
 - **Tooling:** repo commands via `uv` (pytest, ruff); wiki reads via the
   shadowslave.fandom.com MediaWiki API (read-only, no key).
-- **State:** drafted (awaiting owner admission).
+- **State:** admitted 2026-08-15 (owner: "admit both now").
 - **Depends on:** 018.5 slices 1-4 (closed); 018.5 slice 5 (eval data +
   embed speed benchmark) is done but the colab re-embed (018.5 slice 6)
   is BLOCKED on this plan and Plan 020: the index must not be rebuilt

@@ -25,8 +25,8 @@ evidence, review, and human decision gates must also be complete.
 | [016 - Refresh the shelf safely](016-refresh-the-shelf-safely.md) | Completed and owner-accepted 2026-08-10 | Plan 014 accepted | `weaver refresh`: preview-first (no network, no shelf writes), explicit `--apply` confirmation, Plan 002 validation and atomic repair, metadata-only receipts, never a model tool |
 | [017 - Reading continuation to 3148](017-reading-continuation.md) | Completed and owner-accepted 2026-08-14 | Plan 012, 014, 016 | Direct sequential source reading of Shadow Slave 1501-3148 into the private story notebook, checker at milestones 2000/2500/3000/3148, no stopping until the shelf end |
 | [018.5 - Refresh stabilization + full re-embed](018.5-refresh-and-reembed.md) | Admitted 2026-08-15 | v1 slices 1-3 (side plan, disjoint files) | Stabilize `weaver refresh` (retries, first-404, last-chapter report), live refresh to shelf end, recover colab machinery, fix ceiling bug, re-embed whole novel, sweep baseline. Slice 6 (re-embed) blocked on 019+020: notebook must be structured before embedding |
-| [019 - Notebook structure and importance](019-notebook-structure-and-importance.md) | Drafted 2026-08-15 (awaiting owner admission) | 018.5 slices 1-4 (side plan, disjoint files) | Finish reading 3149-3160, wiki structure study, page standard, character importance ranking, overview articles, structure checker |
-| [020 - Notebook entity sweep](020-notebook-entity-sweep.md) | Drafted 2026-08-15 (awaiting owner admission) | Plan 019 closed | Full entity sweep to the 019 standard: rebuild all pages tier by tier, create missing core pages, verify overviews, unblock the colab re-embed |
+| [019 - Notebook structure and importance](019-notebook-structure-and-importance.md) | Admitted 2026-08-15 | 018.5 slices 1-4 (side plan, disjoint files) | Finish reading 3149-3160, wiki structure study, page standard, character importance ranking, overview articles, structure checker |
+| [020 - Notebook entity sweep](020-notebook-entity-sweep.md) | Admitted 2026-08-15 | Plan 019 closed | Full entity sweep to the 019 standard: rebuild all pages tier by tier, create missing core pages, verify overviews, unblock the colab re-embed |
 | Later - Founding Reader Trials | Not yet drafted | Reading continuation | The finished-product bar: Ariel and the Unholy Titan, Sunny 3120+ versus Azarax, Anvil versus Azarax what-if |
 | Later - Durable reader memory | Not yet drafted | Founding trials | Reader opinions, favorites, theories, and unresolved disagreements kept separately from canon |
 
@@ -56,11 +56,11 @@ Plans 001-010 are complete (007.5 applied). The next sequence is:
 10. **019 (side plan)**: notebook structure + character importance —
    finish reading 3149-3160, wiki structure study, page standard,
    importance ranking, overview articles, structure checker.
-   Drafted 2026-08-15 (`plans/019-notebook-structure-and-importance.md`).
+   Admitted 2026-08-15 (`plans/019-notebook-structure-and-importance.md`).
 11. **020 (side plan)**: notebook entity sweep — rebuild all 500+
    entity pages tier by tier to the 019 standard, create missing core
    pages, verify overviews. Unblocks 018.5 slice 6, then back to v1.
-   Drafted 2026-08-15 (`plans/020-notebook-entity-sweep.md`).
+   Admitted 2026-08-15 (`plans/020-notebook-entity-sweep.md`).
 12. **Later**: the founding Reader Trials, then durable reader memory.
 
 Native Android and iOS remain deferred until Plan 013 proves a concrete PWA

@@ -11,7 +11,7 @@
 
 - **Tooling:** repo commands via `uv` (pytest, ruff); subagent fleet for
   page rebuilds; checker from 019 as the format gate.
-- **State:** drafted (awaiting owner admission).
+- **State:** admitted 2026-08-15 (owner: "admit both now").
 - **Depends on:** Plan 019 closed (standard, ranking, checker all land
   here). Unblocks 018.5 slice 6 (colab re-embed) and then v1.
 - **Priority:** P1
