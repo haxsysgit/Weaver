@@ -104,24 +104,35 @@ cost, and whether it runs fake or live (model calls). Rules:
 
 ## Cache-hit doctrine
 
-Input tokens are the cost driver, and a cache hit is ~50x cheaper than a
-miss. Structure live work to hit the provider's prefix cache:
+Plan executors are agents (pi, codex, claude code, cursor, ...). Two
+kinds of model usage exist, and every plan's Budget must say which
+applies to each slice:
 
-- **Byte-identical shared prefix from token 0**: system prompt + static
-  instructions, the exact same string in every call. No timestamps, no
-  random ids, no per-request variation in the prefix.
-- **Dynamic content after the prefix**: the per-request payload (question,
-  digest, file) goes AFTER the static block. After 2-3 requests the
-  provider persists the common prefix; everything after it pays miss.
-- **Batch continuously**: provider caches live hours-to-days. Run live
-  batches in one session; spreading calls over days forfeits the cache.
-- **Verify, don't assume**: read `prompt_cache_hit_tokens` /
-  `prompt_cache_miss_tokens` from every response usage block and record
-  them in receipts. A plan that claims cache savings must prove the hit
-  rate.
-- **Billing windows matter**: check the provider's pricing page before
-  starting. Peak/off-peak or scheduled price changes move the numbers;
-  the plan's Budget must state which window it assumes.
+1. **Agent-executed work (no key needed)** — the default. The agent
+   does the work in its own context (its own model). Rules:
+   - Deterministic prep first: grep / digest / extract locally BEFORE
+     the agent reads raw source. Feed digests, not whole corpora —
+     context is the cost.
+   - Stable shared instructions: identical system/standard block first;
+     only the per-request payload varies. Keeps the agent's context
+     reusable across a batch.
+   - Batch same-type work in one session; don't spread one batch over
+     days.
+
+2. **Direct API calls (key required)** — live model calls through a
+   provider API (e.g. DeepSeek). Only possible where the plan has a key
+   in the environment. An agent without a key CANNOT run these slices:
+   the plan must mark them, and execution stops to ask for the key.
+   Rules:
+   - Byte-identical shared prefix from token 0 (system + static
+     instructions); dynamic content after. No timestamps, no random
+     ids, no per-request variation in the prefix.
+   - Provider caches live hours-to-days: batch continuously; spreading
+     calls over days forfeits the cache.
+   - Verify, don't assume: record `prompt_cache_hit_tokens` /
+     `prompt_cache_miss_tokens` (or provider equivalent) in receipts.
+   - Check billing windows: peak/off-peak and scheduled price changes
+     move the numbers; the Budget states the assumed window.
 
 ## Parallel and sequential plans
 
