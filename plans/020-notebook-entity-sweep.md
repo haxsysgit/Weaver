@@ -198,3 +198,19 @@ does not build or grade it. Each run is unique text (full-miss
 pricing; the flat window closed 16:00 UTC 2026-08-16, live parts now
 run at off-peak $0.22/$0.66). Cap $3 total. Run strictly off-peak
 (never 01:00-04:00 or 06:00-10:00 UTC) and never during peak.
+
+## Freeze decision (2026-08-16, owner)
+
+Plan 020 FROZEN at slice 3 tier-1 completion, owner-directed, to protect
+the v1-critical budget and focus (bill discipline: sweep was ~$0.95
+measured; main-session context is the real cost driver). Status: tiers
+2-4 (99 minor pages) + missing-page creation + overview verification
+DEFERRED post-v1. Resumed later in the future after v1 ships.
+
+Slice 3 outcome (tier 0 + tier 1 = 30 pages, ALL FULL PASS):
+- 30/30 pages byte-identical to digests (verify_pages.py multiset),
+  standard skeleton, checker 0 on all rebuilt pages.
+- Real spend: tier-0+1 = $0.95 measured at off-peak rates from
+  session files (see deliverables/020-notebook-entity-sweep/results.md).
+- Batch execution (Option B) validated: 5 solos + 4 batches of 5,
+  byte-identical shared block for prefix-cache hits.
