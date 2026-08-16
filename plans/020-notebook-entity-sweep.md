@@ -20,10 +20,16 @@
 - **Risk:** High if unbounded — full sweep of 500+ pages is a big live
   budget. Mitigation: tier-based execution (top tiers first, lower
   tiers batch), the checker gates shape, the owner reviews per tier.
-- **Budget:** LIVE. Subagent fleet writing/rebuilding pages from reading
-  records. Estimate: ~500 pages x ~2-4k tokens each ≈ 1-2M tokens for
-  the full sweep; owner sets a spend cap; tiers let the owner stop
-  early if value drops. Live model calls: yes, explicit.
+- **Budget:** LIVE, cap $4 (owner-set 2026-08-16). Grounded in measured
+  digest sizes + official V4-Flash pricing (verified api-docs.deepseek.com
+  2026-08-16): ~565 pages -> ~$1.62 at flat rates (valid until 16:00 UTC
+  2026-08-16), ~$2.87 off-peak, ~$5.74 peak (new billing from 16:00 UTC
+  2026-08-16: peak 01:00-04:00 + 06:00-10:00 UTC, off-peak otherwise).
+  Digest-first (one deterministic grep pass per entity, measured: Kai 32k
+  tokens, Effie 29k, Nephis 89k, Sunny 240k) + byte-identical 20k shared
+  prefix (system + standard + checker rules) for 50x cache hits. Run
+  before 16:00 UTC 2026-08-16 if possible, else strictly off-peak.
+  Output capped ~15% of input.
 
 ## Owner direction (locked decisions)
 
@@ -36,6 +42,10 @@
    only, never its claims).
 4. (2026-08-15) The owner's acceptance test: "list the 7 daemons and 7
    gods" resolves in <= 2 tool calls from one overview page.
+5. (2026-08-16) Spend cap $4. Real numbers over estimates: measured
+   digest sizes, official V4-Flash pricing, cache-hit doctrine from the
+   arinze-plans skill. Sweep runs before 16:00 UTC 2026-08-16 if
+   possible, else strictly off-peak hours.
 
 ## Scope
 
@@ -72,6 +82,10 @@
    reading records (novel text is truth; checker only gates shape).
 5. Entity count report: pages before/after, per category; missing
    pages created; stale pages rebuilt.
+6. Cache-hit verification: every live rebuild call records
+   `prompt_cache_hit_tokens` / `prompt_cache_miss_tokens` in its
+   receipt; the final results.md reports the measured hit rate and the
+   actual dollars spent (must be <= $4, receipts are the proof).
 
 ## STOP conditions
 
@@ -92,8 +106,10 @@
 1. **Plan and admit** — this doc, learning gate (owner sets the spend
    cap + tier review cadence), index rows, deliverable scaffold,
    admission commit.
-2. **Baseline + inventory** — checker (from 019) run: list all pages by
-   tier, empty pages, missing pages, stale pages; the sweep manifest.
+2. **Digest pass** — deterministic grep of the reading records per
+   entity into digest files (free, local); digest size report per
+   entity (measured: Kai 32k, Effie 29k, Nephis 89k, Sunny 240k
+   tokens); this is what every rebuild call feeds on.
 3. **Tier 0-1 deep rebuilds** — main cast + gods + daemons +
    sovereigns pages rebuilt to standard, individually reviewed, owner
    spot-checks.
@@ -106,13 +122,18 @@
 7. **Overview verification + acceptance** — overview articles checked
    against swept pages; the 7 daemons + 7 gods acceptance test run
    through the real tools; notebook checker PASS.
-8. **Close** — full pytest, verification floor, independent review,
-   owner decision, records. Then 018.5 slice 6 (colab re-embed)
-   resumes.
+8. **Close** — full pytest, verification floor, cache-hit + spend
+   report from receipts, independent review, owner decision, records.
+   Then 018.5 slice 6 (colab re-embed) resumes.
 
-## Budget note
+## Cache-hit execution rules (from the arinze-plans doctrine)
 
-Live and explicit. Tier-gated so the owner can stop early. Subagent
-fleet budget included: the estimate counts the whole fleet, not one
-agent. Deterministic checker runs first (fake-only); only page writing
-is live.
+- One byte-identical system prompt + standard + checker block (~20k
+  tokens) at the front of EVERY call; only the digest varies.
+- Batch runs back-to-back in a single session; no multi-day spreading.
+- Record `prompt_cache_hit_tokens` / `prompt_cache_miss_tokens` from
+  every response into receipts; results.md reports the measured hit
+  rate and actual spend.
+- Run before 16:00 UTC 2026-08-16 (flat $0.14/$0.28) if possible;
+  otherwise strictly off-peak ($0.22/$0.66) and never during peak
+  (01:00-04:00, 06:00-10:00 UTC).

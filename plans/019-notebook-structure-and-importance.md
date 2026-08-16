@@ -55,6 +55,10 @@
 - A structure checker script (like the notebook checker) that flags:
   empty pages, missing required sections, missing overview links,
   stale first_known vs reading records, unranked characters.
+- Receipts record cache hit/miss: surface `prompt_cache_hit_tokens` /
+  `prompt_cache_miss_tokens` from ModelUsage (already in
+  model_layer/types.py:79) into the run receipts, so live-work plans
+  can prove their measured hit rate and actual spend.
 - Reading completion 3149-3160 (the owner-gated Plan 17-style batch)
   as the FIRST slice: the sweep must run on a current notebook.
 
@@ -102,7 +106,8 @@
    scaffold, admission commit.
 2. **Finish reading 3149-3160** — the owner-gated Plan 17-style batch:
    read chapters, notebook records, notebook checker PASS, receipts,
-   counts. The sweep runs on a current notebook.
+   counts. The sweep runs on a current notebook. Cache-hit doctrine:
+   run before 16:00 UTC 2026-08-16 (flat rates) or strictly off-peak.
 3. **Wiki structure study** — pull the wiki's page skeletons
    (character infobox fields, section order, overview tables, category
    taxonomy, importance markers) via the MediaWiki API; write the
@@ -116,11 +121,14 @@
 5. **Importance ranking** — deterministic ranker (mention count,
    chapter spread, arc presence, relationships degree, role flags) over
    the reading records; produces tier 0-4; owner reviews the tier list.
-6. **Overview articles** — Gods and Daemons (7+7 with titles/domains/
+6. **Receipts record cache hit/miss** — surface the ModelUsage
+   cache fields into receipts (they exist in types.py but are not
+   persisted); a test asserts hit/miss tokens land in the receipt.
+7. **Overview articles** — Gods and Daemons (7+7 with titles/domains/
    sorcery, one-call answer), Legacy Clans, main factions, species.
-7. **Structure checker** — flags empty/stale/missing-section/unranked/
+8. **Structure checker** — flags empty/stale/missing-section/unranked/
    unlinked pages; wired into the verification floor; runs clean.
-8. **Close** — full pytest, verification floor, independent review,
+9. **Close** — full pytest, verification floor, independent review,
    owner decision, records.
 
 ## Budget note

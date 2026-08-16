@@ -102,6 +102,27 @@ cost, and whether it runs fake or live (model calls). Rules:
 - On a tight budget, run sequential and solo. Subagents are the default
   executor where available; solo is the fallback, not the other way around
 
+## Cache-hit doctrine
+
+Input tokens are the cost driver, and a cache hit is ~50x cheaper than a
+miss. Structure live work to hit the provider's prefix cache:
+
+- **Byte-identical shared prefix from token 0**: system prompt + static
+  instructions, the exact same string in every call. No timestamps, no
+  random ids, no per-request variation in the prefix.
+- **Dynamic content after the prefix**: the per-request payload (question,
+  digest, file) goes AFTER the static block. After 2-3 requests the
+  provider persists the common prefix; everything after it pays miss.
+- **Batch continuously**: provider caches live hours-to-days. Run live
+  batches in one session; spreading calls over days forfeits the cache.
+- **Verify, don't assume**: read `prompt_cache_hit_tokens` /
+  `prompt_cache_miss_tokens` from every response usage block and record
+  them in receipts. A plan that claims cache savings must prove the hit
+  rate.
+- **Billing windows matter**: check the provider's pricing page before
+  starting. Peak/off-peak or scheduled price changes move the numbers;
+  the plan's Budget must state which window it assumes.
+
 ## Parallel and sequential plans
 
 Default: sequential. One plan in flight at a time.
