@@ -154,3 +154,10 @@ sections per standard with empty ones omitted, all chmod 600.
 Cost discipline: balance-checked before dispatch ($4.31), costs
 measured from session files at current off-peak rates, NOT the
 harness's stale flat-rate field.
+
+- **Saint** (327 stmts): FULL PASS. $0.0588 real (74k in / 46k out /
+  1.7M cacheRead). Aliases person:stone-saint + person:marble-saint
+  preserved.
+- **Anvil** (151 stmts): FULL PASS. $0.0548 real (56k in / 44k out /
+  1.9M cacheRead). Titles "King of Swords" preserved, Vital status
+  Dead, Supreme.
