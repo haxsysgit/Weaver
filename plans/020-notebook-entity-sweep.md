@@ -47,6 +47,35 @@
    pricing, cache-hit doctrine from the arinze-plans skill. The flat
    window closed 16:00 UTC 2026-08-16; live parts run strictly
    off-peak hours.
+6. (2026-08-16) Canon distinction (verified against the novel): the
+   gods are PEOPLE (character pages, `person:sun-god` etc.); divine
+   lineages are INHERITANCES (separate pages: `power:the-fire` = Sun
+   God's lineage, `power:blood-weave`/`bone-weave`/`soul-weave`/
+   `flesh-weave` = Weaver's forbidden lineage, House of Night's Storm
+   God lineage, Valor's War God lineage); Aspect Legacy is a
+   MECHANIC (one concept page: `power:aspect-legacy`, the Spell's
+   per-Awakened personal legacy — Shadow Dance, Memory of Light,
+   Jet's scythe). The three must never merge into one page. The
+   connections graph currently misnamespaces gods as `power:*` —
+   sweep moves them to `person:*` and adds lineage/aspect-legacy
+   targets as needed.
+7. (2026-08-16) `statement:*` targets in connections.jsonl are the
+   190-row cross-statement story-map layer (explains/relates/payoff/
+   causes/foreshadows, chapters 5-1080) that powers `lore_path`.
+   They are NOT junk: do NOT delete them. Digest pass SKIPS
+   `statement:*` targets (no pages exist for them). Known
+   limitation: the story map is frozen at the 1000-chapter era;
+   extending or retiring it is a post-v1 decision, not this plan.
+8. (2026-08-16) Execution pattern locked: page rebuilds run in
+   BUDGETED context:fresh SUBAGENTS, never the main agent's own
+   context (the main session carries 100M+ cached tokens; per-call
+   overhead would dominate the sweep). Each subagent receives ONLY:
+   (a) the byte-identical shared block — page standard + checker
+   rules + 1-2 sample pages — so the DeepSeek prefix cache hits
+   across all rebuild calls (~50x cheaper), and (b) its ONE entity
+   digest (bounded, e.g. Kai 34k tokens). One entity per tier-0/1
+   agent; tier 2-4 batch several small digests per agent. Every run
+   records its usage block (input / output / cacheRead / cost).
 
 ## Scope
 
@@ -110,16 +139,22 @@
 2. **Digest pass** — deterministic grep of the reading records per
    entity into digest files (free, local); digest size report per
    entity (measured: Kai 32k, Effie 29k, Nephis 89k, Sunny 240k
-   tokens); this is what every rebuild call feeds on.
+   tokens); this is what every rebuild call feeds on. Skips
+   `statement:*` targets (the story-map layer, decision 7).
 3. **Tier 0-1 deep rebuilds** — main cast + gods + daemons +
    sovereigns pages rebuilt to standard, individually reviewed, owner
-   spot-checks.
+   spot-checks. Gods move from `power:*` to `person:*`; divine
+   lineages (`power:the-fire`, `power:blood-weave`, …) and Aspect
+   Legacy stay separate concept pages (decision 6). One
+   context:fresh subagent per page (decision 8).
 4. **Tier 2-3 standard rebuilds** — recurring characters + major
    powers/places in batches; owner batch review.
 5. **Tier 4 lightweight pass** — background pages to the minimal
    standard, checker-gated.
 6. **Missing-page creation** — gods/daemons and any evidence-backed
-   missing entities created from reading records.
+   missing entities created from reading records (canon namespace
+   rules from decision 6: gods are `person:*`, lineages are
+   `power:*`, Aspect Legacy is one mechanic page).
 7. **Overview verification + acceptance** — overview articles checked
    against swept pages; the 7 daemons + 7 gods acceptance test run
    through the real tools; notebook checker PASS.

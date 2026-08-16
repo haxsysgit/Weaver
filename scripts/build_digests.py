@@ -110,6 +110,14 @@ def build_digests(knowledge: Path) -> tuple[dict[str, list], dict[str, dict]]:
             continue
         entity_statements[aliases.get(target, target)].add(source)
 
+    # Skip the story-map layer: statement: targets are cross-statement
+    # links (cross-* rows, explains/payoff/foreshadows) consumed by
+    # lore_path, not entities with pages.
+    entity_statements = {
+        e: sids for e, sids in entity_statements.items()
+        if not e.startswith("statement:")
+    }
+
     digests: dict[str, dict] = {}
     all_rows: dict[str, list] = {}
     for entity, sids in entity_statements.items():

@@ -42,3 +42,41 @@ aliases folded), writes `.weaver/knowledge/shadow-slave/digests/
 
 - `uv run python scripts/build_digests.py` (default root
   .weaver/knowledge/shadow-slave)
+
+## Slice 2 follow-up: canon distinction + execution pattern (2026-08-16)
+
+Owner drove three locked decisions (now in plans/020 as decisions 6-8):
+
+1. **Canon 3-way split (verified against the novel):** the gods are
+   PEOPLE (`person:sun-god`), divine lineages are INHERITANCES
+   (separate pages: `power:the-fire` = Sun God's lineage, the four
+   Weaves = Weaver's forbidden lineage, Storm/War lineages), and
+   Aspect Legacy is a MECHANIC (one `power:aspect-legacy` page — the
+   Spell's per-Awakened personal legacy: Shadow Dance, Memory of
+   Light, Jet's scythe; defined in novel ch653/1254/1290/1479/1483).
+   Evidence: the current `power:sun-god` digest contains ONLY
+   character/feat statements (7 rows, ch436-691); lineage statements
+   already link elsewhere (`power:the-fire`, `power:blood-weave`,
+   `bone-weave`, `soul-weave`, or to the people who inherit them).
+2. **`statement:*` targets explained + preserved:** they are the
+   190-row cross-statement story-map layer (cross-* ids, relations
+   explains/relates/payoff/causes/foreshadows, chapters 5-1080) that
+   powers `lore_path` — NOT junk. 0 of them come from reading-record
+   links (verified: 0 of 14,363 links point to statement: ids). They
+   are a hand-curated Plan 15-era layer. Decision: keep them, skip
+   them in the digest pass (done — 577 digests now, 142 stale
+   statement-*.md files removed, report clean). Known limitation
+   recorded: the story map is frozen at the 1000-chapter era;
+   extending or retiring `lore_path` is a post-v1 decision.
+3. **Execution pattern locked:** page rebuilds run in budgeted
+   context:fresh subagents (never the main agent's context — this
+   session carries 136M+ cacheRead tokens; per-call overhead would
+   dominate). Each subagent gets the byte-identical shared block
+   (standard + checker rules + samples) FIRST for prefix-cache hits
+   across all rebuild calls, plus its one entity digest. One
+   subagent per tier-0/1 page; batches for tiers 2-4. Every run
+   records input/output/cacheRead/cost.
+
+### Commands
+
+- `uv run python scripts/build_digests.py` (now skips statement:*)
