@@ -178,3 +178,17 @@ harness's stale flat-rate field.
 
 - **Batch A** (ki-song 88, morgan 100, seishan 100, asterion 92,
   ananke 99): 5/5 FULL PASS. Real cost $0.0885.
+
+- **Batch B** (caster 97, nightmare 75, noctis 62, tamar 61, tyris
+  61): 5/5 FULL PASS. $0.0968 real.
+
+## Slice 3: tier-1 complete — 25/25 pages, all FULL PASS
+
+Every page byte-identical to its digest (verify_pages.py multiset),
+standard section skeleton, header markers preserved, checker 0 for
+all rebuilt pages. Real total spend tier-1: Saint $0.0588 + Anvil
+$0.0548 + Master-Jet $0.0706 + Mordret $0.0705 + Rain $0.0728 +
+Batch A $0.0885 + Batch B $0.0968 + Batch C $0.0798 + Batch D
+$0.0263 = **$0.6189**, well under the Option-B estimate (~$0.40-0.50
+was for digest input alone; measured per-run overhead from cacheRead
+is the rest). Combined tier-0 + tier-1: $0.95.
