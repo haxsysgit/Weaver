@@ -130,7 +130,7 @@ def main() -> None:
                     "source": source,
                     "target": target,
                     "relation": "links",
-                    "evidence": [{"chapter": chapter, "location": {"line_start": 1}}],
+                    "evidence": evidence,
                     "first_known_chapter": chapter,
                 }
                 new_rows.append(json.dumps(row, ensure_ascii=False))

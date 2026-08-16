@@ -330,16 +330,15 @@ def run(argv: Sequence[str] | None = None) -> int:
         if args.notebook_command == "check":
             from .notebook.cli import main as notebook_check_main
 
-            return notebook_check_main(
-                [
-                    "--root",
-                    str(args.root),
-                    "--through",
-                    str(args.through),
-                    "--novel-dir",
-                    str(args.novel_dir),
-                ]
-            )
+            check_args = [
+                "--root",
+                str(args.root),
+                "--through",
+                str(args.through),
+            ]
+            if args.novel_dir is not None:
+                check_args.extend(["--novel-dir", str(args.novel_dir)])
+            return notebook_check_main(check_args)
 
     if args.command == "library":
         try:

@@ -65,6 +65,15 @@ def check_connections(
             for chapter_item in chapters:
                 if isinstance(chapter_item, dict):
                     location = chapter_item.get("chapter")
+                    location_data = chapter_item.get("location")
+                    if isinstance(location_data, dict):
+                        line_start = location_data.get("line_start")
+                        line_end = location_data.get("line_end")
+                        if line_start == 1 and not line_end:
+                            result.add(
+                                f"connections.jsonl:{line_number}",
+                                "line 1 is the chapter heading, not evidence",
+                            )
                 else:
                     location = chapter_item
                 if not isinstance(location, int) or not 1 <= location <= context.effective_through:

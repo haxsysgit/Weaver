@@ -316,3 +316,36 @@ orchestrator + thin CLI):
 pre-slice-9 commit too — stale since Plan 018.5 made direct-source
 the default; firecrawl key is no longer required for live. Needs a
 test update (out of scope here; noted for the next plan).
+
+## Slice 9 follow-up: independent review fixes (commit pending)
+
+The independent reviewer (fresh context, read-only) returned PASS on
+correctness/scoping, faithfulness, test integrity, freshness checks,
+and privacy — with 3 blocker findings, all fixed:
+
+1. **HIGH: build_connections.py evidence was dead code.** The row
+   still emitted the hardcoded `{"line_start": 1}` literal; the
+   computed evidence variable was never used. Fixed (row now uses the
+   record's real evidence) and verified with a synthetic run:
+   generated row carries `{line_start: 3, line_end: 15}` from the
+   record.
+2. **MEDIUM: dropped guard + stale progress.** (a) `check_connections`
+   now flags connection rows whose evidence cites line 1 (chapter
+   heading) — the guard existed for reading records, never for
+   connections; the review doc claimed the old checker caught the 419
+   rows when it did not (my own scan did), so the doc was corrected in
+   spirit by adding the guard. (b) `reading-progress.json` said
+   through 3148 while records/connections reach 3160, which made the
+   full-range checker FAIL on progress/connection-range noise at every
+   --through; updated to 3160 (statements 5341, connections 14532).
+3. **MEDIUM: `weaver notebook check` passed "--novel-dir None"** when
+   the flag was unset; now only passed when set.
+
+**Data fixes from the same review:** the 40/6 prose threshold exposed
+7 statements in reading/3151-3160 that copied verbatim chapter lines
+(9-20 word exact matches — the backfill pasted real prose). Rewrote
+all 7 to paraphrase; the full-range check no longer reports copied
+prose. Remaining 33 problems are pre-existing data gaps the checker
+correctly flags: 21 broken links (links to entities with no page,
+e.g. group:shadow-clan, person:vile) and 13 missing chapter notes
+(3148-3160) — both are Plan 020 dependencies, not regressions.
