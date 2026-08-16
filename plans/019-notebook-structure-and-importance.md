@@ -136,15 +136,42 @@
    persisted); a test asserts hit/miss tokens land in the receipt.
 7. **Overview articles** — Gods and Daemons (7+7 with titles/domains/
    sorcery, one-call answer), Legacy Clans, main factions, species.
-8. **Structure checker** — flags empty/stale/missing-section/unranked/
-   unlinked pages; wired into the verification floor; runs clean.
-9. **Close** — full pytest, verification floor, independent review,
+8. **Checker review + findings** — audit scripts/check_story_notebook.py:
+   what it actually checks, what it misses, and what is wrong with it.
+   Known findings going in: the --through range flag does not bound the
+   work (proven: --through 100 still scans all 3160 records, 18.5s,
+   51% of time in one prose-scan genexpr normalizing every string
+   against empty fragment sets); freshness is never checked (a PASS
+   notebook can silently lag: connections.jsonl stuck at 3148 while
+   reading is at 3160 was caught by a human, not the checker); the
+   review also found real live-notebook bugs the checker DID catch
+   (reading/3151-3160.json written 664 not 600 by the backfill
+   subagent; connections.jsonl line 14114 is a blank line; 419 conn
+   rows from the 3149-3160 backfill cite line_start=1 which is the
+   chapter heading, never evidence). Write the findings doc.
+9. **Checker module** — split scripts/check_story_notebook.py (1062
+   lines, 11 concerns, 39 functions) into src/weaver/notebook/: one
+   module per concern (report, context, permissions, provenance,
+   records, pages, connections, progress, prose, git_exposure) + an
+   orchestrator (run_checks) + a thin CLI. Range semantics: global
+   passes (permissions/pages/connections/git/sequence, metadata-only,
+   seconds) always run; scoped passes (sha256 provenance, reader
+   contract, prose scan) bounded by --through. Optimizations: read
+   each novel file once (shared cache in context), hash only files in
+   range, skip normalising strings when the fragment set is empty
+   (the 13.2s hot spot), bound the prose scan by the range. Add the
+   freshness checks the review found missing: connections-max-chapter
+   vs reading-max-chapter, empty-page detection, missing-page for
+   linked targets. Keep scripts/check_story_notebook.py as a shim;
+   migrate the 39 subprocess tests to import the API; wire
+   `weaver notebook check` into cli.py.
+10. **Close** — full pytest, verification floor, independent review,
    owner decision, records.
 
 ## Budget note
 
 Agent-context work: pi does the wiki study and standard drafting in
 its own context, billed through the DeepSeek key like every other
-call. Estimated ~$0.20-0.60 for slices 3-8 at flat rates (measured
+call. Estimated ~$0.20-0.60 for slices 3-9 at flat rates (measured
 scale: ~$0.01-0.05 per batch). The content sweep in Plan 020 is the
 bigger live budget. Total cap $3 (owner-set 2026-08-16).
