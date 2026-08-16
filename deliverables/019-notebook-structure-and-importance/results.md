@@ -231,3 +231,36 @@ product-billing feature (per-turn cost tracking), not a plan-proof
 feature; deferred past v1 with the other product backlog items. The
 live work this plan proves (reading, evals) runs through experiment
 receipts + subagent run budgets, both already measured.
+
+## Slice 7: overview articles — DONE (2026-08-16)
+
+Four one-call pages in .weaver/knowledge/shadow-slave/overview/:
+- overview-gods-and-daemons.md (69 lines): lead + Gods table (7) +
+  Daemons table (7) + 6 topic lore sections, 24 statement lines.
+- overview-legacy-clans.md: Valor/Song/Shadow/Immortal Flame/House of
+  Night (5 rows).
+- overview-factions.md: Government/Academy, Cohort, First Irregular
+  Company, Stewards, Legacy Clans (5 rows).
+- overview-species.md: Nightmare Creature ranks+classes, Spirits, the
+  Nine, Nephilim, Dreamspawn, Shadow Creatures (6 rows).
+
+All 53 statement lines verbatim from reading records (machine-verified
+by the subagent), entity-id markers match filenames, dir 700/files 600,
+checker reports 0 overview-related problems.
+
+CANON CORRECTION: the 7th god is the FORGOTTEN GOD (the Unknown /
+Dream God — god of dreams, nightmares, restoration, imagination,
+oblivion and fate, erased from history, ch1570/1571), NOT "Hope God"
+as the original audit assumed. Records never say "Hope God"; Hope is
+the daemon (Demon of Hope/Desire, chained in the Ivory Tower).
+
+Recorded gaps for Plan 020 (deliberately NOT created here):
+- 7 person pages the tables link to are MISSING: sun-god, shadow-god,
+  heart-god, war-god, beast-god, forgotten-god, mirage, rime,
+  demon-of-oblivion. The tables are correct intent; 020's
+  missing-page creation slice creates them (tier 1 role-flagged).
+- Seven-class ladder assembled from 6 records (no single record
+  enumerates all 7); Nether's wiki phrase "Last child of the Forgotten
+  God" replaced with record-backed "youngest".
+
+Cost: subagent $0.041 (fresh context, 81 turns).
