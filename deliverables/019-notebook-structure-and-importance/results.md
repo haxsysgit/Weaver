@@ -264,3 +264,55 @@ Recorded gaps for Plan 020 (deliberately NOT created here):
   God" replaced with record-backed "youngest".
 
 Cost: subagent $0.041 (fresh context, 81 turns).
+
+## Slice 8+9: checker review and module split
+
+**Slice 8 (review, commit eeb0b65)** — `checker-review.md` documents
+what the 1062-line checker did, what it missed, and what was wrong:
+
+- `--through` never bounded the work: through=100 still scanned all
+  3160 chapters (18.5s; 51% of runtime was one genexpr normalising
+  every record string against empty fragment sets).
+- Freshness was never checked: the connections graph sat stale at
+  3148 while reading was at 3160 and the checker PASSed — the exact
+  bug the owner caught by hand.
+- The review also surfaced 3 real backfill bugs the checker's rules
+  DID catch: reading/3151-3160.json written 664 not 600, a blank
+  line in connections.jsonl, and 419 connection rows citing
+  line_start=1 (chapter heading, never evidence).
+- CLI help claimed through max 100 while code allowed 3200.
+
+**Slice 9 (module split, commit aafacd6)** — `scripts/
+check_story_notebook.py` (1062 lines, 11 concerns) became
+`src/weaver/notebook/` (9 concern modules + report + context +
+orchestrator + thin CLI):
+
+- Orchestrator separates global passes (permissions, pages,
+  connections graph, git exposure, sequence, progress — metadata
+  only, always run) from scoped passes (sha256 provenance, reader
+  contract, entries, notes, prose scan — bounded by --through).
+- Perf: through=100 went 18.5s -> 5.1s. Two wrong turns en route,
+  both recorded as lessons: a regex-alternation "optimisation" for
+  the prose scan cost 4.8s in compile time (50-170ms per chapter
+  pattern) and was reverted; the real fix was per-chapter fragment
+  sets with a plain substring loop (prose scan 5.0s -> 0.08s).
+- New freshness checks (warnings, never fail the run): connections
+  max chapter vs reading max chapter, empty-page detection.
+- New `weaver notebook check --root ... --through N` CLI; the old
+  scripts/ path is a thin shim so reading-run workflow and the 39
+  subprocess tests keep working unchanged (all 39 pass).
+- Data fixes: chmod 600 on the 10 backfilled reading records, blank
+  line removed from connections.jsonl, 419 line_start=1 -> 3.
+- Prose no-copy threshold raised 12 chars/3 words -> 40 chars/
+  6 words: the old rule false-positived on common phrases (e.g.
+  "except for sunny and his shadows."); test contract (42-char
+  synthetic line must still be caught) verified at the new
+  threshold.
+- build_connections.py now copies the record's real evidence
+  (line_start 3+) instead of hardcoding line_start=1.
+
+**Pre-existing failure flagged (not slice 9):**
+`test_live_environment_service_requires_firecrawl_key` fails on the
+pre-slice-9 commit too — stale since Plan 018.5 made direct-source
+the default; firecrawl key is no longer required for live. Needs a
+test update (out of scope here; noted for the next plan).
