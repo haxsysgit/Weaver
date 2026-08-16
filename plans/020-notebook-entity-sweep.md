@@ -25,10 +25,10 @@
   sweep is agent-context work: digest-first (one deterministic grep
   pass per entity bounds the context), the agent writes pages in its
   own context, measured per slice. Scale: 565 pages x ~10-30k fresh
-  input + ~15% output ≈ $1-2 at flat rates ($0.14 miss / $0.28 out
-  until 16:00 UTC 2026-08-16), ~$1.5-3 off-peak ($0.22/$0.66), peak
-  $0.44/$1.32 (peak = 01:00-04:00 + 06:00-10:00 UTC). Run live parts
-  before 16:00 UTC if possible, else strictly off-peak. Measured
+  input + ~15% output ≈ $1.5-3 off-peak ($0.22/$0.66). The flat
+  window ($0.14 miss / $0.28 out) CLOSED 16:00 UTC 2026-08-16 —
+  never plan for it again. Peak $0.44/$1.32 (peak = 01:00-04:00 +
+  06:00-10:00 UTC): run live parts strictly off-peak. Measured
   digests: Kai 32k, Effie 29k, Nephis 89k, Sunny 240k tokens.
 
 ## Owner direction (locked decisions)
@@ -42,10 +42,11 @@
    only, never its claims).
 4. (2026-08-15) The owner's acceptance test: "list the 7 daemons and 7
    gods" resolves in <= 2 tool calls from one overview page.
-5. (2026-08-16) Spend cap $4. Real numbers over estimates: measured
-   digest sizes, official V4-Flash pricing, cache-hit doctrine from the
-   arinze-plans skill. Sweep runs before 16:00 UTC 2026-08-16 if
-   possible, else strictly off-peak hours.
+5. (2026-08-16) Spend cap $4 (later cut to $3 by owner). Real
+   numbers over estimates: measured digest sizes, official V4-Flash
+   pricing, cache-hit doctrine from the arinze-plans skill. The flat
+   window closed 16:00 UTC 2026-08-16; live parts run strictly
+   off-peak hours.
 
 ## Scope
 
@@ -142,12 +143,21 @@ cacheRead / cost) in results.md.
 
 The token figures (Kai 32k, Effie 29k, Nephis 89k, Sunny 240k digests)
 measure agent-context load per page: ~10-30k fresh input + ~15%
-output per page ≈ $1-2 total at flat rates, $1.5-3 off-peak.
+output per page ≈ $1.5-3 off-peak ($0.22/$0.66); flat rates are gone
+as of 16:00 UTC 2026-08-16.
+
+**(a1) Warm-up probe (slice 1, mandatory before spend).** Before any
+real rebuild spend: one tiny live call with the real shared block +
+one entity digest, and verify from the receipt/usage block that
+`prompt_cache_hit_tokens` is nonzero — proving the cache actually
+engages for the byte-identical shared prefix. If the probe shows
+zero cache hits, STOP and investigate (prefix drift, session
+boundary, key change) before spending the cap.
 
 **(b) Verification runs (slice 7)** — the 50-question style evals, if
 the owner wants them live, run through the executing agent (pi) —
 weaver has no harness for eval runs either; it serves the notebook, it
 does not build or grade it. Each run is unique text (full-miss
-pricing). Cap $3 total. Run before 16:00 UTC 2026-08-16 (flat
-$0.14/$0.28) if possible; otherwise strictly off-peak ($0.22/$0.66)
-and never during peak (01:00-04:00, 06:00-10:00 UTC).
+pricing; the flat window closed 16:00 UTC 2026-08-16, live parts now
+run at off-peak $0.22/$0.66). Cap $3 total. Run strictly off-peak
+(never 01:00-04:00 or 06:00-10:00 UTC) and never during peak.
