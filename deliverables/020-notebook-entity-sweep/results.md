@@ -126,3 +126,8 @@ independently after the run: Counter-multiset byte-compare (0 missing,
   first rebuild buried them in Biography); build_page_task.py now
   appends that instruction to every task.
 - **Kai pilot** (395 stmts): FULL PASS, $0.029 — see earlier entry.
+
+- **Cassia** (655 stmts): FULL PASS first try. $0.043 (96k in / 64k
+  out). Sections: Appearance / Personality / Biography (vols 1-13) /
+  Aspect + Abilities / Relationships / Trivia. Alias person:cassie
+  preserved verbatim.
