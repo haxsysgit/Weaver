@@ -161,3 +161,9 @@ harness's stale flat-rate field.
 - **Anvil** (151 stmts): FULL PASS. $0.0548 real (56k in / 44k out /
   1.9M cacheRead). Titles "King of Swords" preserved, Vital status
   Dead, Supreme.
+
+- **Master-Jet** (319 stmts): FULL PASS. $0.0706 real. Old page had
+  only 130 stmts in flat 3 volumes; rebuild carries all 319 with
+  volume nesting (vols 1,3,5-13).
+- **Mordret** (309 stmts): FULL PASS. $0.0705 real. Old page covered
+  only ch438-807 (~50 stmts); rebuild carries all 309 (vols 3-13).
