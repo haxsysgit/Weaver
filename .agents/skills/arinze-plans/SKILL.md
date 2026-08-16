@@ -119,20 +119,24 @@ applies to each slice:
    - Batch same-type work in one session; don't spread one batch over
      days.
 
-2. **Direct API calls (key required)** — live model calls through a
-   provider API (e.g. DeepSeek). Only possible where the plan has a key
-   in the environment. An agent without a key CANNOT run these slices:
-   the plan must mark them, and execution stops to ask for the key.
-   Rules:
-   - Byte-identical shared prefix from token 0 (system + static
-     instructions); dynamic content after. No timestamps, no random
-     ids, no per-request variation in the prefix.
-   - Provider caches live hours-to-days: batch continuously; spreading
-     calls over days forfeits the cache.
+2. **Agent-executed, live (key required)** — the agent (weaver or pi)
+   calls the provider THROUGH its own harness: tool calling, context
+   engine, receipts, scope boundary. The key goes to the agent, never
+   to a raw request. This is how reading runs and evals work.
+   Cache rules:
+   - Byte-identical shared prefix from token 0; dynamic content after.
+   - Provider caches live hours-to-days: batch continuously.
    - Verify, don't assume: record `prompt_cache_hit_tokens` /
      `prompt_cache_miss_tokens` (or provider equivalent) in receipts.
    - Check billing windows: peak/off-peak and scheduled price changes
      move the numbers; the Budget states the assumed window.
+
+3. **Direct raw API (measurement-only, rarely justified)** — a bare
+   request with no agent harness. Legitimate ONLY when the agent would
+   mask what is being measured (e.g. an eval that isolates retrieval
+   quality, where agent tool use papers over index gaps). Never a
+   product path; if a plan proposes it, say why the agent cannot do
+   the job. Default: everything goes through agents.
 
 ## Parallel and sequential plans
 

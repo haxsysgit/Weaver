@@ -23,12 +23,12 @@
   doctrine. (a) Agent-executed work (no key): the wiki study, page
   standard, ranking, receipts, overviews, checker — done by the
   executing agent in its own context, deterministic, no API key. (b)
-  Direct API calls (key required): ONLY slice 2 (reading 3149-3160)
-  hits the live model; small batch (~12 chapters), runs through the
-  DeepSeek key the owner provides. Estimated ~$0.20-0.60 at current
-  flat rates ($0.14 miss / $0.28 out) if run before 16:00 UTC
-  2026-08-16, or off-peak ($0.22/$0.66) after. Reading shares no
-  cacheable prefix (each chapter is unique text) — budget it as
+  Agent-executed, live (key required): ONLY slice 2 (reading
+  3149-3160) calls the model, THROUGH weaver's harness (Reader Trial
+  machinery: tools, context engine, receipts), never raw. Small batch
+  (~12 chapters), estimated ~$0.20-0.60 at current flat rates ($0.14
+  miss / $0.28 out) if run before 16:00 UTC 2026-08-16, or off-peak
+  ($0.22/$0.66) after. Each chapter is unique text, so budget it as
   full-miss. No other slice needs a key. Cap: $4 total.
 
 ## Owner direction (locked decisions)

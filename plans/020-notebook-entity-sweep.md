@@ -142,11 +142,11 @@ The token figures (Kai 32k, Effie 29k, Nephis 89k, Sunny 240k digests)
 measure agent-context load per page, not API spend. An agent without a
 key can still run this whole plan.
 
-**(b) Direct API calls (key required) — only if verification runs use
-the live model.** The 50-question style evals in slice 7, if the owner
-wants them live, hit the DeepSeek key; each such run is unique text
-(full-miss pricing). Budget: agent-executed sweep ~$0 (no key), any
-live verification runs ~$1-3 at off-peak; cap $4 total. Run before
-16:00 UTC 2026-08-16 (flat $0.14/$0.28) if possible; otherwise strictly
-off-peak ($0.22/$0.66) and never during peak (01:00-04:00,
-06:00-10:00 UTC).
+**(b) Agent-executed, live (key required) — only if verification runs
+use the live model.** The 50-question style evals in slice 7, if the
+owner wants them live, run THROUGH weaver (agent harness), not raw.
+Each such run is unique text (full-miss pricing). Budget:
+agent-executed sweep ~$0 (no key), any live verification runs ~$1-3 at
+off-peak; cap $4 total. Run before 16:00 UTC 2026-08-16 (flat
+$0.14/$0.28) if possible; otherwise strictly off-peak ($0.22/$0.66)
+and never during peak (01:00-04:00, 06:00-10:00 UTC).
