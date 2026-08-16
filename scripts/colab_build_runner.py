@@ -41,7 +41,7 @@ class DirectOnnxEmbedder:
     model config uses).
     """
 
-    def __init__(self, onnx_path: str) -> None:
+    def __init__(self, onnx_path: str, provider: str = "auto") -> None:
         import glob
 
         import numpy as np
@@ -58,11 +58,15 @@ class DirectOnnxEmbedder:
                 "DirectOnnxEmbedder needs tokenizer.json beside the onnx file"
             )
         self.tokenizer = Tokenizer.from_file(tokenizer_files[0])
-        # Try CUDA (T4 in colab), fall back to CPU.
+        # Try CUDA (T4 in colab), fall back to CPU. --provider cpu forces CPU
+        # (int8 dynamic models can be slower on CUDA due to per-layer dequant).
         try:
-            self.session = ort.InferenceSession(
-                onnx_path, providers=["CUDAExecutionProvider", "CPUExecutionProvider"]
+            _providers = (
+                ["CPUExecutionProvider"]
+                if provider == "cpu"
+                else ["CUDAExecutionProvider", "CPUExecutionProvider"]
             )
+            self.session = ort.InferenceSession(onnx_path, providers=_providers)
         except Exception:
             self.session = ort.InferenceSession(
                 onnx_path, providers=["CPUExecutionProvider"]
@@ -108,12 +112,14 @@ def main() -> int:
     ap.add_argument("--dense", default="BAAI/bge-large-en-v1.5",
                     help="fastembed id, or path to a local .onnx (int8)")
     ap.add_argument("--sparse", default="Qdrant/bm42-all-minilm-l6-v2-attentions")
+    ap.add_argument("--provider", choices=["auto", "cpu"], default="auto",
+                    help="auto: CUDA then CPU fallback; cpu: force CPU (int8 dynamic models can be slow on CUDA)")
     args = ap.parse_args()
 
     from fastembed import SparseTextEmbedding, TextEmbedding
 
     if args.dense.lower().endswith(".onnx"):
-        embedder = DirectOnnxEmbedder(args.dense)
+        embedder = DirectOnnxEmbedder(args.dense, provider=args.provider)
         dense_size = len(list(embedder.embed(["probe"]))[0])
     else:
         # CUDA first (T4 in colab), CPU fallback.
