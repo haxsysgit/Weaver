@@ -159,6 +159,13 @@ RULES:
 - Keep the file private-mode 600 when done (chmod 600).
 {extra_notes}
 
+LESSON FROM THE SUNNY REBUILD: people pages MUST have a `## Appearance`
+section when any appearance statements exist (physical description,
+body, face, eyes, hair, skin, scars, form transformations, outfit
+statements). Do not bury them in Biography. Place it between the
+header block and `## Personality`. Statements about someone ELSE's
+appearance or 'appeared/looked at' phrasings stay where they are.
+
 VERIFY BEFORE FINISHING:
 1. Every `- ch` line in the digest appears in your page (diff the full statement lines). This is {n_statements} statements — the page MUST contain all of them.
 2. No statement text was altered (spot-check 10).
@@ -175,6 +182,80 @@ IMPORTANT COST/EXECUTION NOTES:
 Report: statement count written, page size, section structure used, checker result, any digest statements you could not place, and your final output file size."""
 
 
+def build_batch_task(entities: list[str]) -> str:
+    """One task that rebuilds several small pages in one worker context."""
+    parts = [f"Plan 020 tier-1 batch rebuild: rebuild {len(entities)} notebook entity pages from their digests, in {REPO}.",
+             "",
+             "TARGET FILES (overwrite each):"]
+    for entity in entities:
+        kind, slug = entity.split(":", 1)
+        page_path = REPO / ".weaver/knowledge/shadow-slave" / (
+            "people" if kind == "person" else f"{kind}s") / f"{kind}-{slug}.md"
+        digest_path = REPO / ".weaver/knowledge/shadow-slave/digests" / f"{kind}-{slug}.md"
+        n = sum(1 for l in digest_path.read_text().splitlines() if l.startswith("- ch"))
+        parts.append(f"- {page_path}   (digest {digest_path.name}: {n} statements)")
+    parts += ["",
+        "THE SHARED BLOCK (page standard + rules — follow exactly, identical for every page):",
+        "===BEGIN===",
+        "You are rebuilding Shadow Slave notebook entity pages from digest statements.",
+        "",
+        "THE PAGE STANDARD (must follow exactly):",
+        "# Page Standard — the notebook entity-page skeleton (019 slice 4)",
+        "",
+        "Written 2026-08-16 from the wiki structure study",
+        "(`wiki-structure-study.md`, slice 3) + the current notebook reality",
+        "(584 pages, checker rules in `scripts/check_story_notebook.py`). This",
+        "is the contract Plan 020 follows for every rebuild. The novel text +",
+        "reading records are the only sources; the standard only organizes",
+        "existing content. It is a skeleton, not a template: sections that are",
+        "empty for an entity are omitted, never written empty.",
+        STANDARD_SKELETON,
+        "",
+        "RULES:",
+        "- Rebuild ONLY from the digest statements. Never invent, never import wiki claims.",
+        "- Every statement line must keep its exact `- chNNNN (kind): text` format, byte-preserved.",
+        "- Group statements under the standard's section skeleton (## Biography with ### Volume nesting, etc.).",
+        "- Header block per standard: # Name, <!-- entity-id: kind:slug -->, First known, Titles, Overview.",
+        "- The CURRENT page header block is authoritative for titles/aliases: preserve its exact Titles line, alias markers, and entity-id marker.",
+        "- Do NOT invent [[wikilinks]] — plain display names only.",
+        "- Keep all statements. Order: by chapter ascending within each section.",
+        "===END===",
+        "",
+        "WORKFLOW (one entity at a time, strictly sequential):",
+        "1. For EACH entity in the list: read its digest ONCE, plan the section mapping,",
+        "   then write its page (whole file or 2-3 chunks). Move to the next entity.",
+        "   Never re-read a digest you already processed. Never read novels/shadow-slave/* files.",
+        "2. Every page: ALL digest statements exactly once, byte-preserved",
+        "   `- chNNNN (kind): text`; people pages MUST have a ## Appearance section",
+        "   when appearance statements exist (physical description, body, face, eyes,",
+        "   hair, skin, scars, form transformations) placed between header block and",
+        "   ## Personality — statements about someone ELSE's appearance stay where they are.",
+        "3. chmod 600 each file when done.",
+        "",
+        "VERIFY BEFORE FINISHING:",
+        "- For each page: the number of `- ch` lines must equal its digest's statement count",
+        "  (grep -c '^- ch'). Run one checker pass at the end:",
+        "  uv run python scripts/check_story_notebook.py --root .weaver/knowledge/shadow-slave",
+        "  --through 3160 --novel-dir novels/shadow-slave and confirm none of YOUR pages",
+        "  produce NEW errors.",
+        "",
+        "COST/EXECUTION NOTES:",
+        "- You have a hard budget. Read each digest exactly once, write in as few large",
+        "  writes as possible, do not re-read pages or digests.",
+        "- NEVER read novels/shadow-slave/* files. Digests are the only source.",
+        "",
+        "Report: per page — statement count written, page size, sections used, checker",
+        "result; then the total file sizes.",
+    ]
+    return "\n".join(parts)
+
 if __name__ == "__main__":
-    entity = sys.argv[1]
-    print(build_task(entity))
+    args = sys.argv[1:]
+    if args and args[0] == "batch":
+        entities = args[1:]
+        print(build_batch_task(entities))
+    elif args:
+        print(build_task(args[0]))
+    else:
+        print("usage: build_page_task.py person:x | build_page_task.py batch person:a person:b ...")
+        sys.exit(2)
