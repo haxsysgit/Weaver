@@ -20,16 +20,16 @@
 - **Risk:** High if unbounded — full sweep of 500+ pages is a big live
   budget. Mitigation: tier-based execution (top tiers first, lower
   tiers batch), the checker gates shape, the owner reviews per tier.
-- **Budget:** cap $4 (owner-set 2026-08-16). Agent-executed sweep
-  (no key): digest-first, the agent writes pages in its own context —
-  ~$0 of DeepSeek API spend. Any live verification runs (slice 7
-  evals) need the owner's DeepSeek key: measured digest sizes (Kai 32k,
-  Effie 29k, Nephis 89k, Sunny 240k) bound agent context; official
-  V4-Flash pricing (api-docs.deepseek.com 2026-08-16): $0.14 miss /
-  $0.28 out flat until 16:00 UTC 2026-08-16, then off-peak
-  $0.22/$0.66, peak $0.44/$1.32 (peak = 01:00-04:00 + 06:00-10:00
-  UTC). Run live parts before 16:00 UTC if possible, else strictly
-  off-peak. Output capped ~15% of input.
+- **Budget:** cap $3 (owner-set 2026-08-16). ALL of it is live — the
+  executing agent's own model is billed through the DeepSeek key. The
+  sweep is agent-context work: digest-first (one deterministic grep
+  pass per entity bounds the context), the agent writes pages in its
+  own context, measured per slice. Scale: 565 pages x ~10-30k fresh
+  input + ~15% output ≈ $1-2 at flat rates ($0.14 miss / $0.28 out
+  until 16:00 UTC 2026-08-16), ~$1.5-3 off-peak ($0.22/$0.66), peak
+  $0.44/$1.32 (peak = 01:00-04:00 + 06:00-10:00 UTC). Run live parts
+  before 16:00 UTC if possible, else strictly off-peak. Measured
+  digests: Kai 32k, Effie 29k, Nephis 89k, Sunny 240k tokens.
 
 ## Owner direction (locked decisions)
 
@@ -130,25 +130,24 @@
 
 Two usage kinds, per the doctrine:
 
-**(a) Agent-executed (no key) — the default for this plan.** The sweep
-is done by the executing agent in its own context, digest-first: the
+**(a) Agent-context work — the default for this plan.** The sweep
+is done by the executing agent (pi) in its own context — billed
+through the DeepSeek key like every call, NOT free. Digest-first: the
 digest pass (deterministic grep per entity, local, free) produces the
 only source material each page rebuild reads; the shared
 standard/checker block stays byte-identical in the agent's context
-across the whole sweep; batches run in one session. No DeepSeek API
-calls happen during the sweep itself — the agent does the writing.
+across the whole sweep (cache hits ~50x cheaper); batches run in one
+session. Every slice records its usage block (input / output /
+cacheRead / cost) in results.md.
 
 The token figures (Kai 32k, Effie 29k, Nephis 89k, Sunny 240k digests)
-measure agent-context load per page, not API spend. An agent without a
-key can still run this whole plan.
+measure agent-context load per page: ~10-30k fresh input + ~15%
+output per page ≈ $1-2 total at flat rates, $1.5-3 off-peak.
 
-**(b) Agent-executed, live (key required) — only if verification runs
-use the live model.** The 50-question style evals in slice 7, if the
-owner wants them live, run through the executing agent (pi) — weaver
-has no harness for eval runs either; it serves the notebook, it does
-not build or grade it.
-Each such run is unique text (full-miss pricing). Budget:
-agent-executed sweep ~$0 (no key), any live verification runs ~$1-3 at
-off-peak; cap $4 total. Run before 16:00 UTC 2026-08-16 (flat
+**(b) Verification runs (slice 7)** — the 50-question style evals, if
+the owner wants them live, run through the executing agent (pi) —
+weaver has no harness for eval runs either; it serves the notebook, it
+does not build or grade it. Each run is unique text (full-miss
+pricing). Cap $3 total. Run before 16:00 UTC 2026-08-16 (flat
 $0.14/$0.28) if possible; otherwise strictly off-peak ($0.22/$0.66)
 and never during peak (01:00-04:00, 06:00-10:00 UTC).

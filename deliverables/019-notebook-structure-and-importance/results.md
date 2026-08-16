@@ -36,7 +36,7 @@ subagent runs fresh (context: fresh) or always filter by timestamp.
 **Verdict:** full reading 3149-3160 ≈ $0.27 extrapolated — far under the
 $3 cap. Cache hits dominate (5.58M cacheRead vs 168k fresh input per
 run; cacheRead is the bulk of context and costs ~50x less). The
-remaining slices are agent-executed, no key. Live budget for 019 is
+remaining slices are agent-context work (billed through the same key). 019 budget is
 safely inside the cap.
 
 ## Slice 2: reading 3149-3160 — DONE (2026-08-16)
@@ -65,5 +65,5 @@ enters the Fifth Nightmare Seed).
 
 Remaining 019 work: wiki structure study, page standard, importance
 ranking, receipts cache fields, overview articles, structure checker.
-All agent-executed, no key. The notebook checker full run (~5+ min) is
+All agent-context work (billed through the same DeepSeek key). The notebook checker full run (~5+ min) is
 part of the verification floor at close.

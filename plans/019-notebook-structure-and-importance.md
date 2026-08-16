@@ -19,22 +19,20 @@
 - **Risk:** Medium — content decisions (what is "important", how deep
   pages go) are judgment calls; owner gates on the ranking method and
   page standard before the sweep.
-- **Budget:** two kinds of usage, per the arinze-plans cache-hit
-  doctrine. (a) Agent-executed work (no key): the wiki study, page
-  standard, ranking, receipts, overviews, checker — done by the
-  executing agent in its own context, deterministic, no API key. (b)
-  Agent-executed, live (key required): ONLY slice 2 (reading
-  3149-3160) calls the model — and it is the EXECUTING AGENT (pi), not
-  weaver. Weaver has no notebook-writing tool: its chat registry is
-  read-only (semantic_search / read_chapters / find_text /
-  browse_chapters / who_is / lore_path + inspect/packet/export), and
-  `check_story_notebook.py` validates but never writes. Reading is
-  agent work: pi reads the chapter, extracts statements, writes
-  reading/NNNN.json, runs the checker. Small batch (~12 chapters),
-  estimated ~$0.20-0.60 at current flat rates ($0.14 miss / $0.28
-  out) if run before 16:00 UTC 2026-08-16, or off-peak ($0.22/$0.66)
-  after. Each chapter is unique text, so budget it as full-miss. No
-  other slice needs a key. Cap: $4 total.
+- **Budget:** every slice is live — the executing agent's own model
+  (pi runs on the DeepSeek API with the owner's key), so agent work is
+  billed and measured, not free. Per the arinze-plans doctrine:
+  (a) Agent-context work (slices 3-8): wiki study, page standard,
+  ranking, receipts, overviews, checker — pi's own context, measured
+  per slice in the session usage and recorded in results.md. Scale
+  from the slice-2 measurement: ~$0.01-0.05 per agent batch; slices
+  3-8 estimated ~$0.20-0.60 total. (b) Slice 2 (reading 3149-3160)
+  was the live read — already DONE at $0.0585 (measured 2026-08-16,
+  two budgeted subagent runs: $0.0453 + $0.0132). Weaver has no
+  notebook-writing tool (chat registry is read-only; the checker
+  validates but never writes), so all reading is agent work: pi reads
+  the chapter, extracts statements, writes reading/NNNN.json, runs
+  the checker. Cap: $3 total (owner-set 2026-08-16).
 
 ## Owner direction (locked decisions)
 
@@ -145,6 +143,8 @@
 
 ## Budget note
 
-Fake-only, $0. The assistant does the wiki study and standard drafting
-directly (read-only API). No live model calls in this plan. The content
-sweep in Plan 020 is where the live budget lives.
+Agent-context work: pi does the wiki study and standard drafting in
+its own context, billed through the DeepSeek key like every other
+call. Estimated ~$0.20-0.60 for slices 3-8 at flat rates (measured
+scale: ~$0.01-0.05 per batch). The content sweep in Plan 020 is the
+bigger live budget. Total cap $3 (owner-set 2026-08-16).

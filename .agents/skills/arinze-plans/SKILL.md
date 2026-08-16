@@ -104,30 +104,38 @@ cost, and whether it runs fake or live (model calls). Rules:
 
 ## Cache-hit doctrine
 
-Plan executors are agents (pi, codex, claude code, cursor, ...). Two
-kinds of model usage exist, and every plan's Budget must say which
-applies to each slice:
+Plan executors are agents (pi, codex, claude code, cursor, ...), and
+the executing agent's own model IS billed to the provider — pi runs on
+the DeepSeek API with the owner's key. **Agent-executed does not mean
+free; it means the cost is the agent's context, and it must be
+budgeted and measured like any other live spend.** Every plan's Budget
+must say which kind of usage each slice has, with an estimate, and
+close with the measured number (pi session files record per-call
+usage + cost).
 
-1. **Agent-executed work (no key needed)** — the default. The agent
-   does the work in its own context (its own model). Rules:
+1. **Agent-context work** — the default. The agent does the work in
+   its own context; the provider bills every call. Rules:
    - Deterministic prep first: grep / digest / extract locally BEFORE
      the agent reads raw source. Feed digests, not whole corpora —
      context is the cost.
    - Stable shared instructions: identical system/standard block first;
      only the per-request payload varies. Keeps the agent's context
-     reusable across a batch.
+     reusable across a batch (cache hits are ~50x cheaper than misses).
    - Batch same-type work in one session; don't spread one batch over
-     days.
+     days (provider caches live hours-to-days).
+   - Measure per slice: read the run's usage block (input / output /
+     cacheRead / cost) and record it in results.md. Verified scale
+     from the 019 reading: ~$0.01-0.05 per 10-chapter agent batch on
+     deepseek-v4-flash.
 
-2. **Agent-executed, live (key required)** — the agent (weaver or pi)
-   calls the provider THROUGH its own harness: tool calling, context
-   engine, receipts, scope boundary. The key goes to the agent, never
-   to a raw request. This is how reading runs and evals work.
-   Cache rules:
+2. **Agent-executed, live via the product's own harness (weaver)** —
+   the agent calls the provider THROUGH the product's harness: tool
+   calling, context engine, receipts, scope boundary. The key goes to
+   the agent, never to a raw request. This is how reading runs and
+   evals work. Same cache rules as above:
    - Byte-identical shared prefix from token 0; dynamic content after.
-   - Provider caches live hours-to-days: batch continuously.
-   - Verify, don't assume: record `prompt_cache_hit_tokens` /
-     `prompt_cache_miss_tokens` (or provider equivalent) in receipts.
+   - Record `prompt_cache_hit_tokens` / `prompt_cache_miss_tokens`
+     (or provider equivalent) in receipts; prove the hit rate.
    - Check billing windows: peak/off-peak and scheduled price changes
      move the numbers; the Budget states the assumed window.
 
