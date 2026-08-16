@@ -131,3 +131,16 @@ independently after the run: Counter-multiset byte-compare (0 missing,
   out). Sections: Appearance / Personality / Biography (vols 1-13) /
   Aspect + Abilities / Relationships / Trivia. Alias person:cassie
   preserved verbatim.
+
+- **Nephis** (1219 stmts): FULL PASS first try. $0.060 (154k in /
+  78k out). Sections: Appearance / Personality / Biography (vols
+  1-13) / Aspect + Abilities / Relationships / Trivia.
+
+## Tier 0 complete (2026-08-16): 5/5 pages FULL PASS
+
+- Kai $0.029 + Sunny $0.161 + Effie $0.027 + Cassia $0.043 +
+  Nephis $0.060 = **$0.32 total for the main cast**
+  (6,291 statements rebuilt, all byte-identical, all checker-clean,
+  all sections per standard with Appearance included).
+- Next: tier 1 (25 pages — gods/daemons with merged person+power
+  digests, sovereigns, main supporting cast).
