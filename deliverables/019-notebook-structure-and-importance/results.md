@@ -201,3 +201,33 @@ Decision: titles stay in the Titles header line (page standard),
 NOT as alias markers — aliases are id-shaped (person:mongrel) and
 checker-validated as unique page-name variants; epithets are display
 titles. The two concepts stay separate.
+
+## Slice 6: receipts record cache hit/miss — DONE (2026-08-16)
+
+Finding that corrected the plan's premise: the cache fields were
+ALREADY persisted in the experiment/smoke receipt path — ModelUsage
+carries cache_hit_tokens/cache_miss_tokens (types.py:79), deepseek
+_normalize_usage reads prompt_cache_hit/miss_tokens from the API
+response, and experiment.py writes asdict(response.usage) into
+manifest.json + response.json. Old smoke receipts already show the
+keys (as nulls from before the fields existed).
+
+What was actually missing: a pin test. Added to
+tests/test_receipts.py::test_fake_smoke_writes_complete_safe_receipt:
+- every manifest call + response pair carries cache_hit_tokens and
+  cache_miss_tokens, and they match each other;
+- fake provider values asserted (cache_miss_tokens=24, hit=0).
+Provider-side normalization already pinned in
+test_deepseek_provider.py (20/10 round-trip).
+
+Chain now proven end-to-end: DeepSeek API -> _normalize_usage ->
+asdict(usage) -> receipt manifest/response. Live-work plans can read
+hit/miss from receipts.
+
+NOT in scope (recorded, not silently dropped): the chat-turn path
+(web conversations) writes NO usage receipts at all — turn.py /
+chat_runtime / conversation store never touch ModelUsage. That is a
+product-billing feature (per-turn cost tracking), not a plan-proof
+feature; deferred past v1 with the other product backlog items. The
+live work this plan proves (reading, evals) runs through experiment
+receipts + subagent run budgets, both already measured.

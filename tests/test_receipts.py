@@ -115,6 +115,15 @@ async def test_fake_smoke_writes_complete_safe_receipt(tmp_path) -> None:
     assert len(manifest["calls"]) == 3
     assert responses[0]["model_id"] == "deepseek-v4-flash"
     assert responses[2]["model_id"] == "deepseek-v4-flash"
+    # Cache hit/miss must land in the receipt (Plan 019 slice 6): the
+    # live-work plans prove measured hit rate and spend from these
+    # fields, so a receipt without them is a broken receipt.
+    for call, response in zip(manifest["calls"], responses):
+        assert "cache_hit_tokens" in call["usage"]
+        assert "cache_miss_tokens" in call["usage"]
+        assert call["usage"] == response["usage"]
+    assert responses[0]["usage"]["cache_miss_tokens"] == 24
+    assert responses[0]["usage"]["cache_hit_tokens"] == 0
     # Note: reasoning redaction itself is owned by
     # test_sensitive_values_and_reasoning_are_redacted; fake responses
     # never contain reasoning_content, so asserting its absence here
