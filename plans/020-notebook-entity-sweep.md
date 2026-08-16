@@ -73,7 +73,9 @@
    (a) the byte-identical shared block — page standard + checker
    rules + 1-2 sample pages — so the DeepSeek prefix cache hits
    across all rebuild calls (~50x cheaper), and (b) its ONE entity
-   digest (bounded, e.g. Kai 34k tokens). One entity per tier-0/1
+   digest (bounded: Sunny 257k tokens is the biggest; DeepSeek
+   Flash context is 1M, owner guidance: stay below 800k, so even
+   Sunny fits one-shot with ~3x headroom). One entity per tier-0/1
    agent; tier 2-4 batch several small digests per agent. Every run
    records its usage block (input / output / cacheRead / cost).
 
