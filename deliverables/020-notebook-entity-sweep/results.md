@@ -170,3 +170,8 @@ harness's stale flat-rate field.
 
 - **Rain** (239 stmts): FULL PASS. $0.0728 real. Titles "Promise of a
   Distant Sky (True Name)" preserved, all 13 volumes nested.
+
+- **Batch C** (gunlaug 73, revel 60, morgan-of-valor 80, weaver 40,
+  nether 11): 5/5 FULL PASS. $0.0798 real. Weaver page carries the
+  merged person+power digest per the canon 3-way split; nether has
+  Personality/Biography/Aspect/Relationships (no Appearance stmts).
