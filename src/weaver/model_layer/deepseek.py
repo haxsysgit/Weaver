@@ -201,10 +201,13 @@ class DeepSeekProvider:
                     return
 
                 choices = _field(chunk, "choices", ()) or ()
+                # DeepSeek sends usage on the FINAL chunk, which also
+                # carries a choice (finish_reason). Read it regardless
+                # of choices so receipts see cache hit/miss tokens.
+                raw_usage = _field(chunk, "usage")
+                if raw_usage is not None:
+                    usage = self._normalize_usage(raw_usage)
                 if not choices:
-                    raw_usage = _field(chunk, "usage")
-                    if raw_usage is not None:
-                        usage = self._normalize_usage(raw_usage)
                     continue
 
                 choice = choices[0]
