@@ -144,7 +144,9 @@ key can still run this whole plan.
 
 **(b) Agent-executed, live (key required) — only if verification runs
 use the live model.** The 50-question style evals in slice 7, if the
-owner wants them live, run THROUGH weaver (agent harness), not raw.
+owner wants them live, run through the executing agent (pi) — weaver
+has no harness for eval runs either; it serves the notebook, it does
+not build or grade it.
 Each such run is unique text (full-miss pricing). Budget:
 agent-executed sweep ~$0 (no key), any live verification runs ~$1-3 at
 off-peak; cap $4 total. Run before 16:00 UTC 2026-08-16 (flat

@@ -24,12 +24,17 @@
   standard, ranking, receipts, overviews, checker — done by the
   executing agent in its own context, deterministic, no API key. (b)
   Agent-executed, live (key required): ONLY slice 2 (reading
-  3149-3160) calls the model, THROUGH weaver's harness (Reader Trial
-  machinery: tools, context engine, receipts), never raw. Small batch
-  (~12 chapters), estimated ~$0.20-0.60 at current flat rates ($0.14
-  miss / $0.28 out) if run before 16:00 UTC 2026-08-16, or off-peak
-  ($0.22/$0.66) after. Each chapter is unique text, so budget it as
-  full-miss. No other slice needs a key. Cap: $4 total.
+  3149-3160) calls the model — and it is the EXECUTING AGENT (pi), not
+  weaver. Weaver has no notebook-writing tool: its chat registry is
+  read-only (semantic_search / read_chapters / find_text /
+  browse_chapters / who_is / lore_path + inspect/packet/export), and
+  `check_story_notebook.py` validates but never writes. Reading is
+  agent work: pi reads the chapter, extracts statements, writes
+  reading/NNNN.json, runs the checker. Small batch (~12 chapters),
+  estimated ~$0.20-0.60 at current flat rates ($0.14 miss / $0.28
+  out) if run before 16:00 UTC 2026-08-16, or off-peak ($0.22/$0.66)
+  after. Each chapter is unique text, so budget it as full-miss. No
+  other slice needs a key. Cap: $4 total.
 
 ## Owner direction (locked decisions)
 
