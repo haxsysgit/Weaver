@@ -108,3 +108,32 @@ Sample rebuilds (subagent, budgeted, context fresh):
 - No wikilinks invented anywhere; entity-id markers intact.
 
 Cost: agent-context work per the doctrine; measured in the run usage.
+
+## Slice 5: importance ranking — DONE (2026-08-16)
+
+Ranker: `scripts/rank_entities.py` (deterministic, no model calls).
+
+Signals per person over connections.jsonl + reading records: mentions,
+distinct chapters, distinct volumes (arcs.md boundaries), relationship
+degree (distinct people sharing a source statement), first/last
+chapter. Tier thresholds measured from the real distribution + role
+flags for gods/daemons (lore-critical even when rarely named).
+
+Output: `.weaver/knowledge/shadow-slave/importance.md` (private; the
+tier list the owner reviews).
+
+Tiers: 0=5 (Sunny, Nephis, Cassia, Effie, Kai) / 1=24 (main cast +
+gods/daemons incl. Mordret, Jet, Saint, Rain, Anvil, Weaver, Nether,
+Ariel, Storm God) / 2=60 / 3=31 / 4=45. 165 people total.
+
+Fixes found during ranking (the review gate works):
+- aliases were NOT folded: person:cassie (36 mentions) had no page and
+  person:mongrel double-counted into Sunny. The ranker now reads
+  `<!-- alias: -->` markers and folds alias targets into the canonical
+  person.
+- relationship term over-weighted group scenes (1-mention person with 6
+  co-mentioners scored 18); tiers now use mention + chapter thresholds,
+  relationships shown but not decision-driving.
+
+Gate: OWNER REVIEWS the tier list (importance.md) before Plan 020
+spends tier by tier.
