@@ -103,3 +103,26 @@ digest. Rebuilt person-kai.md from 395 digest statements.
   keyed by (chapter, kind) collapsed same-chapter statements and
   falsely reported 4 "altered" texts; the correct check is a Counter
   multiset of full lines (byte-identical 395/395).
+
+## Slice 3: tier-0 rebuilds — Sunny, Effie (2026-08-16)
+
+Pipeline: context:fresh worker + byte-identical shared block + one
+digest (build_page_task.py generates the tasks). Every page verified
+independently after the run: Counter-multiset byte-compare (0 missing,
+0 extra, 0 altered) + section-structure check + checker grep.
+
+- **Sunny** (3604 stmts, 1.15MB digest): FULL PASS after one fix-up.
+  Main rebuild $0.084 (148k in / 114k out); fix-up $0.077 — total
+  $0.161. Sections: Appearance (5 stmts moved from Biography) /
+  Personality / Biography (13 volumes) / Aspect + Abilities /
+  Relationships / Trivia. All 4 kinds preserved (confirmed_fact 3082,
+  interpretation 347, theory 156, character_belief 19).
+- **Effie** (418 stmts): FULL PASS first try. $0.027 (71k in / 39k
+  out). Sections: Appearance / Personality / Biography (vols 2-13 —
+  she first appears ch125) / Aspect + Abilities / Relationships /
+  Trivia.
+- **Lesson baked into the generator:** people pages MUST have an
+  ## Appearance section when appearance statements exist (Sunny's
+  first rebuild buried them in Biography); build_page_task.py now
+  appends that instruction to every task.
+- **Kai pilot** (395 stmts): FULL PASS, $0.029 — see earlier entry.
