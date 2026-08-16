@@ -172,3 +172,32 @@ contract with the SAME field set as the established convention, and
 the connections regeneration step must be a kept script, not
 machinery inside a one-off reading session. build_connections.py now
 exists; the page standard (slice 4) already documents the rich schema.
+
+## Slice 5 follow-up 2: epithet audit — Sovereign of Death corrected (2026-08-16)
+
+Owner corrected the flagged mapping: "Sovereign of Death" is SUNNY
+(his Supreme title), not Nephis. Verified in the records: ch2261
+"Sunny (now the Sovereign of Death, 27)"; 6 records total.
+
+What changed:
+- 3155:04's links list was coincidentally already correct (Sunny
+  linked as sentence subject), so no link edit needed — but the
+  subagent's reasoning note was wrong.
+- REAL gap found: person-sunny.md header listed only "Lost from Light
+  (True Name); Mongrel" while records show Lord of Shadows (103 recs),
+  Master Sunless (40), Sovereign of Death (6), Devil Detective (5).
+  Titles line updated to the full set.
+- person-nephis.md: "Changing Star (True Name; also read as Star of
+  Ruin)" — Star of Ruin confirmed in 4 records (ch93-3155).
+- Epithet spot-check across all records (12 titles): mappings
+  consistent (Raised by Wolves=Effie, Nightingale=Kai, Soul
+  Reaper=Master Jet, Song of the Fallen=Cassia, Queen of Worms=Ki
+  Song, King of Swords=Anvil, King of Nothing=Mordret, Lord of
+  Shadows=Sunny, Lady of Shadows=Revel, Changing Star/Star of
+  Ruin=Nephis). Remaining gaps are old pre-3151 records, not the
+  backfill.
+
+Decision: titles stay in the Titles header line (page standard),
+NOT as alias markers — aliases are id-shaped (person:mongrel) and
+checker-validated as unique page-name variants; epithets are display
+titles. The two concepts stay separate.
