@@ -175,3 +175,6 @@ harness's stale flat-rate field.
   nether 11): 5/5 FULL PASS. $0.0798 real. Weaver page carries the
   merged person+power digest per the canon 3-way split; nether has
   Personality/Biography/Aspect/Relationships (no Appearance stmts).
+
+- **Batch A** (ki-song 88, morgan 100, seishan 100, asterion 92,
+  ananke 99): 5/5 FULL PASS. Real cost pending commit.
