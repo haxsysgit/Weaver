@@ -80,3 +80,26 @@ Owner drove three locked decisions (now in plans/020 as decisions 6-8):
 ### Commands
 
 - `uv run python scripts/build_digests.py` (now skips statement:*)
+
+## Slice 3: tier-0 pilot — Kai page rebuild (2026-08-16)
+
+Pilot of the rebuild pipeline: context:fresh worker + shared block
+(page standard inlined, byte-identical across runs) + one entity
+digest. Rebuilt person-kai.md from 395 digest statements.
+
+- **Result: FULL PASS.** 395/395 statements byte-identical (0 missing,
+  0 extra, 0 duplicates). Page 155KB/456 lines. Standard skeleton:
+  header block (entity-id person:kai, First known ch115, Vital status
+  Alive, Titles, Rank/Tier Awakened->Supreme, Affiliation, Overview)
+  + Appearance / Personality / Biography (12 volume nestings) /
+  Aspect + Abilities / Relationships / Trivia.
+- **Checker:** 0 problems on the page. Pre-existing 612 notebook
+  problems unchanged (missing chapter notes 3148-3160 etc.).
+- **Cost: $0.029** (84,098 input + 33,497 output tokens) — 21x under
+  the $0.60 hard cap.
+- **Side fix:** digests/ dir permissions hardened to 700/600 (checker
+  flags unsafe permissions on private artifacts).
+- **Verification lesson:** the first statement-preservation check
+  keyed by (chapter, kind) collapsed same-chapter statements and
+  falsely reported 4 "altered" texts; the correct check is a Counter
+  multiset of full lines (byte-identical 395/395).
