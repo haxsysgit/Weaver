@@ -144,3 +144,13 @@ independently after the run: Counter-multiset byte-compare (0 missing,
   all sections per standard with Appearance included).
 - Next: tier 1 (25 pages — gods/daemons with merged person+power
   digests, sovereigns, main supporting cast).
+
+## Slice 3: tier-1 batch D — gods/daemons (2026-08-16)
+
+5/5 FULL PASS, checker 0 problems. Real cost $0.0263 (33k in / 19k
+out / 1.0M cacheRead @ off-peak). Pages: ariel (6), storm-god (3),
+hope (2), oblivion (1), prince-of-the-underworld (12) — thin pages,
+sections per standard with empty ones omitted, all chmod 600.
+Cost discipline: balance-checked before dispatch ($4.31), costs
+measured from session files at current off-peak rates, NOT the
+harness's stale flat-rate field.
