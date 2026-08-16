@@ -88,3 +88,23 @@ theme-song/site-nav trivia, hidden-god framing.
 
 Ground truth for the sweep: 584 pages; 6 of 7 gods missing; Nether 282B
 vs Sunny 446KB gap = the work.
+
+## Slice 4: page standard + 3 sample rebuilds — DONE (2026-08-16)
+
+Standard: `page-standard.md` (header block + 5 kind skeletons +
+overview one-call shape, grounded in the wiki study). Key finding:
+the notebook has NO wikilinks — relations live in connections.jsonl +
+reading-record links; the standard forbids inventing [[...]] syntax.
+
+Sample rebuilds (subagent, budgeted, context fresh):
+- person-sunny.md: header block added, ## Volume N -> ### Volume N
+  under new ## Biography. 1794 statements preserved byte-for-byte
+  (verified by count).
+- person-nephis.md: same treatment. 530 statements preserved.
+- power-nightmare-spell.md: full rebuild to the powers skeleton
+  (Mechanics / Users / Notable moments / Origin & Lore), 76 -> 79
+  statements (3 added from reading records, each verified against its
+  source record).
+- No wikilinks invented anywhere; entity-id markers intact.
+
+Cost: agent-context work per the doctrine; measured in the run usage.
