@@ -1,0 +1,118 @@
+# Plan 020: Notebook entity sweep
+
+> **Executor instructions:** The content plan. After 019 ships the page
+> standard, importance ranking, and structure checker, sweep ALL entity
+> pages to standard — fill empty/missing pages, rebuild stale ones from
+> the reading records, create the missing core pages (gods, daemons),
+> and keep the checker green. Subagents do the bulk; the checker is the
+> gate, the owner reviews samples.
+
+## Status
+
+- **Tooling:** repo commands via `uv` (pytest, ruff); subagent fleet for
+  page rebuilds; checker from 019 as the format gate.
+- **State:** drafted (awaiting owner admission).
+- **Depends on:** Plan 019 closed (standard, ranking, checker all land
+  here). Unblocks 018.5 slice 6 (colab re-embed) and then v1.
+- **Priority:** P1
+- **Effort:** L (500+ entity pages across people/powers/items/places/
+  groups)
+- **Risk:** High if unbounded — full sweep of 500+ pages is a big live
+  budget. Mitigation: tier-based execution (top tiers first, lower
+  tiers batch), the checker gates shape, the owner reviews per tier.
+- **Budget:** LIVE. Subagent fleet writing/rebuilding pages from reading
+  records. Estimate: ~500 pages x ~2-4k tokens each ≈ 1-2M tokens for
+  the full sweep; owner sets a spend cap; tiers let the owner stop
+  early if value drops. Live model calls: yes, explicit.
+
+## Owner direction (locked decisions)
+
+1. (2026-08-15) Full sweep of entity pages; characters ranked by
+   importance (019 delivers the ranking).
+2. (2026-08-15) Side plan before coming back to v1; notebook must be
+   current to 3160 before the sweep (019 slice 2 reads 3149-3160).
+3. (2026-08-15) The notebook is too unstructured and missing important
+   lore; the wiki's information ordering is the reference (structure
+   only, never its claims).
+4. (2026-08-15) The owner's acceptance test: "list the 7 daemons and 7
+   gods" resolves in <= 2 tool calls from one overview page.
+
+## Scope
+
+- Rebuild every entity page to the 019 standard, tier by tier:
+  - Tier 0-1 (main cast, gods, daemons, sovereigns): deep rebuilds,
+    individual review.
+  - Tier 2-3 (recurring characters, major powers/places): standard
+    rebuilds, batch review.
+  - Tier 4 (background): lightweight standard pages, checker-gated
+    only.
+- Create the missing core pages (6 of 7 gods; remaining daemons;
+  any entity with reading-record evidence but no page).
+- Verify the overview articles from 019 stay correct after the sweep.
+- Final notebook checker PASS; owner acceptance test on the 7 daemons
+  and 7 gods question; colab re-embed (018.5 slice 6) unblocked.
+
+## Out of scope
+
+- Re-embedding (018.5 slice 6 resumes after this plan closes).
+- Wiki claims: never import wiki content; reading records + novel text
+  are the only sources.
+- Re-ranking characters mid-sweep (ranking is fixed by 019; changes
+  would be a new plan).
+- Reading beyond 3160 (future refresh runs).
+
+## Deterministic proof / verification floor
+
+1. `uv run pytest` green (full suite).
+2. 019's structure checker runs clean: zero empty pages, all required
+   sections, all pages linked from overviews, all characters ranked.
+3. Owner acceptance test: "list the 7 daemons and 7 gods" <= 2 tool
+   calls via the overview page.
+4. Sample review: owner spot-checks N pages per tier against the
+   reading records (novel text is truth; checker only gates shape).
+5. Entity count report: pages before/after, per category; missing
+   pages created; stale pages rebuilt.
+
+## STOP conditions
+
+- Owner's spend cap reached: stop mid-sweep, report what tiers are
+  done, ask to continue or close.
+- Checker finds systematic problems (e.g. the standard produces pages
+  that contradict reading records): stop, fix the standard or the
+  records, don't paper over with checker edits.
+- Any page where reading records conflict with the novel text: the
+  novel wins; flag and ask if the conflict looks like a source error.
+- Private content leaking into public docs.
+- If the sweep reveals the reading records themselves are incomplete
+  for a page (no evidence for required sections), stop and ask: add a
+  reading run or relax the standard — never invent content.
+
+## Slices
+
+1. **Plan and admit** — this doc, learning gate (owner sets the spend
+   cap + tier review cadence), index rows, deliverable scaffold,
+   admission commit.
+2. **Baseline + inventory** — checker (from 019) run: list all pages by
+   tier, empty pages, missing pages, stale pages; the sweep manifest.
+3. **Tier 0-1 deep rebuilds** — main cast + gods + daemons +
+   sovereigns pages rebuilt to standard, individually reviewed, owner
+   spot-checks.
+4. **Tier 2-3 standard rebuilds** — recurring characters + major
+   powers/places in batches; owner batch review.
+5. **Tier 4 lightweight pass** — background pages to the minimal
+   standard, checker-gated.
+6. **Missing-page creation** — gods/daemons and any evidence-backed
+   missing entities created from reading records.
+7. **Overview verification + acceptance** — overview articles checked
+   against swept pages; the 7 daemons + 7 gods acceptance test run
+   through the real tools; notebook checker PASS.
+8. **Close** — full pytest, verification floor, independent review,
+   owner decision, records. Then 018.5 slice 6 (colab re-embed)
+   resumes.
+
+## Budget note
+
+Live and explicit. Tier-gated so the owner can stop early. Subagent
+fleet budget included: the estimate counts the whole fleet, not one
+agent. Deterministic checker runs first (fake-only); only page writing
+is live.

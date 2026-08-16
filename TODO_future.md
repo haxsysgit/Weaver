@@ -111,3 +111,16 @@ Open questions for the owner when this plan is admitted:
   account can still use the app (v1 is BYOK-only).
 - Privacy-light analytics (umami-style) if the public launch is real enough
   to need it.
+
+## Side plans 019 + 020 (drafted 2026-08-15)
+
+The notebook is stale and unstructured (missing gods/daemons pages,
+tiny entity pages, no importance ranking, no overview tables). Split
+into two side plans so they can be done before returning to v1:
+
+- **019** Notebook structure + character importance: finish reading
+  3149-3160, wiki structure study, page standard, importance ranking,
+  overview articles, structure checker. Fake-only.
+- **020** Notebook entity sweep: rebuild all 500+ entity pages tier by
+  tier to the 019 standard, create missing core pages. Live budget,
+  tier-gated. Unblocks 018.5 slice 6 (colab re-embed), then v1.
