@@ -67,3 +67,24 @@ Remaining 019 work: wiki structure study, page standard, importance
 ranking, receipts cache fields, overview articles, structure checker.
 All agent-context work (billed through the same DeepSeek key). The notebook checker full run (~5+ min) is
 part of the verification floor at close.
+
+## Slice 3: wiki structure study — DONE (2026-08-16)
+
+Evidence file: `wiki-structure-study.md` (in this deliverable folder).
+
+Pulled fresh via MediaWiki API: Gods_and_Daemons (18.7KB wikitext),
+Sunny (110KB), Nether (4.8KB), category taxonomy (321 cats, Main
+Character = Sunny only, Volume N Characters 1-12, Legacy Clans).
+
+Findings adopted: overview page shape (lead + summary tables +
+topic-grouped lore, chapter-cited) for one-call answers; infobox field
+set for our page header block; by-power-stage biography; category
+ladder as the importance skeleton (Main → Main Cast → Character →
+volume-tagged → background); lore groups with first_known_chapter.
+
+Rejected: spoiler-broken perspective (post-ch3000), fan duplication
+(322 real articles in 2,891 pages), collapsible spoiler UI, images,
+theme-song/site-nav trivia, hidden-god framing.
+
+Ground truth for the sweep: 584 pages; 6 of 7 gods missing; Nether 282B
+vs Sunny 446KB gap = the work.
