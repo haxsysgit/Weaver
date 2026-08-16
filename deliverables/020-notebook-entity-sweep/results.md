@@ -167,3 +167,6 @@ harness's stale flat-rate field.
   volume nesting (vols 1,3,5-13).
 - **Mordret** (309 stmts): FULL PASS. $0.0705 real. Old page covered
   only ch438-807 (~50 stmts); rebuild carries all 309 (vols 3-13).
+
+- **Rain** (239 stmts): FULL PASS. $0.0728 real. Titles "Promise of a
+  Distant Sky (True Name)" preserved, all 13 volumes nested.
