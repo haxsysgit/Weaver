@@ -98,6 +98,22 @@ def main() -> None:
             continue
         for st in rec.get("statements", []):
             source = st.get("id")
+            # The connection's evidence should mirror the record's own
+            # evidence (line_start 3+, never line 1 which is the chapter
+            # heading). Whole-chapter evidence convention: first
+            # evidence item, or fall back to the heading-safe default.
+            record_evidence = st.get("evidence") or []
+            evidence = [
+                {"chapter": chapter, "location": {"line_start": 3}}
+            ]
+            for ev in record_evidence:
+                if isinstance(ev, dict) and isinstance(ev.get("location"), dict):
+                    location = dict(ev["location"])
+                    location.setdefault("line_start", 3)
+                    evidence = [
+                        {"chapter": chapter, "location": location}
+                    ]
+                    break
             for target in st.get("links", []) or []:
                 if (source, target) in existing:
                     skipped += 1

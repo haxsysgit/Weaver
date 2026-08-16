@@ -108,6 +108,34 @@ def _parser() -> argparse.ArgumentParser:
         "scraping API fallback.",
     )
 
+    notebook = subcommands.add_parser(
+        "notebook",
+        help="Validate the private story notebook.",
+    )
+    notebook_commands = notebook.add_subparsers(dest="notebook_command", required=True)
+    notebook_check = notebook_commands.add_parser(
+        "check",
+        help="Run structural and freshness checks on the notebook.",
+    )
+    notebook_check.add_argument(
+        "--root",
+        type=Path,
+        required=True,
+        help="Private notebook root (.weaver/knowledge/<novel>).",
+    )
+    notebook_check.add_argument(
+        "--through",
+        type=int,
+        default=100,
+        help="Maximum chapter to check deeply (1-3200); global structural "
+        "passes always run (default 100).",
+    )
+    notebook_check.add_argument(
+        "--novel-dir",
+        type=Path,
+        help="Private novel directory, useful for synthetic tests.",
+    )
+
     web = subcommands.add_parser(
         "web",
         help="Serve the local browser chat (live DeepSeek by default).",
@@ -297,6 +325,21 @@ def run(argv: Sequence[str] | None = None) -> int:
             through_chapter=args.through_chapter,
             source=args.source,
         )
+
+    if args.command == "notebook":
+        if args.notebook_command == "check":
+            from .notebook.cli import main as notebook_check_main
+
+            return notebook_check_main(
+                [
+                    "--root",
+                    str(args.root),
+                    "--through",
+                    str(args.through),
+                    "--novel-dir",
+                    str(args.novel_dir),
+                ]
+            )
 
     if args.command == "library":
         try:
