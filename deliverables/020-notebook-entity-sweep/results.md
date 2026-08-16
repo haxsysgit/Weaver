@@ -177,4 +177,4 @@ harness's stale flat-rate field.
   Personality/Biography/Aspect/Relationships (no Appearance stmts).
 
 - **Batch A** (ki-song 88, morgan 100, seishan 100, asterion 92,
-  ananke 99): 5/5 FULL PASS. Real cost pending commit.
+  ananke 99): 5/5 FULL PASS. Real cost $0.0885.
