@@ -137,3 +137,38 @@ Fixes found during ranking (the review gate works):
 
 Gate: OWNER REVIEWS the tier list (importance.md) before Plan 020
 spends tier by tier.
+
+## Slice 5 follow-up: connections stale at 3148 — FIXED (2026-08-16)
+
+Owner caught it: importance.md last-chapter anchors stopped at 3148
+while reading records go to 3160.
+
+Root cause (two layers):
+1. The reading-run machinery used to regenerate connections.jsonl per
+   batch; the standalone generator was never kept. Nothing rebuilt it
+   for 3149-3160.
+2. Worse: the 3151-3160 records were written WITHOUT the rich schema
+   (links/evidence/first_known_chapter/later_corrections) — the
+   subagent followed the bare 3148 reference shape I gave it. 3149-3150
+   had links (100%), 3151-3160 had none.
+
+Fixes:
+- scripts/build_connections.py — the missing standalone generator
+  (append-only, idempotent, checker-contract matched). Appended 419
+  rows for 3149-3160, seq 13923 -> 14342, max chapter 3148 -> 3160.
+- Backfill subagent enriched 3151-3160 (129 statements, 394 entity
+  links, evidence + first_known_chapter added, $0.047). Epithet
+  mapping applied (Raised by Wolves->effie, Nightingale->kai,
+  Soul Reaper->master-jet, Queen of Worms->ki-song, King of
+  Swords->anvil, King of Nothing->mordret, Lady of Shadows->revel).
+  Flagged for review: 3155:04 (Sovereign of Death/Star of Ruin
+  inferred epithets), cap-5 trade-offs on 3151:05 / 3152:13 / 3157:06.
+- rank_entities.py re-run: tier 0 last chapters now ch3160; Revel,
+  Morgan of Valor, Seishan, Nightwalker landed tier 1 with the new
+  mentions.
+
+LESSON (process): the reading run must ship its record-format
+contract with the SAME field set as the established convention, and
+the connections regeneration step must be a kept script, not
+machinery inside a one-off reading session. build_connections.py now
+exists; the page standard (slice 4) already documents the rich schema.
