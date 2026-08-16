@@ -39,6 +39,31 @@ run; cacheRead is the bulk of context and costs ~50x less). The
 remaining slices are agent-executed, no key. Live budget for 019 is
 safely inside the cap.
 
-## Slice 2: reading 3149-3160
+## Slice 2: reading 3149-3160 — DONE (2026-08-16)
 
-Pending (measurement above done; run gated on owner go + $3 cap).
+Two runs, both budgeted subagents, `context: fresh` (per the
+fork-filter lesson):
+
+- **3149-3150** (measurement test, run f0689c3f): 19 statements, $0.0453
+- **3151-3160** (main batch, run 994a9d2f): 129 statements, $0.0132
+
+**Total cost for the full slice: $0.0585 — under the $3 cap by 51x.**
+
+| metric | test (2 ch) | main (10 ch) |
+|---|---|---|
+| model calls | 33 | 20 turns |
+| fresh input | 168.2k | 30.0k |
+| output | 21.7k | 25.4k |
+| cacheRead | 5.58M | 678.7k |
+| cost | $0.0453 | $0.0132 |
+
+Final state: `reading/` has 3160 files (complete to shelf end),
+129 statements for 3151-3160, all verified: sha256 matches source,
+line_count matches, sequential ids, confirmed_fact kinds.
+Volume thirteen ended at ch 3160 ("Prelude to Apocalypse" — Sunny
+enters the Fifth Nightmare Seed).
+
+Remaining 019 work: wiki structure study, page standard, importance
+ranking, receipts cache fields, overview articles, structure checker.
+All agent-executed, no key. The notebook checker full run (~5+ min) is
+part of the verification floor at close.
