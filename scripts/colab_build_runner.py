@@ -98,6 +98,23 @@ class DirectOnnxEmbedder:
         return list(pooled / np.linalg.norm(pooled, axis=1, keepdims=True))
 
 
+class ProgressEmbedder:
+    """Wraps any embedder, printing live progress every N items."""
+
+    def __init__(self, inner, label: str, every: int = 200) -> None:
+        self._inner = inner
+        self._label = label
+        self._every = every
+        self._n = 0
+
+    def embed(self, texts: list[str]) -> list:
+        out = self._inner.embed(texts)
+        self._n += len(texts)
+        if self._n % self._every < len(texts):
+            print(f"{self._label}: {self._n} embedded", flush=True)
+        return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--novel-dir", type=Path, required=True)
@@ -161,6 +178,7 @@ def main() -> int:
 
     print(f"chunks: {len(chunks)}, statements: {len(statements)}, "
           f"dense dim: {dense_size}")
+    embedder = ProgressEmbedder(embedder, "dense embed", every=500)
     args.out.mkdir(parents=True, exist_ok=True)
     client = QdrantClient(path=str(args.out))
     try:
