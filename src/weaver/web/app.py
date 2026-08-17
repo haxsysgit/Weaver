@@ -11,6 +11,7 @@ checks on every mutating route.
 
 import asyncio
 import json
+import os
 from collections import deque
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -57,6 +58,18 @@ EVENT_HEADERS = {
 LOCAL_HOSTS = ("127.0.0.1", "localhost")
 
 
+def _allowed_hosts() -> tuple[str, ...]:
+    """Loopback plus any WEAVER_ALLOWED_HOSTS (comma-separated).
+
+    The v1 box serves behind Tailscale Funnel, whose public hostname
+    (weaver-v1.<tailnet>.ts.net) is not loopback; without this the
+    host guard 403s every real request. Env stays the only way in, so
+    the default posture is unchanged (loopback only).
+    """
+    extra = [h.strip().lower() for h in os.environ.get("WEAVER_ALLOWED_HOSTS", "").split(",") if h.strip()]
+    return LOCAL_HOSTS + tuple(extra)
+
+
 class TurnBody(BaseModel):
     message: str = Field(min_length=1, max_length=MAX_MESSAGE_CHARS)
 
@@ -86,7 +99,7 @@ def _check_local_hostname(request: Request) -> None:
     except ValueError:
         raise HTTPException(status_code=403, detail="host not allowed") from None
 
-    if hostname not in LOCAL_HOSTS:
+    if hostname not in _allowed_hosts():
         raise HTTPException(status_code=403, detail="host not allowed")
     if (
         parsed_host.path
@@ -106,13 +119,30 @@ def _check_local_hostname(request: Request) -> None:
 
 
 def _check_local(request: Request) -> None:
-    """Require an exact loopback host and a matching origin when supplied."""
+    """Require an exact loopback host and a matching origin when supplied.
+
+    The origin check compares host, not scheme: behind Tailscale Funnel
+    the browser sends an https:// origin while the box sees plain HTTP,
+    so an exact scheme compare would 403 every real request. A foreign
+    site still fails because its host never matches.
+    """
     _check_local_hostname(request)
     origin = request.headers.get("origin")
     if not origin:
         raise HTTPException(status_code=403, detail="origin required")
-    expected_origin = f"{request.url.scheme}://{request.headers.get('host', '').lower()}"
-    if origin.rstrip("/").lower() != expected_origin:
+    try:
+        parsed_origin = urlparse(origin)
+        origin_host = parsed_origin.hostname
+    except ValueError:
+        raise HTTPException(status_code=403, detail="origin not allowed") from None
+    if not origin_host:
+        raise HTTPException(status_code=403, detail="origin not allowed")
+    expected_host = request.headers.get("host", "").lower()
+    origin_port = parsed_origin.port
+    origin_host = origin_host.lower()
+    if origin_port is not None and f"{origin_host}:{origin_port}" != expected_host:
+        raise HTTPException(status_code=403, detail="origin not allowed")
+    if origin_port is None and origin_host != expected_host.split(":")[0]:
         raise HTTPException(status_code=403, detail="origin not allowed")
 
 

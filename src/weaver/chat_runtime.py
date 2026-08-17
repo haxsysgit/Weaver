@@ -213,20 +213,31 @@ def _developer_tool_registry() -> ToolRegistry:
 class _LazyDenseEmbedder:
     """bge-large loads ~1.3GB and takes seconds; construct on first search.
 
-    The embedder is the same model the Colab index build used
-    (BAAI/bge-large-en-v1.5, 1024-dim), so runtime query vectors match
-    the stored chunk vectors. threads=4 caps onnxruntime RAM.
+    The embedder must be the same model the index build used, so query
+    vectors match the stored chunk vectors. WEAVER_DENSE_ONNX points at a
+    self-quantized int8 onnx file (the v1 host model); otherwise the
+    fp32 registry model is used. threads=4 caps onnxruntime RAM.
     """
 
-    def __init__(self, model: str = "BAAI/bge-large-en-v1.5") -> None:
+    def __init__(
+        self,
+        model: str = "BAAI/bge-large-en-v1.5",
+        onnx_path: str | None = None,
+    ) -> None:
         self._model = model
+        self._onnx_path = onnx_path or os.environ.get("WEAVER_DENSE_ONNX")
         self._inner = None
 
     def embed(self, texts):
         if self._inner is None:
-            from fastembed import TextEmbedding
+            if self._onnx_path:
+                from .retrieval.onnx_embedder import DirectOnnxEmbedder
 
-            self._inner = TextEmbedding(self._model, threads=4)
+                self._inner = DirectOnnxEmbedder(self._onnx_path)
+            else:
+                from fastembed import TextEmbedding
+
+                self._inner = TextEmbedding(self._model, threads=4)
         return self._inner.embed(texts)
 
 

@@ -146,6 +146,11 @@ def _parser() -> argparse.ArgumentParser:
         help="Use deterministic fake mode; default is live DeepSeek.",
     )
     web.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="Interface to bind (default 127.0.0.1; use 0.0.0.0 in the container).",
+    )
+    web.add_argument(
         "--port",
         type=_port_arg,
         default=8000,
@@ -186,7 +191,7 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
-async def _run_web(state_dir: Path, *, live: bool, port: int) -> int:
+async def _run_web(state_dir: Path, *, live: bool, host: str, port: int) -> int:
     """Serve the local browser chat on 127.0.0.1.
 
     Missing live credentials exit 2 before state is opened or a socket
@@ -205,7 +210,7 @@ async def _run_web(state_dir: Path, *, live: bool, port: int) -> int:
         surface="web",
     )
     try:
-        return await serve_web(runtime, host="127.0.0.1", port=port)
+        return await serve_web(runtime, host=host, port=port)
     finally:
         await runtime.close()
 
@@ -305,7 +310,9 @@ def run(argv: Sequence[str] | None = None) -> int:
     state_root = _state_root()
 
     if args.command == "web":
-        return asyncio.run(_run_web(_chat_state_dir(), live=not args.fake, port=args.port))
+        return asyncio.run(
+            _run_web(_chat_state_dir(), live=not args.fake, host=args.host, port=args.port)
+        )
 
     if args.command == "doctor":
         checks = run_doctor(

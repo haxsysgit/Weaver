@@ -1,0 +1,16 @@
+# weaver v1 on the box: code from GHCR image, state from the /srv/weaver volume.
+# The bundle (novels/, .weaver/) is scp'd to /srv/weaver once; deploys only
+# replace the image, never the state.
+services:
+  weaver:
+    image: ghcr.io/haxsysgit/weaver:latest
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      WEAVER_PROJECT_ROOT: /srv/weaver
+      WEAVER_ALLOWED_HOSTS: weaver.platy-halfmoon.ts.net
+      WEAVER_DENSE_ONNX: /srv/weaver/.weaver/models/int8/model_quantized.onnx
+      DEEPSEEK_KEY: ${DEEPSEEK_KEY:?set DEEPSEEK_KEY in .env on the box}
+    volumes:
+      - /srv/weaver:/srv/weaver

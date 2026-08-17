@@ -1,0 +1,26 @@
+# Private source and state never enter the image; they mount at runtime.
+novels/
+.weaver/
+private/
+runs/
+receipts/
+wiki/
+vault/
+generated-wiki/
+generated-vault/
+.venv/
+node_modules/
+__pycache__/
+*.pyc
+*.zip
+.env
+.git/
+tests/
+docs/
+plans/
+deliverables/
+.agents/
+.aws-sam/
+.firecrawl/
+knowledge.zip
+shadow-slave.zip
