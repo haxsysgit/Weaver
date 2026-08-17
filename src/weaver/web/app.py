@@ -26,14 +26,16 @@ from pydantic import BaseModel, Field
 from weaver.agent.errors import safe_error
 from weaver.agent.turn import REASONING_TIERS, TOOL_BUDGET_TIERS, TurnExitReason
 from weaver.chat_runtime import ChatRuntime
-from weaver.model_layer.deepseek import current_api_key
+from weaver.model_layer.deepseek import current_api_key, current_model_id
 
 MAX_MESSAGE_CHARS = 32_000
 
 # Plan v1 slice 3 (BYOK + device scoping): the browser sends its
-# per-user DeepSeek key and its device id on every request.
+# per-user DeepSeek key and its device id on every request. Plan v1
+# (2026-08-17): the browser may also pick the model per request.
 KEY_HEADER = "x-weaver-key"
 DEVICE_HEADER = "x-device-id"
+MODEL_HEADER = "x-weaver-model"
 
 
 def _device_id(request: Request) -> str:
@@ -45,6 +47,12 @@ def _request_key(request: Request) -> str | None:
     """The per-request DeepSeek key (None when absent/blank)."""
     key = (request.headers.get(KEY_HEADER) or "").strip()
     return key or None
+
+
+def _request_model(request: Request) -> str | None:
+    """The per-request model id (None when absent/blank)."""
+    model = (request.headers.get(MODEL_HEADER) or "").strip()
+    return model or None
 
 FRONTEND_DIST = Path(__file__).with_name("dist")
 
@@ -492,6 +500,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         retry: bool = False,
         regenerate: bool = False,
         request_key: str | None = None,
+        request_model: str | None = None,
     ) -> None:
         """Run the send (or the last-turn retry/regenerate), then emit
         only the validated terminal answer."""
@@ -500,6 +509,14 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         # keeps its own key; None falls back to the server env key.
         key_token = (
             current_api_key.set(request_key) if request_key is not None else None
+        )
+        # Plan v1 (2026-08-17): bind this turn's per-request model. The
+        # runner resolves it at call time; None keeps the runtime
+        # default. Reset alongside the key token below.
+        model_token = (
+            current_model_id.set(request_model)
+            if request_model is not None
+            else None
         )
 
         # Plan 014 live-trial seam: tool activity as SSE 'tool' events so
@@ -652,6 +669,8 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
             stream.finished = True
             if key_token is not None:
                 current_api_key.reset(key_token)
+            if model_token is not None:
+                current_model_id.reset(model_token)
 
     @app.post(
         "/api/conversations/{conversation_id}/turns",
@@ -681,6 +700,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 body.message,
                 stream,
                 request_key=_request_key(request),
+                request_model=_request_model(request),
             )
         )
         # The turn runs server-side; the reply is streamed over the GET
@@ -723,6 +743,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 stream,
                 retry=True,
                 request_key=_request_key(request),
+                request_model=_request_model(request),
             )
         )
         return Response(
@@ -763,6 +784,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 stream,
                 regenerate=True,
                 request_key=_request_key(request),
+                request_model=_request_model(request),
             )
         )
         return Response(

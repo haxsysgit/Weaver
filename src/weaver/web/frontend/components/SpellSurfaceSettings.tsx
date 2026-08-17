@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 
-import { getApiKey, setApiKey } from "../lib/identity";
+import { getApiKey, setApiKey, getModelId, setModelId, isApiKeyDisabled, setApiKeyDisabled, AVAILABLE_MODELS } from "../lib/identity";
 import type { SoulSeaMode } from "./SpellSurfaceSoulSea";
 import { SOUL_SEA_LABELS, SpellSurfaceSoulSea } from "./SpellSurfaceSoulSea";
 import { RUNE_OPTIONS, type RuneMode } from "./SpellSurfaceRunes";
@@ -31,6 +31,7 @@ type SettingsSection =
   | "spoilers"
   | "reading"
   | "customize"
+  | "model"
   | "privacy";
 
 interface SpellSurfaceSettingsProps {
@@ -70,6 +71,7 @@ const SETTINGS_SECTIONS: Array<{
   { hint: "protect future events", id: "spoilers", label: "Spoilers" },
   { hint: "answering depth", id: "reading", label: "Reading tier" },
   { hint: "glass, sea, stars, runes", id: "customize", label: "Customize" },
+  { hint: "key and model", id: "model", label: "Model" },
   { hint: "shortcuts and local data", id: "privacy", label: "Keyboard & privacy" },
 ];
 
@@ -115,6 +117,8 @@ export function SpellSurfaceSettings({
 }: SpellSurfaceSettingsProps) {
   const [preferences, setPreferences] = useState(initial);
   const [apiKey, setApiKeyValue] = useState(getApiKey);
+  const [apiKeyDisabled, setApiKeyDisabledValue] = useState(isApiKeyDisabled);
+  const [modelId, setModelIdValue] = useState(getModelId);
   const [activeSection, setActiveSection] = useState<SettingsSection>("customize");
   const panelRef = useRef<HTMLElement>(null);
   const firstControlRef = useRef<HTMLSelectElement>(null);
@@ -151,7 +155,9 @@ export function SpellSurfaceSettings({
 
   function saveSettings() {
     setApiKey(apiKey);
-    onApiKeyChange?.(getApiKey() !== "");
+    setApiKeyDisabled(apiKeyDisabled);
+    setModelId(modelId);
+    onApiKeyChange?.(getApiKey() !== "" && !isApiKeyDisabled());
     onSave(preferences);
   }
 
@@ -396,8 +402,18 @@ export function SpellSurfaceSettings({
                     <span aria-hidden="true">◎</span>
                     <div><strong>Everything stays on this machine.</strong><p>Threads, reader position, and preferences remain in Weaver&apos;s local library.</p></div>
                   </aside>
+                </section>
+              )}
+
+              {activeSection === "model" && (
+                <section className="lab-settings-section">
+                  <div className="lab-setting-title">
+                    <h3>Model</h3>
+                    <span>Your DeepSeek key and which model answers.</span>
+                  </div>
+
                   <div className="lab-api-key-setting">
-                    <label htmlFor="spell-surface-api-key">Your DeepSeek key</label>
+                    <label htmlFor="spell-surface-api-key">DeepSeek key</label>
                     <input
                       autoCapitalize="none"
                       autoComplete="off"
@@ -410,7 +426,38 @@ export function SpellSurfaceSettings({
                     />
                     <small>
                       Stored only in this browser. Sent with each request and
-                      never saved by the server. Leave empty to remove it.
+                      never saved by the server. Leave empty and save to delete it.
+                    </small>
+                  </div>
+
+                  <label className="lab-check-row">
+                    <input
+                      checked={apiKeyDisabled}
+                      onChange={(event) => setApiKeyDisabledValue(event.target.checked)}
+                      type="checkbox"
+                    />
+                    <span>
+                      Disable this key
+                      <small>Fall back to the library key when yours is unavailable.</small>
+                    </span>
+                  </label>
+
+                  <div className="lab-api-key-setting">
+                    <label htmlFor="spell-surface-model">Model</label>
+                    <select
+                      id="spell-surface-model"
+                      onChange={(event) => setModelIdValue(event.target.value)}
+                      value={modelId}
+                    >
+                      {AVAILABLE_MODELS.map((model) => (
+                        <option key={model.id} value={model.id}>
+                          {model.label}
+                        </option>
+                      ))}
+                    </select>
+                    <small>
+                      DeepSeek V4 Flash is fast and cheap; V4 Pro is the
+                      strongest model. Your choice is stored in this browser.
                     </small>
                   </div>
                 </section>

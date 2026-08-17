@@ -24,6 +24,7 @@ from weaver.agent.turn import (
 )
 from weaver.agent.tools import ToolExecutionPolicy, ToolRegistry
 from weaver.model_layer import ModelLayer, ModelSpec
+from weaver.model_layer.deepseek import current_model_id
 from weaver.model_layer.types import ReasoningEffort
 
 from .assembler import ContextAssembler
@@ -139,11 +140,29 @@ class ConversationRunner:
         )
         history = _items_to_messages(items)
 
+        # Plan v1 (2026-08-17): per-turn model selection. The request
+        # layer sets current_model_id from X-Weaver-Model; resolve the
+        # ModelSpec here so the default runtime model is used when the
+        # header is absent or names an unknown model.
+        model = self._model
+        requested = current_model_id.get()
+        if requested and requested != model.model_id:
+            try:
+                model = self._model_layer.get_model(
+                    model.provider_id, requested
+                )
+            except Exception:
+                logger.warning(
+                    "unknown requested model %r, falling back to %s",
+                    requested,
+                    model.model_id,
+                )
+
         result = await run_turn(
             session_id=conversation_id,
             turn_id=turn_id,
             model_layer=self._model_layer,
-            model=self._model,
+            model=model,
             system_prompt=self._system_prompt,
             history=history,
             tool_registry=self._tool_registry,

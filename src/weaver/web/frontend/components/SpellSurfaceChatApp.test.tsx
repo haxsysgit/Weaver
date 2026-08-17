@@ -81,7 +81,7 @@ describe("first Nightmare setup", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Enter later" }));
     expect(localStorage.getItem(FIRST_NIGHTMARE_STORAGE_KEY)).toBe("deferred");
     expect(screen.queryByRole("dialog", { name: "First Nightmare setup" })).toBeNull();
-    expect(screen.getByRole("button", { name: "DeepSeek key · missing" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Model and key settings" })).toBeVisible();
 
   }, 10_000);
 
@@ -118,21 +118,26 @@ describe("first Nightmare setup", () => {
     expect(screen.queryByRole("dialog", { name: "First Nightmare setup" })).toBeNull();
     expect(
       screen.getByRole("button", {
-        name: "DeepSeek key · stored in this browser",
+        name: "Model and key settings",
       }),
     ).toBeVisible();
   });
 
-  it("reopens at the key explanation from the missing-key status", async () => {
-    localStorage.setItem(FIRST_NIGHTMARE_STORAGE_KEY, "deferred");
+  it("opens settings with the model section from the rail footer", async () => {
+    localStorage.setItem(FIRST_NIGHTMARE_STORAGE_KEY, "completed");
+    localStorage.setItem("weaver_api_key", "owner-test-key");
     render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
 
-    fireEvent.click(screen.getByRole("button", { name: "DeepSeek key · missing" }));
+    fireEvent.click(screen.getByRole("button", { name: "Model and key settings" }));
 
     const dialog = await screen.findByRole("dialog", {
-      name: "First Nightmare setup",
+      name: "Soul Sea settings",
     });
-    expect(within(dialog).getByText("Bring your DeepSeek key")).toBeVisible();
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Model" }),
+    );
+    expect(within(dialog).getByLabelText("DeepSeek key")).toBeVisible();
+    expect(within(dialog).getByDisplayValue("DeepSeek V4 Flash")).toBeVisible();
   });
 });
 

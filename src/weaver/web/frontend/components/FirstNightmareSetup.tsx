@@ -16,7 +16,7 @@ interface FirstNightmareSetupProps {
   initialStep?: FirstNightmareStep;
   onComplete: () => void;
   onDefer: () => void;
-  onKeyStored: () => void;
+  onKeyStored?: () => void;
 }
 
 const FOCUSABLE_CONTROLS = [
@@ -99,7 +99,7 @@ export function FirstNightmareSetup({
       setApiKey(apiKey);
       setFirstNightmareState("completed");
       setStorageError(false);
-      onKeyStored();
+      onKeyStored?.();
       setStep(4);
     } catch {
       setStorageError(true);

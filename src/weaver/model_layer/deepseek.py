@@ -32,6 +32,14 @@ current_api_key: ContextVar[str | None] = ContextVar(
     "weaver_current_api_key", default=None
 )
 
+# Plan v1 (2026-08-17): per-turn model selection. The browser sends
+# X-Weaver-Model; the request layer sets this contextvar (task-local like
+# the key) and the runner resolves the ModelSpec at call time, falling
+# back to the runtime default when absent/unknown.
+current_model_id: ContextVar[str | None] = ContextVar(
+    "weaver_current_model_id", default=None
+)
+
 DEEPSEEK_FLASH = ModelSpec(
     provider_id="deepseek",
     model_id="deepseek-v4-flash",
@@ -39,7 +47,14 @@ DEEPSEEK_FLASH = ModelSpec(
     default_output_tokens=4096,
     supports_reasoning=True,
 )
-DEEPSEEK_MODELS = (DEEPSEEK_FLASH,)
+DEEPSEEK_PRO = ModelSpec(
+    provider_id="deepseek",
+    model_id="deepseek-v4-pro",
+    api_family="openai-chat-completions",
+    default_output_tokens=8192,
+    supports_reasoning=True,
+)
+DEEPSEEK_MODELS = (DEEPSEEK_FLASH, DEEPSEEK_PRO)
 
 
 def _field(value: Any, name: str, default: Any = None) -> Any:

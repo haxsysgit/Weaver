@@ -14,7 +14,6 @@ import { runeMessageForActivity } from "../lib/runePhases";
 import {
   shouldOpenFirstNightmare,
 } from "../lib/firstNightmare";
-import { getApiKey } from "../lib/identity";
 import { Composer, type ReadingTier } from "./Composer";
 import {
   FirstNightmareSetup,
@@ -173,7 +172,6 @@ export function SpellSurfaceChatApp({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [setupOpen, setSetupOpen] = useState(shouldOpenFirstNightmare);
   const [setupStep, setSetupStep] = useState<FirstNightmareStep>(1);
-  const [hasApiKey, setHasApiKey] = useState(() => getApiKey() !== "");
   const [railOpen, setRailOpen] = useState(false);
   const [desktopRailCollapsed, setDesktopRailCollapsed] = useState(false);
   const [archivedOpen, setArchivedOpen] = useState(false);
@@ -327,15 +325,6 @@ export function SpellSurfaceChatApp({
     setDesktopRailCollapsed(true);
   }
 
-  function openKeyStatus() {
-    if (hasApiKey) {
-      void openSettings();
-      return;
-    }
-    setSetupStep(2);
-    setSetupOpen(true);
-  }
-
   function closeSetup() {
     setSetupOpen(false);
     window.setTimeout(() => composerRef.current?.focus(), 0);
@@ -432,13 +421,11 @@ export function SpellSurfaceChatApp({
         archivedOpen={archivedOpen}
         collapsed={desktopRailCollapsed}
         drawerOpen={railOpen}
-        hasApiKey={hasApiKey}
         onArchive={(threadId) => toggleSet(setArchivedIds, threadId)}
         onClose={closeRail}
         onCreate={() => void createThread()}
         onDelete={(threadId) => void chat.deleteConversation(threadId)}
         onOpen={openRail}
-        onOpenKeySetup={openKeyStatus}
         onOpenSettings={() => void openSettings()}
         onPin={(threadId) => toggleSet(setPinnedIds, threadId)}
         onRename={renameThread}
@@ -456,17 +443,6 @@ export function SpellSurfaceChatApp({
         <div className="lab-chat-controls">
           <button aria-controls="spell-surface-rail" aria-expanded={railOpen} aria-label="Open threads" className="lab-mobile-rail" onClick={openRail} ref={railOpenerRef} type="button">
             <RailOpenIcon />
-          </button>
-          <button
-            aria-label={hasApiKey
-              ? "DeepSeek key stored in this browser"
-              : "DeepSeek key missing from this browser"}
-            className={`lab-key-status-header ${hasApiKey ? "stored" : "missing"}`}
-            onClick={openKeyStatus}
-            type="button"
-          >
-            <span aria-hidden="true" />
-            {hasApiKey ? "key stored" : "key missing"}
           </button>
           <button aria-label="Open Soul Sea settings from header" className="lab-header-settings" onClick={() => void openSettings()} type="button">
             <SettingsIcon />
@@ -549,7 +525,6 @@ export function SpellSurfaceChatApp({
       {settingsOpen && (
         <SpellSurfaceSettings
           initial={preferences}
-          onApiKeyChange={setHasApiKey}
           onClose={() => setSettingsOpen(false)}
           onSave={(nextPreferences) => {
             setPreferences(nextPreferences);
@@ -566,7 +541,6 @@ export function SpellSurfaceChatApp({
           initialStep={setupStep}
           onComplete={closeSetup}
           onDefer={closeSetup}
-          onKeyStored={() => setHasApiKey(true)}
         />
       )}
 

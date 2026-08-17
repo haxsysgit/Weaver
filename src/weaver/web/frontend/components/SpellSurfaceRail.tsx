@@ -81,13 +81,11 @@ interface SpellSurfaceRailProps {
   archivedOpen: boolean;
   collapsed: boolean;
   drawerOpen: boolean;
-  hasApiKey?: boolean;
   onArchive: (threadId: string) => void;
   onClose: () => void;
   onCreate: () => void;
   onDelete: (threadId: string) => void;
   onOpen: () => void;
-  onOpenKeySetup?: () => void;
   onOpenSettings: () => void;
   onPin: (threadId: string) => void;
   onRename: (threadId: string, title: string) => void;
@@ -102,13 +100,11 @@ export function SpellSurfaceRail({
   archivedOpen,
   collapsed,
   drawerOpen,
-  hasApiKey = true,
   onArchive,
   onClose,
   onCreate,
   onDelete,
   onOpen,
-  onOpenKeySetup,
   onOpenSettings,
   onPin,
   onRename,
@@ -400,17 +396,15 @@ export function SpellSurfaceRail({
 
       <footer className="lab-rail-footer">
         <button
-          aria-label={hasApiKey
-            ? "DeepSeek key · stored in this browser"
-            : "DeepSeek key · missing"}
-          className={`lab-key-status ${hasApiKey ? "stored" : "missing"}`}
-          onClick={hasApiKey ? onOpenSettings : onOpenKeySetup ?? onOpenSettings}
+          aria-label="Model and key settings"
+          className="lab-key-status"
+          onClick={onOpenSettings}
           type="button"
         >
           <span aria-hidden="true" className="lab-key-status-dot" />
           <span>
-            <strong>DeepSeek key</strong>
-            <small>{hasApiKey ? "stored in this browser" : "missing"}</small>
+            <strong>Model &amp; key</strong>
+            <small>open settings</small>
           </span>
         </button>
         <button aria-label="Open Soul Sea settings" onClick={onOpenSettings} type="button">
