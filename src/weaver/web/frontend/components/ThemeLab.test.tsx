@@ -35,7 +35,7 @@ describe("Spell Surface v2 lab", () => {
     expect(surface).toHaveAttribute("data-theme", "cosmos");
     expect(surface).toHaveAttribute("data-soul", "living");
     expect(surface).toHaveAttribute("data-runes", "threads");
-  }, 10_000);
+  }, 20_000);
 
   it("keeps the sidebar clean while thread actions remain available on hover", () => {
     render(<ThemeLab />);

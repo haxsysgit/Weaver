@@ -1754,11 +1754,10 @@ a:focus-visible {
     inset: 0;
     display: block;
     border: 0;
-    background: rgba(2, 2, 4, 0.7);
+    background: rgba(0, 0, 3, 0.72);
     opacity: 0;
     pointer-events: none;
-    transition: opacity var(--motion-smooth);
-    backdrop-filter: blur(3px);
+    transition: opacity var(--motion-smooth) var(--ease-weave);
   }
 
   .drawer-scrim-open {

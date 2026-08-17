@@ -11,7 +11,15 @@ import { useChatController } from "../hooks/useChatController";
 import type { ChatApi, ConversationSummary, UserPreferences } from "../lib/chatApi";
 import { weaverProduct } from "../lib/product";
 import { runeMessageForActivity } from "../lib/runePhases";
+import {
+  shouldOpenFirstNightmare,
+} from "../lib/firstNightmare";
+import { getApiKey } from "../lib/identity";
 import { Composer, type ReadingTier } from "./Composer";
+import {
+  FirstNightmareSetup,
+  type FirstNightmareStep,
+} from "./FirstNightmareSetup";
 import { RailOpenIcon, SettingsIcon } from "./Icons";
 import { Message } from "./Message";
 import { RecoveryPanel } from "./RecoveryPanel";
@@ -163,6 +171,9 @@ export function SpellSurfaceChatApp({
   const chat = useChatController(api, weaverProduct);
   const [preferences, setPreferences] = useState(loadInitialPreferences);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [setupOpen, setSetupOpen] = useState(shouldOpenFirstNightmare);
+  const [setupStep, setSetupStep] = useState<FirstNightmareStep>(1);
+  const [hasApiKey, setHasApiKey] = useState(() => getApiKey() !== "");
   const [railOpen, setRailOpen] = useState(false);
   const [desktopRailCollapsed, setDesktopRailCollapsed] = useState(false);
   const [archivedOpen, setArchivedOpen] = useState(false);
@@ -174,6 +185,7 @@ export function SpellSurfaceChatApp({
   const [announcementKey, setAnnouncementKey] = useState(0);
   const [coreWakeKey, setCoreWakeKey] = useState(0);
   const composerRef = useRef<HTMLTextAreaElement>(null);
+  const railOpenerRef = useRef<HTMLButtonElement>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
   const previousTurnActive = useRef(false);
   const answerPhaseAnnounced = useRef(false);
@@ -198,15 +210,28 @@ export function SpellSurfaceChatApp({
         event.preventDefault();
         void openSettings();
       }
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && !setupOpen) {
         setSettingsOpen(false);
-        setRailOpen(false);
+        if (railOpen) {
+          closeRail();
+        }
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  });
+  }, [railOpen, setupOpen]);
+
+  useEffect(() => {
+    if (!railOpen) {
+      return;
+    }
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [railOpen]);
 
   useEffect(() => {
     const transcript = transcriptRef.current;
@@ -296,9 +321,24 @@ export function SpellSurfaceChatApp({
   function closeRail() {
     if (window.innerWidth < 768) {
       setRailOpen(false);
+      window.setTimeout(() => railOpenerRef.current?.focus(), 0);
       return;
     }
     setDesktopRailCollapsed(true);
+  }
+
+  function openKeyStatus() {
+    if (hasApiKey) {
+      void openSettings();
+      return;
+    }
+    setSetupStep(2);
+    setSetupOpen(true);
+  }
+
+  function closeSetup() {
+    setSetupOpen(false);
+    window.setTimeout(() => composerRef.current?.focus(), 0);
   }
 
   async function createThread() {
@@ -376,7 +416,7 @@ export function SpellSurfaceChatApp({
       <SpellBackground
         className="lab-spell-background"
         mode="alive"
-        paused={settingsOpen}
+        paused={settingsOpen || setupOpen}
         threadAlpha={threadAlpha}
       />
       <div aria-hidden="true" className="lab-galactic-band" />
@@ -392,11 +432,13 @@ export function SpellSurfaceChatApp({
         archivedOpen={archivedOpen}
         collapsed={desktopRailCollapsed}
         drawerOpen={railOpen}
+        hasApiKey={hasApiKey}
         onArchive={(threadId) => toggleSet(setArchivedIds, threadId)}
         onClose={closeRail}
         onCreate={() => void createThread()}
         onDelete={(threadId) => void chat.deleteConversation(threadId)}
         onOpen={openRail}
+        onOpenKeySetup={openKeyStatus}
         onOpenSettings={() => void openSettings()}
         onPin={(threadId) => toggleSet(setPinnedIds, threadId)}
         onRename={renameThread}
@@ -406,10 +448,25 @@ export function SpellSurfaceChatApp({
         threads={threads}
       />
 
-      <main className="lab-chat-main">
+      <main
+        aria-hidden={railOpen ? true : undefined}
+        className="lab-chat-main"
+        inert={railOpen}
+      >
         <div className="lab-chat-controls">
-          <button aria-label="Open threads" className="lab-mobile-rail" onClick={openRail} type="button">
+          <button aria-controls="spell-surface-rail" aria-expanded={railOpen} aria-label="Open threads" className="lab-mobile-rail" onClick={openRail} ref={railOpenerRef} type="button">
             <RailOpenIcon />
+          </button>
+          <button
+            aria-label={hasApiKey
+              ? "DeepSeek key stored in this browser"
+              : "DeepSeek key missing from this browser"}
+            className={`lab-key-status-header ${hasApiKey ? "stored" : "missing"}`}
+            onClick={openKeyStatus}
+            type="button"
+          >
+            <span aria-hidden="true" />
+            {hasApiKey ? "key stored" : "key missing"}
           </button>
           <button aria-label="Open Soul Sea settings from header" className="lab-header-settings" onClick={() => void openSettings()} type="button">
             <SettingsIcon />
@@ -487,11 +544,12 @@ export function SpellSurfaceChatApp({
         </footer>
       </main>
 
-      {railOpen && <button aria-label="Close thread drawer" className="lab-rail-scrim" onClick={() => setRailOpen(false)} type="button" />}
+      {railOpen && <button aria-label="Close thread drawer" className="lab-rail-scrim" onClick={closeRail} type="button" />}
 
       {settingsOpen && (
         <SpellSurfaceSettings
           initial={preferences}
+          onApiKeyChange={setHasApiKey}
           onClose={() => setSettingsOpen(false)}
           onSave={(nextPreferences) => {
             setPreferences(nextPreferences);
@@ -500,6 +558,15 @@ export function SpellSurfaceChatApp({
             announce("[Your soul answers the change.]");
             void api.savePreferences(toApiPreferences(nextPreferences));
           }}
+        />
+      )}
+
+      {setupOpen && (
+        <FirstNightmareSetup
+          initialStep={setupStep}
+          onComplete={closeSetup}
+          onDefer={closeSetup}
+          onKeyStored={() => setHasApiKey(true)}
         />
       )}
 

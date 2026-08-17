@@ -1,7 +1,13 @@
-export function FateWeavingLoader() {
+interface FateWeavingLoaderProps {
+  label?: string;
+}
+
+export function FateWeavingLoader({
+  label = "Weaver is weaving an answer",
+}: FateWeavingLoaderProps = {}) {
   return (
     <div
-      aria-label="Weaver is weaving an answer"
+      aria-label={label}
       className="fate-weaving-loader"
       role="status"
     >

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 
+import { getApiKey, setApiKey } from "../lib/identity";
 import type { SoulSeaMode } from "./SpellSurfaceSoulSea";
 import { SOUL_SEA_LABELS, SpellSurfaceSoulSea } from "./SpellSurfaceSoulSea";
 import { RUNE_OPTIONS, type RuneMode } from "./SpellSurfaceRunes";
@@ -34,6 +35,7 @@ type SettingsSection =
 
 interface SpellSurfaceSettingsProps {
   initial: LabPreferences;
+  onApiKeyChange?: (hasApiKey: boolean) => void;
   onClose: () => void;
   onSave: (preferences: LabPreferences) => void;
 }
@@ -107,10 +109,12 @@ const SURFACE_THEMES: Array<{
 
 export function SpellSurfaceSettings({
   initial,
+  onApiKeyChange,
   onClose,
   onSave,
 }: SpellSurfaceSettingsProps) {
   const [preferences, setPreferences] = useState(initial);
+  const [apiKey, setApiKeyValue] = useState(getApiKey);
   const [activeSection, setActiveSection] = useState<SettingsSection>("customize");
   const panelRef = useRef<HTMLElement>(null);
   const firstControlRef = useRef<HTMLSelectElement>(null);
@@ -143,6 +147,12 @@ export function SpellSurfaceSettings({
     value: LabPreferences[K],
   ) {
     setPreferences((current) => ({ ...current, [key]: value }));
+  }
+
+  function saveSettings() {
+    setApiKey(apiKey);
+    onApiKeyChange?.(getApiKey() !== "");
+    onSave(preferences);
   }
 
   function selectVolume(volumeNumber: number) {
@@ -386,6 +396,23 @@ export function SpellSurfaceSettings({
                     <span aria-hidden="true">◎</span>
                     <div><strong>Everything stays on this machine.</strong><p>Threads, reader position, and preferences remain in Weaver&apos;s local library.</p></div>
                   </aside>
+                  <div className="lab-api-key-setting">
+                    <label htmlFor="spell-surface-api-key">Your DeepSeek key</label>
+                    <input
+                      autoCapitalize="none"
+                      autoComplete="off"
+                      id="spell-surface-api-key"
+                      onChange={(event) => setApiKeyValue(event.target.value)}
+                      placeholder="sk-..."
+                      spellCheck={false}
+                      type="password"
+                      value={apiKey}
+                    />
+                    <small>
+                      Stored only in this browser. Sent with each request and
+                      never saved by the server. Leave empty to remove it.
+                    </small>
+                  </div>
                 </section>
               )}
             </div>
@@ -394,7 +421,7 @@ export function SpellSurfaceSettings({
 
         <footer className="lab-settings-actions">
           <button onClick={onClose} type="button">Leave unchanged</button>
-          <button className="primary" onClick={() => onSave(preferences)} type="button">Apply settings</button>
+          <button className="primary" onClick={saveSettings} type="button">Apply settings</button>
         </footer>
       </section>
     </div>

@@ -101,8 +101,8 @@ export function SettingsModal({ onClose, onSave, initial }: SettingsModalProps) 
               value={apiKey}
             />
             <span className="settings-hint">
-              Stored only in this browser. Sent per request, never saved
-              by the server. Leave empty to use the server&apos;s key.
+              Stored only in this browser. Sent with each request and never
+              saved by the server. Leave empty to remove it.
             </span>
           </fieldset>
 

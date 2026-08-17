@@ -4,7 +4,11 @@
 
 - Admitted 2026-08-17 by owner (parallel to v1's remaining backend slices,
   disjoint frontend files).
-- Execution NOT started (owner requested handoff prompt only).
+- Slice 2 copy approved by the owner on 2026-08-17.
+- Animation direction locked by the owner on 2026-08-17: use the existing
+  motion tokens and Spell language, then make a more polished setup-specific
+  particle-fragment rune instead of copying the current animation.
+- Slices 3-6 may proceed. The final owner decision remains pending.
 
 ## Checkpoint walk 020 -> 021 (per arinze-plans skill)
 

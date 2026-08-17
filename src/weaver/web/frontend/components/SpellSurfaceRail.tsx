@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   ArchiveIcon,
@@ -81,11 +81,13 @@ interface SpellSurfaceRailProps {
   archivedOpen: boolean;
   collapsed: boolean;
   drawerOpen: boolean;
+  hasApiKey?: boolean;
   onArchive: (threadId: string) => void;
   onClose: () => void;
   onCreate: () => void;
   onDelete: (threadId: string) => void;
   onOpen: () => void;
+  onOpenKeySetup?: () => void;
   onOpenSettings: () => void;
   onPin: (threadId: string) => void;
   onRename: (threadId: string, title: string) => void;
@@ -100,11 +102,13 @@ export function SpellSurfaceRail({
   archivedOpen,
   collapsed,
   drawerOpen,
+  hasApiKey = true,
   onArchive,
   onClose,
   onCreate,
   onDelete,
   onOpen,
+  onOpenKeySetup,
   onOpenSettings,
   onPin,
   onRename,
@@ -121,6 +125,27 @@ export function SpellSurfaceRail({
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
     () => new Set(["Yesterday", "Others"]),
   );
+  const [mobileLayout, setMobileLayout] = useState(() => {
+    return window.matchMedia("(max-width: 767px)").matches;
+  });
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 767px)");
+    function syncMobileLayout(event: MediaQueryListEvent) {
+      setMobileLayout(event.matches);
+    }
+
+    setMobileLayout(mediaQuery.matches);
+    mediaQuery.addEventListener("change", syncMobileLayout);
+    return () => mediaQuery.removeEventListener("change", syncMobileLayout);
+  }, []);
+
+  useEffect(() => {
+    if (mobileLayout && drawerOpen) {
+      closeButtonRef.current?.focus();
+    }
+  }, [drawerOpen, mobileLayout]);
 
   const visibleThreads = useMemo(() => {
     return threads
@@ -129,7 +154,7 @@ export function SpellSurfaceRail({
   }, [archivedOpen, threads]);
   const threadGroups = groupThreads(visibleThreads, grouping);
   const archivedCount = threads.filter((thread) => thread.archived).length;
-  const railVisible = drawerOpen || !collapsed;
+  const railVisible = mobileLayout ? drawerOpen : !collapsed;
 
   function startRename(thread: LabThread) {
     setRenamingId(thread.id);
@@ -233,7 +258,15 @@ export function SpellSurfaceRail({
   }
 
   return (
-    <aside className="lab-rail">
+    <aside
+      aria-hidden={!railVisible}
+      aria-label={mobileLayout ? "Threads" : undefined}
+      aria-modal={mobileLayout && drawerOpen ? true : undefined}
+      className="lab-rail"
+      id="spell-surface-rail"
+      inert={!railVisible}
+      role={mobileLayout ? "dialog" : undefined}
+    >
       <header className="lab-brand">
         <span className="lab-brand-mark"><WeaverMark compact /></span>
         <span><strong>weaver</strong></span>
@@ -241,6 +274,7 @@ export function SpellSurfaceRail({
           aria-label={railVisible ? "Close threads" : "Open threads"}
           className="lab-rail-close"
           onClick={railVisible ? onClose : onOpen}
+          ref={closeButtonRef}
           type="button"
         >
           {railVisible ? <RailCloseIcon /> : <RailOpenIcon />}
@@ -365,6 +399,20 @@ export function SpellSurfaceRail({
       </button>
 
       <footer className="lab-rail-footer">
+        <button
+          aria-label={hasApiKey
+            ? "DeepSeek key · stored in this browser"
+            : "DeepSeek key · missing"}
+          className={`lab-key-status ${hasApiKey ? "stored" : "missing"}`}
+          onClick={hasApiKey ? onOpenSettings : onOpenKeySetup ?? onOpenSettings}
+          type="button"
+        >
+          <span aria-hidden="true" className="lab-key-status-dot" />
+          <span>
+            <strong>DeepSeek key</strong>
+            <small>{hasApiKey ? "stored in this browser" : "missing"}</small>
+          </span>
+        </button>
         <button aria-label="Open Soul Sea settings" onClick={onOpenSettings} type="button">
           <SettingsIcon />
           <span><strong>Settings</strong><small>{readerStatus} · runes · appearance</small></span>
