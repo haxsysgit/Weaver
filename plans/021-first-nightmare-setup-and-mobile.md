@@ -12,8 +12,8 @@
 ## Status
 
 - **Tooling:** repo commands via `uv` (pytest, ruff, npm build, vitest).
-- **State:** admitted 2026-08-17 (owner admission; runs parallel to v1's
-  remaining backend slices under the parallel rules).
+- **State:** closed 2026-08-17 (owner accepted after real-phone review;
+  decision.md records it).
 - **Depends on:** v1 plan (numberless) — 021 runs in parallel with v1's
   remaining backend slices (docker/CI/funnel/smoke) under the parallel
   rules: disjoint files (frontend only), serial gates (021 waits at its
