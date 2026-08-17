@@ -244,15 +244,22 @@ async def test_large_preview_stays_within_agent_result_limit(tmp_path) -> None:
     assert len(json.dumps(dispatched.result)) < 12_000
 
 
-def test_live_environment_service_requires_firecrawl_key(
+def test_live_environment_service_uses_direct_source_without_firecrawl_key(
     tmp_path,
     monkeypatch,
 ) -> None:
+    # Plan 018.5 made the direct HTTP source the default: a live service
+    # must work with no firecrawl key at all. The firecrawl fallback still
+    # demands one.
     monkeypatch.setenv("WEAVER_PROJECT_ROOT", str(tmp_path))
     monkeypatch.delenv("FIRECRAWL_API_KEY", raising=False)
 
+    # Default live source (direct) needs no key.
+    service_from_environment(live_source=True)
+
+    # Explicit firecrawl fallback still requires a key.
     with pytest.raises(CorpusError) as captured:
-        service_from_environment(live_source=True)
+        service_from_environment(live_source=True, source_name="firecrawl")
 
     assert captured.value.category.value == "configuration"
     assert captured.value.detail_code == "credential_missing"
