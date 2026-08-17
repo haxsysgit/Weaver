@@ -139,7 +139,17 @@ async def _publish_deltas(
 # interrupted). Tool-call calls keep the 4096 default (their outputs are
 # short and bounded thinking keeps the locate loop fast); the answer
 # calls get headroom.
+#
+# Plan v1 (2026-08-17, live incident): the 4096 default ALSO truncates
+# tool-call/locate calls. A complex locate call spends most of the
+# budget on the thinking trace (reasoning counts against max_tokens)
+# and gets cut with finish_reason="length" before emitting any tool
+# call, which the harness marks as exit_reason="incomplete" ("The model
+# response was incomplete.", surfaced as "thread broke"). Truncation is
+# worse than a slower locate loop, so tool-call calls now get explicit
+# headroom too; the answer call keeps the bigger budget.
 ANSWER_MAX_OUTPUT_TOKENS = 16384
+TOOL_CALL_MAX_OUTPUT_TOKENS = 8192
 
 # Plan 15 (owner 2026-08-08): the final reading call keeps conversation
 # continuity without letting an old exchange dominate. The window is the
@@ -604,11 +614,15 @@ async def run_turn(
             tools=() if (forced_answer or in_final_phase) else tuple(tool_schemas),
             # Plan 15: answer calls get headroom so a long answer with a
             # long thinking trace never truncates (see the daemons turn);
-            # tool-call calls keep the model default (4096).
+            # Plan v1 (2026-08-17): tool-call calls get explicit headroom
+            # too (TOOL_CALL_MAX_OUTPUT_TOKENS) because reasoning tokens
+            # count against max_tokens and a long locate thinking trace
+            # truncated at the 4096 default (live incident: "model
+            # response was incomplete").
             max_output_tokens=(
                 ANSWER_MAX_OUTPUT_TOKENS
                 if (in_final_phase or forced_answer)
-                else None
+                else TOOL_CALL_MAX_OUTPUT_TOKENS
             ),
             # Plan 15 (owner 2026-08-07): thinking stays on for every
             # tier; the tier only picks the reasoning effort. None keeps

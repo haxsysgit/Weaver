@@ -18,6 +18,7 @@ from weaver.agent.tools import (
 )
 from weaver.agent.turn import (
     ANSWER_MAX_OUTPUT_TOKENS,
+    TOOL_CALL_MAX_OUTPUT_TOKENS,
     TurnExitReason,
     _is_working_note_candidate,
     run_turn,
@@ -474,7 +475,11 @@ class TestTurnProtocol:
         # pass, then the second candidate publishes.
         assert result.model_steps == 2
         assert result.tool_starts == 0
-        assert provider.calls[0].max_output_tokens == 777
+        # Plan v1 (2026-08-17): tool-phase calls carry explicit headroom
+        # (TOOL_CALL_MAX_OUTPUT_TOKENS), not the model default, so a
+        # long thinking trace cannot truncate the call (live incident:
+        # "model response was incomplete").
+        assert provider.calls[0].max_output_tokens == TOOL_CALL_MAX_OUTPUT_TOKENS
         assert len(result.new_messages) == 1
         assistant = result.new_messages[0]
         assert isinstance(assistant, AssistantMessage)
@@ -1242,8 +1247,12 @@ class TestFinalReadingPhase:
             packet_builder=packet_builder,
         )
         assert len(provider.calls) == 3
-        # first call: a locate tool step, keeps the default cap (None)
-        assert provider.calls[0].request.max_output_tokens is None
+        # first call: a locate tool step, gets tool-call headroom so a
+        # long thinking trace cannot truncate it (Plan v1 2026-08-17)
+        assert (
+            provider.calls[0].request.max_output_tokens
+            == TOOL_CALL_MAX_OUTPUT_TOKENS
+        )
         # Last call: the final reading answer must have headroom.
         assert (
             provider.calls[-1].request.max_output_tokens
