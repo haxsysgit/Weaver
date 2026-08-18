@@ -177,8 +177,8 @@ At 390 x 844, DPR 2, touch emulation, and 4x CPU throttling:
 
 - the 60-second idle trace allows zero long tasks caused by recurring
   animation work after initial load;
-- the 10-second activity trace allows at most two frames over 50ms and no frame
-  over 100ms;
+- a 10-second direct Spellweave activity-state trace allows at most two frames
+  over 50ms and no frame over 100ms;
 - backgrounding stops rendering work, and returning resumes one loop;
 - the main JavaScript gzip total stays at or below 275 KiB;
 - the main CSS gzip total stays at or below 30 KiB;
@@ -188,6 +188,11 @@ The browser Long Animation Frames API and Long Tasks API report work over 50ms.
 They provide a stable threshold for this plan without claiming laboratory frame
 rate accuracy from desktop emulation. Unsupported observers are recorded as
 unsupported instead of silently replaced with invented numbers.
+
+The activity limit measures the visual engine owned by Plan 025. A separate
+fake message-send trace records the existing transcript-streaming cost without
+assigning it to this plan. Plan 027 owns reply rendering and can use that trace
+as its baseline.
 
 ## Frozen v1 baseline
 

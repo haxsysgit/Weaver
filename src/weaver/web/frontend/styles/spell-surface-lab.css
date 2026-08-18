@@ -2811,7 +2811,14 @@
     linear-gradient(135deg, rgba(30, 31, 32, 0.58), rgba(5, 5, 5, 0.22));
 }
 
-.spell-surface-live .lab-composer {
+.spell-surface-live .weaver-avatar {
+  color: var(--edition-thread-silver);
+  border-color: rgba(203, 204, 204, 0.24);
+  background: rgba(5, 5, 5, 0.72);
+  box-shadow: 0 0 18px rgba(183, 154, 98, 0.08);
+}
+
+.spell-surface-live .composer-shell {
   border-color: rgba(203, 204, 204, 0.24);
   background:
     linear-gradient(96deg, transparent 0 18%, rgba(255, 255, 255, 0.018) 19%, transparent 20% 56%, rgba(255, 255, 255, 0.014) 57%, transparent 58%),
@@ -2822,7 +2829,7 @@
     inset 0 1px rgba(203, 204, 204, 0.07);
 }
 
-.spell-surface-live .lab-composer:focus-within {
+.spell-surface-live .composer-shell:focus-within {
   border-color: rgba(203, 204, 204, 0.48);
   box-shadow:
     0 18px 50px rgba(0, 0, 0, 0.34),
@@ -2830,9 +2837,34 @@
     inset 0 1px rgba(203, 204, 204, 0.08);
 }
 
-.spell-surface-live .lab-composer > button {
+.spell-surface-live[data-theme] .composer-action {
   color: var(--edition-spell-void);
   background: var(--edition-thread-silver);
+}
+
+.spell-surface-live .lab-composer-dock {
+  background: linear-gradient(transparent, rgba(5, 5, 5, 0.68));
+}
+
+.spell-surface-live[data-theme] .tier-pill,
+.spell-surface-live[data-theme] .tier-menu {
+  color: var(--edition-reader-ivory);
+  border-color: rgba(203, 204, 204, 0.2);
+  background: rgba(11, 11, 11, 0.94);
+}
+
+.spell-surface-live .lab-novel-list button.active {
+  color: var(--edition-reader-ivory);
+  background: rgba(203, 204, 204, 0.055);
+}
+
+.spell-surface-live .lab-novel-list button.active small {
+  color: var(--lab-dim);
+}
+
+.spell-surface-live .message-actions button {
+  border-color: var(--edition-depth-line);
+  background: rgba(11, 11, 11, 0.9);
 }
 
 .spell-surface-live .lab-thread-row.active,

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 
 import {
+  getAdaptiveSpellRenderProfile,
   getSpellRenderProfile,
   type SpellRenderProfile,
 } from "../lib/spellRenderProfile";
@@ -255,6 +256,7 @@ export function StarWebScene(
     reducedMotion: false,
     width: initialWidth,
   });
+  let activeProfile = profile;
   const {
     paused = false,
     transparent = false,
@@ -447,6 +449,7 @@ export function StarWebScene(
   };
 
   buildNet();
+  const fullThreadVertexCount = lineGeo.drawRange.count;
 
   const clock = new THREE.Clock();
   let netTimer = 0;
@@ -483,6 +486,53 @@ export function StarWebScene(
   // reacting to the mouse.
   let lastRender = 0;
   let inspectionRecorded = false;
+  let adaptiveLevel = 0;
+  let expensiveFrameCount = 0;
+  let previousAnimationFrame = 0;
+  const adaptiveWarmupUntil = performance.now() + 4_000;
+  const canAdapt = profile.name !== "desktop";
+
+  const updateInspectionData = () => {
+    canvas.dataset.drawCalls = String(renderer.info.render.calls);
+    canvas.dataset.pixelRatio = String(activeProfile.pixelRatio);
+    canvas.dataset.renderProfile = profile.name;
+    canvas.dataset.starCount = String(activeProfile.starCount);
+    canvas.dataset.threadBudget = String(activeProfile.maxThreadSegments);
+  };
+
+  const applyAdaptiveProfile = () => {
+    adaptiveLevel += 1;
+    activeProfile = getAdaptiveSpellRenderProfile(profile, adaptiveLevel);
+    renderer.setPixelRatio(activeProfile.pixelRatio);
+    starGeo.setDrawRange(0, activeProfile.starCount);
+    lineGeo.setDrawRange(
+      0,
+      Math.min(fullThreadVertexCount, activeProfile.maxThreadSegments * 2),
+    );
+    starMat.uniforms.uPixelRatio.value = activeProfile.pixelRatio;
+    dMat.uniforms.uPixelRatio.value = activeProfile.pixelRatio;
+    canvas.dataset.adaptiveLevel = String(adaptiveLevel);
+    inspectionRecorded = false;
+    applyResize();
+    updateInspectionData();
+    if (adaptiveLevel >= 2) {
+      renderer.setAnimationLoop(null);
+    }
+  };
+
+  const recordFrameCost = (expensive: boolean) => {
+    if (!expensive) {
+      expensiveFrameCount = 0;
+      return;
+    }
+
+    expensiveFrameCount += 1;
+    if (expensiveFrameCount >= 3 && adaptiveLevel < 2) {
+      expensiveFrameCount = 0;
+      applyAdaptiveProfile();
+    }
+  };
+
   const renderFrame = () => {
     const t = clock.getElapsedTime();
     lastRender = t;
@@ -499,19 +549,26 @@ export function StarWebScene(
     renderer.render(scene, camera);
 
     if (!inspectionRecorded) {
-      canvas.dataset.drawCalls = String(renderer.info.render.calls);
-      canvas.dataset.pixelRatio = String(profile.pixelRatio);
-      canvas.dataset.renderProfile = profile.name;
-      canvas.dataset.starCount = String(profile.starCount);
-      canvas.dataset.threadBudget = String(profile.maxThreadSegments);
+      updateInspectionData();
       inspectionRecorded = true;
     }
   };
 
-  const tick = () => {
+  const tick = (frameTime: number) => {
     if (document.hidden || paused || canvas.dataset.paused === "true") {
+      previousAnimationFrame = frameTime;
       return;
     }
+
+    if (
+      canAdapt
+      && previousAnimationFrame > 0
+      && frameTime >= adaptiveWarmupUntil
+    ) {
+      const animationFrameGap = frameTime - previousAnimationFrame;
+      recordFrameCost(animationFrameGap > 45 && adaptiveLevel < 2);
+    }
+    previousAnimationFrame = frameTime;
 
     const elapsed = clock.getElapsedTime();
     if (elapsed - lastRender >= 1 / 30) {
@@ -565,11 +622,18 @@ export function SpellBackground({
 
   useEffect(() => {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const updateProfile = () => setProfile(currentRenderProfile());
+    let profileFrame = 0;
+    const updateProfile = () => {
+      window.cancelAnimationFrame(profileFrame);
+      profileFrame = window.requestAnimationFrame(() => {
+        setProfile(currentRenderProfile());
+      });
+    };
 
     window.addEventListener("resize", updateProfile);
     reducedMotion.addEventListener("change", updateProfile);
     return () => {
+      window.cancelAnimationFrame(profileFrame);
       window.removeEventListener("resize", updateProfile);
       reducedMotion.removeEventListener("change", updateProfile);
     };

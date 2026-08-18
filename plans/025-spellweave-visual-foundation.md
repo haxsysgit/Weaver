@@ -172,8 +172,10 @@
    readable text, correct safe areas, no clipped geometry, and no visual drift
    between phone and desktop.
 8. At 390 x 844 with DPR 2, touch emulation, and 4x CPU throttling, an idle
-   60-second observation and repeated activity-state simulation show no touch
-   blockage, runaway animation after backgrounding, or unreadable contrast.
+   60-second observation and direct Spellweave activity-state simulation show
+   no touch blockage, runaway animation after backgrounding, or unreadable
+   contrast. Record the existing fake transcript-streaming cost separately;
+   Plan 027 owns reply rendering and any repair to that path.
 9. Browser performance evidence records render objects, pixel ratio, asset
    bytes, long animation frames, and long tasks against the accepted numeric
    limits in `learning.md`. Record Chrome version and host limits alongside the

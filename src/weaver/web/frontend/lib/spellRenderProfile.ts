@@ -74,3 +74,28 @@ export function getSpellRenderProfile(
     starCount: 4_500,
   };
 }
+
+export function getAdaptiveSpellRenderProfile(
+  profile: SpellRenderProfile,
+  level: number,
+): SpellRenderProfile {
+  if (level <= 0 || !profile.animated) {
+    return profile;
+  }
+
+  if (level === 1) {
+    return {
+      ...profile,
+      maxThreadSegments: Math.min(profile.maxThreadSegments, 900),
+      pixelRatio: Math.min(profile.pixelRatio, 1.5),
+      starCount: Math.min(profile.starCount, 1_800),
+    };
+  }
+
+  return {
+    ...profile,
+    maxThreadSegments: Math.min(profile.maxThreadSegments, 600),
+    pixelRatio: 1,
+    starCount: Math.min(profile.starCount, 1_200),
+  };
+}

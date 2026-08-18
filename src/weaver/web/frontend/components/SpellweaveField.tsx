@@ -1,4 +1,4 @@
-import { useMemo, type CSSProperties } from "react";
+import { useMemo } from "react";
 
 import {
   createSpellGeometry,
@@ -24,6 +24,13 @@ function GeometryGroup({
 }) {
   return (
     <g data-spell-composition={composition}>
+      <path
+        className="spellweave-event-thread"
+        d={composition === "portrait"
+          ? "M 500 1000 C 430 760 570 520 500 0"
+          : "M 0 500 C 260 430 740 570 1000 500"}
+        pathLength="1"
+      />
       {geometry.segments.map((segment, index) => {
         const from = geometry.points[segment.from];
         const to = geometry.points[segment.to];
@@ -31,7 +38,6 @@ function GeometryGroup({
           <line
             key={`${segment.from}-${segment.to}-${index}`}
             pathLength="1"
-            style={{ "--thread-phase": segment.phase } as CSSProperties}
             x1={from.x * 1_000}
             x2={to.x * 1_000}
             y1={from.y * 1_000}

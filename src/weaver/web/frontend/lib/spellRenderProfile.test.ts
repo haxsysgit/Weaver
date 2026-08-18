@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { getSpellRenderProfile } from "./spellRenderProfile";
+import {
+  getAdaptiveSpellRenderProfile,
+  getSpellRenderProfile,
+} from "./spellRenderProfile";
 
 describe("Spell render profiles", () => {
   it("caps the drawing ratio at two physical pixels per CSS pixel", () => {
@@ -66,5 +69,24 @@ describe("Spell render profiles", () => {
     });
 
     expect(profile.name).toBe("compact");
+  });
+
+  it("reduces pixels and active geometry after repeated expensive frames", () => {
+    const profile = getSpellRenderProfile({
+      devicePixelRatio: 2,
+      height: 844,
+      reducedMotion: false,
+      width: 390,
+    });
+
+    const firstStep = getAdaptiveSpellRenderProfile(profile, 1);
+    const secondStep = getAdaptiveSpellRenderProfile(profile, 2);
+
+    expect(firstStep.pixelRatio).toBe(1.5);
+    expect(firstStep.starCount).toBeLessThan(profile.starCount);
+    expect(firstStep.maxThreadSegments).toBeLessThan(profile.maxThreadSegments);
+    expect(secondStep.pixelRatio).toBe(1);
+    expect(secondStep.starCount).toBeLessThan(firstStep.starCount);
+    expect(secondStep.maxThreadSegments).toBeLessThan(firstStep.maxThreadSegments);
   });
 });

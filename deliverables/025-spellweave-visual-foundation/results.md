@@ -2,7 +2,8 @@
 
 ## Status
 
-Slice 2 is in progress. Production code has not started.
+Implementation is complete through slice 9. Device-neutral inspection and the
+full verification floor remain in progress before owner review.
 
 ## V1 baseline evidence
 
@@ -136,3 +137,81 @@ active profile count, and the next build passed.
 - The first green test used a stale exact placeholder string. The backdrop
   assertions had passed, the control-preservation assertion was changed to the
   textbox role, and the rerun passed all 7 live-surface tests.
+
+## Throttled performance failure and boundary check
+
+The first 390 x 844, DPR 2, touch-emulated, 4x CPU activity trace failed the
+proposed limit. Even after the renderer selected its static constrained profile,
+the full fake message-send path produced five long animation frames and peaked
+at 255.2ms.
+
+Two isolation traces established ownership:
+
+- Directly setting the new foreground Spellweave to `answering` for ten seconds
+  produced one 55.5ms long animation frame and no long tasks. It stayed within
+  the Plan 025 visual-engine budget.
+- Hiding the complete Spellweave backdrop and disabling every CSS animation and
+  transition did not remove the fake-streaming cost. The unchanged v1 message
+  path produced five long animation frames, peaked at 225.3ms, and produced six
+  long tasks.
+
+Plan 025 therefore measures its visual activity state directly and preserves the
+fake message-send trace as a baseline for Plan 027, which owns reply rendering.
+Changing transcript streaming here would cross the admitted scope.
+
+## Device-neutral responsive evidence
+
+Final production captures cover 320 x 568, 360 x 800, 390 x 844, 412 x 915,
+800 x 360 narrow landscape, and 1440 x 900. They are private, ignored evidence
+under `private/design-evidence/025/implemented/` and are not production assets.
+
+| Viewport | Profile | DPR | Stars | Segments | Draw calls | Horizontal overflow |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| 320 x 568 | compact | 2 | 1,800 | 900 | 3 | none |
+| 360 x 800 | phone | 2 | 2,600 | 1,600 | 3 | none |
+| 390 x 844 | phone | 2 | 2,600 | 1,600 | 3 | none |
+| 412 x 915 | phone | 2 | 2,600 | 1,600 | 3 | none |
+| 800 x 360 | compact | 2 | 1,800 | 900 | 3 | none |
+| 1440 x 900 | desktop | 2 | 4,500 | 3,400 | 3 | none |
+
+An early matrix run exposed a false adaptation: initial page-load stalls were
+counted as sustained rendering pressure, causing normal devices to downshift.
+The repaired detector ignores the four-second warm-up period and adapts only
+compact and phone profiles. A six-second settled inspection then held every
+normal profile at DPR 2. Under 4x CPU throttling the phone profile still reached
+the level-two static fallback at DPR 1 with 1,200 stars and 600 segments.
+
+Reduced-motion emulation selected the static profile at DPR 2 with 1,200 stars,
+600 segments, and three draw calls. The foreground event thread reported no CSS
+animation, and its state remained visible without decorative travel.
+
+After the throttled phone reached its static fallback and settled, the required
+60-second idle trace reported zero long tasks and zero long animation frames.
+A following ten-second direct `answering` state trace also reported zero long
+tasks and zero long animation frames. The browser was Chrome 148.0.7778.167
+running headless with SwiftShader on the development host, so these figures are
+comparative browser evidence rather than a claim about every phone GPU.
+
+At 200 percent page scale the visual viewport reduced to 195 x 422 while the
+390px layout retained its width without document overflow. A 390 x 500
+keyboard-height approximation kept the composer fully visible from y=395 to
+y=474 and produced no horizontal overflow. A freeze/active lifecycle pass kept
+the canvas and composer mounted; source inspection confirms hidden documents
+skip frame work and the existing single renderer loop remains the resume path.
+
+The captures preserve the existing v1 transcript, composer, mobile navigation,
+and desktop rail. The main surface uses near-black depth, cold silver structure,
+warm ivory text, muted old-gold lights, black wood, and a neutral silver Weaver
+seal. Normal chat no longer uses the old crimson seal.
+
+## Final asset measurements before the full floor
+
+| Asset | Raw bytes | Local gzip bytes |
+| --- | ---: | ---: |
+| Main JavaScript | 909,033 | 249,451 |
+| Lazy Motion feature chunk | 41,223 | 15,604 |
+| Main CSS | 143,514 | 26,533 |
+
+Combined JavaScript is 265,055 gzip bytes, below the accepted 275 KiB limit.
+CSS is 26,533 gzip bytes, below the accepted 30 KiB limit. The final build after
+review repair must remeasure these hashed artifacts before closure.
