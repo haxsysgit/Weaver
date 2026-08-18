@@ -132,17 +132,17 @@ text, focus, sending, or cancellation. Reduced motion removes camera travel,
 parallax, gathering fragments, travelling pulses, and repeated loops while
 retaining immediate opacity and colour state changes.
 
-## Library recommendation pending owner gate
+## Accepted animation-library decision
 
-Add Motion for React as the single DOM choreography dependency, loaded through
+**Accepted by the owner on 2026-08-18.** Add Motion for React as the single DOM
+choreography dependency, loaded through
 `LazyMotion` with the DOM animation feature set and wrapped in
 `MotionConfig reducedMotion="user"`. Keep Three.js as the only scene engine.
 Keep simple control transitions in CSS. Do not add GSAP, React Spring, a
 post-processing stack, or a second canvas renderer in this lane.
 
-This requires an admitted-plan amendment because new dependencies are currently
-out of scope. No package or production source has been changed. The owner must
-accept or reject this recommendation at the learning gate.
+The admitted plan now includes the root package and lockfile change plus one
+shared motion boundary. No package or production source has changed yet.
 
 ## Frozen v1 baseline
 
@@ -201,7 +201,6 @@ composition consistent across Plans 026 to 028.
 Pending. The visual baseline and primary-source research are recorded. The
 remaining evidence is the Redmi Note 14 profiler capture. It must measure the
 untouched v1 idle field and one activity simulation before this note proposes
-numeric phone frame-time and long-task limits. The owner also decides whether
-to amend Plan 025 with the recommended Motion for React dependency and accepts
-or changes the Weaver motion system above. Production code remains blocked
-until those decisions are recorded.
+numeric phone frame-time and long-task limits. The owner accepted the Motion
+for React amendment and the Weaver motion system above. Production code remains
+blocked until the phone limits are recorded.

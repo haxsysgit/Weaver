@@ -7,8 +7,9 @@
 
 ## Status
 
-- **Tooling:** React 19, TypeScript, Three.js, inline SVG, CSS custom properties,
-  Vitest, Testing Library, Vite, and the root Python test suite.
+- **Tooling:** React 19, TypeScript, Three.js, Motion for React, inline SVG, CSS
+  custom properties, Vitest, Testing Library, Vite, and the root Python test
+  suite.
 - **State:** admitted 2026-08-18 (owner direction).
 - **Depends on:** Plan 024 closed as rejected. Plan 025 copies no prototype
   code or visual rules. It has no backend dependency;
@@ -67,6 +68,11 @@
     text. Muted old gold marks appraisal, Memories, and rare focal moments.
     Ambient crimson and purple washes leave the main chat. Crimson appears
     only for corruption, danger, failed binding, and destructive actions.
+13. (2026-08-18) Motion for React is the single DOM choreography dependency.
+    Load it through `LazyMotion`, apply `MotionConfig reducedMotion="user"`,
+    and use it for coordinated mount, exit, interruption, and shared-state
+    transitions. Three.js remains the Spell scene engine. Existing CSS tokens
+    continue to handle small control feedback.
 
 ## Scope
 
@@ -76,6 +82,10 @@
 - Add deterministic, normalized thread geometry at
   `src/weaver/web/frontend/lib/spellGeometry.ts` with tests in
   `src/weaver/web/frontend/lib/spellGeometry.test.ts`.
+- Add Motion for React through the root `package.json` and lockfile. Create one
+  shared `LazyMotion` and `MotionConfig` boundary for the live Spell surface;
+  later surface plans consume that boundary instead of creating separate
+  animation providers.
 - Refactor `src/weaver/web/frontend/components/SpellBackground.tsx` into the
   distant cosmic layer. Keep the existing star, divine-light, and haze language;
   apply the tested DPR and device budgets.
@@ -129,8 +139,8 @@
 - Conversation metadata, routes, persistence, state schemas, provider behavior,
   key storage, retrieval, prompt changes, or model calls.
 - A LOTM visual edition or a general theme marketplace.
-- New dependencies, image assets, custom fonts, audio, haptics, or WebGL for
-  foreground controls.
+- Additional animation dependencies, image assets, custom fonts, audio,
+  haptics, or WebGL for foreground controls.
 - Reusing the rejected prototype HTML/CSS or treating its composition as a
   production design source.
 - Replacing v1's chat, transcript, composer, or rail with a parallel surface.
@@ -219,7 +229,17 @@
    - Commit exact files with
      `Plan 025: add tested Spellweave render profiles`.
 
-4. **Prove deterministic geometry with a red/green loop**
+4. **Install the shared motion boundary**
+   - Add Motion for React through the root package manifest and lockfile.
+   - Write a failing component test for the shared `LazyMotion` and
+     `MotionConfig reducedMotion="user"` boundary.
+   - Add the smallest shared provider around the live Spell surface and prove
+     existing controls and content render unchanged.
+   - Record the raw and gzip asset-byte change.
+   - Commit exact files with
+     `Plan 025: add the shared Spell motion boundary`.
+
+5. **Prove deterministic geometry with a red/green loop**
    - Write failing `spellGeometry.test.ts` cases for stable seed output,
      normalized coordinates, bounded connection counts, portrait anchors, and
      desktop anchors.
@@ -229,7 +249,7 @@
    - Commit exact files with
      `Plan 025: add deterministic Spellweave geometry`.
 
-5. **Sharpen the distant cosmic layer**
+6. **Sharpen the distant cosmic layer**
    - Refactor `SpellBackground.tsx` to consume the tested render profile.
    - Set renderer DPR from the capped profile and update shader uniforms after
      resize or profile change.
@@ -241,7 +261,7 @@
    - Commit exact files with
      `Plan 025: sharpen the distant Nightmare Spell field`.
 
-6. **Build the tested middle and foreground layers**
+7. **Build the tested middle and foreground layers**
    - Write failing component tests for layer order, `aria-hidden`, pointer
      transparency, portrait/desktop profile markers, and activity states.
    - Add `SpellweaveField.tsx`, `SpellweaveBackdrop.tsx`, and
@@ -254,7 +274,7 @@
    - Run the component test and commit exact files with
      `Plan 025: add shared Spellweave layers`.
 
-7. **Install semantic materials and responsive composition**
+8. **Install semantic materials and responsive composition**
    - Add semantic aliases to `tokens.css`. Remove ambient crimson and purple
      washes from the main chat composition. Keep direct crimson use limited to
      failure, corruption, danger, and destructive controls.
@@ -266,7 +286,7 @@
    - Commit exact files with
      `Plan 025: add responsive Spellweave materials`.
 
-8. **Integrate the shared backdrop**
+9. **Integrate the shared backdrop**
    - Write failing live-surface tests for the shared backdrop mount and
      decorative behavior.
    - Compose the existing `SpellBackground` inside the coordinator instead of
@@ -277,8 +297,8 @@
    - Commit exact files with
      `Plan 025: connect the live surface to Spellweave`.
 
-9. **Phone and desktop inspection**
-   - Run the build, serve locally, and capture all three target sizes.
+10. **Phone and desktop inspection**
+   - Run the build, serve locally, and capture all five target sizes.
    - Inspect DPR, resize, scroll, keyboard, background/foreground recovery,
      200 percent zoom, high contrast, reduced motion, and tab order.
    - Run the Redmi Note 14 idle and activity-state pass in portrait and
@@ -286,7 +306,7 @@
    - Ask the owner to confirm depth, sharpness, material, and responsive
      composition before closure.
 
-10. **Independent review, full floor, and owner decision**
+11. **Independent review, full floor, and owner decision**
     - Give an independent frontend reviewer the plan, changed-file list, test
       output, and private captures. The reviewer checks code cleanup, rendering
       disposal, accessibility, performance claims, and scope.
