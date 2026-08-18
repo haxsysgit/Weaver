@@ -47,14 +47,23 @@ Open questions for the owner when this plan is admitted:
   audited and standardized docs (README, architecture, CONTRIBUTING.md),
   recorded the no-chapter-links decision, and audited the retrieval
   stack. Next: v1.
-- Then v1: a numberless plan, deployment and CI/CD for seamless updates
-  (Docker, EC2, CI, release). Admitted 2026-08-14;
-  plans go one by one.
+- Then v1: a numberless plan, deployment and CI/CD for automatic updates
+  (Docker, EC2, CI, release). Closed 2026-08-18 after the owner confirmed the
+  published `v1.0.0` release.
 - Side plan 018.5 (2026-08-15, owner decision): refresh stabilization
   (retries, first-404 probe, last-chapter reporting) + full local
   re-embed redo of the colab skirmish + question-sweep baseline before
-  quantization. Too big for a pre-v1 slice; runs alongside v1 with
-  disjoint files. Admitted 2026-08-15.
+  quantization. Closed 2026-08-18 with a scope cut: refresh stabilization,
+  shelf refresh, benchmark, and rebuild tooling accepted; the full re-embed
+  and question evaluations remain deferred.
+- Plan 020 closed 2026-08-18 with tier 0 and tier 1 accepted. Tiers 2-4,
+  missing-page creation, and overview verification remain deferred.
+- Plans 022-029 are the next drafted lane: Hidden Thread canon and identity,
+  conversation metadata foundations, responsive prototype, Spellweave visual
+  foundation, initiation rite, conversation chamber, Thread Archive, and the
+  integration release trial. Mobile proof covers 320 x 568 through 412 x 915,
+  plus the owner's Redmi Note 14 at its measured CSS viewport. Desktop rides
+  with each production surface.
 
 ## Standing series (no plan number, runs across plans)
 
@@ -121,6 +130,6 @@ into two side plans so they can be done before returning to v1:
 - **019** Notebook structure + character importance (ADMITTED 2026-08-15): finish reading
   3149-3160, wiki structure study, page standard, importance ranking,
   overview articles, structure checker. Fake-only.
-- **020** Notebook entity sweep (ADMITTED 2026-08-15): rebuild all 500+ entity pages tier by
-  tier to the 019 standard, create missing core pages. Live budget,
-  tier-gated. Unblocks 018.5 slice 6 (colab re-embed), then v1.
+- **020** Notebook entity sweep (CLOSED 2026-08-18, accepted with scope cut):
+  tier 0 and tier 1 accepted. Tiers 2-4, missing core pages, and overview
+  verification remain future work.

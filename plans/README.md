@@ -24,10 +24,19 @@ evidence, review, and human decision gates must also be complete.
 | [015 - Weaver the agent (context + agentic parts)](015-reader-trials-1-1000.md) | Closed 2026-08-14 (accepted, scope cut) | Plan 014 accepted | Whole-novel search, spoiler map + judge, preferences, two-phase turn, spell surface. Skills / router / compaction deferred after v1 |
 | [016 - Refresh the shelf safely](016-refresh-the-shelf-safely.md) | Completed and owner-accepted 2026-08-10 | Plan 014 accepted | `weaver refresh`: preview-first (no network, no shelf writes), explicit `--apply` confirmation, Plan 002 validation and atomic repair, metadata-only receipts, never a model tool |
 | [017 - Reading continuation to 3148](017-reading-continuation.md) | Completed and owner-accepted 2026-08-14 | Plan 012, 014, 016 | Direct sequential source reading of Shadow Slave 1501-3148 into the private story notebook, checker at milestones 2000/2500/3000/3148, no stopping until the shelf end |
-| [018.5 - Refresh stabilization + full re-embed](018.5-refresh-and-reembed.md) | Admitted 2026-08-15 | v1 slices 1-3 (side plan, disjoint files) | Stabilize `weaver refresh` (retries, first-404, last-chapter report), live refresh to shelf end, recover colab machinery, fix ceiling bug, re-embed whole novel, sweep baseline. Slice 6 (re-embed) blocked on 019+020: notebook must be structured before embedding |
+| [v1 - Deploy Weaver](v1-deploy-weaver.md) | Closed 2026-08-18; owner accepted and published `v1.0.0` | Plan 018 closed | Docker, EC2, CI/CD, Funnel, BYOK, device scoping, and the first published release |
+| [018.5 - Refresh stabilization + full re-embed](018.5-refresh-and-reembed.md) | Closed 2026-08-18; owner accepted with scope cut | v1 side plan | Refresh stabilization, shelf refresh, benchmark, and rebuild tooling accepted; full re-embed and evaluations deferred, current index ends at chapter 3127 |
 | [019 - Notebook structure and importance](019-notebook-structure-and-importance.md) | Closed 2026-08-16 | 018.5 slices 1-4 (side plan, disjoint files) | Finish reading 3149-3160, wiki structure study, page standard, character importance ranking, overview articles, structure checker |
-| [020 - Notebook entity sweep](020-notebook-entity-sweep.md) | Admitted 2026-08-15 | Plan 019 closed | Full entity sweep to the 019 standard: rebuild all pages tier by tier, create missing core pages, verify overviews, unblock the colab re-embed |
+| [020 - Notebook entity sweep](020-notebook-entity-sweep.md) | Closed 2026-08-18; owner accepted with scope cut | Plan 019 closed | Tier 0 and tier 1 accepted; tiers 2-4, missing pages, and overview verification deferred |
 | [021 - First Nightmare setup + mobile polish](021-first-nightmare-setup-and-mobile.md) | Closed 2026-08-17 (owner accepted) | v1 (parallel, disjoint frontend files) | First-run animated setup modal (Spell-themed, DeepSeek key explainer + entry), mobile drawer real-app fix, mobile polish + animations |
+| [022 - Hidden Thread canon and identity](022-hidden-thread-canon-and-identity.md) | Drafted | v1, 018.5, and 020 closed | Bounded canon read, product-fiction split, stable identity terms, and `shadow-slave` Edition id |
+| [023 - Conversation metadata foundations](023-conversation-metadata-foundations.md) | Drafted | Plan 022 closed | Durable rename, archive, pin, Edition metadata, PATCH route, and exact device ownership |
+| [024 - Hidden Thread responsive prototype](024-hidden-thread-responsive-prototype.md) | Drafted | Plan 022 closed | Disposable rite, chamber, and archive lab across the mobile matrix, Redmi Note 14, and desktop |
+| [025 - Spellweave visual foundation](025-spellweave-visual-foundation.md) | Drafted | Plan 024 closed | Sharp responsive background engine, semantic materials, shared primitives, and measured performance contract |
+| [026 - Hidden Thread initiation rite](026-hidden-thread-initiation-rite.md) | Drafted | Plans 022 and 025 closed | Replace the setup card with the four-act full-screen rite while preserving first-run and BYOK behavior |
+| [027 - Conversation chamber](027-conversation-chamber.md) | Drafted | Plans 022, 024, 025, and 026 closed | Thread-spine replies, user shards, composer binding point, safe Markdown, and responsive desktop composition |
+| [028 - Thread Archive](028-thread-archive.md) | Drafted | Plans 023 and 027 closed | Server-backed full-screen mobile archive and persistent desktop archive using one component |
+| [029 - Hidden Thread integration and phone trial](029-hidden-thread-integration-and-phone-trial.md) | Drafted | Plans 022-028 closed | Fake-only release matrix, mobile support matrix, Redmi Note 14 usability, desktop, accessibility, and owner release decision |
 | Later - Founding Reader Trials | Not yet drafted | Reading continuation | The finished-product bar: Ariel and the Unholy Titan, Sunny 3120+ versus Azarax, Anvil versus Azarax what-if |
 | Later - Durable reader memory | Not yet drafted | Founding trials | Reader opinions, favorites, theories, and unresolved disagreements kept separately from canon |
 
@@ -45,24 +54,27 @@ Plans 001-010 are complete (007.5 applied). The next sequence is:
    1-1000 retrieval experiment, then build the reading tools around the
    winner.
 5. **015**: weaver as a full agentic product: spoiler map + judge, two-phase read, router + skills, then compaction.
-6. **016**: refresh the shelf safely with preview and confirmation — closed 2026-08-10 as the `weaver refresh` CLI command (owner-directed 2026-08-09), verification audit green, live run fetched 3129-3148 and repaired chapter 2843.
+6. **016**: refresh the shelf safely with preview and confirmation. Closed
+   2026-08-10 as the `weaver refresh` CLI command (owner-directed 2026-08-09),
+   verification audit green, live run fetched 3129-3148 and repaired chapter
+   2843.
 7. **018**: pre-v1 cleanup and standard docs (close 015, repo cleanup, docs audit, standard docs, chapter-links decision, retrieval audit).
-8. **v1 (numberless)**: deployment and CI/CD for seamless updates.
-   Admitted 2026-08-14 (`plans/v1-deploy-weaver.md`).
+8. **v1 (numberless)**: deployment and CI/CD for automatic updates.
+   Closed 2026-08-18 after the owner confirmed the published `v1.0.0` release.
 9. **018.5 (side plan)**: refresh stabilization (retries, first-404
    probe, last-chapter reporting) + full re-embed redo + sweep
-   baseline before quantization. Admitted 2026-08-15
-   (`plans/018.5-refresh-and-reembed.md`); slices 1-5 done; slice 6
-   (re-embed) blocked on the notebook being structured.
-10. **019 (side plan)**: notebook structure + character importance —
+   baseline before quantization. Closed 2026-08-18 with a scope cut. Refresh,
+   benchmark, and tooling landed; full re-embed and evaluations are deferred.
+10. **019 (side plan)**: notebook structure + character importance:
    finish reading 3149-3160, wiki structure study, page standard,
    importance ranking, overview articles, structure checker.
    Admitted 2026-08-15 (`plans/019-notebook-structure-and-importance.md`).
-11. **020 (side plan)**: notebook entity sweep — rebuild all 500+
-   entity pages tier by tier to the 019 standard, create missing core
-   pages, verify overviews. Unblocks 018.5 slice 6, then back to v1.
-   Admitted 2026-08-15 (`plans/020-notebook-entity-sweep.md`).
-12. **Later**: the founding Reader Trials, then durable reader memory.
+11. **020 (side plan)**: closed 2026-08-18 with tier 0 and tier 1 accepted;
+   remaining tiers and overview work deferred.
+12. **022-029**: Hidden Thread identity, backend metadata, disposable visual
+   lab, visual engine, rite, conversation chamber, Thread Archive, then the
+   integration and Redmi Note 14 release trial.
+13. **Later**: the founding Reader Trials, then durable reader memory.
 
 Native Android and iOS remain deferred until Plan 013 proves a concrete PWA
 limitation.
