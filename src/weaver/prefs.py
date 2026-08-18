@@ -7,9 +7,6 @@ by tools, never a retrieval filter; the spoiler judge consumes the
 position at answer-framing time. Flavor prefs (best character, best
 scene, fun stuff) are reserved for later memory plans.
 
-Also owns the conversation_title table (one row per conversation: the
-LLM-generated thread name from the Plan 15 naming call). Same sqlite file
-as the conversation store, no migration machinery needed.
 """
 
 from __future__ import annotations
@@ -63,12 +60,6 @@ class PreferencesStore:
             await self._db.execute(
                 "ALTER TABLE preferences ADD COLUMN tier TEXT NOT NULL DEFAULT 'ascended'"
             )
-        await self._db.execute(
-            "CREATE TABLE IF NOT EXISTS conversation_title ("
-            " conversation_id TEXT PRIMARY KEY,"
-            " title TEXT NOT NULL,"
-            " named_at TEXT NOT NULL)"
-        )
         await self._db.commit()
 
     async def close(self) -> None:
@@ -113,29 +104,3 @@ class PreferencesStore:
         )
         await self._db.commit()
         return prefs
-
-    async def set_title(self, conversation_id: str, title: str) -> None:
-        """Store the LLM-generated thread name (Plan 15 slice 5)."""
-        assert self._db is not None
-        await self._db.execute(
-            "INSERT INTO conversation_title (conversation_id, title, named_at)"
-            " VALUES (?, ?, datetime('now'))"
-            " ON CONFLICT(conversation_id) DO UPDATE SET title = excluded.title",
-            (conversation_id, title),
-        )
-        await self._db.commit()
-
-    async def clear_title(self, conversation_id: str) -> None:
-        """Drop the stored thread name (conversation deleted)."""
-        assert self._db is not None
-        await self._db.execute(
-            "DELETE FROM conversation_title WHERE conversation_id = ?",
-            (conversation_id,),
-        )
-        await self._db.commit()
-
-    async def titles(self) -> dict[str, str]:
-        """All stored thread names, keyed by conversation id."""
-        assert self._db is not None
-        cur = await self._db.execute("SELECT conversation_id, title FROM conversation_title")
-        return {row[0]: row[1] for row in await cur.fetchall()}

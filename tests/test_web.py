@@ -16,6 +16,7 @@ import asyncio
 import json
 import logging
 import re
+import sqlite3
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -273,6 +274,52 @@ async def test_missing_device_header_cannot_access_owned_conversation(client) ->
 
     owner_listing = await client.get("/api/conversations", headers=device)
     assert [row["conversation_id"] for row in owner_listing.json()] == [conversation_id]
+
+
+async def test_generated_thread_name_lives_with_conversation_metadata(tmp_path) -> None:
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    conversation_id = await runtime.session.start_conversation(
+        "first question about Weaver",
+        device_id="naming-reader",
+    )
+    try:
+        await web_app._name_thread(
+            runtime,
+            conversation_id,
+            "first question about Weaver",
+            "fake answer",
+        )
+        [generated_summary] = await runtime.session.list_conversations(
+            device_id="naming-reader"
+        )
+        assert generated_summary["title"] == "First Question About Weaver"
+
+        await runtime.session.update_conversation_metadata(
+            conversation_id,
+            title="Reader's name",
+            title_is_set=True,
+            archived=None,
+            pinned=None,
+        )
+        await web_app._name_thread(
+            runtime,
+            conversation_id,
+            "first question about Weaver",
+            "late fake answer",
+        )
+        [manual_summary] = await runtime.session.list_conversations(
+            device_id="naming-reader"
+        )
+        assert manual_summary["title"] == "Reader's name"
+    finally:
+        await runtime.close()
+
+    with sqlite3.connect(tmp_path / "weaver.sqlite3") as database:
+        legacy_title_table = database.execute(
+            "SELECT name FROM sqlite_master "
+            "WHERE type = 'table' AND name = 'conversation_title'"
+        ).fetchone()
+        assert legacy_title_table is None
 
 
 async def test_byok_key_header_used_and_never_persisted(client, tmp_path) -> None:

@@ -255,8 +255,7 @@ async def _name_thread(runtime: ChatRuntime, conversation_id: str, first_message
         except Exception:
             # the turn already succeeded; a failed name is not a failure
             title = _derived_title(first_message)
-    if runtime.prefs is not None:
-        await runtime.prefs.set_title(conversation_id, title)
+    await runtime.session.set_generated_title(conversation_id, title)
 
 
 def _tool_preview(name: str, result: dict) -> tuple[str | None, list[str]]:
@@ -643,7 +642,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 )
             reason = result.exit_reason
             if reason == TurnExitReason.COMPLETED:
-                if is_first_turn and runtime.prefs is not None:
+                if is_first_turn:
                     asyncio.create_task(
                         _name_thread(
                             runtime,
