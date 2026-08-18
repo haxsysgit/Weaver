@@ -1,0 +1,145 @@
+.spellweave-backdrop {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.spellweave-distant,
+.spellweave-field {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.spellweave-distant > * {
+  position: absolute;
+  inset: 0;
+}
+
+.spellweave-field {
+  fill: none;
+  overflow: hidden;
+}
+
+.spellweave-field [data-spell-composition="desktop"] {
+  display: none;
+}
+
+.spellweave-field-middle {
+  z-index: 1;
+  opacity: 0.54;
+}
+
+.spellweave-field-middle line {
+  stroke: var(--edition-thread-quiet, rgba(142, 141, 141, 0.3));
+  stroke-width: 0.72;
+  vector-effect: non-scaling-stroke;
+}
+
+.spellweave-field-middle .spellweave-knot {
+  stroke: var(--edition-thread-quiet, rgba(142, 141, 141, 0.3));
+  stroke-width: 0.65;
+  vector-effect: non-scaling-stroke;
+}
+
+.spellweave-field-foreground {
+  z-index: 2;
+  opacity: 0.08;
+  transition: opacity var(--motion-smooth) var(--ease-weave);
+}
+
+.spellweave-field-foreground line,
+.spellweave-field-foreground .spellweave-knot {
+  stroke: var(--edition-thread-silver, #cbcccc);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.spellweave-field-foreground line {
+  stroke-dasharray: 0.08 0.92;
+  stroke-dashoffset: calc(var(--thread-phase) * -1);
+}
+
+.spellweave-backdrop[data-spell-state="reaching"] .spellweave-field-foreground,
+.spellweave-backdrop[data-spell-state="reading"] .spellweave-field-foreground,
+.spellweave-backdrop[data-spell-state="answering"] .spellweave-field-foreground {
+  opacity: 0.38;
+}
+
+.spellweave-backdrop[data-spell-state="reaching"] .spellweave-field-foreground line {
+  animation: spellweave-pulse calc(var(--motion-smooth) * 3) var(--ease-weave) both;
+}
+
+.spellweave-backdrop[data-spell-state="reading"] .spellweave-knot {
+  animation: spellweave-knot-read calc(var(--motion-smooth) * 4) var(--ease-weave) infinite alternate;
+}
+
+.spellweave-backdrop[data-spell-state="answering"] .spellweave-field-foreground line {
+  stroke-dasharray: 0.32 0.68;
+  animation: spellweave-answer calc(var(--motion-smooth) * 4) var(--ease-weave) infinite;
+}
+
+.spellweave-backdrop[data-spell-state="complete"] .spellweave-field-foreground {
+  opacity: 0.34;
+  filter: drop-shadow(0 0 5px var(--edition-appraisal-gold, #b79a62));
+  animation: spellweave-settle calc(var(--motion-smooth) * 2) var(--ease-weave) both;
+}
+
+.spellweave-backdrop[data-spell-state="failed"] .spellweave-field-foreground {
+  opacity: 0.32;
+  animation: spellweave-fracture var(--motion-smooth) var(--ease-weave) both;
+}
+
+.spellweave-backdrop[data-spell-state="failed"] .spellweave-field-foreground line,
+.spellweave-backdrop[data-spell-state="failed"] .spellweave-field-foreground .spellweave-knot {
+  stroke: var(--edition-corruption, #74302d);
+}
+
+@keyframes spellweave-pulse {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: -1; }
+}
+
+@keyframes spellweave-knot-read {
+  from { opacity: 0.2; }
+  to { opacity: 0.78; }
+}
+
+@keyframes spellweave-answer {
+  to { stroke-dashoffset: -1; }
+}
+
+@keyframes spellweave-settle {
+  from { opacity: 0.08; }
+  55% { opacity: 0.48; }
+  to { opacity: 0.18; }
+}
+
+@keyframes spellweave-fracture {
+  0%, 100% { transform: translateX(0); }
+  45% { transform: translateX(-2px); }
+  65% { transform: translateX(2px); }
+}
+
+@media (min-width: 768px) {
+  .spellweave-field [data-spell-composition="portrait"] {
+    display: none;
+  }
+
+  .spellweave-field [data-spell-composition="desktop"] {
+    display: block;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spellweave-field-foreground,
+  .spellweave-field-foreground line,
+  .spellweave-field-foreground .spellweave-knot {
+    animation: none !important;
+    transition: none !important;
+  }
+}

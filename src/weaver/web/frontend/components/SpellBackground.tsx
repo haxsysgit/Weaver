@@ -359,7 +359,7 @@ export function StarWebScene(
     return `${cellX}:${cellY}:${cellZ}`;
   }
 
-  for (let index = 0; index < STAR_COUNT; index++) {
+  for (let index = 0; index < profile.starCount; index++) {
     const x = positions[index * 3];
     const y = positions[index * 3 + 1];
     const z = positions[index * 3 + 2];

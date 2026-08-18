@@ -87,3 +87,22 @@ The accepted numeric limits are recorded in `learning.md`.
   cleaned up on unmount or profile change.
 - The render-profile and existing live-surface tests passed, 10 tests total,
   followed by a successful TypeScript and Vite build.
+
+The first later build exposed one remaining `STAR_COUNT` reference in the
+spatial-bucket loop. The build failed visibly, the loop was changed to the
+active profile count, and the next build passed.
+
+## Slice 7 shared Spellweave layers
+
+- Red: the targeted component test failed because `SpellweaveBackdrop.tsx` did
+  not exist.
+- Green: 7 geometry and backdrop tests passed.
+- The coordinator preserves the v1 Three.js field as the distant depth and adds
+  deterministic SVG middle and foreground depths.
+- Portrait and desktop compositions share normalized geometry while using
+  separate anchors.
+- Every decorative layer is `aria-hidden`, unfocusable, and pointer-transparent.
+- Reaching, reading, answering, complete, and failed states use the existing
+  motion tokens. Reduced motion removes travel and looping state animation.
+- The production TypeScript and Vite build passed after the recorded profile
+  reference repair.
