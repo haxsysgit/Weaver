@@ -24,6 +24,8 @@ Interaction-contract proof complete. Responsive scene work is in progress.
 - The lab now hides the chamber during the rite and uses a quiet solid network
   of knots and threads. The rite keeps the cosmic field, original abstract mask
   impression, and foreground rune fragments.
+- The rite has its own private control trigger, so the reduced-motion check is
+  reachable before the chamber appears.
 - Local headless captures now cover rite and active-chat compositions at 390 x
   844 plus the active desktop chamber at 1440 x 900. They are temporary
   private inspection evidence only. The actual Redmi gate remains pending.
