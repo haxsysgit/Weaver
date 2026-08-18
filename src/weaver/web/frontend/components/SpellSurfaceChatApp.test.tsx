@@ -215,4 +215,23 @@ describe("live Spellweave foundation", () => {
     expect(backdrop.querySelector("button, input, textarea, a")).toBeNull();
     expect(screen.getByRole("textbox")).toBeVisible();
   });
+
+  it("keeps the collapsed desktop rail operable so it can reopen", () => {
+    render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
+
+    const rail = document.querySelector<HTMLElement>("#spell-surface-rail");
+    expect(rail).not.toBeNull();
+    if (!rail) {
+      return;
+    }
+
+    fireEvent.click(screen.getByRole("button", { name: "Close threads" }));
+
+    expect(rail).toHaveAttribute("aria-hidden", "false");
+    expect(rail).not.toHaveAttribute("inert");
+    expect(screen.getByRole("button", { name: "Open threads" })).toBeEnabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open threads" }));
+    expect(screen.getByRole("button", { name: "Close threads" })).toBeEnabled();
+  });
 });

@@ -209,11 +209,11 @@ seal. Normal chat no longer uses the old crimson seal.
 
 | Asset | Raw bytes | Local gzip bytes |
 | --- | ---: | ---: |
-| Main JavaScript | 909,167 | 249,504 |
+| Main JavaScript | 909,180 | 249,527 |
 | Lazy Motion feature chunk | 41,223 | 15,604 |
 | Main CSS | 143,514 | 26,533 |
 
-Combined JavaScript is 265,108 gzip bytes, below the accepted 275 KiB limit.
+Combined JavaScript is 265,131 gzip bytes, below the accepted 275 KiB limit.
 CSS is 26,533 gzip bytes, below the accepted 30 KiB limit. The final build after
 any owner-review repair must remeasure these hashed artifacts before closure.
 
@@ -221,8 +221,9 @@ any owner-review repair must remeasure these hashed artifacts before closure.
 
 - `npm run build`: passed; 470 modules transformed and the committed production
   bundle rebuilt.
-- `npm test`: 59 passed across 13 files.
-- `uv run pytest`: 528 passed in 451.52 seconds on Python 3.11.13.
+- `npm test`: 60 passed across 13 files after the owner-review repair.
+- `uv run pytest`: 528 passed in 676.82 seconds on Python 3.11.13 after the
+  owner-review repair.
 - `git diff --check` across authored source and records: passed. The unrestricted
   staged check reports whitespace inside Three.js GLSL template strings in the
   newly hashed generated bundle. The dist artifact remains byte-for-byte equal
@@ -232,3 +233,29 @@ The first full frontend run passed but logged repeated jsdom WebGL errors before
 the renderer's existing fallback caught them. A capability check now returns
 before Three.js construction when neither WebGL interface exists. The targeted
 20 chat tests and the repeated full 59-test suite passed without that stderr.
+
+## Owner-run visibility and sidebar failure
+
+The first owner run reported that the production UI looked unchanged and that a
+folded desktop sidebar could not reopen. A fresh fake server on port 8030 served
+the final Plan 025 hashes, `weaver-CxjTFoU0.js` and `weaver-D5Ic9QYw.css`, so the
+production command was reading the rebuilt dist. The visual complaint was still
+valid: this plan changed the scene foundation and materials while preserving the
+v1 chat composition, so it did not deliver the later rite, reply, composer, or
+archive redesigns.
+
+The sidebar failure came from two meanings being stored in one `railVisible`
+value. On desktop, collapsing the rail set its `<aside>` to `aria-hidden` and
+`inert`, even though CSS kept a 58px collapsed rail on screen. The reopen button
+was inside that disabled subtree and could not receive input.
+
+- Red: the new desktop regression test failed because the collapsed rail had
+  `aria-hidden="true"`.
+- Green: desktop collapse now keeps the rail operable while the same value still
+  controls the open/close icon and label. Mobile keeps its closed drawer inert.
+- Targeted verification: all 8 live-surface tests passed, including desktop
+  collapse/reopen and the existing mobile scrim and Escape paths.
+- Production-browser proof loaded `weaver-Clx5SHDI.js`, collapsed the desktop
+  rail to `lab-desktop-rail-collapsed`, kept `aria-hidden="false"` with no
+  `inert`, clicked the rail's `Open threads` control, and restored the expanded
+  state. The repeated full frontend suite passed 60 tests across 13 files.

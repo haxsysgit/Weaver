@@ -151,6 +151,7 @@ export function SpellSurfaceRail({
   const threadGroups = groupThreads(visibleThreads, grouping);
   const archivedCount = threads.filter((thread) => thread.archived).length;
   const railVisible = mobileLayout ? drawerOpen : !collapsed;
+  const railOperable = mobileLayout ? drawerOpen : true;
 
   function startRename(thread: LabThread) {
     setRenamingId(thread.id);
@@ -255,12 +256,12 @@ export function SpellSurfaceRail({
 
   return (
     <aside
-      aria-hidden={!railVisible}
+      aria-hidden={!railOperable}
       aria-label={mobileLayout ? "Threads" : undefined}
       aria-modal={mobileLayout && drawerOpen ? true : undefined}
       className="lab-rail"
       id="spell-surface-rail"
-      inert={!railVisible}
+      inert={!railOperable}
       role={mobileLayout ? "dialog" : undefined}
     >
       <header className="lab-brand">
