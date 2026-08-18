@@ -3,8 +3,8 @@
 ## Gate status
 
 **Admitted 2026-08-18.** Plan 022 closed with the accepted `shadow-slave`
-Edition id. Implementation and independent review are complete. The final
-owner decision is pending the full-suite blocker recorded in `results.md`.
+Edition id. Implementation, independent review, and the verification floor are
+complete. The final owner decision is pending.
 
 ## Owner-confirmed direction
 
@@ -63,12 +63,9 @@ The migration can copy legacy generated titles because `PreferencesStore` and
 the legacy table is absent and repeated startup after migration.
 
 The architecture is implemented with deterministic migration, session, API,
-and privacy coverage. The full suite currently has an unrelated doctor
-expectation failure recorded in `results.md`.
+and privacy coverage. The doctor expectation was aligned with the shipped v1
+model catalogue, then the full suite passed.
 
 ## Pending owner gates
 
-1. Decide whether the unrelated doctor expectation may be repaired under a
-   separate scope, then re-run the full suite.
-2. Record the final accept or reject decision after the verification floor is
-   complete.
+1. Record the final accept or reject decision.

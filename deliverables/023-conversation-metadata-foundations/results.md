@@ -14,18 +14,11 @@
 - `uv run ruff check src/weaver/conversation/schema.py src/weaver/conversation/repository.py src/weaver/conversation/session.py src/weaver/prefs.py src/weaver/web/app.py tests/test_conversation.py tests/test_web.py`:
   all checks passed.
 
-## Full-suite blocker
+## Verification floor
 
-`uv run pytest` collected 528 tests but did not pass cleanly. Its first
-failure was `tests/test_cli.py::test_doctor_has_no_network_requirement`:
-`src/weaver/doctor.py` still expects only the flash model alias, while the
-already-shipped v1 model catalogue includes Pro. Plan 023 did not modify the
-doctor or model catalogue.
+The owner approved the narrow doctor repair needed to unblock the full suite.
+It keeps the intentional flash startup alias and verifies both selectable v1
+model ids, flash and Pro. The doctor still makes no network call.
 
-The command runner also left long-running notebook-checker child processes
-after returning partial output. They were stopped after the failure had been
-captured. No source or generated data changed from those runs.
-
-Plan 023's independent review is complete. The full-suite requirement remains
-blocked on the unrelated doctor expectation until the owner directs a repair
-under an appropriate scope.
+`uv run pytest` completed with 528 passed in 546.54 seconds on 2026-08-18.
+No product model call or DeepSeek key was used.
