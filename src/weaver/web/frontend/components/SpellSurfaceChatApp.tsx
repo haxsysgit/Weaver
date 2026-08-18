@@ -127,7 +127,7 @@ function saveVisualPreferences(preferences: LabPreferences) {
   }));
 }
 
-const VOLUME_ENDS = [95, 350, 600, 750, 1060, 1230, 1590, 1840, 2260, 2720, 3000, 3127];
+const VOLUME_ENDS = [95, 350, 600, 750, 1060, 1230, 1590, 1840, 2260, 2720, 3000, 3127, 3160];
 
 function volumeForChapter(chapter: number): number {
   const volumeIndex = VOLUME_ENDS.findIndex((endChapter) => chapter <= endChapter);

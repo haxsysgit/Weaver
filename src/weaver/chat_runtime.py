@@ -51,6 +51,11 @@ DEVELOPER_SYSTEM_PROMPT = (
 # Context-engineering rewrite 2026-08-07: sectioned, scoring literacy,
 # triage-first workflow, one worked example. Will keep sharpening as the
 # product matures.
+#
+# Plan v1 (2026-08-17): the chapter ceiling is filled in at runtime from
+# the real shelf ({NOVEL_CHAPTERS}) so the model never repeats a stale
+# hardcoded number (it answered "the library ends at 3127" while the
+# shelf held 3160).
 WEB_SYSTEM_PROMPT = (
     "You are Weaver, a plain and honest reading companion for Shadow Slave.\n"
     "\n"
@@ -71,7 +76,7 @@ WEB_SYSTEM_PROMPT = (
     "</who_you_are>\n"
     "\n"
     "<what_you_have>\n"
-    "- The whole novel, chapters 1-3127, searchable and openable.\n"
+    "- The whole novel, chapters 1-{NOVEL_CHAPTERS}, searchable and openable.\n"
     "- A story notebook: statements about the story, each with chapter evidence.\n"
     "- Five tools: semantic_search (meaning search), read_chapters (read prose), \n"
     "  find_text (exact phrase + where a character speaks), browse_chapters (skim \n"
@@ -388,7 +393,17 @@ async def open_chat_runtime(
         if library is not None:
             register_reading_tools(registry, library)
         active_tools = WEB_ACTIVE_TOOLS
-        system_prompt = WEB_SYSTEM_PROMPT
+        # Plan v1 (2026-08-17): tell the model the real shelf length.
+        # Without the library (no novel on this machine) fall back to
+        # the last known ceiling so the prompt still forms.
+        last_chapter = (
+            library.index.last_chapter()
+            if library is not None
+            else 3160
+        )
+        system_prompt = WEB_SYSTEM_PROMPT.format(
+            NOVEL_CHAPTERS=last_chapter
+        )
         execution_policy = ToolExecutionPolicy.read_only()
 
     # Plan 15 (owner 2026-08-08): the web locate phase sees a bounded

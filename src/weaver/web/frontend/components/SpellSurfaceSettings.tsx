@@ -54,6 +54,7 @@ const VOLUMES = [
   { end: 2720, number: 10 },
   { end: 3000, number: 11 },
   { end: 3127, number: 12 },
+  { end: 3160, number: 13 },
 ];
 
 const TIER_COPY: Record<Tier, string> = {
@@ -242,7 +243,7 @@ export function SpellSurfaceSettings({
                     <label>
                       <span>Chapter</span>
                       <input
-                        max={3127}
+                        max={3160}
                         min={1}
                         onChange={(event) => update("chapter", Number(event.target.value))}
                         type="number"

@@ -27,6 +27,7 @@ from weaver.agent.errors import safe_error
 from weaver.agent.turn import REASONING_TIERS, TOOL_BUDGET_TIERS, TurnExitReason
 from weaver.chat_runtime import ChatRuntime
 from weaver.model_layer.deepseek import current_api_key, current_model_id
+from weaver.prefs import MAX_CHAPTER
 
 MAX_MESSAGE_CHARS = 32_000
 
@@ -83,7 +84,7 @@ class TurnBody(BaseModel):
 
 
 class PreferencesBody(BaseModel):
-    reader_chapter: int | None = Field(default=None, ge=1, le=3127)
+    reader_chapter: int | None = Field(default=None, ge=1, le=MAX_CHAPTER)
     spoiler_mode: str = Field(default="protect", pattern="^(protect|none)$")
     tier: str = Field(default="ascended", pattern="^(awakened|ascended|transcendent)$")
 

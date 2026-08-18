@@ -23,7 +23,10 @@ import aiosqlite
 
 SPOILER_MODES = ("protect", "none")
 TIERS = ("awakened", "ascended", "transcendent")
-MAX_CHAPTER = 3127
+# Plan v1 (2026-08-17): the reader-position ceiling. Keep in step with
+# the shelf (novels/shadow-slave, currently 3160); the web system prompt
+# derives its own count at runtime so it can never lie again.
+MAX_CHAPTER = 3160
 
 SpoilerMode = Literal["protect", "none"]
 Tier = Literal["awakened", "ascended", "transcendent"]

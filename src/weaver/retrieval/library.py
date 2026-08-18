@@ -130,6 +130,25 @@ class ChapterIndex:
         self.novel_dir = novel_dir
         self._hash_cache: dict[int, str] = {}
 
+    def last_chapter(self) -> int:
+        """The highest chapter number present on the shelf.
+
+        Scans the NNNN-NNNN+99 buckets (one os.walk over a few hundred
+        files); used to keep the system prompt honest about the real
+        novel length instead of a hardcoded ceiling that goes stale.
+        """
+        highest = 0
+        if not self.novel_dir.exists():
+            return highest
+        for bucket in self.novel_dir.iterdir():
+            if not bucket.is_dir():
+                continue
+            for chapter_file in bucket.glob("chapter-*.txt"):
+                number = chapter_file.stem.removeprefix("chapter-")
+                if number.isdigit():
+                    highest = max(highest, int(number))
+        return highest
+
     def _path(self, chapter: int) -> Path:
         if chapter < 1:
             raise ValueError(f"chapter must be >= 1, got {chapter}")
