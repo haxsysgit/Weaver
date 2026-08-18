@@ -22,8 +22,16 @@ progress; the owner learning gate remains pending after real-device use.
 
 ## Observations to verify after admission
 
-- The current background already supplies useful cosmic scale, but its phone
-  rendering and random composition need direct comparison inside the new layout.
+- The current background already supplies useful cosmic scale through a WebGL
+  star field, silver web, and distant old-gold cores. It deliberately renders
+  at pixel ratio 1 with a 30fps ceiling, so the lab must show whether a sharper
+  foreground Spellweave can carry the near-field detail without becoming noisy.
+- The existing first-run flow keeps the DeepSeek key in browser storage,
+  supports deferral with Escape, and traps dialog focus. The lab only depicts
+  those states. It must not pretend to validate, send, or retain a real key.
+- The existing rail already has mobile focus return and body scroll locking.
+  The lab must make the proposed full-screen Thread Archive reachable and
+  legible without treating it as a narrow desktop sidebar.
 - The approved 390 x 844 board is the composition reference. Responsive proof
   also covers 320 x 568, 360 x 800, and 412 x 915 so the result is not tuned to
   one phone.
