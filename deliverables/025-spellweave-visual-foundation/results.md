@@ -38,8 +38,16 @@ provider response.
 - geometries, materials, renderer, listener, resize frame, and animation frame
   explicitly cleaned up.
 
-## Pending phone evidence
+## Device-neutral evidence contract
 
-The Redmi Note 14 trace remains outstanding. Numeric frame-time and long-task
-limits will be proposed from that trace and require owner acceptance before
-production implementation begins.
+The owner removed the named-phone gate on 2026-08-18. Plan 025 now validates
+the full viewport matrix with DPR 2, touch emulation, and 4x CPU throttling.
+The accepted numeric limits are recorded in `learning.md`.
+
+## Slice 3 render-profile proof
+
+- Red: the targeted Vitest run failed because `spellRenderProfile.ts` did not
+  exist.
+- Green: 4 tests passed after adding the typed profile helper.
+- The tests cover capped DPR, compact and phone budgets, desktop density,
+  reduced-motion static rendering, and narrow landscape.
