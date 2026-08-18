@@ -18,6 +18,13 @@ Interaction-contract proof complete. Responsive scene work is in progress.
 
 ## Local visual inspection
 
+- Owner feedback rejected the first lab composition on 2026-08-18. It was too
+  abstract, failed to follow the approved board, weakened the existing
+  Nightmare Spell background, exposed construction borders, and left the chat
+  surfaces too transparent.
+- The replacement lab now follows the board's actual layout rules: a dominant
+  code-native masked mantle in the rite, dense central Spellweave, opaque
+  reader shards, an explicit Weaver reply spine, and a black-wood composer.
 - The first 390 x 844 and 1440 x 900 captures exposed two failures: the live
   chamber showed through the rite, and dashed background paths looked like
   decorative wallpaper instead of a deliberate Spellweave.
