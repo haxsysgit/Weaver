@@ -1,5 +1,10 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+
+import {
+  getSpellRenderProfile,
+  type SpellRenderProfile,
+} from "../lib/spellRenderProfile";
 
 /**
  * The Nightmare Spell background: the space between dream and reality from
@@ -16,8 +21,6 @@ export type SpellBgMode = "subtle" | "alive";
 
 const STAR_COLOR = new THREE.Color(0xc2c6d2);
 const THREAD_COLOR = new THREE.Color(0xc8ccd6);
-const STAR_COUNT = 4500;
-
 // 91 divine cores shining especially well among the myriad of stars:
 // the Nightmare Spell was matured by Weaver using himself and his six
 // siblings (7 daemons, 7 cores each = 49) and the six gods (6 x 7 = 42),
@@ -116,15 +119,15 @@ const DIVINE_FRAG = /* glsl */ `
   }
 `;
 
-function makeStars(): {
+function makeStars(starCount: number): {
   positions: Float32Array;
   phases: Float32Array;
   sizes: Float32Array;
 } {
-  const positions = new Float32Array(STAR_COUNT * 3);
-  const phases = new Float32Array(STAR_COUNT);
-  const sizes = new Float32Array(STAR_COUNT);
-  for (let i = 0; i < STAR_COUNT; i++) {
+  const positions = new Float32Array(starCount * 3);
+  const phases = new Float32Array(starCount);
+  const sizes = new Float32Array(starCount);
+  for (let i = 0; i < starCount; i++) {
     // a wide flat volume: the void stretches around the reader
     const r = 24 + Math.random() * 36;
     const theta = Math.random() * Math.PI * 2;
@@ -237,9 +240,26 @@ function makeDivineCores(aspectRatio: number): {
 export function StarWebScene(
   canvas: HTMLCanvasElement,
   mode: SpellBgMode,
-  opts: { transparent?: boolean; threadAlpha?: number } = {},
+  opts: {
+    paused?: boolean;
+    profile?: SpellRenderProfile;
+    transparent?: boolean;
+    threadAlpha?: number;
+  } = {},
 ) {
-  const { transparent = false, threadAlpha } = opts;
+  const initialWidth = canvas.clientWidth || window.innerWidth;
+  const initialHeight = canvas.clientHeight || window.innerHeight;
+  const profile = opts.profile ?? getSpellRenderProfile({
+    devicePixelRatio: window.devicePixelRatio,
+    height: initialHeight,
+    reducedMotion: false,
+    width: initialWidth,
+  });
+  const {
+    paused = false,
+    transparent = false,
+    threadAlpha,
+  } = opts;
   // jsdom (and some headless setups) have no WebGL; the background must
   // degrade to nothing instead of crashing the whole chat.
   let renderer: THREE.WebGLRenderer;
@@ -253,14 +273,14 @@ export function StarWebScene(
   } catch {
     return () => undefined;
   }
-  renderer.setPixelRatio(1); // cost: 4x pixels for a faint background is not worth it
+  renderer.setPixelRatio(profile.pixelRatio);
   const scene = new THREE.Scene();
   scene.background = transparent ? null : new THREE.Color(0x050508);
   const camera = new THREE.PerspectiveCamera(62, 1, 0.1, 200);
   camera.position.set(0, 0, 6);
   camera.lookAt(0, 0, -10);
 
-  const { positions, phases, sizes } = makeStars();
+  const { positions, phases, sizes } = makeStars(profile.starCount);
   const starGeo = new THREE.BufferGeometry();
   starGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
   starGeo.setAttribute("phase", new THREE.BufferAttribute(phases, 1));
@@ -279,8 +299,6 @@ export function StarWebScene(
   const stars = new THREE.Points(starGeo, starMat);
   scene.add(stars);
 
-  const initialWidth = canvas.clientWidth || window.innerWidth;
-  const initialHeight = canvas.clientHeight || window.innerHeight;
   const divineCoreData = makeDivineCores(initialWidth / initialHeight);
   const dPos = divineCoreData.positions;
   const dGeo = new THREE.BufferGeometry();
@@ -304,7 +322,7 @@ export function StarWebScene(
   scene.add(divine);
 
   // silver threads: connect stars within a radius, rebuilt on a timer
-  const maxSegs = 3400;
+  const maxSegs = profile.maxThreadSegments;
   const lineGeo = new THREE.BufferGeometry();
   const threadPositions = new Float32Array(maxSegs * 6);
   const lineUV = new Float32Array(maxSegs * 2);
@@ -378,7 +396,7 @@ export function StarWebScene(
     const uv: number[] = [];
     const ph: number[] = [];
 
-    for (let i = 0; i < STAR_COUNT && segs.length < maxSegs * 6; i++) {
+    for (let i = 0; i < profile.starCount && segs.length < maxSegs * 6; i++) {
       const px = positions[i * 3];
       const py = positions[i * 3 + 1];
       const pz = positions[i * 3 + 2];
@@ -431,7 +449,6 @@ export function StarWebScene(
   buildNet();
 
   const clock = new THREE.Clock();
-  let raf = 0;
   let netTimer = 0;
   let resizeFrame = 0;
   let lastDivineAspectRatio = initialWidth / initialHeight;
@@ -465,32 +482,50 @@ export function StarWebScene(
   // camera drifts on its own, slowly, so the web feels alive without
   // reacting to the mouse.
   let lastRender = 0;
-  const tick = (now: number) => {
-    if (document.hidden || canvas.dataset.paused === "true") {
-      raf = requestAnimationFrame(tick);
+  let inspectionRecorded = false;
+  const renderFrame = () => {
+    const t = clock.getElapsedTime();
+    lastRender = t;
+    starMat.uniforms.uTime.value = t;
+    threadMat.uniforms.uTime.value = t;
+    dMat.uniforms.uTime.value = t;
+    if (mode === "alive" && profile.animated) {
+      netTimer += 1 / 30;
+      if (netTimer > 3.2) {
+        netTimer = 0;
+        refreshThreadPhases();
+      }
+    }
+    renderer.render(scene, camera);
+
+    if (!inspectionRecorded) {
+      canvas.dataset.drawCalls = String(renderer.info.render.calls);
+      canvas.dataset.pixelRatio = String(profile.pixelRatio);
+      canvas.dataset.renderProfile = profile.name;
+      canvas.dataset.starCount = String(profile.starCount);
+      canvas.dataset.threadBudget = String(profile.maxThreadSegments);
+      inspectionRecorded = true;
+    }
+  };
+
+  const tick = () => {
+    if (document.hidden || paused || canvas.dataset.paused === "true") {
       return;
     }
-    const t = clock.getElapsedTime();
-    if (t - lastRender >= 1 / 30) {
-      lastRender = t;
-      starMat.uniforms.uTime.value = t;
-      threadMat.uniforms.uTime.value = t;
-      dMat.uniforms.uTime.value = t;
-      if (mode === "alive") {
-        netTimer += 1 / 30;
-        if (netTimer > 3.2) {
-          netTimer = 0;
-          refreshThreadPhases();
-        }
-      }
-      renderer.render(scene, camera);
+
+    const elapsed = clock.getElapsedTime();
+    if (elapsed - lastRender >= 1 / 30) {
+      renderFrame();
     }
-    raf = requestAnimationFrame(tick);
   };
-  raf = requestAnimationFrame(tick);
+
+  renderFrame();
+  if (profile.animated && !paused) {
+    renderer.setAnimationLoop(tick);
+  }
 
   return () => {
-    cancelAnimationFrame(raf);
+    renderer.setAnimationLoop(null);
     cancelAnimationFrame(resizeFrame);
     window.removeEventListener("resize", scheduleResize);
     starGeo.dispose();
@@ -501,6 +536,15 @@ export function StarWebScene(
     dMat.dispose();
     renderer.dispose();
   };
+}
+
+function currentRenderProfile(): SpellRenderProfile {
+  return getSpellRenderProfile({
+    devicePixelRatio: window.devicePixelRatio,
+    height: window.innerHeight,
+    reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    width: window.innerWidth,
+  });
 }
 
 export function SpellBackground({
@@ -517,6 +561,19 @@ export function SpellBackground({
   className?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [profile, setProfile] = useState(currentRenderProfile);
+
+  useEffect(() => {
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updateProfile = () => setProfile(currentRenderProfile());
+
+    window.addEventListener("resize", updateProfile);
+    reducedMotion.addEventListener("change", updateProfile);
+    return () => {
+      window.removeEventListener("resize", updateProfile);
+      reducedMotion.removeEventListener("change", updateProfile);
+    };
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -528,9 +585,14 @@ export function SpellBackground({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const dispose = StarWebScene(canvas, mode, { transparent, threadAlpha });
+    const dispose = StarWebScene(canvas, mode, {
+      paused,
+      profile,
+      threadAlpha,
+      transparent,
+    });
     return dispose;
-  }, [mode, transparent, threadAlpha]);
+  }, [mode, paused, profile, transparent, threadAlpha]);
 
   return (
     <canvas

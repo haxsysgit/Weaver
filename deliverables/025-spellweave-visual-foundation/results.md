@@ -72,3 +72,18 @@ The accepted numeric limits are recorded in `learning.md`.
 - Green: 4 tests passed after adding the pure geometry helper.
 - Geometry is seed-stable, normalized to the viewport, capped below 64
   connections, and composed from different portrait and desktop anchors.
+
+## Slice 6 distant-field rendering
+
+- `SpellBackground` now consumes the tested render profile and caps DPR at 2.
+- Compact, phone, desktop, narrow-landscape, and reduced-motion budgets control
+  star and line buffers before allocation.
+- Reduced motion renders one static frame. Paused and hidden states skip render
+  work.
+- Three.js owns the animation loop through `setAnimationLoop()`.
+- The canvas exposes the active profile, DPR, draw calls, star count, and thread
+  budget as inspection-only data attributes.
+- Geometry, materials, renderer, resize frame, listener, and animation loop are
+  cleaned up on unmount or profile change.
+- The render-profile and existing live-surface tests passed, 10 tests total,
+  followed by a successful TypeScript and Vite build.
