@@ -178,6 +178,103 @@ async def test_device_scoping_isolates_conversations(client) -> None:
     await _no_canaries(hidden.text)
 
 
+async def test_conversation_metadata_patch_returns_durable_summary(client) -> None:
+    device = {"X-Device-Id": "metadata-reader"}
+    conversation_id = (
+        await client.post("/api/conversations", headers=device)
+    ).json()["conversation_id"]
+
+    listed = await client.get("/api/conversations", headers=device)
+    assert listed.status_code == 200
+    assert listed.json() == [
+        {
+            "conversation_id": conversation_id,
+            "title": "New chat",
+            "created_at": listed.json()[0]["created_at"],
+            "archived": False,
+            "pinned": False,
+            "edition_id": "shadow-slave",
+        }
+    ]
+
+    updated = await client.patch(
+        f"/api/conversations/{conversation_id}",
+        headers=device,
+        json={"title": "  Ananke theory  ", "archived": True, "pinned": True},
+    )
+    assert updated.status_code == 200
+    assert updated.json() == {
+        "conversation_id": conversation_id,
+        "title": "Ananke theory",
+        "created_at": listed.json()[0]["created_at"],
+        "archived": True,
+        "pinned": True,
+        "edition_id": "shadow-slave",
+    }
+
+    reset = await client.patch(
+        f"/api/conversations/{conversation_id}",
+        headers=device,
+        json={"title": None, "archived": False, "pinned": False},
+    )
+    assert reset.status_code == 200
+    assert reset.json()["title"] == "New chat"
+    assert reset.json()["archived"] is False
+    assert reset.json()["pinned"] is False
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {},
+        {"title": "   "},
+        {"title": "x" * 81},
+        {"edition_id": "another-edition"},
+        {"unknown": True},
+    ],
+)
+async def test_conversation_metadata_patch_rejects_invalid_body(client, body) -> None:
+    device = {"X-Device-Id": "metadata-reader"}
+    conversation_id = (
+        await client.post("/api/conversations", headers=device)
+    ).json()["conversation_id"]
+
+    response = await client.patch(
+        f"/api/conversations/{conversation_id}",
+        headers=device,
+        json=body,
+    )
+    assert response.status_code == 422
+
+
+async def test_missing_device_header_cannot_access_owned_conversation(client) -> None:
+    device = {"X-Device-Id": "owned-reader"}
+    conversation_id = (
+        await client.post("/api/conversations", headers=device)
+    ).json()["conversation_id"]
+
+    messages = await client.get(f"/api/conversations/{conversation_id}/messages")
+    assert messages.status_code == 404
+
+    turn = await client.post(
+        f"/api/conversations/{conversation_id}/turns",
+        json={"message": "intrude"},
+    )
+    assert turn.status_code == 404
+
+    update = await client.patch(
+        f"/api/conversations/{conversation_id}",
+        json={"archived": True},
+    )
+    assert update.status_code == 404
+
+    delete = await client.delete(f"/api/conversations/{conversation_id}")
+    assert delete.status_code == 404
+
+    owner_listing = await client.get("/api/conversations", headers=device)
+    assert [row["conversation_id"] for row in owner_listing.json()] == [conversation_id]
+
+
 async def test_byok_key_header_used_and_never_persisted(client, tmp_path) -> None:
     """Plan v1 slice 3: the browser key rides the header, is consumed
     for the turn, and never lands in any stored body (no-log rule)."""

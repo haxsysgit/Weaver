@@ -21,7 +21,7 @@ from urllib.parse import urlparse
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from weaver.agent.errors import safe_error
 from weaver.agent.turn import REASONING_TIERS, TOOL_BUDGET_TIERS, TurnExitReason
@@ -87,6 +87,14 @@ class PreferencesBody(BaseModel):
     reader_chapter: int | None = Field(default=None, ge=1, le=MAX_CHAPTER)
     spoiler_mode: str = Field(default="protect", pattern="^(protect|none)$")
     tier: str = Field(default="ascended", pattern="^(awakened|ascended|transcendent)$")
+
+
+class ConversationMetadataBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    title: str | None = Field(default=None, max_length=80)
+    archived: bool | None = None
+    pinned: bool | None = None
 
 
 def _reject_blank(message: str) -> None:
@@ -395,18 +403,38 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
     @app.get("/api/conversations")
     async def list_conversations(request: Request) -> list[dict]:
         device = _device_id(request)
-        rows = await runtime.session.list_conversations(device_id=device)
-        stored = await runtime.prefs.titles() if runtime.prefs is not None else {}
-        return [
-            {
-                "conversation_id": row["conversation_id"],
-                "title": stored.get(row["conversation_id"])
-                or (row["last_owner_text"] or "")[:80]
-                or "New chat",
-                "created_at": row["created_at"],
-            }
-            for row in rows
-        ]
+        return await runtime.session.list_conversations(device_id=device)
+
+    @app.patch(
+        "/api/conversations/{conversation_id}",
+        dependencies=[Depends(_check_local)],
+    )
+    async def update_conversation_metadata(
+        conversation_id: str,
+        request: Request,
+        body: ConversationMetadataBody,
+    ) -> dict:
+        await _own_conversation(conversation_id, request)
+        field_names = body.model_fields_set
+        if not field_names:
+            raise HTTPException(status_code=422, detail="metadata update must not be empty")
+
+        title = body.title
+        if "title" in field_names and title is not None:
+            title = title.strip()
+            if not title:
+                raise HTTPException(status_code=422, detail="title must not be blank")
+
+        summary = await runtime.session.update_conversation_metadata(
+            conversation_id,
+            title=title,
+            title_is_set="title" in field_names,
+            archived=body.archived if "archived" in field_names else None,
+            pinned=body.pinned if "pinned" in field_names else None,
+        )
+        if summary is None:
+            raise HTTPException(status_code=404, detail="unknown conversation")
+        return summary
 
     @app.post(
         "/api/conversations", status_code=201, dependencies=[Depends(_check_local)]
@@ -427,8 +455,6 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
             raise HTTPException(status_code=409, detail="a turn is running in this conversation")
         if not await runtime.session.delete_conversation(conversation_id):
             raise HTTPException(status_code=404, detail="unknown conversation")
-        if runtime.prefs is not None:
-            await runtime.prefs.clear_title(conversation_id)
         return {"deleted": conversation_id}
 
     @app.get("/api/passages", dependencies=[Depends(_check_local)])
