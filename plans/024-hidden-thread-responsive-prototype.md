@@ -10,7 +10,7 @@
 - **Tooling:** root `npm` scripts for regression checks, Node's built-in test
   runner for the private lab state, a local static server, browser responsive
   mode, and a real phone on the same local network.
-- **State:** drafted (awaiting owner admission).
+- **State:** admitted 2026-08-18 (owner direction).
 - **Depends on:** Plan 022 closed with the Hidden Thread canon and identity
   record accepted. The prototype uses Plan 023's locked draft metadata shape
   as a disposable fixture, but does not depend on Plan 023 implementation or

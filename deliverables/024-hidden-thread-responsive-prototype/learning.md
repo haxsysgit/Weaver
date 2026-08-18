@@ -2,9 +2,8 @@
 
 ## Gate status
 
-**Unadmitted.** The owner approved the direction and requested this plan on
-2026-08-18. Plan-specific admission remains pending after Plans 022 and 023
-close.
+**Admitted 2026-08-18.** Plans 022 and 023 are closed. Inspection is in
+progress; the owner learning gate remains pending after real-device use.
 
 ## Confirmed owner direction
 
@@ -40,5 +39,5 @@ accepts the full rite-to-chat transition on the Redmi Note 14.
 
 ## Learning gate
 
-Pending. After admission, the executor records inspection evidence here, then
-the owner confirms the prototype rules that Plan 025 may carry into production.
+Pending. After the lab is inspected on the owner's Redmi Note 14, the owner
+confirms the prototype rules that Plan 025 may carry into production.
