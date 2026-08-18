@@ -2,8 +2,10 @@
 
 ## Gate status
 
-**Admitted 2026-08-18.** The bounded source read is in progress. The owner
-learning gate and final decision are pending.
+**Admitted 2026-08-18.** The bounded source read is complete. The owner
+accepted the canon split, product-fiction text, permanent terms, and stable
+Edition id on 2026-08-18. Independent review and the final decision are
+pending.
 
 ## Owner-confirmed direction
 
@@ -43,7 +45,4 @@ and independent re-read can confirm it.
 
 ## Pending owner gates
 
-1. After the primary read, confirm or correct the canon claim table.
-2. Approve or reject the Hidden Thread product-fiction text, permanent term
-   definitions, and `shadow-slave` Edition id.
-3. Record the final plan decision after independent review.
+1. Record the final plan decision after independent review.
