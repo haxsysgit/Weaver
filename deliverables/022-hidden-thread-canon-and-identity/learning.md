@@ -2,8 +2,8 @@
 
 ## Gate status
 
-**Unadmitted.** The admission gate, bounded source read, owner learning gate,
-and final decision are pending.
+**Admitted 2026-08-18.** The bounded source read is in progress. The owner
+learning gate and final decision are pending.
 
 ## Owner-confirmed direction
 
@@ -43,8 +43,7 @@ and independent re-read can confirm it.
 
 ## Pending owner gates
 
-1. Admit Plan 022 after the currently admitted plans close.
-2. After the primary read, confirm or correct the canon claim table.
-3. Approve or reject the Hidden Thread product-fiction text, permanent term
+1. After the primary read, confirm or correct the canon claim table.
+2. Approve or reject the Hidden Thread product-fiction text, permanent term
    definitions, and `shadow-slave` Edition id.
-4. Record the final plan decision after independent review.
+3. Record the final plan decision after independent review.
