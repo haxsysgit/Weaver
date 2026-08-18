@@ -25,6 +25,18 @@
   --fate-line-bright: rgba(212, 208, 197, 0.17);
   --danger: #ed746b;
 
+  /* Shadow Slave Edition: the Hidden Thread material hierarchy. */
+  --edition-spell-void: #050505;
+  --edition-spell-raised: #1e1f20;
+  --edition-black-wood: #0b0a09;
+  --edition-reader-ivory: #e7e2d9;
+  --edition-thread-silver: #cbcccc;
+  --edition-thread-quiet: rgba(142, 141, 141, 0.3);
+  --edition-appraisal-gold: #b79a62;
+  --edition-appraisal-gold-soft: rgba(183, 154, 98, 0.18);
+  --edition-corruption: #74302d;
+  --edition-depth-line: rgba(203, 204, 204, 0.13);
+
   --rail-width: 296px;
   --reading-width: 860px;
   --composer-radius: 18px;

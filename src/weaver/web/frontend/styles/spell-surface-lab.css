@@ -2754,3 +2754,97 @@
     opacity: 0 !important;
   }
 }
+
+/* Hidden Thread palette. The live Shadow Slave Edition uses light and material
+   contrast for depth, while crimson stays available for meaningful failure. */
+.spell-surface-live,
+.spell-surface-live[data-theme] {
+  --lab-ink: var(--edition-reader-ivory);
+  --lab-silver: var(--edition-thread-silver);
+  --lab-dim: #8e8d8d;
+  --lab-faint: var(--edition-depth-line);
+  --lab-line: rgba(203, 204, 204, 0.19);
+  --lab-gold: var(--edition-appraisal-gold);
+  --lab-gold-soft: var(--edition-appraisal-gold-soft);
+  --lab-crimson: var(--edition-corruption);
+  --lab-glass-strong: rgba(9, 9, 9, 0.72);
+  --lab-glass-soft: rgba(5, 5, 5, 0.34);
+  --lab-glass-message: rgba(5, 5, 5, 0.08);
+  --surface-accent: rgba(203, 204, 204, 0.055);
+  --surface-edge: rgba(203, 204, 204, 0.15);
+  --surface-haze-a: rgba(203, 204, 204, 0.035);
+  --surface-haze-b: rgba(142, 141, 141, 0.018);
+  --surface-panel-a: rgba(11, 11, 11, 0.92);
+  --surface-panel-b: rgba(3, 3, 3, 0.94);
+  --surface-root: var(--edition-spell-void);
+  background:
+    radial-gradient(circle at 76% -16%, rgba(203, 204, 204, 0.035), transparent 34rem),
+    radial-gradient(circle at 38% 112%, rgba(142, 141, 141, 0.018), transparent 42rem),
+    var(--edition-spell-void);
+}
+
+.spell-surface-live .lab-rail {
+  border-right-color: var(--edition-depth-line);
+  background:
+    radial-gradient(circle at 10% 0, rgba(203, 204, 204, 0.045), transparent 20rem),
+    linear-gradient(180deg, rgba(13, 13, 13, 0.9), rgba(3, 3, 3, 0.91));
+  box-shadow: 18px 0 64px rgba(0, 0, 0, 0.34);
+}
+
+.spell-surface-live .lab-chat-header {
+  background: linear-gradient(180deg, rgba(5, 5, 5, 0.48), rgba(5, 5, 5, 0.12));
+}
+
+.spell-surface-live .lab-message-body,
+.spell-surface-live .lab-message-owner .lab-message-body {
+  border-color: rgba(203, 204, 204, 0.16);
+  background: rgba(5, 5, 5, 0.08);
+}
+
+.spell-surface-live .lab-message-body p {
+  color: var(--edition-reader-ivory);
+}
+
+.spell-surface-live .lab-message-owner .lab-message-body {
+  border-color: rgba(203, 204, 204, 0.25);
+  background:
+    linear-gradient(135deg, rgba(30, 31, 32, 0.58), rgba(5, 5, 5, 0.22));
+}
+
+.spell-surface-live .lab-composer {
+  border-color: rgba(203, 204, 204, 0.24);
+  background:
+    linear-gradient(96deg, transparent 0 18%, rgba(255, 255, 255, 0.018) 19%, transparent 20% 56%, rgba(255, 255, 255, 0.014) 57%, transparent 58%),
+    repeating-linear-gradient(4deg, rgba(255, 255, 255, 0.012) 0 1px, transparent 1px 6px),
+    linear-gradient(145deg, #131210, var(--edition-black-wood) 54%, #050505);
+  box-shadow:
+    0 18px 50px rgba(0, 0, 0, 0.34),
+    inset 0 1px rgba(203, 204, 204, 0.07);
+}
+
+.spell-surface-live .lab-composer:focus-within {
+  border-color: rgba(203, 204, 204, 0.48);
+  box-shadow:
+    0 18px 50px rgba(0, 0, 0, 0.34),
+    0 0 0 1px rgba(183, 154, 98, 0.1),
+    inset 0 1px rgba(203, 204, 204, 0.08);
+}
+
+.spell-surface-live .lab-composer > button {
+  color: var(--edition-spell-void);
+  background: var(--edition-thread-silver);
+}
+
+.spell-surface-live .lab-thread-row.active,
+.spell-surface-live .lab-new-thread,
+.spell-surface-live .lab-rail-footer > button,
+.spell-surface-live .lab-live-mode {
+  border-color: var(--edition-depth-line);
+  background: rgba(203, 204, 204, 0.045);
+}
+
+.spell-surface-live .lab-chat-main::before {
+  background:
+    linear-gradient(110deg, rgba(203, 204, 204, 0.018), transparent 34%),
+    radial-gradient(circle at 100% 52%, rgba(142, 141, 141, 0.018), transparent 32rem);
+}

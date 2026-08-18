@@ -106,3 +106,18 @@ active profile count, and the next build passed.
   motion tokens. Reduced motion removes travel and looping state animation.
 - The production TypeScript and Vite build passed after the recorded profile
   reference repair.
+
+## Slice 8 materials and palette
+
+- Added Shadow Slave Edition aliases for near-black depth, black wood, reader
+  ivory, cold thread silver, quiet silver, muted appraisal gold, and corruption
+  crimson.
+- The live surface no longer derives its main atmosphere from crimson or
+  purple washes.
+- Existing global tokens remain available to older surfaces and settings.
+- The composer gains a code-native black-wood grain built from layered CSS
+  gradients, with no image asset.
+- New state animation uses only `--motion-smooth` and `--ease-weave`. Reduced
+  motion removes travel and loops.
+- The production build measured 25.97 KiB gzip CSS, below the accepted 30 KiB
+  limit.
