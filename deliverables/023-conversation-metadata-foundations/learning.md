@@ -2,8 +2,8 @@
 
 ## Gate status
 
-**Unadmitted.** Plan 022 must close first. Implementation, independent review,
-and the final owner decision have not started.
+**Admitted 2026-08-18.** Plan 022 must close first. Implementation,
+independent review, and the final owner decision have not started.
 
 ## Owner-confirmed direction
 
@@ -67,6 +67,5 @@ owner admits the plan.
 ## Pending owner gates
 
 1. Close Plan 022 with the Edition id confirmed.
-2. Admit this exact schema and PATCH contract.
-3. Review deterministic migration and API evidence after implementation.
-4. Record the final accept or reject decision after independent review.
+2. Review deterministic migration and API evidence after implementation.
+3. Record the final accept or reject decision after independent review.
