@@ -121,3 +121,18 @@ active profile count, and the next build passed.
   motion removes travel and loops.
 - The production build measured 25.97 KiB gzip CSS, below the accepted 30 KiB
   limit.
+
+## Slice 9 live-surface integration
+
+- Red: the live-surface test failed because the app still mounted the old
+  background siblings and main-chat Soul Sea.
+- Green: 10 backdrop and live-surface tests passed after integration.
+- `SpellSurfaceChatApp` now mounts one `SpellweaveBackdrop` around the existing
+  v1 chat, rail, transcript, composer, setup, and settings components.
+- Existing chat activity drives reaching, reading, answering, complete, and
+  failed backdrop states.
+- The main-chat Soul Sea mount was removed. The existing Soul Sea inside the
+  settings dialog remains visible and is now asserted by the live-surface test.
+- The first green test used a stale exact placeholder string. The backdrop
+  assertions had passed, the control-preservation assertion was changed to the
+  textbox role, and the rerun passed all 7 live-surface tests.

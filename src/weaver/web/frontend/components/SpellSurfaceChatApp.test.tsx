@@ -133,6 +133,9 @@ describe("first Nightmare setup", () => {
     const dialog = await screen.findByRole("dialog", {
       name: "Soul Sea settings",
     });
+    expect(
+      within(dialog).getByRole("img", { name: /Still Black Sea/ }),
+    ).toBeVisible();
     fireEvent.click(
       within(dialog).getByRole("button", { name: "Model" }),
     );
@@ -194,5 +197,22 @@ describe("mobile thread drawer", () => {
 
     await waitFor(() => expect(opener).toHaveFocus());
     expect(document.body.style.overflow).toBe("");
+  });
+});
+
+describe("live Spellweave foundation", () => {
+  beforeEach(() => {
+    setDesktopMedia();
+    localStorage.setItem(FIRST_NIGHTMARE_STORAGE_KEY, "deferred");
+  });
+
+  it("mounts one decorative three-depth backdrop around the existing chat", () => {
+    render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
+
+    const backdrop = screen.getByTestId("spellweave-backdrop");
+    expect(backdrop).toHaveAttribute("aria-hidden", "true");
+    expect(backdrop.querySelectorAll("[data-spell-depth]")).toHaveLength(3);
+    expect(backdrop.querySelector("button, input, textarea, a")).toBeNull();
+    expect(screen.getByRole("textbox")).toBeVisible();
   });
 });

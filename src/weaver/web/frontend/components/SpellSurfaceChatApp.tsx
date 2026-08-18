@@ -22,15 +22,17 @@ import {
 import { RailOpenIcon, SettingsIcon } from "./Icons";
 import { Message } from "./Message";
 import { RecoveryPanel } from "./RecoveryPanel";
-import { SpellBackground } from "./SpellBackground";
 import { SpellMotionProvider } from "./SpellMotionProvider";
+import {
+  SpellweaveBackdrop,
+  type SpellweaveActivityState,
+} from "./SpellweaveBackdrop";
 import { SpellSurfaceRail, type LabThread } from "./SpellSurfaceRail";
 import { SpellSurfaceRunes } from "./SpellSurfaceRunes";
 import {
   SpellSurfaceSettings,
   type LabPreferences,
 } from "./SpellSurfaceSettings";
-import { SpellSurfaceSoulSea, type SoulSeaState } from "./SpellSurfaceSoulSea";
 import { WeaverMark } from "./WeaverMark";
 import "../styles/spell-surface-lab.css";
 
@@ -179,10 +181,9 @@ function SpellSurfaceChatSurface({
   const [archivedIds, setArchivedIds] = useState<Set<string>>(new Set());
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set());
   const [threadNames, setThreadNames] = useState<Map<string, string>>(new Map());
-  const [soulState, setSoulState] = useState<SoulSeaState>("idle");
+  const [spellState, setSpellState] = useState<SpellweaveActivityState>("idle");
   const [announcement, setAnnouncement] = useState("[The Spell listens.]");
   const [announcementKey, setAnnouncementKey] = useState(0);
-  const [coreWakeKey, setCoreWakeKey] = useState(0);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const railOpenerRef = useRef<HTMLButtonElement>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
@@ -242,19 +243,19 @@ function SpellSurfaceChatSurface({
   useEffect(() => {
     if (chat.turnActive) {
       previousTurnActive.current = true;
-      setSoulState(chat.activity.length > 0 ? "weaving" : "rippling");
+      setSpellState(chat.activity.length > 0 ? "reading" : "reaching");
       return;
     }
     if (!previousTurnActive.current) {
       return;
     }
     previousTurnActive.current = false;
-    setSoulState("complete");
+    setSpellState("complete");
     announce("[The weave is complete.]");
     if (completionTimer.current) {
       window.clearTimeout(completionTimer.current);
     }
-    completionTimer.current = window.setTimeout(() => setSoulState("idle"), 900);
+    completionTimer.current = window.setTimeout(() => setSpellState("idle"), 900);
   }, [chat.activity.length, chat.turnActive]);
 
   useEffect(() => {
@@ -264,6 +265,7 @@ function SpellSurfaceChatSurface({
     }
     const message = runeMessageForActivity(activity);
     if (message) {
+      setSpellState("reading");
       announce(message);
     }
   }, [chat.activity]);
@@ -277,6 +279,7 @@ function SpellSurfaceChatSurface({
       return;
     }
     answerPhaseAnnounced.current = true;
+    setSpellState("answering");
     announce("[Weaving the story.]");
   }, [chat.turnActive, streamingReplyHasText]);
 
@@ -289,7 +292,6 @@ function SpellSurfaceChatSurface({
   function announce(message: string) {
     setAnnouncement(message);
     setAnnouncementKey((current) => current + 1);
-    setCoreWakeKey((current) => current + 1);
   }
 
   async function openSettings() {
@@ -368,14 +370,14 @@ function SpellSurfaceChatSurface({
 
   function sendMessage(message: string) {
     answerPhaseAnnounced.current = false;
-    setSoulState("rippling");
+    setSpellState("reaching");
     announce("[The Spell reaches for the first thread.]");
     void chat.sendMessage(message);
   }
 
   function regenerateReply() {
     answerPhaseAnnounced.current = false;
-    setSoulState("weaving");
+    setSpellState("reading");
     announce("[The Spell takes up the thread once more.]");
     chat.regenerateReply();
   }
@@ -386,6 +388,7 @@ function SpellSurfaceChatSurface({
     : preferences.starIntensity === "vivid"
       ? 0.56
       : 0.36;
+  const backdropState = chat.recoveryMessage ? "failed" : spellState;
   return (
     <div
       className={[
@@ -403,19 +406,11 @@ function SpellSurfaceChatSurface({
       data-theme={preferences.theme}
       data-testid="spell-surface-live"
     >
-      <SpellBackground
-        className="lab-spell-background"
-        mode="alive"
+      <SpellweaveBackdrop
         paused={settingsOpen || setupOpen}
+        state={backdropState}
         threadAlpha={threadAlpha}
       />
-      <div aria-hidden="true" className="lab-galactic-band" />
-      <div aria-hidden="true" className="lab-purple-depth" />
-      <div aria-hidden="true" className="lab-star-flare flare-one" />
-      <div aria-hidden="true" className="lab-star-flare flare-two" />
-      <div aria-hidden="true" className="lab-core-wake" key={coreWakeKey}><span /><span /></div>
-
-      <SpellSurfaceSoulSea mode={preferences.soulMode} state={soulState} />
 
       <SpellSurfaceRail
         activeThreadId={chat.conversationId ?? ""}
