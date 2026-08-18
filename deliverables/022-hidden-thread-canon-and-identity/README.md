@@ -7,7 +7,7 @@
 | `canon-and-identity.md` | Accepted canon split and product identity | Owner learning gate accepted |
 | `results.md` | Deterministic observations and commands | Primary read complete |
 | `review-ledger.md` | Independent findings, repairs, and rechecks | Not started |
-| `decision.md` | Owner's final accept or reject record | Pending |
+| `decision.md` | Owner's final accept or reject record | Accepted 2026-08-18 |
 
 No novel prose, chats, credentials, private receipts, generated knowledge,
 or raw model reasoning belongs here.

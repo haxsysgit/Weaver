@@ -9,7 +9,7 @@
 
 - **Tooling:** local private chapter reads; repo inspection via `rg`; document
   checks via `git diff --check` and explicit staged-file audits.
-- **State:** admitted 2026-08-18 (owner direction).
+- **State:** closed 2026-08-18 (owner accepted).
 - **Depends on:** Plan v1, Plan 018.5, and Plan 020 closed 2026-08-18. Their
   close records preserve the v1 release and the explicit scope cuts.
 - **Priority:** P1. Plans 023-029 use this identity and visual language.

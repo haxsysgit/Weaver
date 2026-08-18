@@ -4,8 +4,8 @@
 
 **Admitted 2026-08-18.** The bounded source read is complete. The owner
 accepted the canon split, product-fiction text, permanent terms, and stable
-Edition id on 2026-08-18. Independent review and the final decision are
-pending.
+Edition id on 2026-08-18. Independent review is complete and the owner
+accepted the final record.
 
 ## Owner-confirmed direction
 
@@ -43,6 +43,6 @@ without borrowing unsupported facts.
 This is a hypothesis. Only the full source read, private owner quote review,
 and independent re-read can confirm it.
 
-## Pending owner gates
+## Owner decision
 
-1. Record the final plan decision after independent review.
+The owner accepted Plan 022 on 2026-08-18 after independent review.
