@@ -1,17 +1,17 @@
 # Plan 025: Spellweave visual foundation
 
 > **Executor instructions:** Build the shared responsive visual foundation that
-> every Hidden Thread surface will use. Start each behavior with a failing test,
-> preserve the current cosmic depth, and rebuild only the visual rules accepted
-> in Plan 024.
+> every Hidden Thread surface will use. Start each behavior with a failing test
+> and evolve the accepted v1 interface in place. The rejected Plan 024 lab is
+> evidence of what this plan must avoid.
 
 ## Status
 
 - **Tooling:** React 19, TypeScript, Three.js, inline SVG, CSS custom properties,
   Vitest, Testing Library, Vite, and the root Python test suite.
 - **State:** drafted (awaiting owner admission).
-- **Depends on:** Plan 024 closed with the owner's accepted mobile and desktop
-  visual rules. Plan 025 copies no prototype code. It has no backend dependency;
+- **Depends on:** Plan 024 closed as rejected. Plan 025 copies no prototype
+  code or visual rules. It has no backend dependency;
   Plan 028 reconciles the later archive client with Plan 023's accepted API.
 - **Priority:** P1. Plans 026 to 028 depend on these shared layers and tokens.
 - **Effort:** L.
@@ -50,6 +50,10 @@
    changes clear.
 8. (2026-08-18) The approved board controls mood and material. The production
    work uses original code-native geometry and does not ship the reference image.
+9. (2026-08-18) v1 is the accepted interaction base. Preserve and improve its
+   actual star web, `SpellSurfaceChatApp`, `Message`, `Composer`, rail,
+   first-run behavior, and test coverage. This plan does not create a parallel
+   chat product or replace v1 with a board-shaped mockup.
 
 ## Scope
 
@@ -74,8 +78,9 @@
   interaction silver, appraisal gold, corruption crimson, black wood, depth,
   and line contrast. Existing token values remain the base palette.
 - Replace the directly mounted background pieces in
-  `src/weaver/web/frontend/components/SpellSurfaceChatApp.tsx` with
-  `SpellweaveBackdrop`.
+  `src/weaver/web/frontend/components/SpellSurfaceChatApp.tsx` with a
+  `SpellweaveBackdrop` that composes the existing `SpellBackground` rather
+  than discarding it.
 - Update `src/weaver/web/frontend/components/SpellSurfaceSettings.tsx` and
   `src/weaver/web/frontend/components/SpellSurfaceSoulSea.tsx` so the Soul Sea
   remains a restrained reader/settings space after it leaves the main chat.
@@ -87,6 +92,10 @@
   owner changes in the same file.
 - Rebuild and commit `src/weaver/web/dist/` because the root Vite build is what
   ships.
+- Preserve the existing chat transcript, Markdown boundary, message mechanics,
+  composer behavior, rail behavior, first-run behavior, and their tests. Later
+  plans may restyle those same components only after this v1-first foundation
+  is accepted.
 - Capture private visual evidence at 320 x 568, 360 x 800, 390 x 844,
   412 x 915, and 1440 x 900. Capture real-device visual and performance
   evidence on the Redmi Note 14 at its measured CSS viewport under
@@ -107,7 +116,9 @@
 - A LOTM visual edition or a general theme marketplace.
 - New dependencies, image assets, custom fonts, audio, haptics, or WebGL for
   foreground controls.
-- Reusing prototype HTML/CSS. The prototype supplies accepted rules only.
+- Reusing the rejected prototype HTML/CSS or treating its composition as a
+  production design source.
+- Replacing v1's chat, transcript, composer, or rail with a parallel surface.
 - Changing the existing motion-token durations or easing curve.
 
 ## Deterministic proof / verification floor
@@ -166,20 +177,20 @@
 ## Slices
 
 1. **Plan and admit**
-   - Confirm Plan 024 is closed and the accepted prototype rules are
-     copied into `learning.md`.
+   - Confirm Plan 024 is closed as rejected. Copy its failure record and the
+     v1-first owner direction into `learning.md`.
    - Review scope, file ownership, and budget with the owner.
    - Admit and commit records with
      `Plan 025: admit Spellweave visual foundation`.
 
 2. **Freeze the current visual baseline**
-   - Capture the current production surface across the four mobile matrix sizes
-     and 1440 x 900 before edits.
+   - Capture the current accepted v1 production surface across the four mobile
+     matrix sizes and 1440 x 900 before edits.
    - Inspect the current Three.js lifecycle, `setPixelRatio(1)`, star and segment
      counts, resize cleanup, visibility handling, Soul Sea mount, layer order,
      CSS breakpoints, and reduced-motion rules.
-   - Record current observations and the accepted Plan 024 deltas. Do not edit
-     code in this slice.
+   - Record the v1 interaction elements that must survive and the rejected
+     Plan 024 patterns that must not return. Do not edit code in this slice.
    - Capture the named idle and activity traces on the owner phone. Propose
      numeric object, asset, frame-time, and long-task limits from that evidence,
      then STOP until the owner accepts or changes them in `learning.md`.
@@ -242,9 +253,9 @@
 8. **Integrate the shared backdrop**
    - Write failing live-surface tests for the shared backdrop mount and
      decorative behavior.
-   - Replace direct background pieces in `SpellSurfaceChatApp.tsx` with the
-     coordinator. Move the existing Soul Sea presentation into the reader/settings
-     surface and prove that path through the live-surface test.
+   - Compose the existing `SpellBackground` inside the coordinator instead of
+     replacing it. Move the existing Soul Sea presentation into the
+     reader/settings surface and prove that path through the live-surface test.
    - Remove only superseded rules from `spell-surface-lab.css`.
    - Run the targeted tests, then `npm test`.
    - Commit exact files with

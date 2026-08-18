@@ -2,9 +2,9 @@
 
 ## Gate status
 
-**Unadmitted.** The owner requested the production visual foundation on
-2026-08-18. Admission waits for Plan 024 to close. This visual foundation has
-no backend dependency.
+**Unadmitted.** Plan 024 closed rejected on 2026-08-18. The owner directed this
+visual foundation to begin from the accepted v1 interface. This plan has no
+backend dependency.
 
 ## Confirmed owner direction
 
@@ -21,6 +21,10 @@ no backend dependency.
 - Existing motion tokens govern new interface transitions. Reduced motion keeps
   state legible without decorative travel or repeated pulses.
 - The approved reference image never ships.
+- v1 is the source surface. Its current star web, chat mechanics, composer,
+  transcript, rail, first-run behavior, and tests survive the visual pass.
+- The rejected Plan 024 lab is not a visual source. It created a parallel,
+  generic chat composition instead of extending v1.
 
 ## Current code observations
 
@@ -47,10 +51,10 @@ composition consistent across Plans 026 to 028.
 
 ## Learning gate
 
-Pending. After Plan 024 closes, copy only its owner-accepted visual rules here.
-Capture the baseline with a profiler, then record concrete proposed limits for
+Pending. Capture the v1 baseline with a profiler, then record concrete proposed limits for
 capped DPR, render objects per profile, built asset bytes, frame time during
 named interactions, and long tasks during the named trace window. The owner
-confirms or changes those numeric limits, layer meanings, and responsive
-composition before production code begins. Plan 025 cannot close until its
-results record both the accepted limits and final measurements for Plan 029.
+confirms or changes those numeric limits, the v1-preserving layer meanings, and
+responsive composition before production code begins. Plan 025 cannot close
+until its results record both the accepted limits and final measurements for
+Plan 029.
