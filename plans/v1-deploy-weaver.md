@@ -11,8 +11,8 @@
 
 - **Tooling:** repo commands via `uv` (pytest, ruff, pip check); docker +
   docker compose; GitHub Actions; AWS console/CLI; tailscale.
-- **State:** admitted (2026-08-14), learning gate approved (live
-  quantization calls allowed).
+- **State:** closed 2026-08-18, owner accepted. Release `v1.0.0` was published
+  at commit `cbe4cd6`; this record repairs the missed close ceremony.
 - **Depends on:** Plan 018 closed (2026-08-14) — repo cleanup and docs
   done, retrieval audit recorded the risks this plan sequences.
 - **Priority:** P1
