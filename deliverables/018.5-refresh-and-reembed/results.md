@@ -27,6 +27,15 @@
 
 ## Slices 5-9 - not started
 
+## Close audit (2026-08-18)
+
+- The owner accepted the completed refresh, benchmark, and rebuild-tooling
+  scope and cut the remaining execution from this plan.
+- Read-only Qdrant inspection found 6,826 `novel_chunks` points and a highest
+  chapter payload of 3127. The private shelf reaches chapter 3160.
+- Therefore the full re-embed and question evaluations remain deferred. They
+  were not silently credited to the v1 release.
+
 ## Slice 5 - eval data + embed speed benchmark (2026-08-15)
 
 - Eval data recovered from disk (never deleted): questions-colab.json,
