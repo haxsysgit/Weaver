@@ -1,7 +1,7 @@
 [project]
 name = "weaver"
-version = "0.1.0"
-description = "Trustworthy experiments for building Weaver, a synthetic lifelong reader"
+dynamic = ["version"]
+description = "A reading companion for Shadow Slave: the agent of the nightmare spell that reads every chapter and answers with the chapter in hand."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -34,6 +34,13 @@ dev = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+# Version lives in src/weaver/__init__.py (__version__); hatchling reads
+# it at build time. Path-based (not git-tag-based) because the Docker
+# image build copies only pyproject + src, no .git, so git-sourced
+# versioning would break `pip install .` inside the image.
+path = "src/weaver/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/weaver"]

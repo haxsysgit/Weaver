@@ -1,5 +1,10 @@
 """Weaver, a synthetic lifelong reader."""
 
+# Single source of truth for the package version. pyproject.toml reads
+# it via [tool.hatch.version] path (hatchling), so bumping the version
+# is one edit here, then tag + release with the same number.
+__version__ = "1.0.0"
+
 from .model_layer import (
     DEEPSEEK_FLASH,
     DEEPSEEK_MODELS,
