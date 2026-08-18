@@ -132,6 +132,7 @@ def test_doctor_has_no_network_requirement(
 
     output = capsys.readouterr().out
     assert exit_code == 0
+    assert "PASS model_catalogue: aliases and selectable models match v1" in output
     assert "PASS network: doctor made no network call" in output
     assert "WARN live_credential" in output
 

@@ -28,15 +28,19 @@ def run_doctor(state_path: Path, *, credential_present: bool) -> list[dict[str, 
     expected_aliases = {
         "flash": "deepseek-v4-flash",
     }
+    expected_model_ids = {
+        "deepseek-v4-flash",
+        "deepseek-v4-pro",
+    }
     checks.append(
         {
             "name": "model_catalogue",
             "ok": (
                 dict(MODEL_ALIASES) == expected_aliases
                 and {model.model_id for model in DEEPSEEK_MODELS}
-                == set(expected_aliases.values())
+                == expected_model_ids
             ),
-            "detail": "flash alias matches the admitted model catalogue",
+            "detail": "aliases and selectable models match v1",
         }
     )
     for dependency in ("openai", "dotenv"):
