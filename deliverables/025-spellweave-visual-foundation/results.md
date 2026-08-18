@@ -64,3 +64,11 @@ The accepted numeric limits are recorded in `learning.md`.
   JavaScript and 15,604 gzip bytes for the lazy Motion feature chunk. Their
   combined 263,539 bytes remain under the accepted 275 KiB JavaScript budget.
 - CSS remained 25,245 gzip bytes, under the accepted 30 KiB budget.
+
+## Slice 5 deterministic-geometry proof
+
+- Red: the targeted Vitest run failed because `spellGeometry.ts` did not
+  exist.
+- Green: 4 tests passed after adding the pure geometry helper.
+- Geometry is seed-stable, normalized to the viewport, capped below 64
+  connections, and composed from different portrait and desktop anchors.
