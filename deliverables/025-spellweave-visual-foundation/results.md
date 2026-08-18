@@ -51,3 +51,16 @@ The accepted numeric limits are recorded in `learning.md`.
 - Green: 4 tests passed after adding the typed profile helper.
 - The tests cover capped DPR, compact and phone budgets, desktop density,
   reduced-motion static rendering, and narrow landscape.
+
+## Slice 4 shared motion proof
+
+- Red: the targeted component test failed because `SpellMotionProvider.tsx`
+  did not exist.
+- Green: the provider test and existing live-surface tests passed, 7 tests in
+  total.
+- Motion for React 13.1.0 supports the repository's React 19 runtime.
+- `LazyMotion` loads the DOM feature set from a separate production chunk.
+- The first production build measured 247,935 gzip bytes for the main
+  JavaScript and 15,604 gzip bytes for the lazy Motion feature chunk. Their
+  combined 263,539 bytes remain under the accepted 275 KiB JavaScript budget.
+- CSS remained 25,245 gzip bytes, under the accepted 30 KiB budget.

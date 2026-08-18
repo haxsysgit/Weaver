@@ -23,6 +23,7 @@ import { RailOpenIcon, SettingsIcon } from "./Icons";
 import { Message } from "./Message";
 import { RecoveryPanel } from "./RecoveryPanel";
 import { SpellBackground } from "./SpellBackground";
+import { SpellMotionProvider } from "./SpellMotionProvider";
 import { SpellSurfaceRail, type LabThread } from "./SpellSurfaceRail";
 import { SpellSurfaceRunes } from "./SpellSurfaceRunes";
 import {
@@ -163,7 +164,7 @@ function toApiPreferences(preferences: LabPreferences): UserPreferences {
   };
 }
 
-export function SpellSurfaceChatApp({
+function SpellSurfaceChatSurface({
   api,
   privacyLabel,
 }: SpellSurfaceChatAppProps) {
@@ -545,5 +546,16 @@ export function SpellSurfaceChatApp({
       )}
 
     </div>
+  );
+}
+
+export function SpellSurfaceChatApp(props: {
+  api: ChatApi;
+  privacyLabel: string;
+}) {
+  return (
+    <SpellMotionProvider>
+      <SpellSurfaceChatSurface {...props} />
+    </SpellMotionProvider>
   );
 }
