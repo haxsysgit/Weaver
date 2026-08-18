@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import aiosqlite
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 SCHEMA = """
 CREATE TABLE _migration (
@@ -20,7 +20,12 @@ CREATE TABLE conversation (
     id TEXT PRIMARY KEY,
     relationship_id TEXT NOT NULL REFERENCES relationship(id),
     device_id TEXT NOT NULL DEFAULT '',
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    generated_title TEXT,
+    manual_title TEXT,
+    archived_at TEXT,
+    pinned_at TEXT,
+    edition_id TEXT NOT NULL DEFAULT 'shadow-slave'
 );
 
 CREATE TABLE turn (
@@ -72,6 +77,49 @@ PRAGMAS = [
 ]
 
 
+async def _conversation_column_names(db: aiosqlite.Connection) -> set[str]:
+    cursor = await db.execute("PRAGMA table_info(conversation)")
+    rows = await cursor.fetchall()
+    return {row[1] for row in rows}
+
+
+async def _add_conversation_column_if_missing(
+    db: aiosqlite.Connection,
+    column_name: str,
+    column_definition: str,
+) -> None:
+    columns = await _conversation_column_names(db)
+    if column_name in columns:
+        return
+    await db.execute(f"ALTER TABLE conversation ADD COLUMN {column_definition}")
+
+
+async def _legacy_title_table_exists(db: aiosqlite.Connection) -> bool:
+    cursor = await db.execute(
+        "SELECT 1 FROM sqlite_master "
+        "WHERE type = 'table' AND name = 'conversation_title'"
+    )
+    return await cursor.fetchone() is not None
+
+
+async def _migrate_legacy_generated_titles(db: aiosqlite.Connection) -> None:
+    if not await _legacy_title_table_exists(db):
+        return
+
+    await db.execute(
+        "UPDATE conversation "
+        "SET generated_title = ("
+        "SELECT title FROM conversation_title "
+        "WHERE conversation_title.conversation_id = conversation.id"
+        ") "
+        "WHERE EXISTS ("
+        "SELECT 1 FROM conversation_title "
+        "WHERE conversation_title.conversation_id = conversation.id"
+        ")"
+    )
+    await db.execute("DROP TABLE conversation_title")
+
+
 async def migrate(db: aiosqlite.Connection) -> None:
     """Run schema if not already applied, then bump to the latest."""
     cursor = await db.execute(
@@ -95,4 +143,36 @@ async def migrate(db: aiosqlite.Connection) -> None:
         await db.execute(
             "INSERT INTO _migration (version) VALUES (?)", (2,)
         )
+        await db.commit()
+    if version < 3:
+        # v3: conversation-owned metadata replaces the separate title table.
+        # Each addition is guarded so a restart can finish an interrupted
+        # migration without trying to add a column twice.
+        await _add_conversation_column_if_missing(
+            db,
+            "generated_title",
+            "generated_title TEXT",
+        )
+        await _add_conversation_column_if_missing(
+            db,
+            "manual_title",
+            "manual_title TEXT",
+        )
+        await _add_conversation_column_if_missing(
+            db,
+            "archived_at",
+            "archived_at TEXT",
+        )
+        await _add_conversation_column_if_missing(
+            db,
+            "pinned_at",
+            "pinned_at TEXT",
+        )
+        await _add_conversation_column_if_missing(
+            db,
+            "edition_id",
+            "edition_id TEXT NOT NULL DEFAULT 'shadow-slave'",
+        )
+        await _migrate_legacy_generated_titles(db)
+        await db.execute("INSERT INTO _migration (version) VALUES (?)", (3,))
         await db.commit()

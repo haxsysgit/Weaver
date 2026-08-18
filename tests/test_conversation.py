@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -108,6 +109,107 @@ async def test_migration_idempotent():
         sw2 = SessionWeave(state_dir)
         await sw2.open()
         await sw2.close()
+
+
+@pytest.mark.asyncio
+async def test_version_two_migration_keeps_generated_title_and_retires_legacy_table(
+    tmp_path,
+):
+    """A version-two database gains durable conversation metadata safely."""
+    state_dir = Path(tmp_path) / ".weaver" / "state"
+    state_dir.mkdir(parents=True)
+    db_path = state_dir / "weaver.sqlite3"
+
+    with sqlite3.connect(db_path) as database:
+        database.executescript(
+            """
+            CREATE TABLE _migration (version INTEGER NOT NULL);
+            INSERT INTO _migration (version) VALUES (2);
+            CREATE TABLE conversation (
+                id TEXT PRIMARY KEY,
+                relationship_id TEXT NOT NULL,
+                device_id TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL
+            );
+            CREATE TABLE conversation_title (
+                conversation_id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                named_at TEXT NOT NULL
+            );
+            """
+        )
+        database.execute(
+            "INSERT INTO conversation (id, relationship_id, device_id, created_at) "
+            "VALUES (?, ?, ?, ?)",
+            ("conversation-one", "relationship-one", "device-one", "2026-08-18T10:00:00"),
+        )
+        database.execute(
+            "INSERT INTO conversation (id, relationship_id, device_id, created_at) "
+            "VALUES (?, ?, ?, ?)",
+            ("conversation-two", "relationship-two", "device-one", "2026-08-18T11:00:00"),
+        )
+        database.execute(
+            "INSERT INTO conversation_title (conversation_id, title, named_at) "
+            "VALUES (?, ?, ?)",
+            ("conversation-one", "Legacy generated title", "2026-08-18T10:05:00"),
+        )
+
+    session = SessionWeave(state_dir)
+    await session.open()
+    await session.close()
+
+    with sqlite3.connect(db_path) as database:
+        conversation_columns = {
+            row[1]: row for row in database.execute("PRAGMA table_info(conversation)")
+        }
+        assert conversation_columns["generated_title"][2] == "TEXT"
+        assert conversation_columns["manual_title"][2] == "TEXT"
+        assert conversation_columns["archived_at"][2] == "TEXT"
+        assert conversation_columns["pinned_at"][2] == "TEXT"
+        assert conversation_columns["edition_id"][2] == "TEXT"
+
+        migrated_row = database.execute(
+            "SELECT generated_title, manual_title, archived_at, pinned_at, edition_id "
+            "FROM conversation WHERE id = ?",
+            ("conversation-one",),
+        ).fetchone()
+        assert migrated_row == (
+            "Legacy generated title",
+            None,
+            None,
+            None,
+            "shadow-slave",
+        )
+
+        untouched_row = database.execute(
+            "SELECT generated_title, manual_title, archived_at, pinned_at, edition_id "
+            "FROM conversation WHERE id = ?",
+            ("conversation-two",),
+        ).fetchone()
+        assert untouched_row == (None, None, None, None, "shadow-slave")
+
+        legacy_table = database.execute(
+            "SELECT name FROM sqlite_master "
+            "WHERE type = 'table' AND name = 'conversation_title'"
+        ).fetchone()
+        assert legacy_table is None
+
+        versions = [
+            row[0]
+            for row in database.execute("SELECT version FROM _migration ORDER BY version")
+        ]
+        assert versions == [2, 3]
+
+    reopened_session = SessionWeave(state_dir)
+    await reopened_session.open()
+    await reopened_session.close()
+
+    with sqlite3.connect(db_path) as database:
+        repeated_row = database.execute(
+            "SELECT generated_title, edition_id FROM conversation WHERE id = ?",
+            ("conversation-one",),
+        ).fetchone()
+        assert repeated_row == ("Legacy generated title", "shadow-slave")
 
 
 @pytest.mark.asyncio
