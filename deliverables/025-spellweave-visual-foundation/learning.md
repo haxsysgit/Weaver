@@ -47,6 +47,119 @@ production code.
 - `spell-surface-lab.css` contains several mobile and reduced-motion sections,
   so edits must be narrow and preserve unrelated owner work.
 
+## Primary-source animation research
+
+Research date: 2026-08-18.
+
+- Three.js recommends `WebGLRenderer.setAnimationLoop()` over a hand-written
+  `requestAnimationFrame()` loop for renderer compatibility. Its
+  `renderer.info` counters expose draw calls, points, lines, programs,
+  geometries, and textures for the measured contract this plan needs.
+  Source: <https://threejs.org/docs/pages/WebGLRenderer.html>.
+- Three.js treats CSS canvas size and the physical drawing buffer as separate
+  concerns. DPR therefore belongs in a measured render profile, alongside a
+  resize check, rather than as an unconditional visual setting.
+  Source: <https://threejs.org/manual/en/responsive.html>.
+- Three.js GPU resources require explicit disposal. The current v1 scene
+  already disposes its geometries, materials, renderer, listener, and animation
+  frames. The refactor must retain that ownership and add an inspection path
+  through `renderer.info`.
+  Source: <https://threejs.org/manual/en/how-to-dispose-of-objects.html>.
+- Three.js recommends reducing object and draw-call overhead through shared or
+  merged geometry. The v1 field is already close to the right shape: one
+  `Points` object for stars, one for divine lights, and one `LineSegments`
+  object for the web. Plan 025 should deepen those shaders and buffers instead
+  of creating hundreds of scene objects.
+  Source: <https://threejs.org/manual/en/optimize-lots-of-objects.html>.
+- Motion for React links animation to React state and supports interruptible
+  transitions, exit choreography, layout transitions, and touch gestures. Its
+  own guide recommends CSS for simple self-contained effects. That matches the
+  Weaver split: CSS tokens for small control feedback, Motion for coordinated
+  surface changes, and Three.js for the Spell world.
+  Source: <https://motion.dev/docs/react>.
+- `LazyMotion` can load a smaller DOM animation feature set, while
+  `MotionConfig reducedMotion="user"` applies the device preference across the
+  React animation tree. `useReducedMotion` can also replace travel with opacity
+  or disable parallax at the interaction source.
+  Sources: <https://motion.dev/docs/react-reduce-bundle-size>,
+  <https://motion.dev/docs/react-motion-config>, and
+  <https://motion.dev/docs/react-use-reduced-motion>.
+- GSAP has sound React cleanup and media-query support through `useGSAP()` and
+  `gsap.matchMedia()`. Its imperative timeline model is useful for long,
+  precisely authored sequences. The current lane mostly needs state-driven,
+  interruptible transitions across React surfaces, so GSAP would introduce a
+  second orchestration model without a demonstrated advantage.
+  Sources: <https://gsap.com/resources/React/> and
+  <https://gsap.com/docs/v3/GSAP/gsap.matchMedia()>.
+- The browser's `prefers-reduced-motion` media feature is widely available and
+  is the baseline even when a library also observes it.
+  Source: <https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/At-rules/%40media/prefers-reduced-motion>.
+
+## Proposed Weaver motion system
+
+Three.js owns the living Nightmare Spell environment:
+
+- a slow autonomous star field and distant haze;
+- deterministic middle-depth Spellweave geometry;
+- foreground rune fragments and light pulses that travel through the same web;
+- subtle depth or focal changes driven by product state, never cursor chasing;
+- one batched scene with a small, measured draw-call count and no default
+  bloom or post-processing pass.
+
+The DOM owns every readable or operable surface. Motion for React coordinates
+surface changes that need mount, exit, interruption, or shared state. Existing
+CSS tokens continue to handle short hover, focus, colour, and press feedback.
+
+Every animation has one plain product meaning:
+
+| State | Spell response | What the reader learns |
+| --- | --- | --- |
+| idle | distant drift and rare quiet glints | the world is awake and waiting |
+| focus | two nearby threads settle toward the composer | the question has a binding point |
+| sending | one pulse carries the question into the web | the question left the composer |
+| reading | nearby knots illuminate in sequence | Weaver is searching its library |
+| answering | a single response thread grows with the reply | the answer is arriving |
+| complete | the active thread settles and leaves one gold glint | the response is complete |
+| failed | the active thread breaks once with restrained crimson | the action failed and needs attention |
+
+The complexity rule is one ambient motion plus one event response at a time.
+Controls stay immediately usable. Decorative movement cannot delay navigation,
+text, focus, sending, or cancellation. Reduced motion removes camera travel,
+parallax, gathering fragments, travelling pulses, and repeated loops while
+retaining immediate opacity and colour state changes.
+
+## Library recommendation pending owner gate
+
+Add Motion for React as the single DOM choreography dependency, loaded through
+`LazyMotion` with the DOM animation feature set and wrapped in
+`MotionConfig reducedMotion="user"`. Keep Three.js as the only scene engine.
+Keep simple control transitions in CSS. Do not add GSAP, React Spring, a
+post-processing stack, or a second canvas renderer in this lane.
+
+This requires an admitted-plan amendment because new dependencies are currently
+out of scope. No package or production source has been changed. The owner must
+accept or reject this recommendation at the learning gate.
+
+## Frozen v1 baseline
+
+The untouched production surface was captured at 320 x 568, 360 x 800,
+390 x 844, 412 x 915, and 1440 x 900 under
+`private/design-evidence/025/v1-baseline/`.
+
+The captures confirm the parts that survive:
+
+- chat surfaces remain transparent enough for the Spell to occupy the screen;
+- the star web carries the strongest product identity on both phone and desktop;
+- the mobile composer stays reachable and the desktop rail remains useful;
+- the empty state stays visually integrated with the field;
+- the current field is soft at DPR 1, yet its scale, density, and visual rhythm
+  are the accepted starting point.
+
+The current WebGL scene uses three batched render objects: 4,500 star points,
+91 divine-light points, and up to 3,400 line segments. The shipped main assets
+are 875,344 bytes of JavaScript and 136,393 bytes of CSS, or 237,920 and 25,245
+bytes respectively when measured with gzip locally.
+
 ## Hypothesis
 
 A tested render profile plus deterministic normalized geometry can make the
@@ -56,10 +169,10 @@ composition consistent across Plans 026 to 028.
 
 ## Learning gate
 
-Pending. Capture the v1 baseline with a profiler, then record concrete proposed limits for
-capped DPR, render objects per profile, built asset bytes, frame time during
-named interactions, and long tasks during the named trace window. The owner
-confirms or changes those numeric limits, the v1-preserving layer meanings, and
-responsive composition before production code begins. Plan 025 cannot close
-until its results record both the accepted limits and final measurements for
-Plan 029.
+Pending. The visual baseline and primary-source research are recorded. The
+remaining evidence is the Redmi Note 14 profiler capture. It must measure the
+untouched v1 idle field and one activity simulation before this note proposes
+numeric phone frame-time and long-task limits. The owner also decides whether
+to amend Plan 025 with the recommended Motion for React dependency and accepts
+or changes the Weaver motion system above. Production code remains blocked
+until those decisions are recorded.
