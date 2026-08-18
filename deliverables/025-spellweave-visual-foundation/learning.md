@@ -2,9 +2,10 @@
 
 ## Gate status
 
-**Unadmitted.** Plan 024 closed rejected on 2026-08-18. The owner directed this
-visual foundation to begin from the accepted v1 interface. This plan has no
-backend dependency.
+**Admitted 2026-08-18.** Plan 024 closed rejected. The owner directed this
+visual foundation to begin from the accepted v1 interface. Research and v1
+baseline inspection are in progress; the learning gate remains pending before
+production code.
 
 ## Confirmed owner direction
 
@@ -25,6 +26,10 @@ backend dependency.
   transcript, rail, first-run behavior, and tests survive the visual pass.
 - The rejected Plan 024 lab is not a visual source. It created a parallel,
   generic chat composition instead of extending v1.
+- The generic frontend-design workflow is excluded from this lane.
+- Three.js and motion research must come from current primary sources. Motion
+  should make the Spell feel alive through meaningful product events while
+  keeping the reading and chat controls obvious.
 
 ## Current code observations
 

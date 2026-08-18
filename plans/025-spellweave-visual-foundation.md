@@ -9,7 +9,7 @@
 
 - **Tooling:** React 19, TypeScript, Three.js, inline SVG, CSS custom properties,
   Vitest, Testing Library, Vite, and the root Python test suite.
-- **State:** drafted (awaiting owner admission).
+- **State:** admitted 2026-08-18 (owner direction).
 - **Depends on:** Plan 024 closed as rejected. Plan 025 copies no prototype
   code or visual rules. It has no backend dependency;
   Plan 028 reconciles the later archive client with Plan 023's accepted API.
@@ -54,6 +54,13 @@
    actual star web, `SpellSurfaceChatApp`, `Message`, `Composer`, rail,
    first-run behavior, and test coverage. This plan does not create a parallel
    chat product or replace v1 with a board-shaped mockup.
+10. (2026-08-18) Do not use the generic frontend-design workflow for this
+    lane. Research current Three.js and motion techniques from primary sources,
+    then define a Weaver-specific interaction language from the accepted
+    product fiction, v1 surface, and approved mood reference.
+11. (2026-08-18) The app should feel alive and responsive without becoming
+    difficult to read or operate. Motion responds to meaningful events such as
+    opening, focusing, sending, reading, answering, completing, and failing.
 
 ## Scope
 
