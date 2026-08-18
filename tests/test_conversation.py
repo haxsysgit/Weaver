@@ -1138,8 +1138,7 @@ async def test_send_on_delta_raising_callback_does_not_fail_turn(tmp_path):
 
 @pytest.mark.asyncio
 async def test_list_conversations_newest_first_with_preview(tmp_path):
-    """Phase C: recent conversations come back newest first with the last
-    owner message decoded from its JSON body."""
+    """Recent conversation summaries are newest first with safe title fallback."""
     layer, model, provider = _fake_layer(_stop_response("ok"))
     sw = _open_woven(Path(tmp_path), layer, model, _echo_registry())
     await sw.open()
@@ -1148,11 +1147,99 @@ async def test_list_conversations_newest_first_with_preview(tmp_path):
         second = await sw.start_conversation("second hello")
         convs = await sw.list_conversations()
         assert [c["conversation_id"] for c in convs] == [second, first]
-        assert convs[0]["last_owner_text"] == "second hello"
-        assert convs[1]["last_owner_text"] == "first hello"
+        assert convs[0]["title"] == "second hello"
+        assert convs[1]["title"] == "first hello"
+        assert convs[0]["edition_id"] == "shadow-slave"
+        assert convs[0]["archived"] is False
+        assert convs[0]["pinned"] is False
         assert len(await sw.list_conversations(limit=1)) == 1
     finally:
         await sw.close()
+
+
+@pytest.mark.asyncio
+async def test_conversation_metadata_survives_restart_and_manual_titles_win(tmp_path):
+    """Conversation-owned metadata stays durable and beats late naming."""
+    state_dir = Path(tmp_path) / ".weaver" / "state"
+    session = SessionWeave(state_dir)
+    await session.open()
+    try:
+        conversation_id = await session.start_conversation(
+            "What happened in the chapter?",
+            device_id="reader-device",
+        )
+        await session.set_generated_title(conversation_id, "Initial generated title")
+        updated = await session.update_conversation_metadata(
+            conversation_id,
+            title="  Reader rename  ",
+            title_is_set=True,
+            archived=True,
+            pinned=True,
+        )
+        assert updated is not None
+        assert updated["title"] == "Reader rename"
+        assert updated["archived"] is True
+        assert updated["pinned"] is True
+        assert updated["edition_id"] == "shadow-slave"
+
+        await session.set_generated_title(conversation_id, "Late generated title")
+        [summary] = await session.list_conversations(device_id="reader-device")
+        assert summary["title"] == "Reader rename"
+
+        reset = await session.update_conversation_metadata(
+            conversation_id,
+            title=None,
+            title_is_set=True,
+            archived=False,
+            pinned=False,
+        )
+        assert reset is not None
+        assert reset["title"] == "Late generated title"
+        assert reset["archived"] is False
+        assert reset["pinned"] is False
+    finally:
+        await session.close()
+
+    reopened_session = SessionWeave(state_dir)
+    await reopened_session.open()
+    try:
+        [summary] = await reopened_session.list_conversations(
+            device_id="reader-device"
+        )
+        assert summary["title"] == "Late generated title"
+        assert summary["archived"] is False
+        assert summary["pinned"] is False
+        assert summary["edition_id"] == "shadow-slave"
+    finally:
+        await reopened_session.close()
+
+
+@pytest.mark.asyncio
+async def test_conversation_device_ownership_requires_exact_match(tmp_path):
+    """An empty request device id never matches another device's chat."""
+    state_dir = Path(tmp_path) / ".weaver" / "state"
+    session = SessionWeave(state_dir)
+    await session.open()
+    try:
+        owned_conversation = await session.start_conversation(
+            "private discussion",
+            device_id="reader-device",
+        )
+        legacy_conversation = await session.start_conversation(
+            "legacy discussion",
+            device_id="",
+        )
+
+        assert await session.conversation_owned_by(
+            owned_conversation, "reader-device"
+        )
+        assert not await session.conversation_owned_by(owned_conversation, "")
+        assert not await session.conversation_owned_by(
+            owned_conversation, "another-device"
+        )
+        assert await session.conversation_owned_by(legacy_conversation, "")
+    finally:
+        await session.close()
 
 
 async def test_tool_result_round_trip_preserves_failure_metadata():

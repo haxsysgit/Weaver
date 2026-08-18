@@ -42,6 +42,18 @@ class EventRecord:
     created_at: str
 
 
+@dataclass
+class ConversationSummaryRecord:
+    id: str
+    created_at: str
+    generated_title: str | None
+    manual_title: str | None
+    archived_at: str | None
+    pinned_at: str | None
+    edition_id: str
+    last_owner_body: str | None
+
+
 class ConversationRepository:
     def __init__(self, db: aiosqlite.Connection) -> None:
         self._db = db
@@ -250,22 +262,27 @@ class ConversationRepository:
             for r in rows
         ]
 
-    async def load_conversations(
-        self, limit: int = 12, device_id: str = ""
-    ) -> list[tuple[str, str, str | None]]:
-        """Newest-first conversations: (id, created_at, last owner body).
-
-        device_id filters to conversations owned by that device; the
-        empty string is the legacy catch-all (pre-device-scoping rows
-        and tests that do not pass a device).
-        """
+    async def load_conversation_summaries(
+        self,
+        limit: int = 12,
+        device_id: str = "",
+    ) -> list[ConversationSummaryRecord]:
+        """Return newest-first, device-owned conversation metadata."""
         async with self._db.execute(
             """
-            SELECT c.id, c.created_at, (
+            SELECT
+                c.id,
+                c.created_at,
+                c.generated_title,
+                c.manual_title,
+                c.archived_at,
+                c.pinned_at,
+                c.edition_id,
+                (
                 SELECT i.body FROM conversation_item i
                 WHERE i.conversation_id = c.id AND i.kind = 'owner'
                 ORDER BY i.sequence DESC LIMIT 1
-            ) AS last_owner
+                ) AS last_owner
             FROM conversation c
             WHERE c.device_id = ?
             ORDER BY c.created_at DESC
@@ -274,7 +291,96 @@ class ConversationRepository:
             (device_id, limit),
         ) as cur:
             rows = await cur.fetchall()
-        return [(r[0], r[1], r[2]) for r in rows]
+        return [
+            ConversationSummaryRecord(
+                id=row[0],
+                created_at=row[1],
+                generated_title=row[2],
+                manual_title=row[3],
+                archived_at=row[4],
+                pinned_at=row[5],
+                edition_id=row[6],
+                last_owner_body=row[7],
+            )
+            for row in rows
+        ]
+
+    async def load_conversation_summary(
+        self, conversation_id: str
+    ) -> ConversationSummaryRecord | None:
+        async with self._db.execute(
+            """
+            SELECT
+                c.id,
+                c.created_at,
+                c.generated_title,
+                c.manual_title,
+                c.archived_at,
+                c.pinned_at,
+                c.edition_id,
+                (
+                    SELECT i.body FROM conversation_item i
+                    WHERE i.conversation_id = c.id AND i.kind = 'owner'
+                    ORDER BY i.sequence DESC LIMIT 1
+                ) AS last_owner
+            FROM conversation c
+            WHERE c.id = ?
+            """,
+            (conversation_id,),
+        ) as cursor:
+            row = await cursor.fetchone()
+        if row is None:
+            return None
+        return ConversationSummaryRecord(
+            id=row[0],
+            created_at=row[1],
+            generated_title=row[2],
+            manual_title=row[3],
+            archived_at=row[4],
+            pinned_at=row[5],
+            edition_id=row[6],
+            last_owner_body=row[7],
+        )
+
+    async def set_generated_title(self, conversation_id: str, title: str) -> bool:
+        cursor = await self._db.execute(
+            "UPDATE conversation SET generated_title = ? WHERE id = ?",
+            (title, conversation_id),
+        )
+        await self._db.commit()
+        return cursor.rowcount == 1
+
+    async def update_conversation_metadata(
+        self,
+        conversation_id: str,
+        *,
+        manual_title: str | None,
+        update_manual_title: bool,
+        archived_at: str | None,
+        update_archived: bool,
+        pinned_at: str | None,
+        update_pinned: bool,
+    ) -> bool:
+        """Apply the requested metadata fields in one conversation-row update."""
+        assignments: list[str] = []
+        values: list[str | None] = []
+        if update_manual_title:
+            assignments.append("manual_title = ?")
+            values.append(manual_title)
+        if update_archived:
+            assignments.append("archived_at = ?")
+            values.append(archived_at)
+        if update_pinned:
+            assignments.append("pinned_at = ?")
+            values.append(pinned_at)
+        if not assignments:
+            raise ValueError("metadata update must include at least one field")
+
+        values.append(conversation_id)
+        query = "UPDATE conversation SET " + ", ".join(assignments) + " WHERE id = ?"
+        cursor = await self._db.execute(query, values)
+        await self._db.commit()
+        return cursor.rowcount == 1
 
     async def conversation_owner(self, conversation_id: str) -> str | None:
         """The device id that owns a conversation, or None when missing."""
