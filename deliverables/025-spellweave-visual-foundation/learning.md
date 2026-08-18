@@ -144,6 +144,51 @@ post-processing stack, or a second canvas renderer in this lane.
 The admitted plan now includes the root package and lockfile change plus one
 shared motion boundary. No package or production source has changed yet.
 
+## Accepted device-neutral performance contract
+
+**Accepted by owner direction on 2026-08-18.** A named phone no longer gates
+Plan 025. Chrome documents Device Mode as a first-order approximation that can
+simulate viewport, DPR, touch, CPU, and network while still differing from real
+mobile CPU architecture. This plan therefore records the emulation environment
+honestly and validates several phone shapes instead of claiming that one model
+represents mobile support.
+
+Sources:
+
+- <https://developer.chrome.com/docs/devtools/device-mode>
+- <https://developer.chrome.com/docs/chromedriver/mobile-emulation>
+- <https://web.dev/articles/custom-metrics>
+
+The implementation budgets are:
+
+| Measure | Compact phone | Phone | Desktop |
+| --- | ---: | ---: | ---: |
+| CSS width | below 360px | 360px to 767px | 768px and above |
+| DPR | min(device DPR, 2) | min(device DPR, 2) | min(device DPR, 2) |
+| star points | at most 1,800 | at most 2,600 | at most 4,500 |
+| line segments | at most 900 | at most 1,600 | at most 3,400 |
+| divine lights | 91 | 91 | 91 |
+| WebGL draw calls | at most 3 | at most 3 | at most 3 |
+
+Reduced motion uses a static profile with at most 1,200 stars and 600 line
+segments. Narrow landscape uses the compact profile regardless of width.
+
+At 390 x 844, DPR 2, touch emulation, and 4x CPU throttling:
+
+- the 60-second idle trace allows zero long tasks caused by recurring
+  animation work after initial load;
+- the 10-second activity trace allows at most two frames over 50ms and no frame
+  over 100ms;
+- backgrounding stops rendering work, and returning resumes one loop;
+- the main JavaScript gzip total stays at or below 275 KiB;
+- the main CSS gzip total stays at or below 30 KiB;
+- Motion loads as a separate lazy feature chunk where the build supports it.
+
+The browser Long Animation Frames API and Long Tasks API report work over 50ms.
+They provide a stable threshold for this plan without claiming laboratory frame
+rate accuracy from desktop emulation. Unsupported observers are recorded as
+unsupported instead of silently replaced with invented numbers.
+
 ## Frozen v1 baseline
 
 The untouched production surface was captured at 320 x 568, 360 x 800,
@@ -198,9 +243,7 @@ composition consistent across Plans 026 to 028.
 
 ## Learning gate
 
-Pending. The visual baseline and primary-source research are recorded. The
-remaining evidence is the Redmi Note 14 profiler capture. It must measure the
-untouched v1 idle field and one activity simulation before this note proposes
-numeric phone frame-time and long-task limits. The owner accepted the Motion
-for React amendment and the Weaver motion system above. Production code remains
-blocked until the phone limits are recorded.
+**Passed by owner direction on 2026-08-18.** The owner accepted Motion for
+React, replaced the named-phone gate with the device-neutral contract above,
+and directed Plan 025 implementation to begin. Final measurements still belong
+in `results.md` before the owner visual decision.

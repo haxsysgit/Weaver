@@ -73,6 +73,10 @@
     and use it for coordinated mount, exit, interruption, and shared-state
     transitions. Three.js remains the Spell scene engine. Existing CSS tokens
     continue to handle small control feedback.
+14. (2026-08-18) Mobile support is capability-based and device-neutral. No
+    named handset gates implementation or closure. Validate the full responsive
+    matrix with DPR and CPU throttling, then keep lower-cost and static profiles
+    available for constrained browsers and reduced-motion users.
 
 ## Scope
 
@@ -122,15 +126,14 @@
   plans may restyle those same components only after this v1-first foundation
   is accepted.
 - Capture private visual evidence at 320 x 568, 360 x 800, 390 x 844,
-  412 x 915, and 1440 x 900. Capture real-device visual and performance
-  evidence on the Redmi Note 14 at its measured CSS viewport under
-  `private/design-evidence/025/`.
-- Before implementation passes the learning gate, record owner-accepted numeric
-  budgets in `learning.md`: capped DPR, render-object counts per profile,
-  built asset bytes, measured frame-time target for named interactions, and
-  allowed long tasks during the named trace window. Record both the limits and
-  the final measurements in `results.md` so Plan 029 has an executable
-  performance contract.
+  412 x 915, and 1440 x 900. Capture device-neutral visual and performance
+  evidence under `private/design-evidence/025/` using mobile viewport, DPR 2,
+  touch emulation, and 4x CPU throttling.
+- Use the numeric budgets accepted in `learning.md`: capped DPR, render-object
+  counts per profile, built asset bytes, frame-time target for named
+  interactions, and allowed long frames during the named trace window. Record
+  final measurements in `results.md` so Plan 029 has an executable performance
+  contract.
 
 ## Out of scope
 
@@ -168,14 +171,13 @@
    crisp threads,
    readable text, correct safe areas, no clipped geometry, and no visual drift
    between phone and desktop.
-8. On the Redmi Note 14, an idle 60-second observation and repeated send/reply-state
-   simulation show no obvious stutter, touch blockage, runaway animation after
-   backgrounding, or unreadable contrast. Record device and browser. Do not
-   invent a frame-rate number without a profiler capture.
-9. Before the learning gate closes, a profiler capture supplies concrete
-   object, pixel-ratio, asset, frame-time, and long-task limits. The owner
-   accepts or adjusts those numeric limits, and `results.md` records the final
-   measured values for Plan 029.
+8. At 390 x 844 with DPR 2, touch emulation, and 4x CPU throttling, an idle
+   60-second observation and repeated activity-state simulation show no touch
+   blockage, runaway animation after backgrounding, or unreadable contrast.
+9. Browser performance evidence records render objects, pixel ratio, asset
+   bytes, long animation frames, and long tasks against the accepted numeric
+   limits in `learning.md`. Record Chrome version and host limits alongside the
+   results because desktop emulation does not reproduce a phone CPU or GPU.
 10. The owner reviews the three depths on phone and desktop. Automated tests
    cannot accept the visual result.
 
@@ -186,8 +188,9 @@
   canvas, and shader code, STOP before adding or tracing an image asset.
 - If this plan needs a backend, persistence, API, service-worker, identity,
   first-run, or key-storage change, STOP and return it to the owning plan.
-- If any measured device requires DPR above 2 for acceptable output, or DPR 2
-  cannot stay responsive under the phone budget, STOP and present both captures.
+- If any matrix viewport requires DPR above 2 for acceptable output, or DPR 2
+  cannot stay responsive under the throttled mobile budget, STOP and present
+  both captures.
 - If the middle weave cannot remain deterministic across resize and remount,
   STOP before adding random geometry as a fallback.
 - If removing the Soul Sea from chat breaks its reader/settings use, STOP and
@@ -216,9 +219,9 @@
      CSS breakpoints, and reduced-motion rules.
    - Record the v1 interaction elements that must survive and the rejected
      Plan 024 patterns that must not return. Do not edit code in this slice.
-   - Capture the named idle and activity traces on the owner phone. Propose
-     numeric object, asset, frame-time, and long-task limits from that evidence,
-     then STOP until the owner accepts or changes them in `learning.md`.
+   - Research browser-based mobile approximation limits, record numeric object,
+     asset, frame-time, and long-task limits, then obtain owner direction before
+     implementation.
 
 3. **Prove render profiles with a red/green loop**
    - Write failing `spellRenderProfile.test.ts` cases for capped DPR, phone and
@@ -301,8 +304,9 @@
    - Run the build, serve locally, and capture all five target sizes.
    - Inspect DPR, resize, scroll, keyboard, background/foreground recovery,
      200 percent zoom, high contrast, reduced motion, and tab order.
-   - Run the Redmi Note 14 idle and activity-state pass in portrait and
-     landscape. Record failures before any repair.
+   - Run throttled idle and activity-state passes across compact portrait,
+     standard portrait, tall portrait, narrow landscape, and desktop. Record
+     failures before any repair.
    - Ask the owner to confirm depth, sharpness, material, and responsive
      composition before closure.
 
