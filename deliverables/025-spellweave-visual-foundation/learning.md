@@ -30,6 +30,10 @@ production code.
 - Three.js and motion research must come from current primary sources. Motion
   should make the Spell feel alive through meaningful product events while
   keeping the reading and chat controls obvious.
+- The approved board locks the Shadow Slave Edition's colour mood. The main
+  chat moves away from v1's ambient crimson and purple cast toward near-black
+  depth, cold silver structure, warm ivory text, and rare muted old gold.
+  Crimson communicates corruption, danger, failure, or destructive action.
 
 ## Current code observations
 
@@ -159,6 +163,31 @@ The current WebGL scene uses three batched render objects: 4,500 star points,
 91 divine-light points, and up to 3,400 line segments. The shipped main assets
 are 875,344 bytes of JavaScript and 136,393 bytes of CSS, or 237,920 and 25,245
 bytes respectively when measured with gzip locally.
+
+## Approved tonal correction
+
+The reference image was sampled only to understand its tonal distribution. Its
+dominant field sits around near-black `#050505`, with cool raised blacks around
+`#1e1f20`, middle silver-grey around `#8e8d8d`, and bright cold silver around
+`#cbcccc`. These are measurement anchors, not an instruction to ship or trace
+the image.
+
+Plan 025 will create Edition-specific semantic aliases instead of changing
+every global base token. The intended roles are:
+
+| Role | Target character | Use |
+| --- | --- | --- |
+| Spell void | near-black with almost no hue | dominant background and depth |
+| black wood | slightly warm raised black | composer and strong physical controls |
+| thread silver | crisp cool silver | active web, focus, binding, send, answer |
+| quiet silver | low-contrast neutral grey | distant web and secondary interface |
+| reader ivory | warm off-white | headings and long-form answer text |
+| old gold | desaturated aged gold | appraisal, Memories, rare completion marks |
+| corruption crimson | restrained dark red | failure, danger, corruption, destructive actions |
+
+The atmospheric crimson radial gradients and purple depth wash currently seen
+in v1 will not define the main chat after this plan. Depth will come from value,
+line density, sharpness, controlled haze, and the three Spellweave layers.
 
 ## Hypothesis
 

@@ -61,6 +61,12 @@
 11. (2026-08-18) The app should feel alive and responsive without becoming
     difficult to read or operate. Motion responds to meaningful events such as
     opening, focusing, sending, reading, answering, completing, and failing.
+12. (2026-08-18) The approved Hidden Thread board locks the Shadow Slave
+    Edition's tonal hierarchy. Near-black depth dominates. Cold silver draws
+    the Spellweave and interactive structure. Warm ivory carries readable
+    text. Muted old gold marks appraisal, Memories, and rare focal moments.
+    Ambient crimson and purple washes leave the main chat. Crimson appears
+    only for corruption, danger, failed binding, and destructive actions.
 
 ## Scope
 
@@ -83,7 +89,9 @@
   states, and reduced motion.
 - Update `src/weaver/web/frontend/styles/tokens.css` with semantic aliases for
   interaction silver, appraisal gold, corruption crimson, black wood, depth,
-  and line contrast. Existing token values remain the base palette.
+  warm ivory text, and line contrast. Preserve existing base tokens for older
+  surfaces, while the new Shadow Slave Edition aliases follow the approved
+  board's colder near-black, silver, ivory, and muted-gold hierarchy.
 - Replace the directly mounted background pieces in
   `src/weaver/web/frontend/components/SpellSurfaceChatApp.tsx` with a
   `SpellweaveBackdrop` that composes the existing `SpellBackground` rather
@@ -247,7 +255,8 @@
      `Plan 025: add shared Spellweave layers`.
 
 7. **Install semantic materials and responsive composition**
-   - Add semantic aliases to `tokens.css`. Keep direct crimson use limited to
+   - Add semantic aliases to `tokens.css`. Remove ambient crimson and purple
+     washes from the main chat composition. Keep direct crimson use limited to
      failure, corruption, danger, and destructive controls.
    - Add the original black-wood material as layered CSS gradients with no
      downloaded texture.
