@@ -21,4 +21,5 @@ It keeps the intentional flash startup alias and verifies both selectable v1
 model ids, flash and Pro. The doctor still makes no network call.
 
 `uv run pytest` completed with 528 passed in 546.54 seconds on 2026-08-18.
-No product model call or DeepSeek key was used.
+No product model call or DeepSeek key was used. This Codex environment exposes
+no per-run agent-context token or cost meter, so no cost figure is recorded.

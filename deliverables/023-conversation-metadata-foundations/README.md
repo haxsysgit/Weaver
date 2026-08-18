@@ -6,7 +6,7 @@
 | `learning.md` | Owner-confirmed decisions | Plan 022 dependency satisfied; implementation complete |
 | `results.md` | Deterministic observations and commands | Verification floor green |
 | `review-ledger.md` | Independent findings, repairs, and rechecks | Complete; one coverage repair rechecked |
-| `decision.md` | Owner's final accept or reject record | Pending |
+| `decision.md` | Owner's final accept or reject record | Accepted 2026-08-18 |
 
 No novel prose, chats, credentials, private receipts, generated knowledge,
 or raw model reasoning belongs here.

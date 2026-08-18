@@ -4,7 +4,7 @@
 
 **Admitted 2026-08-18.** Plan 022 closed with the accepted `shadow-slave`
 Edition id. Implementation, independent review, and the verification floor are
-complete. The final owner decision is pending.
+complete. The owner accepted Plan 023 on 2026-08-18.
 
 ## Owner-confirmed direction
 
@@ -66,6 +66,7 @@ The architecture is implemented with deterministic migration, session, API,
 and privacy coverage. The doctor expectation was aligned with the shipped v1
 model catalogue, then the full suite passed.
 
-## Pending owner gates
+## Owner decision
 
-1. Record the final accept or reject decision.
+The owner accepted Plan 023 on 2026-08-18 after independent review and the
+green verification floor.
