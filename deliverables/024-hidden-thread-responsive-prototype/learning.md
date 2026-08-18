@@ -2,8 +2,8 @@
 
 ## Gate status
 
-**Admitted 2026-08-18.** Plans 022 and 023 are closed. Inspection is in
-progress; the owner learning gate remains pending after real-device use.
+**Closed 2026-08-18.** The owner rejected the alternate visual direction before
+the real-device gate. v1 remains the accepted interaction base for later work.
 
 ## Confirmed owner direction
 
@@ -45,7 +45,9 @@ production work starts. The direction passes only if the same visual rules feel
 intentional across the four mobile matrix sizes and 1440 x 900, and the owner
 accepts the full rite-to-chat transition on the Redmi Note 14.
 
-## Learning gate
+## Learning gate outcome
 
-Pending. After the lab is inspected on the owner's Redmi Note 14, the owner
-confirms the prototype rules that Plan 025 may carry into production.
+Rejected. The private lab treated the approved board as a replacement chat
+surface. The owner directed the next pass to extend the tested v1 interface,
+retaining its star web and working conversation mechanics while applying the
+Hidden Thread lore and experience selectively.
