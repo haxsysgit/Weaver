@@ -2,8 +2,9 @@
 
 ## Status
 
-Implementation is complete through slice 9. Device-neutral inspection and the
-full verification floor remain in progress before owner review.
+Implementation, device-neutral inspection, and the full verification floor are
+complete. Independent review and the owner's visual decision remain before
+closure.
 
 ## V1 baseline evidence
 
@@ -204,14 +205,30 @@ and desktop rail. The main surface uses near-black depth, cold silver structure,
 warm ivory text, muted old-gold lights, black wood, and a neutral silver Weaver
 seal. Normal chat no longer uses the old crimson seal.
 
-## Final asset measurements before the full floor
+## Final asset measurements
 
 | Asset | Raw bytes | Local gzip bytes |
 | --- | ---: | ---: |
-| Main JavaScript | 909,033 | 249,451 |
+| Main JavaScript | 909,167 | 249,504 |
 | Lazy Motion feature chunk | 41,223 | 15,604 |
 | Main CSS | 143,514 | 26,533 |
 
-Combined JavaScript is 265,055 gzip bytes, below the accepted 275 KiB limit.
+Combined JavaScript is 265,108 gzip bytes, below the accepted 275 KiB limit.
 CSS is 26,533 gzip bytes, below the accepted 30 KiB limit. The final build after
-review repair must remeasure these hashed artifacts before closure.
+any owner-review repair must remeasure these hashed artifacts before closure.
+
+## Full verification floor
+
+- `npm run build`: passed; 470 modules transformed and the committed production
+  bundle rebuilt.
+- `npm test`: 59 passed across 13 files.
+- `uv run pytest`: 528 passed in 451.52 seconds on Python 3.11.13.
+- `git diff --check` across authored source and records: passed. The unrestricted
+  staged check reports whitespace inside Three.js GLSL template strings in the
+  newly hashed generated bundle. The dist artifact remains byte-for-byte equal
+  to `npm run build` instead of being edited after generation.
+
+The first full frontend run passed but logged repeated jsdom WebGL errors before
+the renderer's existing fallback caught them. A capability check now returns
+before Three.js construction when neither WebGL interface exists. The targeted
+20 chat tests and the repeated full 59-test suite passed without that stderr.

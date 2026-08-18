@@ -262,8 +262,13 @@ export function StarWebScene(
     transparent = false,
     threadAlpha,
   } = opts;
-  // jsdom (and some headless setups) have no WebGL; the background must
-  // degrade to nothing instead of crashing the whole chat.
+  // jsdom and browsers without WebGL must keep the chat usable and quiet.
+  const hasWebGL = typeof window.WebGLRenderingContext !== "undefined"
+    || typeof window.WebGL2RenderingContext !== "undefined";
+  if (!hasWebGL) {
+    return () => undefined;
+  }
+
   let renderer: THREE.WebGLRenderer;
   try {
     renderer = new THREE.WebGLRenderer({
