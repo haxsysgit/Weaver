@@ -9,8 +9,9 @@
 
 - **Tooling:** Python 3.11, SQLite via `aiosqlite`, FastAPI, Pydantic, pytest,
   ruff, fake-mode web runtime.
-- **State:** admitted 2026-08-18 (owner direction); blocked until Plan 022
-  closes with the accepted Edition id.
+- **State:** admitted 2026-08-18; implementation and independent review are
+  complete, with the full verification floor blocked by an unrelated doctor
+  expectation recorded in `results.md`.
 - **Depends on:** Plan 022 must close with accepted identity terms and the
   stable `shadow-slave` Edition id.
 - **Priority:** P1. Plan 028 needs durable rename, archive, and pin controls.

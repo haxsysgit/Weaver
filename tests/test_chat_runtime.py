@@ -16,7 +16,7 @@ async def test_open_developer_runtime_starts_no_conversation(tmp_path) -> None:
     runtime = await open_chat_runtime(tmp_path, live=False, surface="developer")
     try:
         assert runtime.surface == "developer"
-        conversations = await runtime.session.repo.load_conversations()
+        conversations = await runtime.session.repo.load_conversation_summaries()
         assert conversations == []
     finally:
         await runtime.close()

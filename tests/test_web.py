@@ -162,6 +162,15 @@ async def test_device_scoping_isolates_conversations(client) -> None:
         json={"message": "intrude"},
     )
     assert hidden.status_code == 404
+    metadata_hidden = await client.patch(
+        f"/api/conversations/{conv_b}",
+        headers=device_a,
+        json={"archived": True},
+    )
+    assert metadata_hidden.status_code == 404
+
+    unchanged_b = await client.get("/api/conversations", headers=device_b)
+    assert unchanged_b.json()[0]["archived"] is False
     hidden = await client.post(
         f"/api/conversations/{conv_a}/cancel", headers=device_b
     )

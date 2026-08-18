@@ -2,8 +2,9 @@
 
 ## Gate status
 
-**Admitted 2026-08-18.** Plan 022 must close first. Implementation,
-independent review, and the final owner decision have not started.
+**Admitted 2026-08-18.** Plan 022 closed with the accepted `shadow-slave`
+Edition id. Implementation and independent review are complete. The final
+owner decision is pending the full-suite blocker recorded in `results.md`.
 
 ## Owner-confirmed direction
 
@@ -61,11 +62,13 @@ The migration can copy legacy generated titles because `PreferencesStore` and
 `SessionWeave` already use the same SQLite file. Tests must cover the case where
 the legacy table is absent and repeated startup after migration.
 
-This architecture is pending Plan 023 admission. No code may change before the
-owner admits the plan.
+The architecture is implemented with deterministic migration, session, API,
+and privacy coverage. The full suite currently has an unrelated doctor
+expectation failure recorded in `results.md`.
 
 ## Pending owner gates
 
-1. Close Plan 022 with the Edition id confirmed.
-2. Review deterministic migration and API evidence after implementation.
-3. Record the final accept or reject decision after independent review.
+1. Decide whether the unrelated doctor expectation may be repaired under a
+   separate scope, then re-run the full suite.
+2. Record the final accept or reject decision after the verification floor is
+   complete.
