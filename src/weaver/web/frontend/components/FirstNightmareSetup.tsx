@@ -2,13 +2,15 @@ import {
   useEffect,
   useRef,
   useState,
+  type AnimationEvent,
   type KeyboardEvent,
 } from "react";
 
 import { setFirstNightmareState } from "../lib/firstNightmare";
 import { getApiKey, setApiKey } from "../lib/identity";
-import { FateWeavingLoader } from "./FateWeavingLoader";
 import { FirstNightmareRunes } from "./FirstNightmareRunes";
+import { HiddenThreadMask } from "./HiddenThreadMask";
+import "../styles/hidden-thread-initiation.css";
 
 export type FirstNightmareStep = 1 | 2 | 3 | 4;
 
@@ -17,13 +19,19 @@ interface FirstNightmareSetupProps {
   onComplete: () => void;
   onDefer: () => void;
   onKeyStored?: () => void;
+  onRevealStart?: () => void;
 }
 
+const APPRAISAL_TIERS = ["Good", "Exceptional", "Remarkable", "Glorious"] as const;
 const FOCUSABLE_CONTROLS = [
   "a[href]",
   "button:not(:disabled)",
   "input:not(:disabled)",
 ].join(", ");
+
+function prefersReducedMotion(): boolean {
+  return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+}
 
 function setSurfaceInert(dialog: HTMLElement): () => void {
   const surface = dialog.closest(".spell-surface-lab");
@@ -57,15 +65,25 @@ function setSurfaceInert(dialog: HTMLElement): () => void {
   };
 }
 
+function riteAct(step: FirstNightmareStep): string {
+  if (step === 1) return "awakening";
+  if (step === 2) return "initiation";
+  if (step === 3) return "binding";
+  return "appraisal";
+}
+
 export function FirstNightmareSetup({
   initialStep = 1,
   onComplete,
   onDefer,
   onKeyStored,
+  onRevealStart,
 }: FirstNightmareSetupProps) {
   const [step, setStep] = useState<FirstNightmareStep>(initialStep);
   const [apiKey, setApiKeyValue] = useState(getApiKey);
   const [storageError, setStorageError] = useState(false);
+  const [appraisalIndex, setAppraisalIndex] = useState(0);
+  const [revealing, setRevealing] = useState(false);
   const dialogRef = useRef<HTMLElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(
     document.activeElement instanceof HTMLElement ? document.activeElement : null,
@@ -76,7 +94,7 @@ export function FirstNightmareSetup({
     if (!dialog) {
       return;
     }
-    const restoreSurface = setSurfaceInert(dialog.parentElement ?? dialog);
+    const restoreSurface = setSurfaceInert(dialog);
     return () => {
       restoreSurface();
       previousFocusRef.current?.focus();
@@ -84,9 +102,10 @@ export function FirstNightmareSetup({
   }, []);
 
   useEffect(() => {
-    const dialog = dialogRef.current;
-    const preferredControl = dialog?.querySelector<HTMLElement>("[data-autofocus]");
-    preferredControl?.focus();
+    const preferredControl = dialogRef.current?.querySelector<HTMLElement>(
+      "[data-autofocus]",
+    );
+    preferredControl?.focus({ preventScroll: true });
   }, [step]);
 
   function deferSetup() {
@@ -99,11 +118,33 @@ export function FirstNightmareSetup({
       setApiKey(apiKey);
       setFirstNightmareState("completed");
       setStorageError(false);
+      setAppraisalIndex(prefersReducedMotion() ? APPRAISAL_TIERS.length - 1 : 0);
       onKeyStored?.();
       setStep(4);
     } catch {
       setStorageError(true);
     }
+  }
+
+  function beginReveal() {
+    onRevealStart?.();
+    if (prefersReducedMotion()) {
+      onComplete();
+      return;
+    }
+    setRevealing(true);
+  }
+
+  function finishReveal(event: AnimationEvent<HTMLElement>) {
+    if (revealing && event.target === event.currentTarget) {
+      onComplete();
+    }
+  }
+
+  function advanceAppraisal() {
+    setAppraisalIndex((current) => {
+      return Math.min(current + 1, APPRAISAL_TIERS.length - 1);
+    });
   }
 
   function keepFocusInside(event: KeyboardEvent<HTMLElement>) {
@@ -131,32 +172,41 @@ export function FirstNightmareSetup({
     }
   }
 
-  const announcement = [
-    "",
-    "[The Nightmare Spell has found you.]",
-    "[The trial has taken shape.]",
-    "[Every Nightmare finds the vulnerable place.]",
-    "[Your preparation has been appraised.]",
-  ][step];
+  const appraisal = APPRAISAL_TIERS[appraisalIndex];
+  const announcement = step === 1
+    ? "[The hidden thread has found you.]"
+    : step === 2
+      ? "[A buried knowledge answers.]"
+      : step === 3
+        ? "[Bind a voice to the hidden thread.]"
+        : `[Appraisal: ${appraisal}.]`;
+  const beadCount = Math.min(apiKey.length, 24);
 
   return (
-    <div className="first-nightmare-backdrop">
-      <section
-        aria-label="First Nightmare setup"
-        aria-modal="true"
-        className="first-nightmare-panel"
-        onKeyDown={keepFocusInside}
-        ref={dialogRef}
-        role="dialog"
-      >
-        <header className="first-nightmare-head">
-          <span>First Nightmare</span>
-          <small>· {step} of 4</small>
-        </header>
+    <section
+      aria-label="First Nightmare setup"
+      aria-modal="true"
+      className={`hidden-thread-rite${revealing ? " is-revealing" : ""}`}
+      data-rite-act={riteAct(step)}
+      onAnimationEnd={finishReveal}
+      onKeyDown={keepFocusInside}
+      ref={dialogRef}
+      role="dialog"
+    >
+      <div aria-hidden="true" className="hidden-thread-mantle hidden-thread-mantle-left" />
+      <div aria-hidden="true" className="hidden-thread-mantle hidden-thread-mantle-right" />
+      <div aria-hidden="true" className="hidden-thread-axis" />
 
+      <header className="hidden-thread-progress">
+        <span>First Nightmare</span>
+        <small>{step} / 4</small>
+      </header>
+
+      <div className="hidden-thread-scene">
+        {step === 1 && <HiddenThreadMask />}
         <FirstNightmareRunes announcement={announcement} eventKey={step} />
 
-        <div className="first-nightmare-content" key={step}>
+        <div className="hidden-thread-copy" key={step}>
           {step === 1 && (
             <>
               <h1>The Spell has found you</h1>
@@ -164,16 +214,13 @@ export function FirstNightmareSetup({
                 A thread has taken root in this browser. Before Weaver can read
                 with you, there is one small trial.
               </p>
-              <div className="first-nightmare-actions">
-                <button
-                  className="first-nightmare-primary"
-                  data-autofocus
-                  onClick={() => setStep(2)}
-                  type="button"
-                >
-                  Enter the First Nightmare
+              <div className="hidden-thread-actions">
+                <button data-autofocus onClick={() => setStep(2)} type="button">
+                  <span>Enter the First Nightmare</span>
                 </button>
-                <button onClick={deferSetup} type="button">Enter later</button>
+                <button className="hidden-thread-secondary" onClick={deferSetup} type="button">
+                  Enter later
+                </button>
               </div>
             </>
           )}
@@ -186,29 +233,22 @@ export function FirstNightmareSetup({
                 questions to DeepSeek and charge the model usage to your
                 DeepSeek account.
               </p>
-              <aside className="first-nightmare-privacy">
+              <aside className="hidden-thread-privacy">
                 Your key stays in this browser. Weaver sends it with each
                 request and the server does not save it.
               </aside>
-              <a
-                href="https://platform.deepseek.com/"
-                rel="noreferrer"
-                target="_blank"
-              >
+              <a href="https://platform.deepseek.com/" rel="noreferrer" target="_blank">
                 Get a key from DeepSeek
                 <span className="sr-only">, opens the DeepSeek Platform in a new tab</span>
               </a>
-              <div className="first-nightmare-actions">
-                <button
-                  className="first-nightmare-primary"
-                  data-autofocus
-                  onClick={() => setStep(3)}
-                  type="button"
-                >
-                  I have a key
+              <div className="hidden-thread-actions">
+                <button data-autofocus onClick={() => setStep(3)} type="button">
+                  <span>I have a key</span>
                 </button>
-                <button onClick={() => setStep(1)} type="button">Back</button>
-                <button onClick={deferSetup} type="button">Enter later</button>
+                <div className="hidden-thread-quiet-actions">
+                  <button onClick={() => setStep(1)} type="button">Back</button>
+                  <button onClick={deferSetup} type="button">Enter later</button>
+                </div>
               </div>
             </>
           )}
@@ -220,74 +260,78 @@ export function FirstNightmareSetup({
                 storeKey();
               }}
             >
-              <h1>Face the trial</h1>
+              <h1>Bind a voice to the thread</h1>
               <label htmlFor="first-nightmare-api-key">Your DeepSeek API key</label>
-              <input
-                autoCapitalize="none"
-                autoComplete="off"
-                data-autofocus
-                id="first-nightmare-api-key"
-                onChange={(event) => setApiKeyValue(event.target.value)}
-                placeholder="sk-..."
-                spellCheck={false}
-                type="password"
-                value={apiKey}
-              />
+              <div className="hidden-thread-key-channel">
+                <input
+                  autoCapitalize="none"
+                  autoComplete="off"
+                  data-autofocus
+                  id="first-nightmare-api-key"
+                  onChange={(event) => setApiKeyValue(event.target.value)}
+                  placeholder="sk-..."
+                  spellCheck={false}
+                  type="password"
+                  value={apiKey}
+                />
+                <div aria-hidden="true" className="hidden-thread-binding-beads" data-testid="key-binding-beads">
+                  {Array.from({ length: beadCount }, (_, index) => <span key={index} />)}
+                </div>
+              </div>
               <small>
                 Stored only in this browser. You can replace or remove it later
                 in Settings.
               </small>
               {storageError && (
-                <p className="first-nightmare-error" role="alert">
+                <p className="hidden-thread-error" role="alert">
                   The key could not be stored in this browser. Check browser
                   storage and try again.
                 </p>
               )}
-              <div className="first-nightmare-actions">
-                <button
-                  className="first-nightmare-primary"
-                  disabled={apiKey.trim() === ""}
-                  type="submit"
-                >
-                  Store key and continue
+              <div className="hidden-thread-actions">
+                <button disabled={apiKey.trim() === ""} type="submit">
+                  <span>Store key and continue</span>
                 </button>
-                <button onClick={() => setStep(2)} type="button">Back</button>
-                <button onClick={deferSetup} type="button">Enter later</button>
+                <div className="hidden-thread-quiet-actions">
+                  <button onClick={() => setStep(2)} type="button">Back</button>
+                  <button onClick={deferSetup} type="button">Enter later</button>
+                </div>
               </div>
             </form>
           )}
 
           {step === 4 && (
             <>
-              <div className="first-nightmare-weaving">
-                <FateWeavingLoader label="Fate threads draw together" />
-                <span>[Fate threads draw together.]</span>
+              <div aria-hidden="true" className="hidden-thread-sealed-knot" data-testid="sealed-knot">
+                <span />
               </div>
-              <div aria-label="Appraisal: Glorious" className="first-nightmare-appraisal">
-                <span>Good</span>
-                <span>Exceptional</span>
-                <span>Remarkable</span>
-                <span>Glorious</span>
-              </div>
-              <h1>Your Aspect awakens</h1>
-              <p>
-                The key is stored in this browser. Weaver can now read, reread,
-                and answer through your DeepSeek account.
-              </p>
-              <div className="first-nightmare-actions">
-                <button
-                  className="first-nightmare-primary"
-                  data-autofocus
-                  onClick={onComplete}
-                  type="button"
+              <div aria-label={`Appraisal: ${appraisal}`} className="hidden-thread-appraisal">
+                <span
+                  className={appraisal === "Glorious" ? "is-glorious" : ""}
+                  key={appraisal}
+                  onAnimationEnd={advanceAppraisal}
                 >
-                  Enter Weaver
-                </button>
+                  {appraisal}
+                </span>
               </div>
+              {appraisal === "Glorious" && (
+                <>
+                  <h1>The voice is bound</h1>
+                  <p>
+                    The key is stored in this browser. Weaver can now read,
+                    reread, and answer through your DeepSeek account.
+                  </p>
+                  <div className="hidden-thread-actions">
+                    <button data-autofocus onClick={beginReveal} type="button">
+                      <span>Enter Weaver</span>
+                    </button>
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>
-      </section>
-    </div>
+      </div>
+    </section>
   );
 }

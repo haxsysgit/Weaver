@@ -45,6 +45,7 @@ function setMotionPreference(reduced: boolean) {
 
 describe("Hidden Thread initiation rite", () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
     localStorage.clear();
     setMotionPreference(false);
   });
@@ -132,6 +133,7 @@ describe("Hidden Thread initiation rite", () => {
   it("shows storage failure without advancing or exposing the key", () => {
     const nativeSetItem = Storage.prototype.setItem;
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (
+      this: Storage,
       key: string,
       value: string,
     ) {
