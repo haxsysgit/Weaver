@@ -78,6 +78,40 @@ describe("Composer", () => {
     fireEvent.keyDown(textbox, { key: "Enter" });
     expect(onSubmit).toHaveBeenCalledWith("Cassie had a plan");
   });
+
+  it("shows the honest unbound inscription only when the voice is unavailable", () => {
+    const { rerender } = render(
+      <Composer
+        cancelling={false}
+        draft=""
+        onCancel={vi.fn()}
+        onDraftChange={vi.fn()}
+        onSubmit={vi.fn()}
+        onTierChange={vi.fn()}
+        tier="ascended"
+        turnActive={false}
+        voiceBound={false}
+      />,
+    );
+
+    expect(screen.getByText("[The voice remains unbound.]")).toBeVisible();
+
+    rerender(
+      <Composer
+        cancelling={false}
+        draft=""
+        onCancel={vi.fn()}
+        onDraftChange={vi.fn()}
+        onSubmit={vi.fn()}
+        onTierChange={vi.fn()}
+        tier="ascended"
+        turnActive={false}
+        voiceBound
+      />,
+    );
+
+    expect(screen.queryByText("[The voice remains unbound.]")).toBeNull();
+  });
 describe("Composer reading tier", () => {
   it("opens the tier menu and reports the pick", async () => {
     const onTierChange = vi.fn();

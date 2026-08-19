@@ -7,7 +7,9 @@ import { getApiKey } from "../lib/identity";
 import { SpellSurfaceChatApp } from "./SpellSurfaceChatApp";
 
 vi.mock("./SpellBackground", () => ({
-  SpellBackground: () => <canvas data-testid="spell-background" />,
+  SpellBackground: ({ paused }: { paused: boolean }) => (
+    <canvas data-paused={paused} data-testid="spell-background" />
+  ),
 }));
 
 function createApi(): ChatApi {
@@ -109,18 +111,57 @@ describe("first Nightmare setup", () => {
       within(dialog).getByRole("button", { name: "Store key and continue" }),
     );
 
-    expect(await within(dialog).findByText("Your Aspect awakens")).toBeVisible();
+    for (const tier of ["Good", "Exceptional", "Remarkable"]) {
+      fireEvent.animationEnd(within(dialog).getByText(tier));
+    }
+    expect(await within(dialog).findByText("The voice is bound")).toBeVisible();
     expect(within(dialog).getByText("Glorious")).toBeInTheDocument();
     expect(getApiKey()).toBe("owner-test-key");
     expect(localStorage.getItem(FIRST_NIGHTMARE_STORAGE_KEY)).toBe("completed");
+    expect(screen.getByTestId("spell-background")).toHaveAttribute("data-paused", "true");
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Enter Weaver" }));
+    expect(screen.getByTestId("spell-background")).toHaveAttribute("data-paused", "false");
+    expect(screen.getByTestId("spellweave-backdrop")).toHaveAttribute(
+      "data-spell-state",
+      "reaching",
+    );
+    fireEvent.animationEnd(dialog);
     expect(screen.queryByRole("dialog", { name: "First Nightmare setup" })).toBeNull();
+    await waitFor(() => expect(screen.getByRole("textbox")).toHaveFocus());
+    expect(screen.queryByText("[The voice remains unbound.]")).toBeNull();
     expect(
       screen.getByRole("button", {
         name: "Model and key settings",
       }),
     ).toBeVisible();
+  });
+
+  it("keeps the deferred chat honest about its unbound voice", async () => {
+    render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
+
+    const dialog = await screen.findByRole("dialog", {
+      name: "First Nightmare setup",
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Enter later" }));
+
+    expect(screen.getByText("[The voice remains unbound.]")).toBeVisible();
+  });
+
+  it("updates the unbound inscription when settings enable a stored key", async () => {
+    localStorage.setItem(FIRST_NIGHTMARE_STORAGE_KEY, "completed");
+    localStorage.setItem("weaver_api_key", "owner-test-key");
+    localStorage.setItem("weaver_api_key_disabled", "1");
+    render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
+
+    expect(screen.getByText("[The voice remains unbound.]")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Model and key settings" }));
+    const settings = await screen.findByRole("dialog", { name: "Soul Sea settings" });
+    fireEvent.click(within(settings).getByRole("button", { name: "Model" }));
+    fireEvent.click(within(settings).getByRole("checkbox", { name: /Disable this key/ }));
+    fireEvent.click(within(settings).getByRole("button", { name: "Apply settings" }));
+
+    expect(screen.queryByText("[The voice remains unbound.]")).toBeNull();
   });
 
   it("opens settings with the model section from the rail footer", async () => {

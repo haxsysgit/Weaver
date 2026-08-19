@@ -14,11 +14,9 @@ import { runeMessageForActivity } from "../lib/runePhases";
 import {
   shouldOpenFirstNightmare,
 } from "../lib/firstNightmare";
+import { getApiKey, isApiKeyDisabled } from "../lib/identity";
 import { Composer, type ReadingTier } from "./Composer";
-import {
-  FirstNightmareSetup,
-  type FirstNightmareStep,
-} from "./FirstNightmareSetup";
+import { FirstNightmareSetup } from "./FirstNightmareSetup";
 import { RailOpenIcon, SettingsIcon } from "./Icons";
 import { Message } from "./Message";
 import { RecoveryPanel } from "./RecoveryPanel";
@@ -174,7 +172,10 @@ function SpellSurfaceChatSurface({
   const [preferences, setPreferences] = useState(loadInitialPreferences);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [setupOpen, setSetupOpen] = useState(shouldOpenFirstNightmare);
-  const [setupStep, setSetupStep] = useState<FirstNightmareStep>(1);
+  const [setupRevealing, setSetupRevealing] = useState(false);
+  const [voiceBound, setVoiceBound] = useState(() => {
+    return getApiKey() !== "" && !isApiKeyDisabled();
+  });
   const [railOpen, setRailOpen] = useState(false);
   const [desktopRailCollapsed, setDesktopRailCollapsed] = useState(false);
   const [archivedOpen, setArchivedOpen] = useState(false);
@@ -330,7 +331,13 @@ function SpellSurfaceChatSurface({
 
   function closeSetup() {
     setSetupOpen(false);
+    setSetupRevealing(false);
+    refreshVoiceBinding();
     window.setTimeout(() => composerRef.current?.focus(), 0);
+  }
+
+  function refreshVoiceBinding() {
+    setVoiceBound(getApiKey() !== "" && !isApiKeyDisabled());
   }
 
   async function createThread() {
@@ -388,7 +395,11 @@ function SpellSurfaceChatSurface({
     : preferences.starIntensity === "vivid"
       ? 0.56
       : 0.36;
-  const backdropState = chat.recoveryMessage ? "failed" : spellState;
+  const backdropState = chat.recoveryMessage
+    ? "failed"
+    : setupRevealing
+      ? "reaching"
+      : spellState;
   return (
     <div
       className={[
@@ -407,7 +418,7 @@ function SpellSurfaceChatSurface({
       data-testid="spell-surface-live"
     >
       <SpellweaveBackdrop
-        paused={settingsOpen || setupOpen}
+        paused={settingsOpen || (setupOpen && !setupRevealing)}
         state={backdropState}
         threadAlpha={threadAlpha}
       />
@@ -511,6 +522,7 @@ function SpellSurfaceChatSurface({
             textareaRef={composerRef}
             tier={preferences.tier}
             turnActive={chat.turnActive}
+            voiceBound={voiceBound}
           />
           <p><span /> {privacyLabel}</p>
         </footer>
@@ -521,6 +533,7 @@ function SpellSurfaceChatSurface({
       {settingsOpen && (
         <SpellSurfaceSettings
           initial={preferences}
+          onApiKeyChange={setVoiceBound}
           onClose={() => setSettingsOpen(false)}
           onSave={(nextPreferences) => {
             setPreferences(nextPreferences);
@@ -534,9 +547,10 @@ function SpellSurfaceChatSurface({
 
       {setupOpen && (
         <FirstNightmareSetup
-          initialStep={setupStep}
           onComplete={closeSetup}
           onDefer={closeSetup}
+          onKeyStored={refreshVoiceBinding}
+          onRevealStart={() => setSetupRevealing(true)}
         />
       )}
 

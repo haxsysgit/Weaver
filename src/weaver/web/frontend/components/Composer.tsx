@@ -21,6 +21,7 @@ interface ComposerProps {
   textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
   tier: ReadingTier;
   turnActive: boolean;
+  voiceBound?: boolean;
 }
 
 export function Composer({
@@ -38,6 +39,7 @@ export function Composer({
   textareaRef,
   tier,
   turnActive,
+  voiceBound = true,
 }: ComposerProps) {
   const innerRef = useRef<HTMLTextAreaElement>(null);
   const resolvedRef = textareaRef ?? innerRef;
@@ -163,6 +165,9 @@ export function Composer({
           </button>
         )}
       </div>
+      {!voiceBound && (
+        <p className="composer-binding-status">[The voice remains unbound.]</p>
+      )}
     </div>
   );
 }
