@@ -50,8 +50,9 @@ Vite chunk-size warning remains. `git diff --check` passed.
 ## Browser walkthrough
 
 The fake app was captured through a DPR 2, touch-enabled browser session at
-390 x 844 and 320 x 568, plus the shared desktop component at 1440 x 900.
-Private evidence covers all four acts and the real chat after the mantle reveal.
+320 x 568, 360 x 800, 390 x 844, and 412 x 915, plus the shared desktop
+component at 1440 x 900. Private evidence covers all four acts and the real
+chat after the mantle reveal at every size.
 
 The first walkthrough exposed and repaired three visual defects:
 
