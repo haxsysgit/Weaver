@@ -20,3 +20,29 @@ The new focused rite suite failed as expected: six failed and one existing
 Escape path passed. The failures prove the current component still uses a card,
 has no act state, mask, binding beads, sealed knot, replacement appraisal, or
 continuous reveal state. No production source changed before this red run.
+
+## Production contract
+
+- The full-screen rite now owns four explicit acts: awakening, initiation,
+  binding, and appraisal.
+- Act one uses an original inline SVG mask impression. No private reference
+  image or raster asset enters the bundle.
+- Act two keeps the plain DeepSeek explanation, safe platform link, Back, and
+  Enter later paths.
+- Act three stores through `identity.ts`, masks the input, derives decorative
+  beads from length only, and stays on the binding act when storage fails.
+- Act four replaces Good, Exceptional, Remarkable, and Glorious in sequence.
+  Glorious settles in the existing old-gold token.
+- The final mantle split resumes the mounted Spellweave in its reaching state,
+  removes the rite after its own animation settles, then focuses the composer.
+- Deferred, absent, and disabled keys show `[The voice remains unbound.]`.
+  Saving or enabling a key through existing settings removes the inscription.
+- Superseded Plan 021 card styles and keyframes were removed.
+
+## Targeted green proof
+
+`npm test -- --run src/weaver/web/frontend/components/FirstNightmareSetup.test.tsx src/weaver/web/frontend/components/Composer.test.tsx src/weaver/web/frontend/components/SpellSurfaceChatApp.test.tsx src/weaver/web/frontend/lib/identity.test.ts src/weaver/web/frontend/lib/firstNightmare.test.ts`
+passed 30/30 tests across five files.
+
+`npm run build` passed and rebuilt the committed production bundle. The normal
+Vite chunk-size warning remains. `git diff --check` passed.
