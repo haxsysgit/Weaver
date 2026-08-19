@@ -30,6 +30,16 @@
   content: "";
 }
 
+.hidden-thread-rite .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .hidden-thread-rite::before {
   opacity: 0.44;
   background-image:

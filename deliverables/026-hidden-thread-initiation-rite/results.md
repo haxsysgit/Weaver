@@ -46,3 +46,20 @@ passed 30/30 tests across five files.
 
 `npm run build` passed and rebuilt the committed production bundle. The normal
 Vite chunk-size warning remains. `git diff --check` passed.
+
+## Browser walkthrough
+
+The fake app was captured through a DPR 2, touch-enabled browser session at
+390 x 844 and 320 x 568, plus the shared desktop component at 1440 x 900.
+Private evidence covers all four acts and the real chat after the mantle reveal.
+
+The first walkthrough exposed and repaired three visual defects:
+
+- the original mask impression needed stronger plates, mantle geometry, and
+  surrounding web nodes;
+- the new-tab accessibility note leaked into visible link copy because the
+  inherited `sr-only` class had no active rule;
+- the appraisal inherited the key-entry scroll position after act three.
+
+The repeated captures show the repaired link, full appraisal header, settled
+Glorious mark, narrow binding layout, and continuous real-chat reveal.

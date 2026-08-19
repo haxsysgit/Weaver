@@ -102,11 +102,13 @@ export function FirstNightmareSetup({
   }, []);
 
   useEffect(() => {
-    const preferredControl = dialogRef.current?.querySelector<HTMLElement>(
+    const dialog = dialogRef.current;
+    dialog?.scrollTo?.({ behavior: "auto", top: 0 });
+    const preferredControl = dialog?.querySelector<HTMLElement>(
       "[data-autofocus]",
     );
     preferredControl?.focus({ preventScroll: true });
-  }, [step]);
+  }, [appraisalIndex, step]);
 
   function deferSetup() {
     setFirstNightmareState("deferred");
