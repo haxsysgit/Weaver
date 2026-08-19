@@ -944,14 +944,15 @@
   display: flex;
   min-height: 62px;
   flex-direction: column;
+  align-items: center;
   justify-content: center;
-  padding: 10px 12px 10px 15px;
+  padding: 10px 12px;
   color: #a7a8b2;
   border: 1px solid transparent;
   border-radius: 10px;
   background: transparent;
   cursor: pointer;
-  text-align: left;
+  text-align: center;
 }
 
 .lab-settings-nav button:hover {
@@ -967,11 +968,21 @@
 
 .lab-settings-nav button.on::before {
   position: absolute;
-  inset: 12px auto 12px 0;
-  width: 2px;
+  inset: auto 12px 0;
+  height: 2px;
   content: "";
   background: #cf7774;
   box-shadow: 0 0 10px rgba(207, 119, 116, 0.65);
+}
+
+.lab-settings-actions {
+  flex-wrap: wrap;
+}
+
+.lab-settings-actions .lab-settings-replay {
+  margin-right: auto;
+  color: var(--edition-thread-silver);
+  border-color: rgba(203, 204, 204, 0.28);
 }
 
 .lab-settings-nav strong {
@@ -1157,10 +1168,16 @@
     min-width: 130px;
     min-height: 48px;
     padding: 8px 11px;
+    text-align: center;
   }
 
   .lab-settings-nav button.on::before { inset: auto 12px 0; width: auto; height: 2px; }
   .lab-settings-nav span { display: none; }
+
+  .lab-settings-actions .lab-settings-replay {
+    width: 100%;
+    margin-right: 0;
+  }
 
   .lab-settings-main { grid-template-rows: 110px minmax(0, 1fr); }
   .lab-settings-main > .lab-soul-sea { height: 110px; }

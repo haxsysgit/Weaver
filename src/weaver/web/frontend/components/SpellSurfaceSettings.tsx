@@ -38,6 +38,7 @@ interface SpellSurfaceSettingsProps {
   initial: LabPreferences;
   onApiKeyChange?: (hasApiKey: boolean) => void;
   onClose: () => void;
+  onReplayFirstNightmare?: () => void;
   onSave: (preferences: LabPreferences) => void;
 }
 
@@ -114,6 +115,7 @@ export function SpellSurfaceSettings({
   initial,
   onApiKeyChange,
   onClose,
+  onReplayFirstNightmare,
   onSave,
 }: SpellSurfaceSettingsProps) {
   const [preferences, setPreferences] = useState(initial);
@@ -468,6 +470,15 @@ export function SpellSurfaceSettings({
         </div>
 
         <footer className="lab-settings-actions">
+          {onReplayFirstNightmare && (
+            <button
+              className="lab-settings-replay"
+              onClick={onReplayFirstNightmare}
+              type="button"
+            >
+              Replay First Nightmare
+            </button>
+          )}
           <button onClick={onClose} type="button">Leave unchanged</button>
           <button className="primary" onClick={saveSettings} type="button">Apply settings</button>
         </footer>

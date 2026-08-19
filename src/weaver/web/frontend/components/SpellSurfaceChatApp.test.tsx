@@ -183,6 +183,22 @@ describe("first Nightmare setup", () => {
     expect(within(dialog).getByLabelText("DeepSeek key")).toBeVisible();
     expect(within(dialog).getByDisplayValue("DeepSeek V4 Flash")).toBeVisible();
   });
+
+  it("replays the rite from settings without changing the saved first-run state", async () => {
+    localStorage.setItem(FIRST_NIGHTMARE_STORAGE_KEY, "completed");
+    render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Model and key settings" }));
+    const settings = await screen.findByRole("dialog", { name: "Soul Sea settings" });
+    fireEvent.click(
+      within(settings).getByRole("button", { name: "Replay First Nightmare" }),
+    );
+
+    const rite = await screen.findByRole("dialog", { name: "First Nightmare setup" });
+    expect(within(rite).getByText("The Spell has found you")).toBeVisible();
+    fireEvent.click(within(rite).getByRole("button", { name: "Enter later" }));
+    expect(localStorage.getItem(FIRST_NIGHTMARE_STORAGE_KEY)).toBe("completed");
+  });
 });
 
 describe("mobile thread drawer", () => {

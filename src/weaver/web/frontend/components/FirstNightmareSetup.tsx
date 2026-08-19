@@ -20,6 +20,7 @@ interface FirstNightmareSetupProps {
   onDefer: () => void;
   onKeyStored?: () => void;
   onRevealStart?: () => void;
+  reviewMode?: boolean;
 }
 
 const APPRAISAL_TIERS = ["Good", "Exceptional", "Remarkable", "Glorious"] as const;
@@ -78,6 +79,7 @@ export function FirstNightmareSetup({
   onDefer,
   onKeyStored,
   onRevealStart,
+  reviewMode = false,
 }: FirstNightmareSetupProps) {
   const [step, setStep] = useState<FirstNightmareStep>(initialStep);
   const [apiKey, setApiKeyValue] = useState(getApiKey);
@@ -111,7 +113,9 @@ export function FirstNightmareSetup({
   }, [appraisalIndex, step]);
 
   function deferSetup() {
-    setFirstNightmareState("deferred");
+    if (!reviewMode) {
+      setFirstNightmareState("deferred");
+    }
     onDefer();
   }
 

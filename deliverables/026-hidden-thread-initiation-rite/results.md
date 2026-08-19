@@ -64,3 +64,14 @@ The first walkthrough exposed and repaired three visual defects:
 
 The repeated captures show the repaired link, full appraisal header, settled
 Glorious mark, narrow binding layout, and continuous real-chat reveal.
+
+## Repeatable owner review
+
+- Soul Sea settings now exposes `Replay First Nightmare` on phone and desktop.
+- Replay always starts at the awakening act and leaves the saved first-run
+  state unchanged when the owner exits with Enter later or Escape.
+- Settings navigation labels and active markers are centered within each tab.
+- Focused setup, settings integration, and theme tests passed 25/25. The
+  production build passed and refreshed the committed bundle.
+- Private DPR 2 captures at 390 x 844 and 1440 x 900 verify the replay control
+  and centered navigation in the rendered app.

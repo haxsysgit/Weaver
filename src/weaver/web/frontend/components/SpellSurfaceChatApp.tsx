@@ -173,6 +173,7 @@ function SpellSurfaceChatSurface({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [setupOpen, setSetupOpen] = useState(shouldOpenFirstNightmare);
   const [setupRevealing, setSetupRevealing] = useState(false);
+  const [setupReviewMode, setSetupReviewMode] = useState(false);
   const [voiceBound, setVoiceBound] = useState(() => {
     return getApiKey() !== "" && !isApiKeyDisabled();
   });
@@ -332,12 +333,20 @@ function SpellSurfaceChatSurface({
   function closeSetup() {
     setSetupOpen(false);
     setSetupRevealing(false);
+    setSetupReviewMode(false);
     refreshVoiceBinding();
     window.setTimeout(() => composerRef.current?.focus(), 0);
   }
 
   function refreshVoiceBinding() {
     setVoiceBound(getApiKey() !== "" && !isApiKeyDisabled());
+  }
+
+  function replayFirstNightmare() {
+    setSettingsOpen(false);
+    setSetupRevealing(false);
+    setSetupReviewMode(true);
+    setSetupOpen(true);
   }
 
   async function createThread() {
@@ -535,6 +544,7 @@ function SpellSurfaceChatSurface({
           initial={preferences}
           onApiKeyChange={setVoiceBound}
           onClose={() => setSettingsOpen(false)}
+          onReplayFirstNightmare={replayFirstNightmare}
           onSave={(nextPreferences) => {
             setPreferences(nextPreferences);
             saveVisualPreferences(nextPreferences);
@@ -551,6 +561,7 @@ function SpellSurfaceChatSurface({
           onDefer={closeSetup}
           onKeyStored={refreshVoiceBinding}
           onRevealStart={() => setSetupRevealing(true)}
+          reviewMode={setupReviewMode}
         />
       )}
 
