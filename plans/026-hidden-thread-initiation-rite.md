@@ -9,7 +9,7 @@
 
 - **Tooling:** React 19, TypeScript, inline SVG, CSS, Vitest, Testing Library,
   Vite, and the root Python test suite.
-- **State:** drafted (awaiting owner admission).
+- **State:** admitted 2026-08-19 by owner direction.
 - **Depends on:** Plan 022 closed for accepted lore and copy boundaries; Plan 025
   closed for the responsive Spellweave layers, materials, render profiles, and
   motion rules. The rite preserves the existing conversation handoff and has no
@@ -124,14 +124,14 @@
    private image, no literal key fixture shaped like a real credential, no new
    hard-coded transition timing, and no key-validation network path.
 8. Across 320 x 568, 360 x 800, 390 x 844, and 412 x 915 browser viewports,
-   plus the Redmi Note 14 at its measured CSS viewport, evidence covers all four
+   evidence uses DPR 2, touch emulation, and CPU throttling to cover all four
    acts, software keyboard open/close, safe areas, 200 percent text zoom, Back,
    Enter later, storage failure, completion, and reduced motion.
 9. At 1440 x 900, evidence covers the same component with the wide mask/thread
    composition, readable line length, keyboard navigation, and continuous chat
    reveal.
-10. The owner reviews the rite on the Redmi Note 14 and desktop. Passing tests cannot
-    accept the visual or emotional result.
+10. The owner reviews the phone-matrix and desktop evidence. Passing tests
+    cannot accept the visual or emotional result.
 
 ## STOP conditions
 
@@ -152,7 +152,8 @@
 - If the continuous reveal requires duplicate chat trees or a fake conversation
   surface, STOP and repair the shared-component boundary.
 - If the owner rejects mask scale, thread motion, appraisal pace, wood material,
-  or reveal on the Redmi Note 14, record the failed result. Do not close the plan.
+  or reveal in the phone-matrix evidence, record the failed result. Do not close
+  the plan.
 
 ## Slices
 
@@ -250,9 +251,9 @@
       DeepSeek key.
     - Record every required state across the four mobile matrix sizes and
       1440 x 900.
-    - Test touch, keyboard, safe areas, rotate/resize, 200 percent zoom, reduced
-      motion, storage denial, defer, refresh, and completion on the Redmi Note
-      14 in portrait and landscape.
+   - Test touch, keyboard, safe areas, rotate/resize, 200 percent zoom, reduced
+     motion, storage denial, defer, refresh, and completion across the mobile
+     matrix and narrow landscape.
     - Ask the owner to judge mask, depth, transition language, appraisal, and
       the final reveal. Record failures before repair.
 

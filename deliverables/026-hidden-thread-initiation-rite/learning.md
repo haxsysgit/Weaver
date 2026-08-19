@@ -2,8 +2,9 @@
 
 ## Gate status
 
-**Unadmitted.** The owner requested the full-screen initiation direction on
-2026-08-18. Admission waits for Plans 022, 023, and 025 to close.
+**Accepted and admitted 2026-08-19.** Plans 022, 023, and 025 are closed. The
+owner approved the full-screen initiation direction and directed implementation
+to start.
 
 ## Confirmed owner direction
 
@@ -42,6 +43,6 @@ the chat or creating a second mobile implementation.
 
 ## Learning gate
 
-Pending. After dependencies close, the executor maps Plan 022's accepted copy
-and Plan 025's visual contract onto the four acts. The owner confirms that map
-before production edits begin.
+Accepted. The four acts use Plan 022's accepted copy and Plan 025's visual
+contract. The evidence gate covers a device-neutral phone matrix and desktop;
+no named handset represents mobile support.
