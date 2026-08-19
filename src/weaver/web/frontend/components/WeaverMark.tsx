@@ -1,5 +1,4 @@
-import { faSpider } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import maskImage from "../assets/hidden-thread-mask-mark.webp";
 
 export interface WeaverMarkProps {
   className?: string;
@@ -16,10 +15,13 @@ export function WeaverMark({ className, compact = false }: WeaverMarkProps) {
     .join(" ");
 
   return (
-    <FontAwesomeIcon
+    <img
+      alt=""
       aria-hidden="true"
       className={markClassName}
-      icon={faSpider}
+      height={512}
+      src={maskImage}
+      width={512}
     />
   );
 }

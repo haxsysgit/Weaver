@@ -57,7 +57,10 @@ describe("Hidden Thread initiation rite", () => {
     expect(dialog).toHaveClass("hidden-thread-rite");
     expect(dialog).toHaveAttribute("data-rite-act", "awakening");
     expect(dialog.querySelector(".first-nightmare-panel")).toBeNull();
-    expect(dialog.querySelector("[data-hidden-thread-mask]")).not.toBeNull();
+    expect(dialog.querySelector(".hidden-thread-axis")).toBeNull();
+    const mask = dialog.querySelector("[data-hidden-thread-mask]");
+    expect(mask).not.toBeNull();
+    expect(mask?.tagName).toBe("IMG");
     expect(within(dialog).getByText("[The hidden thread has found you.]")).toBeVisible();
     expect(within(dialog).getByText("The Spell has found you")).toBeVisible();
   });
@@ -71,7 +74,6 @@ describe("Hidden Thread initiation rite", () => {
     );
 
     expect(dialog).toHaveAttribute("data-rite-act", "initiation");
-    expect(dialog.querySelector(".hidden-thread-axis")).toBeNull();
     const link = within(dialog).getByRole("link", { name: /Get a key from DeepSeek/ });
     expect(link).toHaveAttribute("href", "https://platform.deepseek.com/");
     expect(link).toHaveAttribute("rel", "noreferrer");
@@ -102,10 +104,11 @@ describe("Hidden Thread initiation rite", () => {
     expect(getApiKey()).toBe("owner-test-key");
     expect(localStorage.getItem(FIRST_NIGHTMARE_STORAGE_KEY)).toBe("completed");
     expect(dialog).toHaveAttribute("data-rite-act", "appraisal");
-    expect(within(dialog).getByTestId("sealed-knot")).toBeVisible();
+    expect(within(dialog).getByTestId("appraisal-mask")).toBeVisible();
   });
 
-  it("previews every appraisal act without storing a key during owner review", () => {
+  it("uses a random fun appraisal without storing a key during owner review", () => {
+    vi.spyOn(Math, "random").mockReturnValue(0.99);
     render(
       <FirstNightmareSetup
         onComplete={vi.fn()}
@@ -123,7 +126,9 @@ describe("Hidden Thread initiation rite", () => {
     expect(getApiKey()).toBe("");
     expect(localStorage.getItem(FIRST_NIGHTMARE_STORAGE_KEY)).toBeNull();
     expect(dialog).toHaveAttribute("data-rite-act", "appraisal");
-    expect(within(dialog).getByText("Good")).toBeVisible();
+    expect(within(dialog).getByText("Fraudulent")).toBeVisible();
+    expect(within(dialog).getByTestId("appraisal-mask").querySelector("img")).not.toBeNull();
+    expect(within(dialog).getByText("The rite is complete")).toBeVisible();
   });
 
   it("replaces each appraisal tier before opening into the conversation", () => {

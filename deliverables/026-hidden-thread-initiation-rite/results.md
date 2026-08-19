@@ -118,3 +118,30 @@ Public-safe generation constraints:
 
 The novel does not prescribe the cover's exact face geometry. The generated
 asset must remain original and cannot use supplied cover or board pixels.
+
+The first isolated-mask candidate also failed the composition check. The mask
+looked like an inserted emblem and lost the accepted relationship between the
+face, central thread, surrounding Spellweave, woven action, and page depth. It
+was discarded before commit.
+
+The accepted implementation direction uses one original, text-free portrait
+scene. The scene contains the mask, pale mantle, silver web, central thread, and
+lower woven altar as one artwork. Accessible HTML supplies every word and
+control above it. On phones the scene fills the rite; on desktop it becomes the
+left ritual plane while the same live content occupies the right plane. A crop
+from the same scene supplies the appraisal and small Weaver identity marks.
+
+## Plan 028 handoff, 2026-08-19
+
+Read-only inspection reproduced both reported thread-management faults:
+
+- `SpellSurfaceChatApp` derives `pinned` and `archived` from component-local
+  `Set<string>` state. Pinning only changes the current render order and both
+  values disappear when the page reloads.
+- Opening Archived only filters the existing rail list and toggles the same
+  archive button. The rail has no archive heading, empty-state copy, or other
+  strong location cue.
+
+Plan 023 already provides the persistent metadata route. Plan 028 owns wiring
+that route into the frontend and giving the Thread Archive an unmistakable
+active state; Plan 026 does not alter those controls.

@@ -11,6 +11,7 @@ import { getApiKey, setApiKey } from "../lib/identity";
 import { FirstNightmareRunes } from "./FirstNightmareRunes";
 import { HiddenThreadMask } from "./HiddenThreadMask";
 import { EyeIcon, EyeSlashIcon } from "./Icons";
+import { WeaverMark } from "./WeaverMark";
 import "../styles/hidden-thread-initiation.css";
 
 export type FirstNightmareStep = 1 | 2 | 3 | 4;
@@ -25,6 +26,14 @@ interface FirstNightmareSetupProps {
 }
 
 const APPRAISAL_TIERS = ["Good", "Exceptional", "Remarkable", "Glorious"] as const;
+const REVIEW_APPRAISALS = [
+  "Glorious",
+  "Fated",
+  "Treacherous",
+  "Suspicious",
+  "Remarkable",
+  "Fraudulent",
+] as const;
 const FOCUSABLE_CONTROLS = [
   "a[href]",
   "button:not(:disabled)",
@@ -88,6 +97,7 @@ export function FirstNightmareSetup({
   const [storageError, setStorageError] = useState(false);
   const [appraisalIndex, setAppraisalIndex] = useState(0);
   const [previewOnly, setPreviewOnly] = useState(false);
+  const [reviewAppraisal, setReviewAppraisal] = useState<string | null>(null);
   const [revealing, setRevealing] = useState(false);
   const dialogRef = useRef<HTMLElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(
@@ -128,6 +138,7 @@ export function FirstNightmareSetup({
       setFirstNightmareState("completed");
       setStorageError(false);
       setPreviewOnly(false);
+      setReviewAppraisal(null);
       setAppraisalIndex(prefersReducedMotion() ? APPRAISAL_TIERS.length - 1 : 0);
       onKeyStored?.();
       setStep(4);
@@ -139,7 +150,8 @@ export function FirstNightmareSetup({
   function previewAppraisal() {
     setStorageError(false);
     setPreviewOnly(true);
-    setAppraisalIndex(prefersReducedMotion() ? APPRAISAL_TIERS.length - 1 : 0);
+    const randomIndex = Math.floor(Math.random() * REVIEW_APPRAISALS.length);
+    setReviewAppraisal(REVIEW_APPRAISALS[randomIndex]);
     setStep(4);
   }
 
@@ -159,6 +171,9 @@ export function FirstNightmareSetup({
   }
 
   function advanceAppraisal() {
+    if (previewOnly) {
+      return;
+    }
     setAppraisalIndex((current) => {
       return Math.min(current + 1, APPRAISAL_TIERS.length - 1);
     });
@@ -189,7 +204,8 @@ export function FirstNightmareSetup({
     }
   }
 
-  const appraisal = APPRAISAL_TIERS[appraisalIndex];
+  const appraisal = reviewAppraisal ?? APPRAISAL_TIERS[appraisalIndex];
+  const appraisalComplete = previewOnly || appraisal === "Glorious";
   const announcement = step === 1
     ? "[The hidden thread has found you.]"
     : step === 2
@@ -212,8 +228,6 @@ export function FirstNightmareSetup({
     >
       <div aria-hidden="true" className="hidden-thread-mantle hidden-thread-mantle-left" />
       <div aria-hidden="true" className="hidden-thread-mantle hidden-thread-mantle-right" />
-      {step === 1 && <div aria-hidden="true" className="hidden-thread-axis" />}
-
       <header className="hidden-thread-progress">
         <span>First Nightmare</span>
         <small>{step} / 4</small>
@@ -338,21 +352,21 @@ export function FirstNightmareSetup({
             <>
               <div
                 aria-hidden="true"
-                className={`hidden-thread-sealed-knot${previewOnly ? " is-preview" : ""}`}
-                data-testid="sealed-knot"
+                className={`hidden-thread-appraisal-mark${previewOnly ? " is-preview" : ""}`}
+                data-testid="appraisal-mask"
               >
-                <span />
+                <WeaverMark compact />
               </div>
               <div aria-label={`Appraisal: ${appraisal}`} className="hidden-thread-appraisal">
                 <span
-                  className={appraisal === "Glorious" ? "is-glorious" : ""}
+                  className={appraisalComplete ? "is-glorious" : ""}
                   key={appraisal}
                   onAnimationEnd={advanceAppraisal}
                 >
                   {appraisal}
                 </span>
               </div>
-              {appraisal === "Glorious" && (
+              {appraisalComplete && (
                 <>
                   <h1>{previewOnly ? "The rite is complete" : "The voice is bound"}</h1>
                   {previewOnly ? (

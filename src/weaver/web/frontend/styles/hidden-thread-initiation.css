@@ -74,39 +74,6 @@
   font: inherit;
 }
 
-.hidden-thread-axis {
-  position: fixed;
-  z-index: 0;
-  top: max(48px, env(safe-area-inset-top));
-  bottom: 0;
-  left: 50%;
-  width: 1px;
-  pointer-events: none;
-  background: linear-gradient(
-    to bottom,
-    rgba(203, 204, 204, 0.02),
-    rgba(203, 204, 204, 0.42) 22%,
-    rgba(203, 204, 204, 0.12) 76%,
-    transparent
-  );
-  transform-origin: top;
-  animation: hidden-thread-axis-wakes calc(var(--motion-smooth) * 4) var(--ease-weave) both;
-}
-
-.hidden-thread-axis::before,
-.hidden-thread-axis::after {
-  position: absolute;
-  left: 50%;
-  width: 7px;
-  height: 7px;
-  border: 1px solid var(--edition-appraisal-gold);
-  content: "";
-  transform: translateX(-50%) rotate(45deg);
-}
-
-.hidden-thread-axis::before { top: 19%; }
-.hidden-thread-axis::after { bottom: 16%; }
-
 .hidden-thread-scene {
   position: relative;
   z-index: 2;
@@ -119,75 +86,40 @@
 }
 
 .hidden-thread-mask {
-  width: min(58vw, 310px);
-  max-height: 42dvh;
-  justify-self: center;
-  margin-bottom: clamp(-20px, -2vh, -8px);
-  overflow: visible;
-  fill: rgba(5, 5, 5, 0.96);
+  position: fixed;
+  z-index: 0;
+  inset: 0;
+  display: block;
+  width: 100vw;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  object-fit: cover;
+  object-position: center;
   filter: drop-shadow(0 22px 35px rgba(0, 0, 0, 0.8));
-  stroke: rgba(203, 204, 204, 0.64);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.15;
   animation: hidden-thread-mask-gathers calc(var(--motion-smooth) * 5) var(--ease-weave) both;
 }
 
-.hidden-thread-mask-horns,
-.hidden-thread-mask-etching,
-.hidden-thread-mask-weave {
-  fill: none;
+.hidden-thread-rite[data-rite-act="awakening"]::after {
+  z-index: 1;
+  background: linear-gradient(
+    to bottom,
+    transparent 0 48%,
+    rgba(0, 0, 0, 0.18) 56%,
+    rgba(0, 0, 0, 0.7) 70%,
+    rgba(0, 0, 0, 0.22) 84%,
+    rgba(0, 0, 0, 0.76) 100%
+  );
 }
 
-.hidden-thread-mask-weave {
-  stroke: rgba(203, 204, 204, 0.22);
-  stroke-width: 0.65;
+.hidden-thread-rite[data-rite-act="awakening"] .hidden-thread-scene {
+  align-content: end;
 }
 
-.hidden-thread-mask-weave circle {
-  fill: var(--edition-thread-silver);
-  stroke: none;
-}
-
-.hidden-thread-mask-mantle {
-  fill: rgba(2, 2, 2, 0.98);
-  stroke: rgba(203, 204, 204, 0.14);
-}
-
-.hidden-thread-mask-crown {
-  fill: rgba(9, 9, 9, 0.98);
-  stroke-width: 1.55;
-}
-
-.hidden-thread-mask-crown-ridge,
-.hidden-thread-mask-nose {
-  fill: rgba(17, 17, 17, 0.98);
-  stroke: rgba(183, 154, 98, 0.3);
-}
-
-.hidden-thread-mask-plates path {
-  fill: rgba(14, 14, 14, 0.98);
-  stroke: rgba(203, 204, 204, 0.48);
-}
-
-.hidden-thread-mask-eye {
-  fill: #010101;
-  stroke: rgba(231, 226, 217, 0.82);
-  stroke-width: 1.3;
-}
-
-.hidden-thread-mask-teeth path {
-  fill: rgba(4, 4, 4, 0.98);
-  stroke: rgba(203, 204, 204, 0.42);
-}
-
-.hidden-thread-mask-etching {
-  stroke: rgba(183, 154, 98, 0.38);
-  stroke-width: 0.75;
-}
-
-.hidden-thread-mask-etching circle {
-  fill: var(--edition-appraisal-gold-soft);
+.hidden-thread-rite[data-rite-act="awakening"] .first-nightmare-rune-event,
+.hidden-thread-rite[data-rite-act="awakening"] .hidden-thread-copy {
+  position: relative;
+  z-index: 2;
 }
 
 .hidden-thread-rite .first-nightmare-rune-event {
@@ -500,32 +432,27 @@
   display: none;
 }
 
-.hidden-thread-sealed-knot {
-  position: relative;
+.hidden-thread-appraisal-mark {
+  display: grid;
   width: 58px;
   height: 58px;
   margin: 0 auto 14px;
+  padding: 5px;
+  place-items: center;
   border: 1px solid rgba(203, 204, 204, 0.42);
   border-radius: 50%;
-  transform: rotate(45deg);
   animation: hidden-thread-knot-seals calc(var(--motion-smooth) * 2) var(--ease-weave) both;
 }
 
-.hidden-thread-sealed-knot::before,
-.hidden-thread-sealed-knot::after,
-.hidden-thread-sealed-knot span {
-  position: absolute;
-  background: var(--edition-thread-silver);
-  content: "";
+.hidden-thread-appraisal-mark .weaver-mark-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: saturate(0.72) drop-shadow(0 0 10px rgba(183, 154, 98, 0.24));
 }
 
-.hidden-thread-sealed-knot::before { top: 50%; right: 8px; left: 8px; height: 1px; }
-.hidden-thread-sealed-knot::after { top: 8px; bottom: 8px; left: 50%; width: 1px; }
-.hidden-thread-sealed-knot span { inset: 22px; transform: rotate(45deg); }
-
-.hidden-thread-sealed-knot.is-preview {
+.hidden-thread-appraisal-mark.is-preview {
   border-style: dashed;
-  opacity: 0.72;
 }
 
 .hidden-thread-appraisal {
@@ -585,11 +512,6 @@
   text-align: center;
 }
 
-@keyframes hidden-thread-axis-wakes {
-  from { opacity: 0; transform: scaleY(0); }
-  to { opacity: 1; transform: scaleY(1); }
-}
-
 @keyframes hidden-thread-mask-gathers {
   from { opacity: 0; filter: blur(8px) drop-shadow(0 22px 35px rgba(0, 0, 0, 0.72)); transform: scale(0.92); }
   to { opacity: 0.92; filter: blur(0) drop-shadow(0 22px 35px rgba(0, 0, 0, 0.72)); transform: scale(1); }
@@ -623,8 +545,8 @@
 }
 
 @keyframes hidden-thread-knot-seals {
-  from { opacity: 0; transform: rotate(15deg) scale(1.3); }
-  to { opacity: 1; transform: rotate(45deg) scale(1); }
+  from { opacity: 0; transform: rotate(-6deg) scale(1.3); }
+  to { opacity: 1; transform: rotate(0) scale(1); }
 }
 
 @keyframes hidden-thread-appraises {
@@ -661,10 +583,18 @@
   }
 
   .hidden-thread-mask {
-    grid-row: 1 / span 2;
-    width: min(24vw, 285px);
-    max-height: 58dvh;
-    margin: 0;
+    right: auto;
+    width: 50vw;
+    height: 100dvh;
+  }
+
+  .hidden-thread-rite[data-rite-act="awakening"]::after {
+    background: linear-gradient(
+      to right,
+      transparent 0 34%,
+      rgba(0, 0, 0, 0.44) 45%,
+      var(--edition-spell-void) 55% 100%
+    );
   }
 
   .hidden-thread-rite[data-rite-act="awakening"] .first-nightmare-rune-event,
@@ -694,8 +624,8 @@
   }
 
   .hidden-thread-mask {
-    width: min(60vw, 225px);
-    max-height: 35dvh;
+    width: 100vw;
+    height: 100dvh;
   }
 
   .hidden-thread-rite .first-nightmare-rune-event {
@@ -719,13 +649,7 @@
 }
 
 @media (max-height: 640px) {
-  .hidden-thread-mask {
-    width: min(48vw, 165px);
-    max-height: 27dvh;
-  }
-
   .hidden-thread-scene {
-    align-content: start;
     padding-top: 48px;
   }
 
@@ -748,10 +672,9 @@
   }
 
   .hidden-thread-mask,
-  .hidden-thread-axis,
   .hidden-thread-rite .first-nightmare-rune-event > p,
   .hidden-thread-copy,
-  .hidden-thread-sealed-knot,
+  .hidden-thread-appraisal-mark,
   .hidden-thread-appraisal span {
     opacity: 1;
     filter: none;
