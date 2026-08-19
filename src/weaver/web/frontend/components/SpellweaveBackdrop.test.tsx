@@ -27,6 +27,10 @@ describe("Spellweave backdrop", () => {
     expect(depths).toEqual(["distant", "middle", "foreground"]);
     expect(backdrop).toHaveAttribute("aria-hidden", "true");
     expect(backdrop).toHaveAttribute("data-spell-state", "answering");
+    expect(backdrop.querySelector(".spellweave-field-foreground")).toHaveAttribute(
+      "data-spell-state",
+      "answering",
+    );
   });
 
   it("keeps both responsive compositions decorative and unfocusable", () => {

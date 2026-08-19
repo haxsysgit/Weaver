@@ -38,7 +38,7 @@ export function SpellweaveBackdrop({
         <div className="lab-star-flare flare-two" />
       </div>
       <SpellweaveField depth="middle" />
-      <SpellweaveField depth="foreground" />
+      <SpellweaveField depth="foreground" state={state} />
     </div>
   );
 }

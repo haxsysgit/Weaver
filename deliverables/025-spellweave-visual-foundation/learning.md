@@ -2,10 +2,8 @@
 
 ## Gate status
 
-**Admitted 2026-08-18.** Plan 024 closed rejected. The owner directed this
-visual foundation to begin from the accepted v1 interface. Research and v1
-baseline inspection are in progress; the learning gate remains pending before
-production code.
+**Complete.** Admitted and accepted by the owner on 2026-08-18. Plan 024 closed
+rejected, and this visual foundation began from the accepted v1 interface.
 
 ## Confirmed owner direction
 

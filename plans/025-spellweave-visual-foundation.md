@@ -10,7 +10,8 @@
 - **Tooling:** React 19, TypeScript, Three.js, Motion for React, inline SVG, CSS
   custom properties, Vitest, Testing Library, Vite, and the root Python test
   suite.
-- **State:** admitted 2026-08-18 (owner direction).
+- **State:** closed 2026-08-19. Owner accepted after independent review and
+  evidence repair.
 - **Depends on:** Plan 024 closed as rejected. Plan 025 copies no prototype
   code or visual rules. It has no backend dependency;
   Plan 028 reconciles the later archive client with Plan 023's accepted API.

@@ -71,40 +71,38 @@
   vector-effect: non-scaling-stroke;
 }
 
-.spellweave-backdrop[data-spell-state="reaching"] .spellweave-field-foreground,
-.spellweave-backdrop[data-spell-state="reading"] .spellweave-field-foreground,
-.spellweave-backdrop[data-spell-state="answering"] .spellweave-field-foreground {
+.spellweave-field-foreground[data-spell-state="reaching"],
+.spellweave-field-foreground[data-spell-state="reading"] {
   opacity: 0.38;
 }
 
-.spellweave-backdrop[data-spell-state="reaching"] .spellweave-event-thread {
+.spellweave-field-foreground[data-spell-state="reaching"] .spellweave-event-thread {
   opacity: 0.82;
   animation: spellweave-pulse calc(var(--motion-smooth) * 3) var(--ease-weave) both;
 }
 
-.spellweave-backdrop[data-spell-state="reading"] .spellweave-field-foreground {
+.spellweave-field-foreground[data-spell-state="reading"] {
   animation: spellweave-knot-read calc(var(--motion-smooth) * 4) var(--ease-weave) infinite alternate;
 }
 
-.spellweave-backdrop[data-spell-state="answering"] .spellweave-event-thread {
+.spellweave-field-foreground[data-spell-state="answering"] .spellweave-event-thread {
   opacity: 0.74;
   stroke-dasharray: 0.32 0.68;
-  animation: spellweave-answer calc(var(--motion-smooth) * 4) var(--ease-weave) infinite;
 }
 
-.spellweave-backdrop[data-spell-state="complete"] .spellweave-field-foreground {
+.spellweave-field-foreground[data-spell-state="complete"] {
   opacity: 0.34;
   filter: drop-shadow(0 0 5px var(--edition-appraisal-gold, #b79a62));
   animation: spellweave-settle calc(var(--motion-smooth) * 2) var(--ease-weave) both;
 }
 
-.spellweave-backdrop[data-spell-state="failed"] .spellweave-field-foreground {
+.spellweave-field-foreground[data-spell-state="failed"] {
   opacity: 0.32;
   animation: spellweave-fracture var(--motion-smooth) var(--ease-weave) both;
 }
 
-.spellweave-backdrop[data-spell-state="failed"] .spellweave-field-foreground line,
-.spellweave-backdrop[data-spell-state="failed"] .spellweave-field-foreground .spellweave-knot {
+.spellweave-field-foreground[data-spell-state="failed"] line,
+.spellweave-field-foreground[data-spell-state="failed"] .spellweave-knot {
   stroke: var(--edition-corruption, #74302d);
 }
 
@@ -116,10 +114,6 @@
 @keyframes spellweave-knot-read {
   from { opacity: 0.2; }
   to { opacity: 0.78; }
-}
-
-@keyframes spellweave-answer {
-  to { stroke-dashoffset: -1; }
 }
 
 @keyframes spellweave-settle {

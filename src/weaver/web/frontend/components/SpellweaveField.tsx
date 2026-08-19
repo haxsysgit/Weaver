@@ -5,6 +5,7 @@ import {
   type SpellComposition,
   type SpellGeometry,
 } from "../lib/spellGeometry";
+import type { SpellweaveActivityState } from "./SpellweaveBackdrop";
 
 export type SpellweaveDepth = "foreground" | "middle";
 
@@ -59,7 +60,13 @@ function GeometryGroup({
   );
 }
 
-export function SpellweaveField({ depth }: { depth: SpellweaveDepth }) {
+export function SpellweaveField({
+  depth,
+  state,
+}: {
+  depth: SpellweaveDepth;
+  state?: SpellweaveActivityState;
+}) {
   const portrait = useMemo(() => geometryFor("portrait"), []);
   const desktop = useMemo(() => geometryFor("desktop"), []);
 
@@ -67,6 +74,7 @@ export function SpellweaveField({ depth }: { depth: SpellweaveDepth }) {
     <svg
       className={`spellweave-field spellweave-field-${depth}`}
       data-spell-depth={depth}
+      data-spell-state={state}
       data-testid="spellweave-field"
       focusable="false"
       preserveAspectRatio="none"

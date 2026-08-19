@@ -148,9 +148,12 @@ at 255.2ms.
 
 Two isolation traces established ownership:
 
-- Directly setting the new foreground Spellweave to `answering` for ten seconds
-  produced one 55.5ms long animation frame and no long tasks. It stayed within
-  the Plan 025 visual-engine budget.
+- The independent closure review found that the earlier passing direct activity
+  result had not been saved. Repeating it exposed an expensive ancestor selector
+  and SVG dash animation. The repair places activity state on the foreground SVG
+  and keeps the answering thread as a static silver state. After the throttled
+  phone reached its static fallback and settled, the repeated ten-second direct
+  `answering` trace produced zero long tasks and zero long animation frames.
 - Hiding the complete Spellweave backdrop and disabling every CSS animation and
   transition did not remove the fake-streaming cost. The unchanged v1 message
   path produced five long animation frames, peaked at 225.3ms, and produced six
@@ -166,14 +169,14 @@ Final production captures cover 320 x 568, 360 x 800, 390 x 844, 412 x 915,
 800 x 360 narrow landscape, and 1440 x 900. They are private, ignored evidence
 under `private/design-evidence/025/implemented/` and are not production assets.
 
-| Viewport | Profile | DPR | Stars | Segments | Draw calls | Horizontal overflow |
-| --- | --- | ---: | ---: | ---: | ---: | --- |
-| 320 x 568 | compact | 2 | 1,800 | 900 | 3 | none |
-| 360 x 800 | phone | 2 | 2,600 | 1,600 | 3 | none |
-| 390 x 844 | phone | 2 | 2,600 | 1,600 | 3 | none |
-| 412 x 915 | phone | 2 | 2,600 | 1,600 | 3 | none |
-| 800 x 360 | compact | 2 | 1,800 | 900 | 3 | none |
-| 1440 x 900 | desktop | 2 | 4,500 | 3,400 | 3 | none |
+| Viewport | Profile | Device DPR | Active DPR | Adaptive level | Stars | Segments | Draw calls | Horizontal overflow |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| 320 x 568 | compact | 2 | 2 | 0 | 1,800 | 900 | 3 | none |
+| 360 x 800 | phone | 2 | 2 | 0 | 2,600 | 1,600 | 3 | none |
+| 390 x 844 | phone | 2 | 2 | 0 | 2,600 | 1,600 | 3 | none |
+| 412 x 915 | phone | 2 | 2 | 0 | 2,600 | 1,600 | 3 | none |
+| 800 x 360 | compact | 2 | 1.5 | 1 | 1,800 | 900 | 3 | none |
+| 1440 x 900 | desktop | 2 | 2 | 0 | 4,500 | 3,400 | 3 | none |
 
 An early matrix run exposed a false adaptation: initial page-load stalls were
 counted as sustained rendering pressure, causing normal devices to downshift.
@@ -189,12 +192,19 @@ animation, and its state remained visible without decorative travel.
 After the throttled phone reached its static fallback and settled, the required
 60-second idle trace reported zero long tasks and zero long animation frames.
 A following ten-second direct `answering` state trace also reported zero long
-tasks and zero long animation frames. The browser was Chrome 148.0.7778.167
+tasks and zero long animation frames. Its raw result is saved as
+`private/design-evidence/025/implemented/direct-answering-performance.json`.
+The browser was Chrome 148.0.7778.167
 running headless with SwiftShader on the development host, so these figures are
 comparative browser evidence rather than a claim about every phone GPU.
 
 At 200 percent page scale the visual viewport reduced to 195 x 422 while the
-390px layout retained its width without document overflow. A 390 x 500
+390px layout retained its width without document overflow. The zoomed compact
+capture is preserved as `320x568-200-percent-zoom.png`; a replacement
+`320x568-final.png` records the normal-scale 320 x 568 layout. The existing v1
+message Copy control can collide with the fixed settings control at narrow
+widths, and the preserved v1 composer reaches beyond the visible right edge at
+320px. Plan 027 owns those reply and composer layouts. A 390 x 500
 keyboard-height approximation kept the composer fully visible from y=395 to
 y=474 and produced no horizontal overflow. A freeze/active lifecycle pass kept
 the canvas and composer mounted; source inspection confirms hidden documents
@@ -209,20 +219,25 @@ seal. Normal chat no longer uses the old crimson seal.
 
 | Asset | Raw bytes | Local gzip bytes |
 | --- | ---: | ---: |
-| Main JavaScript | 909,180 | 249,527 |
-| Lazy Motion feature chunk | 41,223 | 15,604 |
-| Main CSS | 143,514 | 26,533 |
+| Main JavaScript | 909,217 | 249,534 |
+| Lazy Motion feature chunk | 41,223 | 15,605 |
+| Main CSS | 143,165 | 26,512 |
 
-Combined JavaScript is 265,131 gzip bytes, below the accepted 275 KiB limit.
-CSS is 26,533 gzip bytes, below the accepted 30 KiB limit. The final build after
-any owner-review repair must remeasure these hashed artifacts before closure.
+Combined JavaScript is 265,139 gzip bytes, below the accepted 275 KiB limit.
+CSS is 26,512 gzip bytes, below the accepted 30 KiB limit.
+
+## Agent usage
+
+The execution environment exposes no reliable per-plan token or cost counter.
+Executor and reviewer usage therefore cannot be measured without inventing a
+number. Product execution stayed fake-only and made no model or provider call.
 
 ## Full verification floor
 
 - `npm run build`: passed; 470 modules transformed and the committed production
   bundle rebuilt.
 - `npm test`: 60 passed across 13 files after the owner-review repair.
-- `uv run pytest`: 528 passed in 676.82 seconds on Python 3.11.13 after the
+- `uv run pytest`: 528 passed in 466.35 seconds on Python 3.11.13 after the
   owner-review repair.
 - `git diff --check` across authored source and records: passed. The unrestricted
   staged check reports whitespace inside Three.js GLSL template strings in the
