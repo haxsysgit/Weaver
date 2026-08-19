@@ -944,15 +944,15 @@
   display: flex;
   min-height: 62px;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 10px 12px;
+  padding: 10px 12px 10px 15px;
   color: #a7a8b2;
   border: 1px solid transparent;
   border-radius: 10px;
   background: transparent;
   cursor: pointer;
-  text-align: center;
+  text-align: left;
 }
 
 .lab-settings-nav button:hover {
@@ -968,11 +968,15 @@
 
 .lab-settings-nav button.on::before {
   position: absolute;
-  inset: auto 12px 0;
-  height: 2px;
+  inset: 12px auto 12px 0;
+  width: 2px;
   content: "";
-  background: #cf7774;
-  box-shadow: 0 0 10px rgba(207, 119, 116, 0.65);
+  background: var(--edition-thread-silver);
+  box-shadow: 0 0 10px rgba(203, 204, 204, 0.42);
+}
+
+.lab-settings-nav button:focus-visible {
+  outline-color: var(--edition-thread-silver);
 }
 
 .lab-settings-actions {
@@ -1168,6 +1172,7 @@
     min-width: 130px;
     min-height: 48px;
     padding: 8px 11px;
+    align-items: center;
     text-align: center;
   }
 
@@ -1187,6 +1192,8 @@
   .lab-settings-content .lab-choice-grid.two,
   .lab-settings-content .lab-choice-grid.three { grid-template-columns: 1fr; }
   .lab-settings-content .lab-choice-grid button { min-height: 84px; }
+  .lab-voice-binding-card { padding: 17px 14px; }
+  .lab-model-picker > div { grid-template-columns: 1fr; }
   .lab-customize-row { grid-template-columns: 1fr; }
   .lab-settings-actions { padding: 10px 12px; }
 }
@@ -2228,6 +2235,221 @@
   line-height: 1.5;
 }
 
+.lab-model-settings {
+  width: min(100%, 720px);
+}
+
+.lab-model-settings .lab-setting-title {
+  display: grid;
+  gap: 5px;
+}
+
+.lab-model-settings .lab-setting-title .lab-model-eyebrow {
+  margin: 0 0 2px;
+  color: var(--edition-appraisal-gold);
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+.lab-voice-binding-card {
+  display: grid;
+  gap: 10px;
+  padding: 20px;
+  border: 1px solid rgba(203, 204, 204, 0.18);
+  background:
+    repeating-linear-gradient(7deg, transparent 0 13px, rgba(231, 226, 217, 0.014) 14px 15px),
+    linear-gradient(145deg, rgba(19, 18, 17, 0.96), var(--edition-black-wood));
+  box-shadow: inset 0 1px rgba(231, 226, 217, 0.04), 0 22px 55px rgba(0, 0, 0, 0.2);
+  clip-path: polygon(9px 0, calc(100% - 9px) 0, 100% 9px, 100% calc(100% - 9px), calc(100% - 9px) 100%, 9px 100%, 0 calc(100% - 9px), 0 9px);
+}
+
+.lab-binding-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(203, 204, 204, 0.12);
+}
+
+.lab-binding-status > span {
+  width: 11px;
+  height: 11px;
+  flex: 0 0 11px;
+  border: 1px solid rgba(203, 204, 204, 0.5);
+  transform: rotate(45deg);
+}
+
+.lab-binding-status > span.is-bound {
+  border-color: var(--edition-appraisal-gold);
+  background: var(--edition-appraisal-gold-soft);
+  box-shadow: 0 0 12px var(--edition-appraisal-gold-soft);
+}
+
+.lab-binding-status div {
+  display: grid;
+  gap: 3px;
+}
+
+.lab-binding-status strong,
+.lab-voice-binding-card > label,
+.lab-model-picker legend {
+  color: var(--edition-reader-ivory);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.lab-binding-status small,
+.lab-voice-binding-card > small,
+.lab-binding-toggle small,
+.lab-model-picker > p,
+.lab-model-picker button small {
+  color: #898a91;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.lab-secret-input {
+  position: relative;
+}
+
+.lab-secret-input input {
+  width: 100%;
+  min-height: 50px;
+  padding: 11px 54px 11px 14px;
+  color: var(--edition-reader-ivory);
+  border: 1px solid rgba(203, 204, 204, 0.2);
+  border-radius: 0;
+  outline: 0;
+  background: rgba(0, 0, 0, 0.46);
+  font-family: var(--font-display);
+  font-size: 16px;
+}
+
+.lab-secret-input:focus-within input {
+  border-color: rgba(203, 204, 204, 0.58);
+  box-shadow: 0 0 20px rgba(203, 204, 204, 0.07);
+}
+
+.lab-secret-input button {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  place-items: center;
+  color: rgba(203, 204, 204, 0.64);
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.lab-secret-input button:hover,
+.lab-secret-input button:focus-visible {
+  color: var(--edition-reader-ivory);
+}
+
+.lab-secret-input svg { width: 16px; }
+
+.lab-binding-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 7px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(203, 204, 204, 0.12);
+}
+
+.lab-binding-toggle input {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  margin: 1px 0 0;
+  accent-color: var(--edition-appraisal-gold);
+}
+
+.lab-binding-toggle > span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+  color: var(--edition-reader-ivory);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.lab-binding-toggle small {
+  display: block;
+  font-weight: 400;
+}
+
+.lab-model-picker {
+  min-width: 0;
+  margin: 24px 0 0;
+  padding: 20px 0 0;
+  border: 0;
+  border-top: 1px solid var(--edition-depth-line);
+}
+
+.lab-model-picker > p {
+  margin: 6px 0 14px;
+}
+
+.lab-model-picker > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.lab-model-picker button {
+  position: relative;
+  display: grid;
+  min-height: 96px;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 4px 10px;
+  padding: 16px;
+  color: #aaa9af;
+  border: 1px solid rgba(203, 204, 204, 0.14);
+  border-radius: 0;
+  background: rgba(4, 4, 5, 0.5);
+  cursor: pointer;
+  text-align: left;
+}
+
+.lab-model-picker button:hover,
+.lab-model-picker button:focus-visible {
+  border-color: rgba(203, 204, 204, 0.4);
+}
+
+.lab-model-picker button.on {
+  border-color: rgba(183, 154, 98, 0.52);
+  background: linear-gradient(145deg, rgba(183, 154, 98, 0.08), rgba(4, 4, 5, 0.58));
+}
+
+.lab-model-picker button strong {
+  color: var(--edition-reader-ivory);
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.lab-model-picker button small { grid-column: 2; }
+
+.lab-model-knot {
+  width: 9px;
+  height: 9px;
+  margin: 5px 0 0 2px;
+  border: 1px solid rgba(203, 204, 204, 0.5);
+  transform: rotate(45deg);
+}
+
+.lab-model-picker button.on .lab-model-knot {
+  border-color: var(--edition-appraisal-gold);
+  background: var(--edition-appraisal-gold-soft);
+  box-shadow: 0 0 9px var(--edition-appraisal-gold-soft);
+}
+
 .lab-key-status.missing .lab-key-status-dot,
 .lab-key-status-header.missing > span {
   background: #c24f50;
@@ -2341,6 +2563,10 @@
       max(8px, env(safe-area-inset-right))
       max(8px, env(safe-area-inset-bottom))
       max(8px, env(safe-area-inset-left));
+  }
+
+  .lab-model-picker > div {
+    grid-template-columns: 1fr;
   }
 }
 

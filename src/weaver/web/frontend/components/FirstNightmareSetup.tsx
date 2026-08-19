@@ -10,6 +10,7 @@ import { setFirstNightmareState } from "../lib/firstNightmare";
 import { getApiKey, setApiKey } from "../lib/identity";
 import { FirstNightmareRunes } from "./FirstNightmareRunes";
 import { HiddenThreadMask } from "./HiddenThreadMask";
+import { EyeIcon, EyeSlashIcon } from "./Icons";
 import "../styles/hidden-thread-initiation.css";
 
 export type FirstNightmareStep = 1 | 2 | 3 | 4;
@@ -83,8 +84,10 @@ export function FirstNightmareSetup({
 }: FirstNightmareSetupProps) {
   const [step, setStep] = useState<FirstNightmareStep>(initialStep);
   const [apiKey, setApiKeyValue] = useState(getApiKey);
+  const [showApiKey, setShowApiKey] = useState(false);
   const [storageError, setStorageError] = useState(false);
   const [appraisalIndex, setAppraisalIndex] = useState(0);
+  const [previewOnly, setPreviewOnly] = useState(false);
   const [revealing, setRevealing] = useState(false);
   const dialogRef = useRef<HTMLElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(
@@ -124,12 +127,20 @@ export function FirstNightmareSetup({
       setApiKey(apiKey);
       setFirstNightmareState("completed");
       setStorageError(false);
+      setPreviewOnly(false);
       setAppraisalIndex(prefersReducedMotion() ? APPRAISAL_TIERS.length - 1 : 0);
       onKeyStored?.();
       setStep(4);
     } catch {
       setStorageError(true);
     }
+  }
+
+  function previewAppraisal() {
+    setStorageError(false);
+    setPreviewOnly(true);
+    setAppraisalIndex(prefersReducedMotion() ? APPRAISAL_TIERS.length - 1 : 0);
+    setStep(4);
   }
 
   function beginReveal() {
@@ -201,7 +212,7 @@ export function FirstNightmareSetup({
     >
       <div aria-hidden="true" className="hidden-thread-mantle hidden-thread-mantle-left" />
       <div aria-hidden="true" className="hidden-thread-mantle hidden-thread-mantle-right" />
-      <div aria-hidden="true" className="hidden-thread-axis" />
+      {step === 1 && <div aria-hidden="true" className="hidden-thread-axis" />}
 
       <header className="hidden-thread-progress">
         <span>First Nightmare</span>
@@ -277,9 +288,17 @@ export function FirstNightmareSetup({
                   onChange={(event) => setApiKeyValue(event.target.value)}
                   placeholder="sk-..."
                   spellCheck={false}
-                  type="password"
+                  type={showApiKey ? "text" : "password"}
                   value={apiKey}
                 />
+                <button
+                  aria-label={showApiKey ? "Hide API key" : "Show API key"}
+                  className="hidden-thread-key-visibility"
+                  onClick={() => setShowApiKey((visible) => !visible)}
+                  type="button"
+                >
+                  {showApiKey ? <EyeSlashIcon /> : <EyeIcon />}
+                </button>
                 <div aria-hidden="true" className="hidden-thread-binding-beads" data-testid="key-binding-beads">
                   {Array.from({ length: beadCount }, (_, index) => <span key={index} />)}
                 </div>
@@ -302,13 +321,26 @@ export function FirstNightmareSetup({
                   <button onClick={() => setStep(2)} type="button">Back</button>
                   <button onClick={deferSetup} type="button">Enter later</button>
                 </div>
+                {reviewMode && (
+                  <button
+                    className="hidden-thread-review-action"
+                    onClick={previewAppraisal}
+                    type="button"
+                  >
+                    Preview without storing a key
+                  </button>
+                )}
               </div>
             </form>
           )}
 
           {step === 4 && (
             <>
-              <div aria-hidden="true" className="hidden-thread-sealed-knot" data-testid="sealed-knot">
+              <div
+                aria-hidden="true"
+                className={`hidden-thread-sealed-knot${previewOnly ? " is-preview" : ""}`}
+                data-testid="sealed-knot"
+              >
                 <span />
               </div>
               <div aria-label={`Appraisal: ${appraisal}`} className="hidden-thread-appraisal">
@@ -322,11 +354,18 @@ export function FirstNightmareSetup({
               </div>
               {appraisal === "Glorious" && (
                 <>
-                  <h1>The voice is bound</h1>
-                  <p>
-                    The key is stored in this browser. Weaver can now read,
-                    reread, and answer through your DeepSeek account.
-                  </p>
+                  <h1>{previewOnly ? "The rite is complete" : "The voice is bound"}</h1>
+                  {previewOnly ? (
+                    <p>
+                      Review complete. No key was stored and your current
+                      binding remains unchanged.
+                    </p>
+                  ) : (
+                    <p>
+                      The key is stored in this browser. Weaver can now read,
+                      reread, and answer through your DeepSeek account.
+                    </p>
+                  )}
                   <div className="hidden-thread-actions">
                     <button data-autofocus onClick={beginReveal} type="button">
                       <span>Enter Weaver</span>

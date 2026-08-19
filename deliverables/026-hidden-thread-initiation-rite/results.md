@@ -75,3 +75,27 @@ Glorious mark, narrow binding layout, and continuous real-chat reveal.
   production build passed and refreshed the committed bundle.
 - Private DPR 2 captures at 390 x 844 and 1440 x 900 verify the replay control
   and centered navigation in the rendered app.
+
+## Owner visual rejection and repair
+
+The owner rejected the first binding composition. The permanent centre axis,
+double password-like bead rows, missing key visibility control, and generic
+model settings made the screen confusing. The owner also clarified that
+settings navigation is centered on phone only and keeps its original desktop
+alignment.
+
+- The centre axis now exists only during awakening and leaves the DOM when act
+  two begins.
+- Both key fields retain the `sk-...` placeholder and have accessible show/hide
+  controls.
+- Binding beads gather as a small secondary knot instead of spanning the input.
+- Settings replay exposes `Preview without storing a key`; it runs appraisal
+  and reveal without writing a key or changing first-run storage.
+- Model settings now use a black-wood binding surface, honest bound state, and
+  explicit model choice inscriptions. Phone choices stack in one column.
+- Desktop settings labels returned to left alignment. Phone labels and active
+  markers remain centered.
+
+The current SVG mask remains rejected. Plan 026 still forbids raster art, so an
+owner decision is pending on whether to amend the plan for one original
+generated awakening image.

@@ -71,6 +71,7 @@ describe("Hidden Thread initiation rite", () => {
     );
 
     expect(dialog).toHaveAttribute("data-rite-act", "initiation");
+    expect(dialog.querySelector(".hidden-thread-axis")).toBeNull();
     const link = within(dialog).getByRole("link", { name: /Get a key from DeepSeek/ });
     expect(link).toHaveAttribute("href", "https://platform.deepseek.com/");
     expect(link).toHaveAttribute("rel", "noreferrer");
@@ -86,6 +87,11 @@ describe("Hidden Thread initiation rite", () => {
 
     const input = within(dialog).getByLabelText("Your DeepSeek API key");
     expect(input).toHaveAttribute("type", "password");
+    expect(input).toHaveAttribute("placeholder", "sk-...");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Show API key" }));
+    expect(input).toHaveAttribute("type", "text");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Hide API key" }));
+    expect(input).toHaveAttribute("type", "password");
     fireEvent.change(input, { target: { value: "  owner-test-key  " } });
     expect(within(dialog).getByTestId("key-binding-beads").children.length).toBeGreaterThan(0);
 
@@ -97,6 +103,27 @@ describe("Hidden Thread initiation rite", () => {
     expect(localStorage.getItem(FIRST_NIGHTMARE_STORAGE_KEY)).toBe("completed");
     expect(dialog).toHaveAttribute("data-rite-act", "appraisal");
     expect(within(dialog).getByTestId("sealed-knot")).toBeVisible();
+  });
+
+  it("previews every appraisal act without storing a key during owner review", () => {
+    render(
+      <FirstNightmareSetup
+        onComplete={vi.fn()}
+        onDefer={vi.fn()}
+        reviewMode
+      />,
+    );
+    const dialog = screen.getByRole("dialog", { name: "First Nightmare setup" });
+    reachKeyEntry(dialog);
+
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Preview without storing a key" }),
+    );
+
+    expect(getApiKey()).toBe("");
+    expect(localStorage.getItem(FIRST_NIGHTMARE_STORAGE_KEY)).toBeNull();
+    expect(dialog).toHaveAttribute("data-rite-act", "appraisal");
+    expect(within(dialog).getByText("Good")).toBeVisible();
   });
 
   it("replaces each appraisal tier before opening into the conversation", () => {

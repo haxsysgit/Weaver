@@ -6,6 +6,8 @@ import {
   faGear,
   faChevronLeft,
   faCopy,
+  faEye,
+  faEyeSlash,
   faLink,
   faMagnifyingGlass,
   faPen,
@@ -29,6 +31,14 @@ export function ArrowUpIcon(props: IconProps) {
 
 export function CopyIcon(props: IconProps) {
   return <FontAwesomeIcon aria-hidden="true" icon={faCopy} {...props} />;
+}
+
+export function EyeIcon(props: IconProps) {
+  return <FontAwesomeIcon aria-hidden="true" icon={faEye} {...props} />;
+}
+
+export function EyeSlashIcon(props: IconProps) {
+  return <FontAwesomeIcon aria-hidden="true" icon={faEyeSlash} {...props} />;
 }
 
 export function PlusIcon(props: IconProps) {

@@ -180,8 +180,15 @@ describe("first Nightmare setup", () => {
     fireEvent.click(
       within(dialog).getByRole("button", { name: "Model" }),
     );
-    expect(within(dialog).getByLabelText("DeepSeek key")).toBeVisible();
-    expect(within(dialog).getByDisplayValue("DeepSeek V4 Flash")).toBeVisible();
+    const keyInput = within(dialog).getByLabelText("DeepSeek key");
+    expect(keyInput).toBeVisible();
+    expect(keyInput).toHaveAttribute("placeholder", "sk-...");
+    expect(keyInput).toHaveAttribute("type", "password");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Show API key" }));
+    expect(keyInput).toHaveAttribute("type", "text");
+    expect(
+      within(dialog).getByRole("button", { name: /DeepSeek V4 Flash/ }),
+    ).toHaveAttribute("aria-pressed", "true");
   });
 
   it("replays the rite from settings without changing the saved first-run state", async () => {

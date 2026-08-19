@@ -4,6 +4,7 @@ import { getApiKey, setApiKey, getModelId, setModelId, isApiKeyDisabled, setApiK
 import type { SoulSeaMode } from "./SpellSurfaceSoulSea";
 import { SOUL_SEA_LABELS, SpellSurfaceSoulSea } from "./SpellSurfaceSoulSea";
 import { RUNE_OPTIONS, type RuneMode } from "./SpellSurfaceRunes";
+import { EyeIcon, EyeSlashIcon } from "./Icons";
 
 export type Density = "compact" | "comfortable";
 export type FontSize = "small" | "medium" | "large";
@@ -79,6 +80,11 @@ const SETTINGS_SECTIONS: Array<{
 
 const SOUL_MODES: SoulSeaMode[] = ["still", "living", "mirror"];
 
+const MODEL_DESCRIPTIONS: Record<string, string> = {
+  "deepseek-v4-flash": "Fast responses for everyday chapter questions.",
+  "deepseek-v4-pro": "Deeper answers for hard canon debates and theories.",
+};
+
 const SURFACE_THEMES: Array<{
   description: string;
   label: string;
@@ -120,6 +126,7 @@ export function SpellSurfaceSettings({
 }: SpellSurfaceSettingsProps) {
   const [preferences, setPreferences] = useState(initial);
   const [apiKey, setApiKeyValue] = useState(getApiKey);
+  const [showApiKey, setShowApiKey] = useState(false);
   const [apiKeyDisabled, setApiKeyDisabledValue] = useState(isApiKeyDisabled);
   const [modelId, setModelIdValue] = useState(getModelId);
   const [activeSection, setActiveSection] = useState<SettingsSection>("customize");
@@ -409,60 +416,79 @@ export function SpellSurfaceSettings({
               )}
 
               {activeSection === "model" && (
-                <section className="lab-settings-section">
+                <section className="lab-settings-section lab-model-settings">
                   <div className="lab-setting-title">
-                    <h3>Model</h3>
-                    <span>Your DeepSeek key and which model answers.</span>
+                    <span className="lab-model-eyebrow">[Voice binding]</span>
+                    <h3>Choose the voice behind Weaver</h3>
+                    <span>Your key opens the channel. Your model sets how deeply Weaver answers.</span>
                   </div>
 
-                  <div className="lab-api-key-setting">
+                  <div className="lab-voice-binding-card">
+                    <div className="lab-binding-status">
+                      <span aria-hidden="true" className={apiKey.trim() ? "is-bound" : ""} />
+                      <div>
+                        <strong>{apiKey.trim() ? "Voice bound in this browser" : "The voice remains unbound"}</strong>
+                        <small>{apiKeyDisabled ? "Your stored key is currently disabled." : "Weaver never stores this key on the server."}</small>
+                      </div>
+                    </div>
+
                     <label htmlFor="spell-surface-api-key">DeepSeek key</label>
-                    <input
-                      autoCapitalize="none"
-                      autoComplete="off"
-                      id="spell-surface-api-key"
-                      onChange={(event) => setApiKeyValue(event.target.value)}
-                      placeholder="sk-..."
-                      spellCheck={false}
-                      type="password"
-                      value={apiKey}
-                    />
+                    <div className="lab-secret-input">
+                      <input
+                        autoCapitalize="none"
+                        autoComplete="off"
+                        id="spell-surface-api-key"
+                        onChange={(event) => setApiKeyValue(event.target.value)}
+                        placeholder="sk-..."
+                        spellCheck={false}
+                        type={showApiKey ? "text" : "password"}
+                        value={apiKey}
+                      />
+                      <button
+                        aria-label={showApiKey ? "Hide API key" : "Show API key"}
+                        onClick={() => setShowApiKey((visible) => !visible)}
+                        type="button"
+                      >
+                        {showApiKey ? <EyeSlashIcon /> : <EyeIcon />}
+                      </button>
+                    </div>
                     <small>
                       Stored only in this browser. Sent with each request and
                       never saved by the server. Leave empty and save to delete it.
                     </small>
+
+                    <label className="lab-check-row lab-binding-toggle">
+                      <input
+                        checked={apiKeyDisabled}
+                        onChange={(event) => setApiKeyDisabledValue(event.target.checked)}
+                        type="checkbox"
+                      />
+                      <span>
+                        Disable this key
+                        <small>Keep the key stored while stopping it from being sent.</small>
+                      </span>
+                    </label>
                   </div>
 
-                  <label className="lab-check-row">
-                    <input
-                      checked={apiKeyDisabled}
-                      onChange={(event) => setApiKeyDisabledValue(event.target.checked)}
-                      type="checkbox"
-                    />
-                    <span>
-                      Disable this key
-                      <small>Fall back to the library key when yours is unavailable.</small>
-                    </span>
-                  </label>
-
-                  <div className="lab-api-key-setting">
-                    <label htmlFor="spell-surface-model">Model</label>
-                    <select
-                      id="spell-surface-model"
-                      onChange={(event) => setModelIdValue(event.target.value)}
-                      value={modelId}
-                    >
+                  <fieldset className="lab-model-picker">
+                    <legend>Answering depth</legend>
+                    <p>Choose how much time Weaver spends pulling an answer from the thread.</p>
+                    <div>
                       {AVAILABLE_MODELS.map((model) => (
-                        <option key={model.id} value={model.id}>
-                          {model.label}
-                        </option>
+                        <button
+                          aria-pressed={modelId === model.id}
+                          className={modelId === model.id ? "on" : ""}
+                          key={model.id}
+                          onClick={() => setModelIdValue(model.id)}
+                          type="button"
+                        >
+                          <span aria-hidden="true" className="lab-model-knot" />
+                          <strong>{model.label}</strong>
+                          <small>{MODEL_DESCRIPTIONS[model.id]}</small>
+                        </button>
                       ))}
-                    </select>
-                    <small>
-                      DeepSeek V4 Flash is fast and cheap; V4 Pro is the
-                      strongest model. Your choice is stored in this browser.
-                    </small>
-                  </div>
+                    </div>
+                  </fieldset>
                 </section>
               )}
             </div>
