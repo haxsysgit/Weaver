@@ -46,3 +46,15 @@ the chat or creating a second mobile implementation.
 Accepted. The four acts use Plan 022's accepted copy and Plan 025's visual
 contract. The evidence gate covers a device-neutral phone matrix and desktop;
 no named handset represents mobile support.
+
+## Owner amendment, 2026-08-19
+
+- The geometric mask failed owner review. Plan 026 now allows one original
+  generated mask image grounded in a bounded reread and the accepted product
+  identity. Supplied art remains reference-only.
+- That mask becomes the awakening image, appraisal seal, and small Weaver mark.
+- Replay-only review may use a direct random fun appraisal and must store no
+  key. The review path and its completion copy are removed at Plan 029's release
+  gate.
+- Pin failure and archived-state distinction are recorded for Plan 028 after a
+  read-only reproduction. They stay outside Plan 026 implementation.

@@ -7,8 +7,8 @@
 
 ## Status
 
-- **Tooling:** React 19, TypeScript, inline SVG, CSS, Vitest, Testing Library,
-  Vite, and the root Python test suite.
+- **Tooling:** React 19, TypeScript, CSS, original generated raster art, Vitest,
+  Testing Library, Vite, and the root Python test suite.
 - **State:** admitted 2026-08-19 by owner direction.
 - **Depends on:** Plan 022 closed for accepted lore and copy boundaries; Plan 025
   closed for the responsive Spellweave layers, materials, render profiles, and
@@ -50,6 +50,20 @@
    Their compositions differ only through responsive layout.
 10. (2026-08-18) The approved board is private reference material. The mask,
     threads, fragments, seals, and wood are original code-native work.
+11. (2026-08-19) Owner visual review rejected the geometric mask. One original
+    generated mask image is allowed after rereading the bounded novel and
+    private identity records. This narrowly overrides decision 10 for the mask
+    asset only. Supplied cover, board, and mask pixels remain reference-only.
+12. (2026-08-19) The same distinct mask identity replaces the temporary
+    appraisal seal and spider marks at suitable hero, seal, and navigation
+    sizes. Threads, fragments, and motion stay code-native.
+13. (2026-08-19) The replay-only fake path may choose one fun appraisal string
+    with a direct `Math.random()` selection. It stores no key. The fake path and
+    review-complete copy are temporary and must be removed at Plan 029's
+    production release gate.
+14. (2026-08-19) Pin-button failure and weak archived-state distinction are
+    accepted user feedback for Plan 028. Plan 026 may inspect and record the
+    current fault but does not change archive behavior.
 
 ## Scope
 
@@ -62,8 +76,10 @@
 - Refactor `src/weaver/web/frontend/components/FirstNightmareSetup.tsx` into the
   full-screen four-act state owner. Keep the current public prop contract unless
   a failing integration test proves a small typed change is necessary.
-- Create `src/weaver/web/frontend/components/HiddenThreadMask.tsx` as an original
-  inline SVG/CSS silhouette with no image import.
+- Replace the rejected geometric mask with one original generated raster asset
+  informed by a bounded reread of the novel and private identity record. Use a
+  responsive image component with useful crops for awakening, appraisal seal,
+  and small Weaver marks.
 - Refine `src/weaver/web/frontend/components/FirstNightmareRunes.tsx` for the
   accepted fragment, thread, binding, and appraisal states.
 - Create `src/weaver/web/frontend/components/FirstNightmareSetup.test.tsx` for
@@ -88,6 +104,8 @@
 - Rebuild and commit `src/weaver/web/dist/` because the root build is the shipped
   frontend.
 - Save phone and desktop captures under `private/design-evidence/026/`.
+- Inspect the current pin and archived-state behavior read-only, then record the
+  reproduction and Plan 028 handoff without editing that surface.
 
 ## Out of scope
 
@@ -97,8 +115,9 @@
   prompts, backend routes, persistence, schemas, retrieval, or novel data.
 - The final response-spine layout, user-message shard styling, composer rebuild,
   or Thread Archive. Plans 027 and 028 own those surfaces.
-- Shipping the approved image, supplied cover art, a raster mask, downloaded
-  texture, custom font, audio, or haptics.
+- Shipping the approved image, supplied cover art, downloaded texture, custom
+  font, audio, or haptics. The single original generated mask approved in owner
+  direction 11 is the only raster-art exception.
 - New appraisal copy or new canon claims. Plan 022's accepted record controls
   every lore-facing line.
 - A separate mobile component tree or a desktop-only follow-up pass.
@@ -121,8 +140,9 @@
 6. `npm run build`, `npm test`, and `uv run pytest` all pass from the repository
    root.
 7. `git diff --check` passes. Searches across changed files find no imported
-   private image, no literal key fixture shaped like a real credential, no new
-   hard-coded transition timing, and no key-validation network path.
+   private reference or cover image, no literal key fixture shaped like a real
+   credential, no new hard-coded transition timing, and no key-validation
+   network path.
 8. Across 320 x 568, 360 x 800, 390 x 844, and 412 x 915 browser viewports,
    evidence uses DPR 2, touch emulation, and CPU throttling to cover all four
    acts, software keyboard open/close, safe areas, 200 percent text zoom, Back,
@@ -142,8 +162,9 @@
   key validation, or server-side key state, STOP.
 - If any key value would enter logs, test snapshots, error reporting, HTML
   attributes, analytics, or a committed fixture, STOP and remove it.
-- If creating the mask requires tracing, importing, or extracting pixels from
-  the approved board or cover art, STOP and return to original SVG geometry.
+- If the generated mask copies a supplied composition, traces or extracts
+  pixels from the approved board or cover art, or cannot be clearly described
+  as original, STOP and reject the asset.
 - If the 320 x 568 keyboard-open state cannot keep the active input and primary
   action reachable, STOP and bring the layout tradeoff to the owner.
 - If reduced motion removes information, focus becomes trapped after completion,
@@ -268,3 +289,16 @@
     - Record measured agent usage and the owner's dated accept/reject reason.
     - Commit closure with
       `Plan 026: close Hidden Thread initiation rite`.
+
+12. **Owner-rejected mask and review repair**
+    - Read the bounded mask passages and private product-identity notes before
+      prompting image generation. Record short public-safe visual constraints,
+      never novel prose.
+    - Generate one original mask asset, inspect it against the accepted tone and
+      originality boundary, then integrate responsive hero, seal, and small-mark
+      variants from that same source.
+    - Keep random fake appraisal selection replay-only and direct. Prove it never
+      stores a key or changes first-run state.
+    - Record the pin/archive reproduction for Plan 028 without changing its
+      files or behavior.
+    - Repeat the phone and desktop visual gate before final review.

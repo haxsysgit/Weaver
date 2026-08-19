@@ -96,6 +96,25 @@ alignment.
 - Desktop settings labels returned to left alignment. Phone labels and active
   markers remain centered.
 
-The current SVG mask remains rejected. Plan 026 still forbids raster art, so an
-owner decision is pending on whether to amend the plan for one original
-generated awakening image.
+At this checkpoint the SVG mask remained rejected and the raster exception
+still awaited owner approval. The amendment below resolves that gate.
+
+## Mask reread, 2026-08-19
+
+The owner approved a narrow raster exception and Plan 026 now supersedes its
+old code-native mask rule. The bounded reread covered chapters 277 through 279,
+1337, and 2589 from beginning to end, then checked the private Weaver's Mask
+record and accepted product identity.
+
+Public-safe generation constraints:
+
+- polished black lacquered wood;
+- a fearsome, somber, bestial, and regal face;
+- fangs, twisting horns, and eye openings lost in darkness;
+- seven inner lights connected by an extremely dense spellweave;
+- a dark priestly mantle around the mask;
+- silver interaction threads and restrained old gold from the Shadow Slave
+  Edition identity.
+
+The novel does not prescribe the cover's exact face geometry. The generated
+asset must remain original and cannot use supplied cover or board pixels.
