@@ -48,14 +48,28 @@ describe("Spellweave backdrop", () => {
     expect(document.querySelector(".spellweave-backdrop input")).toBeNull();
   });
 
-  it("passes paused state to the distant renderer", () => {
+  it("passes paused state to the distant renderer", async () => {
     render(
       <SpellweaveBackdrop paused state="failed" threadAlpha={0.36} />,
     );
 
-    expect(screen.getByTestId("distant-spell-field")).toHaveAttribute(
+    expect(await screen.findByTestId("distant-spell-field")).toHaveAttribute(
       "data-paused",
       "true",
     );
+  });
+
+  it("keeps the distant renderer unmounted while a full-screen surface hides it", () => {
+    render(
+      <SpellweaveBackdrop
+        distantRendererEnabled={false}
+        paused
+        state="idle"
+        threadAlpha={0.36}
+      />,
+    );
+
+    expect(screen.queryByTestId("distant-spell-field")).toBeNull();
+    expect(screen.getByTestId("spellweave-backdrop")).toBeInTheDocument();
   });
 });

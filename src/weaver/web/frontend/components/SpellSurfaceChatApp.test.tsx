@@ -79,6 +79,7 @@ describe("first Nightmare setup", () => {
     });
     expect(within(dialog).getByText("The Spell has found you")).toBeVisible();
     expect(dialog.querySelector(".first-nightmare-particles")).not.toBeNull();
+    expect(screen.queryByTestId("spell-background")).toBeNull();
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Enter later" }));
     expect(localStorage.getItem(FIRST_NIGHTMARE_STORAGE_KEY)).toBe("deferred");
@@ -118,10 +119,10 @@ describe("first Nightmare setup", () => {
     expect(within(dialog).getByText("Glorious")).toBeInTheDocument();
     expect(getApiKey()).toBe("owner-test-key");
     expect(localStorage.getItem(FIRST_NIGHTMARE_STORAGE_KEY)).toBe("completed");
-    expect(screen.getByTestId("spell-background")).toHaveAttribute("data-paused", "true");
+    expect(screen.queryByTestId("spell-background")).toBeNull();
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Enter Weaver" }));
-    expect(screen.getByTestId("spell-background")).toHaveAttribute("data-paused", "false");
+    expect(await screen.findByTestId("spell-background")).toHaveAttribute("data-paused", "false");
     expect(screen.getByTestId("spellweave-backdrop")).toHaveAttribute(
       "data-spell-state",
       "reaching",

@@ -427,6 +427,7 @@ function SpellSurfaceChatSurface({
       data-testid="spell-surface-live"
     >
       <SpellweaveBackdrop
+        distantRendererEnabled={!setupOpen || setupRevealing}
         paused={settingsOpen || (setupOpen && !setupRevealing)}
         state={backdropState}
         threadAlpha={threadAlpha}

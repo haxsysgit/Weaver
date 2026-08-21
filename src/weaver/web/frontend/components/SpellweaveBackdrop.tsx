@@ -1,6 +1,13 @@
-import { SpellBackground } from "./SpellBackground";
+import { lazy, Suspense } from "react";
+
 import { SpellweaveField } from "./SpellweaveField";
 import "../styles/spellweave.css";
+
+const SpellBackground = lazy(() =>
+  import("./SpellBackground").then((module) => ({
+    default: module.SpellBackground,
+  })),
+);
 
 export type SpellweaveActivityState =
   | "answering"
@@ -11,10 +18,12 @@ export type SpellweaveActivityState =
   | "reading";
 
 export function SpellweaveBackdrop({
+  distantRendererEnabled = true,
   paused,
   state,
   threadAlpha,
 }: {
+  distantRendererEnabled?: boolean;
   paused: boolean;
   state: SpellweaveActivityState;
   threadAlpha: number;
@@ -27,12 +36,16 @@ export function SpellweaveBackdrop({
       data-testid="spellweave-backdrop"
     >
       <div className="spellweave-distant" data-spell-depth="distant">
-        <SpellBackground
-          className="lab-spell-background"
-          mode="alive"
-          paused={paused}
-          threadAlpha={threadAlpha}
-        />
+        {distantRendererEnabled && (
+          <Suspense fallback={null}>
+            <SpellBackground
+              className="lab-spell-background"
+              mode="alive"
+              paused={paused}
+              threadAlpha={threadAlpha}
+            />
+          </Suspense>
+        )}
         <div className="lab-galactic-band" />
         <div className="lab-star-flare flare-one" />
         <div className="lab-star-flare flare-two" />

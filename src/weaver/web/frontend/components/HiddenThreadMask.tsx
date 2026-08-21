@@ -7,6 +7,7 @@ export function HiddenThreadMask() {
       aria-hidden="true"
       className="hidden-thread-mask"
       data-hidden-thread-mask
+      draggable={false}
       height={1672}
       src={riteArtwork}
       width={941}

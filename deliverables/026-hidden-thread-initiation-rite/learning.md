@@ -62,3 +62,12 @@ no named handset represents mobile support.
   acts two through four instead of disappearing into a blank void.
 - Mask identity marks sit directly in the Spellweave without visible circular
   containers. The rite keeps only the step count in its top progress row.
+
+## Reload finding, 2026-08-21
+
+The rite artwork was not the main startup cost. It transfers about 94 KB. The
+larger cost was the 913 KB initial JavaScript bundle and eager construction of a
+hidden Three.js scene. A lazy renderer boundary removes that work from the
+covered rite without changing the live Spellweave. Service-worker activation
+also contained an explicit second-navigation path, which is unnecessary after
+`clients.claim()` and made updates feel like slow reloads.

@@ -69,6 +69,9 @@
     distant background for initiation, binding, and appraisal, then gives way
     to the live Spellweave during reveal. Mask identity marks have no visible
     circle, badge, or frame. The top-left `First Nightmare` label is removed.
+16. (2026-08-21) The decorative rite artwork never receives pointer or drag
+    input. Reload work must remove measured startup waste without weakening the
+    live Spellweave, reduced-motion behavior, offline shell, or shared chat.
 
 ## Scope
 
@@ -109,6 +112,9 @@
 - Rebuild and commit `src/weaver/web/dist/` because the root build is the shipped
   frontend.
 - Save phone and desktop captures under `private/design-evidence/026/`.
+- Measure a throttled fresh load and reload, keep the distant Three.js renderer
+  unmounted while the full-screen rite hides it, and record the before/after
+  startup evidence under `private/design-evidence/026/`.
 - Inspect the current pin and archived-state behavior read-only, then record the
   reproduction and Plan 028 handoff without editing that surface.
 

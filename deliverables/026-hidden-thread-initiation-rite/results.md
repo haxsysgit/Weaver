@@ -162,3 +162,27 @@ Fresh fake-mode captures cover 320 x 568, 390 x 844, and 1440 x 900. The full
 art and both actions remain visible at the smallest size, the desktop artwork
 stays within its left ritual plane, and every later act retains the same distant
 mask without reducing text contrast.
+
+## Reload investigation and repair, 2026-08-21
+
+A fresh Chrome profile at 390 x 844, DPR 2, and 4x CPU throttling confirmed two
+sources of wasted reload work:
+
+- the initial bundle transferred 913,418 bytes and constructed a paused Three.js
+  canvas while the full-screen rite hid it;
+- a service-worker cache upgrade called `client.navigate()` for every open tab,
+  creating a second navigation during an update.
+
+The Three.js renderer is now a separate lazy chunk and stays unmounted until the
+rite begins revealing the shared chat. The main script transfer fell to 391,612
+bytes. Cold navigation load fell from 778.4 ms to 645.5 ms, cached reload load
+fell from 506.2 ms to 370.8 ms, and cached reload first contentful paint fell
+from 1,588 ms to 1,424 ms in the same throttled setup. The service worker still
+cleans old caches and claims open clients, but it no longer reloads them.
+
+The browser reproduction found no anchor around the rite image and a direct
+click did not change the URL. It did find that the image accepted pointer and
+drag input. The image is now non-draggable and pointer-transparent in both the
+component and CSS, which prevents click, drag, and long-press image interaction.
+The focused red/green contract passed 23/23 tests. Full evidence is saved in
+`private/design-evidence/026/reload-latency-before-after.json`.

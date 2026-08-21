@@ -751,16 +751,14 @@ async def test_service_worker_served_at_root_scope(client) -> None:
     assert resp.status_code == 200
     assert resp.headers.get("service-worker-allowed", "").strip() == "/"
     assert "caches.open" in resp.text
-    assert 'const CACHE_NAME = "weaver-shell-v6"' in resp.text
+    assert 'const CACHE_NAME = "weaver-shell-v7"' in resp.text
     assert 'request.mode === "navigate"' in resp.text
     assert "await fetch(request)" in resp.text
     assert 'requestUrl.pathname.startsWith("/api/")' in resp.text
     assert 'requestUrl.pathname.startsWith("/assets/")' in resp.text
     assert "shellHtml.matchAll" in resp.text
     assert "versionedAssets.length < 2" in resp.text
-    assert "const openClients = await self.clients.matchAll" in resp.text
-    assert "includeUncontrolled: true" in resp.text
-    assert "client.navigate(client.url)" in resp.text
+    assert "client.navigate(client.url)" not in resp.text
 
 
 async def test_mutating_routes_reject_nonlocal_origin(tmp_path) -> None:

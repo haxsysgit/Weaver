@@ -1,4 +1,4 @@
-const CACHE_NAME = "weaver-shell-v6";
+const CACHE_NAME = "weaver-shell-v7";
 const SHELL_FILES = ["/manifest.webmanifest", "/weaver-mark.svg"];
 
 async function cacheShell() {
@@ -25,25 +25,13 @@ async function removeOldCaches() {
   const cacheNames = await caches.keys();
   const oldCacheNames = cacheNames.filter((cacheName) => cacheName !== CACHE_NAME);
   await Promise.all(oldCacheNames.map((cacheName) => caches.delete(cacheName)));
-  return oldCacheNames.length > 0;
-}
-
-async function reloadLegacyClients() {
-  const openClients = await self.clients.matchAll({
-    type: "window",
-    includeUncontrolled: true,
-  });
-  await Promise.all(openClients.map((client) => client.navigate(client.url)));
 }
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
-      const replacedLegacyCache = await removeOldCaches();
+      await removeOldCaches();
       await self.clients.claim();
-      if (replacedLegacyCache) {
-        await reloadLegacyClients();
-      }
     })(),
   );
 });

@@ -61,6 +61,7 @@ describe("Hidden Thread initiation rite", () => {
     const mask = dialog.querySelector("[data-hidden-thread-mask]");
     expect(mask).not.toBeNull();
     expect(mask?.tagName).toBe("IMG");
+    expect(mask).toHaveAttribute("draggable", "false");
     expect(within(dialog).queryByText("First Nightmare")).toBeNull();
     expect(within(dialog).getByText("[The hidden thread has found you.]")).toBeVisible();
     expect(within(dialog).getByText("The Spell has found you")).toBeVisible();
