@@ -1,5 +1,5 @@
 const CACHE_NAME = "weaver-shell-v7";
-const SHELL_FILES = ["/manifest.webmanifest", "/weaver-mark.svg"];
+const SHELL_FILES = ["/manifest.webmanifest", "/weaver-mask-mark.webp"];
 
 async function cacheShell() {
   const cache = await caches.open(CACHE_NAME);

@@ -71,3 +71,9 @@ hidden Three.js scene. A lazy renderer boundary removes that work from the
 covered rite without changing the live Spellweave. Service-worker activation
 also contained an explicit second-navigation path, which is unnecessary after
 `clients.claim()` and made updates feel like slow reloads.
+
+## App identity mark, 2026-08-21
+
+The owner selected the original small Weaver mask mark for browser and PWA
+identity. The favicon and manifest use the same 512 by 512 WebP, and the web
+app serves that public file from a dedicated static route.

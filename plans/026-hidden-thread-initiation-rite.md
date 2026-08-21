@@ -72,6 +72,9 @@
 16. (2026-08-21) The decorative rite artwork never receives pointer or drag
     input. Reload work must remove measured startup waste without weakening the
     live Spellweave, reduced-motion behavior, offline shell, or shared chat.
+17. (2026-08-21) The original small Weaver mask mark is the browser and PWA
+    icon. One matching static route is allowed so the production app can serve
+    its WebP favicon. This is the sole backend-route exception for this plan.
 
 ## Scope
 
@@ -115,6 +118,8 @@
 - Measure a throttled fresh load and reload, keep the distant Three.js renderer
   unmounted while the full-screen rite hides it, and record the before/after
   startup evidence under `private/design-evidence/026/`.
+- Use the original small Weaver mask mark for the favicon and PWA manifest,
+  including the one static serving route required by the production app.
 - Inspect the current pin and archived-state behavior read-only, then record the
   reproduction and Plan 028 handoff without editing that surface.
 
@@ -123,7 +128,8 @@
 - Validating a key against DeepSeek, making a model call, changing BYOK headers,
   storing keys on the server, accounts, billing, or pooled keys.
 - Changing device ID behavior, chat privacy, markdown rendering, assistant
-  prompts, backend routes, persistence, schemas, retrieval, or novel data.
+  prompts, backend routes beyond the owner-approved static favicon route,
+  persistence, schemas, retrieval, or novel data.
 - The final response-spine layout, user-message shard styling, composer rebuild,
   or Thread Archive. Plans 027 and 028 own those surfaces.
 - Shipping the approved image, supplied cover art, downloaded texture, custom
@@ -169,8 +175,9 @@
 - If Plans 022, 023, or 025 are not closed, STOP.
 - If the accepted Plan 022 copy conflicts with any line proposed for the rite,
   STOP and show the owner the exact conflict before editing copy.
-- If the implementation needs a backend route, schema change, provider call,
-  key validation, or server-side key state, STOP.
+- If the implementation needs a backend route other than the owner-approved
+  static favicon route, schema change, provider call, key validation, or
+  server-side key state, STOP.
 - If any key value would enter logs, test snapshots, error reporting, HTML
   attributes, analytics, or a committed fixture, STOP and remove it.
 - If the generated mask copies a supplied composition, traces or extracts

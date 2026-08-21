@@ -912,6 +912,13 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
     async def weaver_mark() -> Response:
         return FileResponse(FRONTEND_DIST / "weaver-mark.svg", media_type="image/svg+xml")
 
+    @app.get("/weaver-mask-mark.webp")
+    async def weaver_mask_mark() -> Response:
+        return FileResponse(
+            FRONTEND_DIST / "weaver-mask-mark.webp",
+            media_type="image/webp",
+        )
+
     @app.get("/")
     async def index() -> HTMLResponse:
         html = (FRONTEND_DIST / "index.html").read_text(encoding="utf-8")

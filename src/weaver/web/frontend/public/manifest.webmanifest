@@ -9,9 +9,9 @@
   "theme_color": "#08090c",
   "icons": [
     {
-      "src": "/weaver-mark.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/weaver-mask-mark.webp",
+      "sizes": "512x512",
+      "type": "image/webp",
       "purpose": "any maskable"
     }
   ]

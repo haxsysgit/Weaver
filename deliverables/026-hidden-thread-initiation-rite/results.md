@@ -186,3 +186,10 @@ drag input. The image is now non-draggable and pointer-transparent in both the
 component and CSS, which prevents click, drag, and long-press image interaction.
 The focused red/green contract passed 23/23 tests. Full evidence is saved in
 `private/design-evidence/026/reload-latency-before-after.json`.
+
+## App identity mark, 2026-08-21
+
+The browser favicon and PWA manifest now use the original 512 by 512 Weaver
+mask mark instead of the legacy SVG. The production web app has one matching
+static route for the WebP, the service-worker shell caches it, and the focused
+production asset checks passed 3/3.

@@ -43,6 +43,7 @@ def test_production_frontend_assets_exist() -> None:
         "index.html",
         "manifest.webmanifest",
         "weaver-mark.svg",
+        "weaver-mask-mark.webp",
         "sw.js",
     )
     for relative_path in expected_assets:
@@ -729,7 +730,7 @@ async def test_new_static_assets_serve(client) -> None:
         style_path,
         script_path,
         "/manifest.webmanifest",
-        "/weaver-mark.svg",
+        "/weaver-mask-mark.webp",
         "/assets/font-awesome-license.txt",
         "/sw.js",
     ]:
@@ -737,7 +738,10 @@ async def test_new_static_assets_serve(client) -> None:
         assert resp.status_code == 200, path
         ct = resp.headers.get("content-type", "")
         assert (
-            "text" in ct or "svg" in ct or "manifest+json" in ct or "javascript" in ct
+            "text" in ct
+            or "image/" in ct
+            or "manifest+json" in ct
+            or "javascript" in ct
         ), path
 
     license_response = await client.get("/assets/font-awesome-license.txt")
