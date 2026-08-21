@@ -1,4 +1,4 @@
-# Plan 027-conversation-chamber deliverables
+# Plan 027 conversation chamber, Thread Archive, and integration trial deliverables
 
 | File | Purpose | Current state |
 | --- | --- | --- |

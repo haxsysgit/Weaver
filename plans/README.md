@@ -31,12 +31,12 @@ evidence, review, and human decision gates must also be complete.
 | [021 - First Nightmare setup + mobile polish](021-first-nightmare-setup-and-mobile.md) | Closed 2026-08-17 (owner accepted) | v1 (parallel, disjoint frontend files) | First-run animated setup modal (Spell-themed, DeepSeek key explainer + entry), mobile drawer real-app fix, mobile polish + animations |
 | [022 - Hidden Thread canon and identity](022-hidden-thread-canon-and-identity.md) | Closed 2026-08-18; owner accepted | v1, 018.5, and 020 closed | Bounded canon read, product-fiction split, stable identity terms, and `shadow-slave` Edition id |
 | [023 - Conversation metadata foundations](023-conversation-metadata-foundations.md) | Closed 2026-08-18; owner accepted | Plan 022 closed | Durable rename, archive, pin, Edition metadata, PATCH route, and exact device ownership |
-| [024 - Hidden Thread responsive prototype](024-hidden-thread-responsive-prototype.md) | Closed 2026-08-18; owner rejected alternate visual direction | Plan 022 closed | Disposable rite, chamber, and archive lab across the mobile matrix, Redmi Note 14, and desktop |
+| [024 - Hidden Thread responsive prototype](024-hidden-thread-responsive-prototype.md) | Closed 2026-08-18; owner rejected alternate visual direction | Plan 022 closed | Disposable rite, chamber, and archive lab across the phone matrix and desktop |
 | [025 - Spellweave visual foundation](025-spellweave-visual-foundation.md) | Closed 2026-08-19; owner accepted | Plan 024 closed | v1-first responsive background engine, semantic materials, shared primitives, and measured performance contract |
 | [026 - Hidden Thread initiation rite](026-hidden-thread-initiation-rite.md) | Closed 2026-08-21; owner accepted | Plans 022 and 025 closed | Replace the setup card with the four-act full-screen rite while preserving first-run and BYOK behavior |
-| [027 - Conversation chamber](027-conversation-chamber.md) | Drafted | Plans 022, 024, 025, and 026 closed | Thread-spine replies, user shards, composer binding point, safe Markdown, and responsive desktop composition |
-| [028 - Thread Archive](028-thread-archive.md) | Drafted | Plans 023 and 027 closed | Server-backed full-screen mobile archive and persistent desktop archive using one component |
-| [029 - Hidden Thread integration and phone trial](029-hidden-thread-integration-and-phone-trial.md) | Drafted | Plans 022-028 closed | Fake-only release matrix, mobile support matrix, Redmi Note 14 usability, desktop, accessibility, and owner release decision |
+| [027 - Conversation chamber, Thread Archive, and integration trial](027-conversation-chamber.md) | Drafted | Plans 022, 023, 025, and 026 closed | One continuous frontend plan with chamber, archive, and full fake-mode integration checkpoints |
+| [028 - Thread Archive](028-thread-archive.md) | Drafted, superseded by Plan 027 | None | Historical draft retained; work moved into Plan 027 checkpoint two |
+| [029 - Hidden Thread integration and phone trial](029-hidden-thread-integration-and-phone-trial.md) | Drafted, superseded by Plan 027 | None | Historical draft retained; work moved into Plan 027 checkpoint three |
 | Later - Founding Reader Trials | Not yet drafted | Reading continuation | The finished-product bar: Ariel and the Unholy Titan, Sunny 3120+ versus Azarax, Anvil versus Azarax what-if |
 | Later - Durable reader memory | Not yet drafted | Founding trials | Reader opinions, favorites, theories, and unresolved disagreements kept separately from canon |
 
@@ -71,9 +71,10 @@ Plans 001-010 are complete (007.5 applied). The next sequence is:
    Admitted 2026-08-15 (`plans/019-notebook-structure-and-importance.md`).
 11. **020 (side plan)**: closed 2026-08-18 with tier 0 and tier 1 accepted;
    remaining tiers and overview work deferred.
-12. **022-029**: Hidden Thread identity, backend metadata, disposable visual
-   lab, visual engine, rite, conversation chamber, Thread Archive, then the
-   integration and Redmi Note 14 release trial.
+12. **022-027**: Hidden Thread identity, backend metadata, visual engine, rite,
+   then one continuous Conversation Chamber, Thread Archive, and integration
+   trial with broad phone support and three owner checkpoints. Drafted Plans
+   028 and 029 are superseded planning records.
 13. **Later**: the founding Reader Trials, then durable reader memory.
 
 Native Android and iOS remain deferred until Plan 013 proves a concrete PWA

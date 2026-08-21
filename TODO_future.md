@@ -58,12 +58,12 @@ Open questions for the owner when this plan is admitted:
   and question evaluations remain deferred.
 - Plan 020 closed 2026-08-18 with tier 0 and tier 1 accepted. Tiers 2-4,
   missing-page creation, and overview verification remain deferred.
-- Plans 022-029 are the next drafted lane: Hidden Thread canon and identity,
-  conversation metadata foundations, responsive prototype, Spellweave visual
-  foundation, initiation rite, conversation chamber, Thread Archive, and the
-  integration release trial. Mobile proof covers 320 x 568 through 412 x 915,
-  plus the owner's Redmi Note 14 at its measured CSS viewport. Desktop rides
-  with each production surface.
+- Plans 022-027 are the current Hidden Thread lane: canon and identity,
+  conversation metadata foundations, visual foundation, initiation rite, then
+  one continuous Conversation Chamber, Thread Archive, and integration trial
+  with three owner checkpoints. Mobile proof covers 320 x 568 through 412 x
+  915, available owner phones, and a desktop composition alongside each
+  production surface. Drafted Plans 028 and 029 are superseded.
 
 ## Standing series (no plan number, runs across plans)
 

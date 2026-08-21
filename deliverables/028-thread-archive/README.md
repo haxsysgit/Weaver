@@ -10,3 +10,6 @@
 
 No novel prose, chats, credentials, private receipts, generated knowledge,
 or raw model reasoning belongs here.
+
+This drafted deliverable set is superseded by Plan 027 checkpoint two. It is
+historical planning material and receives no implementation work.
