@@ -353,10 +353,9 @@
   width: 39px;
   height: 39px;
   place-items: center;
-  border: 1px solid var(--lab-line);
-  border-radius: 50%;
-  background: rgba(7, 8, 14, 0.45);
-  box-shadow: inset 0 0 16px rgba(185, 75, 72, 0.09);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .weaver-mark-icon {
@@ -509,7 +508,7 @@
 .lab-message-body > small { display: block; margin-bottom: 7px; color: var(--lab-gold); font-size: 8px; letter-spacing: 0.17em; text-transform: uppercase; }
 .lab-message-body p { margin: 0; color: #ebe9ec; line-height: 1.67; }
 .lab-message-weaver .lab-message-body p { font-family: var(--font-display); font-size: 1.02em; }
-.lab-weaver-mark { display: grid; width: 31px; height: 31px; flex: 0 0 31px; place-items: center; border: 1px solid var(--lab-line); border-radius: 50%; background: rgba(5, 6, 11, 0.7); }
+.lab-weaver-mark { display: grid; width: 31px; height: 31px; flex: 0 0 31px; place-items: center; }
 .lab-weaver-mark .weaver-mark-icon { width: 24px; height: 24px; }
 
 .lab-message-actions { position: absolute; right: 8px; bottom: -29px; display: flex; gap: 3px; opacity: 0; transition: opacity 150ms ease, transform 150ms ease; transform: translateY(-3px); }
@@ -526,7 +525,7 @@
 @keyframes weaving-dot { 50% { opacity: 0.25; transform: translateY(-3px); } }
 
 .lab-empty-weave { display: grid; place-items: center; margin: auto; padding: 28px; text-align: center; }
-.lab-empty-mark { display: grid; width: 68px; height: 68px; place-items: center; border: 1px solid var(--lab-line); border-radius: 50%; background: rgba(4, 5, 9, 0.42); box-shadow: 0 0 50px rgba(122, 101, 151, 0.11); }
+.lab-empty-mark { display: grid; width: 68px; height: 68px; place-items: center; filter: drop-shadow(0 0 26px rgba(183, 154, 98, 0.12)); }
 .lab-empty-mark .weaver-mark-icon { width: 52px; height: 52px; }
 .lab-empty-weave p { margin: 18px 0 6px; color: var(--lab-gold); font-family: var(--font-display); font-size: 12px; }
 .lab-empty-weave h1 { margin: 0; font-family: var(--font-display); font-size: clamp(26px, 4vw, 42px); font-weight: 400; }

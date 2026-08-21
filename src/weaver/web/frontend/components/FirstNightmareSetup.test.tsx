@@ -61,6 +61,7 @@ describe("Hidden Thread initiation rite", () => {
     const mask = dialog.querySelector("[data-hidden-thread-mask]");
     expect(mask).not.toBeNull();
     expect(mask?.tagName).toBe("IMG");
+    expect(within(dialog).queryByText("First Nightmare")).toBeNull();
     expect(within(dialog).getByText("[The hidden thread has found you.]")).toBeVisible();
     expect(within(dialog).getByText("The Spell has found you")).toBeVisible();
   });
@@ -74,6 +75,7 @@ describe("Hidden Thread initiation rite", () => {
     );
 
     expect(dialog).toHaveAttribute("data-rite-act", "initiation");
+    expect(dialog.querySelector("[data-hidden-thread-mask]")).not.toBeNull();
     const link = within(dialog).getByRole("link", { name: /Get a key from DeepSeek/ });
     expect(link).toHaveAttribute("href", "https://platform.deepseek.com/");
     expect(link).toHaveAttribute("rel", "noreferrer");

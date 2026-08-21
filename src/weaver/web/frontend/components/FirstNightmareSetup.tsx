@@ -229,12 +229,11 @@ export function FirstNightmareSetup({
       <div aria-hidden="true" className="hidden-thread-mantle hidden-thread-mantle-left" />
       <div aria-hidden="true" className="hidden-thread-mantle hidden-thread-mantle-right" />
       <header className="hidden-thread-progress">
-        <span>First Nightmare</span>
         <small>{step} / 4</small>
       </header>
 
       <div className="hidden-thread-scene">
-        {step === 1 && <HiddenThreadMask />}
+        <HiddenThreadMask />
         <FirstNightmareRunes announcement={announcement} eventKey={step} />
 
         <div className="hidden-thread-copy" key={step}>

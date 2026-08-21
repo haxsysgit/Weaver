@@ -58,3 +58,7 @@ no named handset represents mobile support.
   gate.
 - Pin failure and archived-state distinction are recorded for Plan 028 after a
   read-only reproduction. They stay outside Plan 026 implementation.
+- The mask scene fits inside phone and desktop viewports, then recedes behind
+  acts two through four instead of disappearing into a blank void.
+- Mask identity marks sit directly in the Spellweave without visible circular
+  containers. The rite keeps only the step count in its top progress row.

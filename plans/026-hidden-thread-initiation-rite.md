@@ -64,6 +64,11 @@
 14. (2026-08-19) Pin-button failure and weak archived-state distinction are
     accepted user feedback for Plan 028. Plan 026 may inspect and record the
     current fault but does not change archive behavior.
+15. (2026-08-21) Owner review keeps the mask scene present through all four
+    acts. It fits fully inside each viewport during awakening, recedes into a
+    distant background for initiation, binding, and appraisal, then gives way
+    to the live Spellweave during reveal. Mask identity marks have no visible
+    circle, badge, or frame. The top-left `First Nightmare` label is removed.
 
 ## Scope
 

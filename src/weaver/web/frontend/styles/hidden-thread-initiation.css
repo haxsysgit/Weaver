@@ -61,7 +61,7 @@
   left: max(20px, env(safe-area-inset-left));
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   color: var(--lab-dim, #8e8d8d);
   font-family: var(--font-display);
   font-size: 10px;
@@ -94,10 +94,21 @@
   height: 100dvh;
   max-height: none;
   margin: 0;
-  object-fit: cover;
+  object-fit: contain;
   object-position: center;
   filter: drop-shadow(0 22px 35px rgba(0, 0, 0, 0.8));
   animation: hidden-thread-mask-gathers calc(var(--motion-smooth) * 5) var(--ease-weave) both;
+}
+
+.hidden-thread-rite:not([data-rite-act="awakening"])::after {
+  z-index: 1;
+  background:
+    radial-gradient(circle at 50% 46%, rgba(0, 0, 0, 0.48), rgba(0, 0, 0, 0.82) 46rem),
+    rgba(0, 0, 0, 0.38);
+}
+
+.hidden-thread-rite:not([data-rite-act="awakening"]) .hidden-thread-mask {
+  animation: hidden-thread-mask-recedes calc(var(--motion-smooth) * 3) var(--ease-weave) both;
 }
 
 .hidden-thread-rite[data-rite-act="awakening"]::after {
@@ -439,8 +450,6 @@
   margin: 0 auto 14px;
   padding: 5px;
   place-items: center;
-  border: 1px solid rgba(203, 204, 204, 0.42);
-  border-radius: 50%;
   animation: hidden-thread-knot-seals calc(var(--motion-smooth) * 2) var(--ease-weave) both;
 }
 
@@ -452,7 +461,7 @@
 }
 
 .hidden-thread-appraisal-mark.is-preview {
-  border-style: dashed;
+  opacity: 0.82;
 }
 
 .hidden-thread-appraisal {
@@ -515,6 +524,19 @@
 @keyframes hidden-thread-mask-gathers {
   from { opacity: 0; filter: blur(8px) drop-shadow(0 22px 35px rgba(0, 0, 0, 0.72)); transform: scale(0.92); }
   to { opacity: 0.92; filter: blur(0) drop-shadow(0 22px 35px rgba(0, 0, 0, 0.72)); transform: scale(1); }
+}
+
+@keyframes hidden-thread-mask-recedes {
+  from {
+    opacity: 0.42;
+    filter: blur(0) saturate(0.72);
+    transform: scale(1);
+  }
+  to {
+    opacity: 0.13;
+    filter: blur(2px) saturate(0.45);
+    transform: scale(0.94);
+  }
 }
 
 @keyframes hidden-thread-inscription-forms {
@@ -595,6 +617,11 @@
       rgba(0, 0, 0, 0.44) 45%,
       var(--edition-spell-void) 55% 100%
     );
+  }
+
+  .hidden-thread-rite:not([data-rite-act="awakening"]) .hidden-thread-mask {
+    right: 0;
+    width: 100vw;
   }
 
   .hidden-thread-rite[data-rite-act="awakening"] .first-nightmare-rune-event,

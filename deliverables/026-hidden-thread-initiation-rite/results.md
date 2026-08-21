@@ -145,3 +145,20 @@ Read-only inspection reproduced both reported thread-management faults:
 Plan 023 already provides the persistent metadata route. Plan 028 owns wiring
 that route into the frontend and giving the Thread Archive an unmistakable
 active state; Plan 026 does not alter those controls.
+
+## Continuity repair, 2026-08-21
+
+Owner review found three visual breaks: framed mask marks, oversized awakening
+art on desktop, and a blank void after act one. The repair:
+
+- removes the visible badge treatment from sidebar, empty-state, reply, and
+  appraisal mask marks;
+- changes the awakening artwork from viewport-filling crop to contained fit;
+- removes the top-left `First Nightmare` label while retaining the step count;
+- keeps the full mask scene behind acts two through four at low opacity and
+  shallow blur, then reveals the live Spellweave when the rite parts.
+
+Fresh fake-mode captures cover 320 x 568, 390 x 844, and 1440 x 900. The full
+art and both actions remain visible at the smallest size, the desktop artwork
+stays within its left ritual plane, and every later act retains the same distant
+mask without reducing text contrast.
