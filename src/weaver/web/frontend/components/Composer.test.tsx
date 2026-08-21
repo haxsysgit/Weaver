@@ -113,7 +113,7 @@ describe("Composer", () => {
     expect(screen.queryByText("[The voice remains unbound.]")).toBeNull();
   });
 
-  it("shows the active reading boundary above the binding point", () => {
+  it("keeps redundant book and spoiler labels out of the binding point", () => {
     render(
       <Composer
         cancelling={false}
@@ -127,8 +127,8 @@ describe("Composer", () => {
       />,
     );
 
-    expect(screen.getByText("Shadow Slave")).toBeVisible();
-    expect(screen.getByText("Spoilers through your current chapter")).toBeVisible();
+    expect(screen.queryByLabelText("Reading boundary")).toBeNull();
+    expect(screen.queryByText("Shadow Slave")).toBeNull();
   });
 describe("Composer reading tier", () => {
   it("opens the tier menu and reports the pick", async () => {

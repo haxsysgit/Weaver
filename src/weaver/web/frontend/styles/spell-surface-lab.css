@@ -2843,21 +2843,6 @@
   background: transparent;
 }
 
-.spell-surface-live .composer-reading-context {
-  display: flex;
-  min-width: 0;
-  justify-content: center;
-  gap: 8px;
-  margin: 0 0 7px;
-  color: rgba(203, 204, 204, 0.74);
-  font-size: 11px;
-  letter-spacing: 0.035em;
-}
-
-.spell-surface-live .composer-reading-context span:first-child {
-  color: var(--edition-appraisal-gold);
-}
-
 @keyframes chamber-spine-extends {
   from {
     opacity: 0.35;
@@ -2883,12 +2868,6 @@
     min-height: 48px;
   }
 
-  .spell-surface-live .composer-reading-context {
-    overflow: hidden;
-    font-size: 10px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

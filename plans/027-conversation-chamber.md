@@ -38,9 +38,9 @@
 3. (2026-08-18) The composer is a black-wood binding point with a fine silver
    inner edge, at least 16px input text, 48px phone controls, and a knot or
    needle send mark.
-4. (2026-08-18) Shadow Slave is the only current Edition. The active Edition,
-   reader chapter, spoiler boundary, and honest bound or unbound key state stay
-   visible around the composer. No book switcher or fake future controls.
+4. (2026-08-21) Shadow Slave is the only current Edition. The composer omits
+   the redundant Edition and spoiler-boundary label. Honest bound or unbound
+   key state remains visible. No book switcher or fake future controls.
 5. (2026-08-18) Motion belongs to reader action: focus draws threads inward,
    send carries an owner shard, streaming extends the response spine,
    completion seals it, and failure uses restrained corruption crimson.

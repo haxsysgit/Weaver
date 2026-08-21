@@ -515,7 +515,6 @@ function SpellSurfaceChatSurface({
           <Composer
             cancelling={chat.turnState === "cancelling"}
             draft={chat.draft}
-            editionName="Shadow Slave"
             inputLabel={weaverProduct.inputLabel}
             onCancel={() => void chat.cancelTurn()}
             onDraftChange={chat.setDraft}
@@ -526,7 +525,6 @@ function SpellSurfaceChatSurface({
               void api.savePreferences(toApiPreferences(nextPreferences));
             }}
             placeholder={weaverProduct.composerPlaceholder}
-            spoilerBoundary={`Spoilers through ch. ${preferences.chapter}`}
             sendLabel={weaverProduct.sendLabel}
             stopLabel={weaverProduct.stopLabel}
             stoppingLabel={weaverProduct.stoppingLabel}

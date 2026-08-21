@@ -19,8 +19,8 @@ composer actions.
 - A visible `chapter 709` or `ch. 709` string can become a compact reference
   knot. The knot repeats its label, has no chapter URL, and makes no canon
   claim.
-- The Composer carries an Edition, reader-chapter, spoiler-boundary, and
-  bound-or-unbound context strip. It receives key status only, never a key.
+- The Composer omits the redundant Edition and spoiler-boundary strip. It
+  receives bound status only, never a key.
 
 ## Failure language
 

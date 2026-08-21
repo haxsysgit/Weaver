@@ -36,6 +36,9 @@ execution limit, request rejection, server failure, saved-state failure, and an
 unknown failure. Raw exception and provider text no longer reaches recovery
 copy.
 
+The owner removed the redundant `Shadow Slave` and spoiler-boundary line above
+the Composer during checkpoint review.
+
 - Focused repair Vitest passed 41/41 tests across six files.
 - `npx tsc --noEmit` passed.
 - The refreshed preview build passed and updated committed `dist/` assets.
