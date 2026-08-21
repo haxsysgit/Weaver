@@ -39,10 +39,58 @@ copy.
 The owner removed the redundant `Shadow Slave` and spoiler-boundary line above
 the Composer during checkpoint review.
 
+### Checkpoint reset
+
+The owner accepted the transparent Conversation Chamber as the plan foundation
+and replaced checkpoint one with the Soul Sea Reader Appraisal. The accepted
+concept uses a phone settings index and detail flow, threaded desktop
+navigation, a combined reader-position and spoiler page, fixed Hidden Thread
+identity, accurate privacy copy, and a dedicated First Nightmare section.
+
 - Focused repair Vitest passed 41/41 tests across six files.
 - `npx tsc --noEmit` passed.
 - The refreshed preview build passed and updated committed `dist/` assets.
 
+### Reader Appraisal implementation
+
+The rebuilt settings surface now uses the Soul Sea as its reader-profile
+setting. Desktop navigation follows a vertical silver thread with an old-gold
+selected knot. Phone navigation opens as a vertical settings index, then moves
+into one focused detail page with a clear Settings back action.
+
+Reader position and spoiler protection now share one page. Chapter is the
+editable source of truth, the volume is derived from it, and the four step
+controls move by 10 or 1 chapter. Answer depth and model selection have
+separate sections. Bound voice keeps the existing browser-local key behavior,
+masking, reveal control, disabled state, and model selection.
+
+Appearance keeps the Hidden Thread identity fixed while exposing rune motion,
+star-web intensity, reading density, and text size. Privacy now names the three
+real boundaries: Weaver's local library, DeepSeek messages, and the
+browser-local key. First Nightmare replay has its own section. Dirty settings
+open a discard confirmation before the panel closes.
+
+- Focused Vitest passed 20/20 tests across the settings lab and live app.
+- `npm exec tsc -- --noEmit` passed.
+- `npm run build` passed and refreshed `src/weaver/web/dist/`.
+- `git diff --check` passed before the final focused recheck.
+- The complete test suites remain reserved for checkpoint three by owner
+  direction.
+
+Owner review found that the title header consumed space while the Soul Sea was
+too dark to read. The repair removes the repeated Reader Appraisal heading,
+moves the close control into the scene, expands the visible Soul Sea crop, and
+raises its contrast on phone and desktop. The focused settings recheck passed
+3/3 tests, TypeScript passed, and the production bundle was rebuilt.
+
+A second review found that legacy appearance values made an untouched panel
+look dirty. Settings now establishes the fixed Hidden Thread identity as its
+opening baseline, so navigation alone closes immediately while actual edits
+still receive confirmation. The close control is now an unframed X. Both clean
+and dirty close regressions passed, TypeScript passed, and the bundle was
+rebuilt.
+
 ## Status
 
-Not started.
+Checkpoint one was accepted by the owner on 2026-08-21. Thread Archive work
+may begin.

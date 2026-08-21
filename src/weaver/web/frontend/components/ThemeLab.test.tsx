@@ -18,22 +18,20 @@ describe("Spell Surface v2 lab", () => {
     expect(surface).toHaveAttribute("data-font-size", "small");
   });
 
-  it("keeps theme and visual choices inside Customize settings", () => {
+  it("keeps the Hidden Thread identity fixed while appearance controls remain", () => {
     render(<ThemeLab />);
 
     fireEvent.click(screen.getByRole("button", { name: "Open Soul Sea settings" }));
-    const dialog = screen.getByRole("dialog", { name: "Soul Sea settings" });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Customize" }));
-    fireEvent.click(within(dialog).getByRole("button", { name: "Cosmos" }));
-    fireEvent.click(within(dialog).getByRole("button", { name: "Immersive glass" }));
-    fireEvent.click(within(dialog).getByRole("button", { name: "Living Soul" }));
+    const dialog = screen.getByRole("dialog", { name: "Reader Appraisal settings" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Appearance" }));
     fireEvent.click(within(dialog).getByRole("button", { name: "Thread weave" }));
-    fireEvent.click(within(dialog).getByRole("button", { name: "Apply settings" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "vivid" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Apply changes" }));
 
     const surface = screen.getByTestId("spell-surface-lab");
     expect(surface).toHaveAttribute("data-glass", "immersive");
-    expect(surface).toHaveAttribute("data-theme", "cosmos");
-    expect(surface).toHaveAttribute("data-soul", "living");
+    expect(surface).toHaveAttribute("data-theme", "void");
+    expect(surface).toHaveAttribute("data-star-intensity", "vivid");
     expect(surface).toHaveAttribute("data-runes", "threads");
   }, 20_000);
 
@@ -89,30 +87,70 @@ describe("Spell Surface v2 lab", () => {
     render(<ThemeLab />);
 
     fireEvent.click(screen.getByRole("button", { name: "Open Soul Sea settings" }));
-    const dialog = screen.getByRole("dialog", { name: "Soul Sea settings" });
-    expect(within(dialog).getByRole("button", { name: "Spoilers" })).toBeVisible();
-    expect(within(dialog).getByRole("button", { name: "Customize" })).toBeVisible();
+    const dialog = screen.getByRole("dialog", { name: "Reader Appraisal settings" });
+    expect(within(dialog).getByRole("navigation", { name: "Settings index" })).toBeVisible();
+    expect(within(dialog).queryByRole("button", { name: "Spoilers" })).toBeNull();
+    expect(within(dialog).getByRole("button", { name: "Appearance" })).toBeVisible();
+
+    const panel = dialog;
+    expect(panel).not.toHaveClass("settings-detail-open");
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Reader position" }));
-    fireEvent.change(within(dialog).getByLabelText("Reader volume"), {
-      target: { value: "7" },
+    expect(panel).toHaveClass("settings-detail-open");
+    fireEvent.click(dialog.querySelector(".lab-settings-back") as HTMLButtonElement);
+    expect(panel).not.toHaveClass("settings-detail-open");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Reader position" }));
+    fireEvent.change(within(dialog).getByLabelText("Current chapter"), {
+      target: { value: "1231" },
     });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Customize" }));
+    expect(within(dialog).getByText("Volume 7")).toBeVisible();
+    expect(
+      within(dialog).getByRole("radio", { name: /Protect everything after Chapter 1231/ }),
+    ).toBeChecked();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Appearance" }));
     fireEvent.click(within(dialog).getByRole("button", { name: "Comfortable text" }));
-    fireEvent.click(within(dialog).getByRole("button", { name: "Apply settings" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Apply changes" }));
 
     const surface = screen.getByTestId("spell-surface-lab");
     expect(surface).toHaveAttribute("data-density", "comfortable");
     expect(screen.getAllByText(/Vol 7/)).not.toHaveLength(0);
+  }, 10_000);
+
+  it("protects dirty settings from an accidental close", () => {
+    render(<ThemeLab />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Open Soul Sea settings" }));
+    const dialog = screen.getByRole("dialog", { name: "Reader Appraisal settings" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Answer depth" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "transcendent" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Close settings" }));
+
+    expect(within(dialog).getByText("Discard unsaved changes?")).toBeVisible();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Keep editing" }));
+    expect(screen.getByRole("dialog", { name: "Reader Appraisal settings" })).toBeVisible();
+  });
+
+  it("states the real local-library, DeepSeek, and browser-key boundaries", () => {
+    render(<ThemeLab />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Open Soul Sea settings" }));
+    const dialog = screen.getByRole("dialog", { name: "Reader Appraisal settings" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Privacy and controls" }));
+
+    expect(within(dialog).getByText(/local library on this Weaver installation/)).toBeVisible();
+    expect(within(dialog).getByText(/Messages are sent to DeepSeek/)).toBeVisible();
+    expect(within(dialog).getByText(/key stays in this browser/)).toBeVisible();
+    expect(within(dialog).queryByText("Everything stays on this machine.")).toBeNull();
   });
 
   it("supports the settings keyboard shortcut", () => {
     render(<ThemeLab />);
 
     fireEvent.keyDown(window, { key: ",", ctrlKey: true });
-    expect(screen.getByRole("dialog", { name: "Soul Sea settings" })).toBeVisible();
+    expect(screen.getByRole("dialog", { name: "Reader Appraisal settings" })).toBeVisible();
     fireEvent.keyDown(window, { key: "Escape" });
-    expect(screen.queryByRole("dialog", { name: "Soul Sea settings" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Reader Appraisal settings" })).not.toBeInTheDocument();
   });
 
   it("lets the owner send a lab message and shows the Spell weaving response", () => {

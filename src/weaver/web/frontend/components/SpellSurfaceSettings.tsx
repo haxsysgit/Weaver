@@ -1,10 +1,17 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 
-import { getApiKey, setApiKey, getModelId, setModelId, isApiKeyDisabled, setApiKeyDisabled, AVAILABLE_MODELS } from "../lib/identity";
-import type { SoulSeaMode } from "./SpellSurfaceSoulSea";
-import { SOUL_SEA_LABELS, SpellSurfaceSoulSea } from "./SpellSurfaceSoulSea";
-import { RUNE_OPTIONS, type RuneMode } from "./SpellSurfaceRunes";
+import {
+  AVAILABLE_MODELS,
+  getApiKey,
+  getModelId,
+  isApiKeyDisabled,
+  setApiKey,
+  setApiKeyDisabled,
+  setModelId,
+} from "../lib/identity";
 import { EyeIcon, EyeSlashIcon } from "./Icons";
+import { RUNE_OPTIONS, type RuneMode } from "./SpellSurfaceRunes";
+import { SpellSurfaceSoulSea, type SoulSeaMode } from "./SpellSurfaceSoulSea";
 
 export type Density = "compact" | "comfortable";
 export type FontSize = "small" | "medium" | "large";
@@ -29,11 +36,11 @@ export interface LabPreferences {
 
 type SettingsSection =
   | "reader"
-  | "spoilers"
   | "reading"
-  | "customize"
   | "model"
-  | "privacy";
+  | "appearance"
+  | "privacy"
+  | "rite";
 
 interface SpellSurfaceSettingsProps {
   initial: LabPreferences;
@@ -43,6 +50,7 @@ interface SpellSurfaceSettingsProps {
   onSave: (preferences: LabPreferences) => void;
 }
 
+const MAX_CHAPTER = 3160;
 const VOLUMES = [
   { end: 95, number: 1 },
   { end: 350, number: 2 },
@@ -56,66 +64,52 @@ const VOLUMES = [
   { end: 2720, number: 10 },
   { end: 3000, number: 11 },
   { end: 3127, number: 12 },
-  { end: 3160, number: 13 },
+  { end: MAX_CHAPTER, number: 13 },
 ];
 
 const TIER_COPY: Record<Tier, string> = {
-  awakened: "A quick read for direct questions.",
+  awakened: "A quick reread for direct questions.",
   ascended: "A balanced reread with connected evidence.",
-  transcendent: "The longest reread for hard canon debates.",
+  transcendent: "The deepest reread for hard canon debates.",
 };
-
-const SETTINGS_SECTIONS: Array<{
-  hint: string;
-  id: SettingsSection;
-  label: string;
-}> = [
-  { hint: "chapter and volume", id: "reader", label: "Reader position" },
-  { hint: "protect future events", id: "spoilers", label: "Spoilers" },
-  { hint: "answering depth", id: "reading", label: "Reading tier" },
-  { hint: "glass, sea, stars, runes", id: "customize", label: "Customize" },
-  { hint: "key and model", id: "model", label: "Model" },
-  { hint: "shortcuts and local data", id: "privacy", label: "Keyboard & privacy" },
-];
-
-const SOUL_MODES: SoulSeaMode[] = ["still", "living", "mirror"];
 
 const MODEL_DESCRIPTIONS: Record<string, string> = {
   "deepseek-v4-flash": "Fast responses for everyday chapter questions.",
-  "deepseek-v4-pro": "Deeper answers for hard canon debates and theories.",
+  "deepseek-v4-pro": "More reasoning for hard canon debates and theories.",
 };
 
-const SURFACE_THEMES: Array<{
-  description: string;
-  label: string;
-  swatches: string[];
-  value: SurfaceTheme;
-}> = [
-  {
-    description: "Weaver's dark blood-red identity.",
-    label: "Crimson Spell",
-    swatches: ["#26080d", "#761d26", "#d7a6a2"],
-    value: "crimson",
-  },
-  {
-    description: "Deep cosmic purple and cold blue.",
-    label: "Cosmos",
-    swatches: ["#0b071b", "#34296f", "#5e8fdc"],
-    value: "cosmos",
-  },
-  {
-    description: "Silver-white starlight over deep space.",
-    label: "Starlight",
-    swatches: ["#10131a", "#747e91", "#eef3ff"],
-    value: "starlight",
-  },
-  {
-    description: "Pitch black with almost no color cast.",
-    label: "Void",
-    swatches: ["#000000", "#101010", "#686868"],
-    value: "void",
-  },
-];
+function volumeForChapter(chapter: number) {
+  return VOLUMES.find((volume) => chapter <= volume.end)?.number ?? VOLUMES.length;
+}
+
+function titleCase(value: string) {
+  return `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
+}
+
+function withHiddenThreadIdentity(preferences: LabPreferences): LabPreferences {
+  return {
+    ...preferences,
+    glass: "immersive",
+    soulMode: "still",
+    theme: "void",
+  };
+}
+
+function preferencesMatch(left: LabPreferences, right: LabPreferences) {
+  return (
+    left.chapter === right.chapter &&
+    left.density === right.density &&
+    left.fontSize === right.fontSize &&
+    left.glass === right.glass &&
+    left.runeMode === right.runeMode &&
+    left.soulMode === right.soulMode &&
+    left.spoilerMode === right.spoilerMode &&
+    left.starIntensity === right.starIntensity &&
+    left.theme === right.theme &&
+    left.tier === right.tier &&
+    left.volume === right.volume
+  );
+}
 
 export function SpellSurfaceSettings({
   initial,
@@ -124,20 +118,78 @@ export function SpellSurfaceSettings({
   onReplayFirstNightmare,
   onSave,
 }: SpellSurfaceSettingsProps) {
-  const [preferences, setPreferences] = useState(initial);
+  const [preferences, setPreferences] = useState(() => withHiddenThreadIdentity(initial));
   const [apiKey, setApiKeyValue] = useState(getApiKey);
   const [showApiKey, setShowApiKey] = useState(false);
   const [apiKeyDisabled, setApiKeyDisabledValue] = useState(isApiKeyDisabled);
   const [modelId, setModelIdValue] = useState(getModelId);
-  const [activeSection, setActiveSection] = useState<SettingsSection>("customize");
+  const [activeSection, setActiveSection] = useState<SettingsSection>("reader");
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
+  const [discardPromptOpen, setDiscardPromptOpen] = useState(false);
   const panelRef = useRef<HTMLElement>(null);
-  const firstControlRef = useRef<HTMLSelectElement>(null);
+  const initialApiKey = useRef(apiKey);
+  const initialApiKeyDisabled = useRef(apiKeyDisabled);
+  const initialModelId = useRef(modelId);
+  const initialPreferences = useRef(preferences);
+
+  const fixedPreferences = useMemo(
+    () => withHiddenThreadIdentity(preferences),
+    [preferences],
+  );
+  const isDirty =
+    !preferencesMatch(fixedPreferences, initialPreferences.current) ||
+    apiKey !== initialApiKey.current ||
+    apiKeyDisabled !== initialApiKeyDisabled.current ||
+    modelId !== initialModelId.current;
 
   useEffect(() => {
     panelRef.current?.querySelector<HTMLElement>(".lab-settings-nav button.on")?.focus();
   }, []);
 
+  function update<K extends keyof LabPreferences>(
+    key: K,
+    value: LabPreferences[K],
+  ) {
+    setPreferences((current) => ({ ...current, [key]: value }));
+  }
+
+  function setChapter(nextChapter: number) {
+    const chapter = Math.min(MAX_CHAPTER, Math.max(1, nextChapter || 1));
+    setPreferences((current) => ({
+      ...current,
+      chapter,
+      volume: volumeForChapter(chapter),
+    }));
+  }
+
+  function openSection(section: SettingsSection) {
+    setActiveSection(section);
+    setMobileDetailOpen(true);
+  }
+
+  function requestClose() {
+    if (isDirty) {
+      setDiscardPromptOpen(true);
+      return;
+    }
+    onClose();
+  }
+
+  function saveSettings() {
+    setApiKey(apiKey);
+    setApiKeyDisabled(apiKeyDisabled);
+    setModelId(modelId);
+    onApiKeyChange?.(apiKey.trim() !== "" && !apiKeyDisabled);
+    onSave(fixedPreferences);
+  }
+
   function keepFocusInside(event: KeyboardEvent<HTMLElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      requestClose();
+      return;
+    }
     if (event.key !== "Tab" || !panelRef.current) {
       return;
     }
@@ -156,65 +208,63 @@ export function SpellSurfaceSettings({
     }
   }
 
-  function update<K extends keyof LabPreferences>(
-    key: K,
-    value: LabPreferences[K],
-  ) {
-    setPreferences((current) => ({ ...current, [key]: value }));
-  }
-
-  function saveSettings() {
-    setApiKey(apiKey);
-    setApiKeyDisabled(apiKeyDisabled);
-    setModelId(modelId);
-    onApiKeyChange?.(getApiKey() !== "" && !isApiKeyDisabled());
-    onSave(preferences);
-  }
-
-  function selectVolume(volumeNumber: number) {
-    const volume = VOLUMES.find((candidate) => candidate.number === volumeNumber);
-    if (!volume) {
-      return;
-    }
-    const previousEnd = VOLUMES[volumeNumber - 2]?.end ?? 0;
-    const chapter = Math.max(previousEnd + 1, Math.min(preferences.chapter, volume.end));
-    setPreferences((current) => ({
-      ...current,
-      chapter,
-      volume: volumeNumber,
-    }));
-  }
+  const selectedModel = AVAILABLE_MODELS.find((model) => model.id === modelId);
+  const sections: Array<{ hint: string; id: SettingsSection; label: string }> = [
+    {
+      hint: `Chapter ${preferences.chapter} · Volume ${preferences.volume}`,
+      id: "reader",
+      label: "Reader position",
+    },
+    { hint: titleCase(preferences.tier), id: "reading", label: "Answer depth" },
+    {
+      hint: `${selectedModel?.label ?? "DeepSeek"} · ${apiKey.trim() && !apiKeyDisabled ? "bound" : "unbound"}`,
+      id: "model",
+      label: "Bound voice",
+    },
+    {
+      hint: `${titleCase(preferences.runeMode)} runes · ${titleCase(preferences.starIntensity)} stars`,
+      id: "appearance",
+      label: "Appearance",
+    },
+    { hint: "Local library and DeepSeek", id: "privacy", label: "Privacy and controls" },
+    { hint: "Replay the initiation", id: "rite", label: "First Nightmare" },
+  ];
 
   return (
-    <div className="lab-settings-backdrop" onMouseDown={onClose}>
+    <div className="lab-settings-backdrop" onMouseDown={requestClose}>
       <section
-        aria-label="Soul Sea settings"
+        aria-label="Reader Appraisal settings"
         aria-modal="true"
-        className="lab-settings-panel"
+        className={`lab-settings-panel${mobileDetailOpen ? " settings-detail-open" : ""}`}
         onKeyDown={keepFocusInside}
         onMouseDown={(event) => event.stopPropagation()}
         ref={panelRef}
         role="dialog"
       >
-        <header className="lab-settings-head">
-          <div>
-            <p>the sea within</p>
-            <h2>Soul Sea</h2>
-          </div>
-          <button aria-label="Close settings" onClick={onClose} type="button">×</button>
-        </header>
+        <div className="lab-settings-atmosphere">
+          <SpellSurfaceSoulSea compact mode="still" state="idle" />
+          <span>The Soul Sea holds your place.</span>
+          <button
+            aria-label="Close settings"
+            className="lab-settings-close"
+            onClick={requestClose}
+            type="button"
+          >
+            ×
+          </button>
+        </div>
 
         <div className="lab-settings-layout">
           <aside className="lab-settings-nav">
-            <p>Settings</p>
-            <nav aria-label="Settings sections">
-              {SETTINGS_SECTIONS.map((section) => (
+            <p>Settings index</p>
+            <nav aria-label="Settings index">
+              {sections.map((section) => (
                 <button
                   aria-label={section.label}
                   aria-current={activeSection === section.id ? "page" : undefined}
                   className={activeSection === section.id ? "on" : ""}
                   key={section.id}
-                  onClick={() => setActiveSection(section.id)}
+                  onClick={() => openSection(section.id)}
                   type="button"
                 >
                   <strong>{section.label}</strong>
@@ -224,74 +274,90 @@ export function SpellSurfaceSettings({
             </nav>
           </aside>
 
-          <div className="lab-settings-main">
-            <SpellSurfaceSoulSea compact mode={preferences.soulMode} state="idle" />
+          <main className="lab-settings-main">
+            <button
+              className="lab-settings-back"
+              onClick={() => setMobileDetailOpen(false)}
+              type="button"
+            >
+              ‹ Settings
+            </button>
             <div className="lab-settings-content">
               {activeSection === "reader" && (
                 <section className="lab-settings-section">
                   <div className="lab-setting-title">
+                    <p>[Your place in the story.]</p>
                     <h3>Reader position</h3>
-                    <span>The Spell will not read beyond this point.</span>
+                    <span>Chapter is the source of truth. Weaver derives the volume and protects everything beyond your reach.</span>
                   </div>
-                  <div className="lab-reader-grid">
-                    <label>
-                      <span>Volume</span>
-                      <select
-                        aria-label="Reader volume"
-                        onChange={(event) => selectVolume(Number(event.target.value))}
-                        ref={firstControlRef}
-                        value={preferences.volume}
-                      >
-                        {VOLUMES.map((volume) => (
-                          <option key={volume.number} value={volume.number}>
-                            Vol {volume.number} · to ch {volume.end}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      <span>Chapter</span>
+                  <div className="lab-reader-position">
+                    <label htmlFor="reader-chapter">Current chapter</label>
+                    <div>
                       <input
-                        max={3160}
+                        id="reader-chapter"
+                        max={MAX_CHAPTER}
                         min={1}
-                        onChange={(event) => update("chapter", Number(event.target.value))}
+                        onChange={(event) => setChapter(Number(event.target.value))}
                         type="number"
                         value={preferences.chapter}
                       />
+                      <strong>Volume {preferences.volume}</strong>
+                    </div>
+                    <div className="lab-chapter-steps">
+                      {[-10, -1, 1, 10].map((step) => (
+                        <button
+                          aria-label={`${step < 0 ? "Move back" : "Move forward"} ${Math.abs(step)} ${Math.abs(step) === 1 ? "chapter" : "chapters"}`}
+                          key={step}
+                          onClick={() => setChapter(preferences.chapter + step)}
+                          type="button"
+                        >
+                          {step > 0 ? `+${step}` : step}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <fieldset className="lab-spoiler-boundary">
+                    <legend>Spoiler boundary</legend>
+                    <label className={preferences.spoilerMode === "protect" ? "on" : ""}>
+                      <input
+                        checked={preferences.spoilerMode === "protect"}
+                        name="spoiler-boundary"
+                        onChange={() => update("spoilerMode", "protect")}
+                        type="radio"
+                      />
+                      <span><strong>Protect everything after Chapter {preferences.chapter}</strong><small>Weaver answers only from the story you have reached.</small></span>
                     </label>
-                  </div>
-                </section>
-              )}
-
-              {activeSection === "spoilers" && (
-                <section className="lab-settings-section">
-                  <div className="lab-setting-title">
-                    <h3>Spoilers</h3>
-                    <span>Choose how Weaver handles knowledge past your chapter.</span>
-                  </div>
-                  <div className="lab-choice-grid two">
-                    <button aria-pressed={preferences.spoilerMode === "protect"} className={preferences.spoilerMode === "protect" ? "on" : ""} onClick={() => update("spoilerMode", "protect")} type="button">
-                      <strong>Protect the story</strong>
-                      <span>Hide later facts and explain only what you have reached.</span>
-                    </button>
-                    <button aria-pressed={preferences.spoilerMode === "none"} className={preferences.spoilerMode === "none" ? "on" : ""} onClick={() => update("spoilerMode", "none")} type="button">
-                      <strong>No spoiler limits</strong>
-                      <span>You have finished the novel, so answer without limits.</span>
-                    </button>
-                  </div>
+                    <label className={preferences.spoilerMode === "none" ? "on" : ""}>
+                      <input
+                        checked={preferences.spoilerMode === "none"}
+                        name="spoiler-boundary"
+                        onChange={() => update("spoilerMode", "none")}
+                        type="radio"
+                      />
+                      <span><strong>Allow knowledge from the complete novel</strong><small>Use this after you have finished the story.</small></span>
+                    </label>
+                  </fieldset>
                 </section>
               )}
 
               {activeSection === "reading" && (
                 <section className="lab-settings-section">
                   <div className="lab-setting-title">
-                    <h3>Reading tier</h3>
-                    <span>Choose how much rereading Weaver does before answering.</span>
+                    <p>[Choose how deeply the thread is followed.]</p>
+                    <h3>Answer depth</h3>
+                    <span>This controls how much reading and connecting Weaver does before answering. It is separate from the model.</span>
                   </div>
                   <div className="lab-choice-grid three">
                     {(["awakened", "ascended", "transcendent"] as Tier[]).map((tier) => (
-                      <button aria-pressed={preferences.tier === tier} className={preferences.tier === tier ? "on" : ""} key={tier} onClick={() => update("tier", tier)} type="button">
-                        <strong>{tier}</strong>
+                      <button
+                        aria-label={tier}
+                        aria-pressed={preferences.tier === tier}
+                        className={preferences.tier === tier ? "on" : ""}
+                        key={tier}
+                        onClick={() => update("tier", tier)}
+                        type="button"
+                      >
+                        <strong>{titleCase(tier)}</strong>
                         <span>{TIER_COPY[tier]}</span>
                       </button>
                     ))}
@@ -299,139 +365,21 @@ export function SpellSurfaceSettings({
                 </section>
               )}
 
-              {activeSection === "customize" && (
-                <section className="lab-settings-section lab-customize-section">
-                  <div className="lab-setting-title">
-                    <h3>Customize the Spell</h3>
-                    <span>Choose its identity, then tune how alive and transparent it feels.</span>
-                  </div>
-
-                  <div className="lab-customize-block">
-                    <h4>Surface theme</h4>
-                    <div className="lab-theme-grid">
-                      {SURFACE_THEMES.map((theme) => (
-                        <button
-                          aria-label={theme.label}
-                          aria-pressed={preferences.theme === theme.value}
-                          className={preferences.theme === theme.value ? "on" : ""}
-                          key={theme.value}
-                          onClick={() => update("theme", theme.value)}
-                          type="button"
-                        >
-                          <span aria-hidden="true" className="lab-theme-swatches">
-                            {theme.swatches.map((swatch) => (
-                              <i key={swatch} style={{ background: swatch }} />
-                            ))}
-                          </span>
-                          <strong>{theme.label}</strong>
-                          <span>{theme.description}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="lab-customize-block">
-                    <h4>Rune appearance</h4>
-                    <div className="lab-choice-grid three">
-                      {RUNE_OPTIONS.map((option) => (
-                        <button aria-label={option.label} aria-pressed={preferences.runeMode === option.mode} className={preferences.runeMode === option.mode ? "on" : ""} key={option.mode} onClick={() => update("runeMode", option.mode)} type="button">
-                          <strong>{option.label}</strong>
-                          <span>{option.description}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="lab-customize-block">
-                    <h4>Soul Sea</h4>
-                    <div className="lab-choice-grid three">
-                      {SOUL_MODES.map((mode) => (
-                        <button aria-label={SOUL_SEA_LABELS[mode]} aria-pressed={preferences.soulMode === mode} className={preferences.soulMode === mode ? "on" : ""} key={mode} onClick={() => update("soulMode", mode)} type="button">
-                          <strong>{SOUL_SEA_LABELS[mode]}</strong>
-                          <span>{mode === "still" ? "A calm horizon behind the conversation." : mode === "living" ? "More motion and glow while Weaver works." : "A quieter reflective sea with deeper contrast."}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="lab-customize-block">
-                    <h4>Message transparency</h4>
-                    <div className="lab-choice-grid two">
-                      <button aria-label="Subtle glass" aria-pressed={preferences.glass === "subtle"} className={preferences.glass === "subtle" ? "on" : ""} onClick={() => update("glass", "subtle")} type="button">
-                        <strong>Subtle glass</strong>
-                        <span>A faint surface behind the words for easier reading.</span>
-                      </button>
-                      <button aria-label="Immersive glass" aria-pressed={preferences.glass === "immersive"} className={preferences.glass === "immersive" ? "on" : ""} onClick={() => update("glass", "immersive")} type="button">
-                        <strong>Immersive · no surface</strong>
-                        <span>Remove message fills, borders, shadows, and blur completely.</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="lab-customize-block">
-                    <h4>Star web</h4>
-                    <div className="lab-segmented-control">
-                      {(["quiet", "balanced", "vivid"] as StarIntensity[]).map((intensity) => (
-                        <button aria-pressed={preferences.starIntensity === intensity} className={preferences.starIntensity === intensity ? "on" : ""} key={intensity} onClick={() => update("starIntensity", intensity)} type="button">{intensity}</button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="lab-customize-row">
-                    <div>
-                      <h4>Reading density</h4>
-                      <div className="lab-segmented-control">
-                        <button aria-label="Compact text" aria-pressed={preferences.density === "compact"} className={preferences.density === "compact" ? "on" : ""} onClick={() => update("density", "compact")} type="button">compact</button>
-                        <button aria-label="Comfortable text" aria-pressed={preferences.density === "comfortable"} className={preferences.density === "comfortable" ? "on" : ""} onClick={() => update("density", "comfortable")} type="button">comfortable</button>
-                      </div>
-                    </div>
-                    <div>
-                      <h4>Font size</h4>
-                      <div className="lab-segmented-control">
-                        {(["small", "medium", "large"] as FontSize[]).map((fontSize) => (
-                          <button aria-pressed={preferences.fontSize === fontSize} className={preferences.fontSize === fontSize ? "on" : ""} key={fontSize} onClick={() => update("fontSize", fontSize)} type="button">{fontSize}</button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </section>
-              )}
-
-              {activeSection === "privacy" && (
-                <section className="lab-settings-section">
-                  <div className="lab-setting-title">
-                    <h3>Keyboard & privacy</h3>
-                    <span>Quick controls and where your reading data stays.</span>
-                  </div>
-                  <dl className="lab-shortcuts">
-                    <div><dt><kbd>Ctrl</kbd><kbd>,</kbd></dt><dd>open settings</dd></div>
-                    <div><dt><kbd>Esc</kbd></dt><dd>close this panel</dd></div>
-                    <div><dt><kbd>Enter</kbd></dt><dd>send a message</dd></div>
-                  </dl>
-                  <aside className="lab-privacy-note">
-                    <span aria-hidden="true">◎</span>
-                    <div><strong>Everything stays on this machine.</strong><p>Threads, reader position, and preferences remain in Weaver&apos;s local library.</p></div>
-                  </aside>
-                </section>
-              )}
-
               {activeSection === "model" && (
                 <section className="lab-settings-section lab-model-settings">
                   <div className="lab-setting-title">
-                    <span className="lab-model-eyebrow">[Voice binding]</span>
-                    <h3>Choose the voice behind Weaver</h3>
-                    <span>Your key opens the channel. Your model sets how deeply Weaver answers.</span>
+                    <p>[Voice binding.]</p>
+                    <h3>Bound voice</h3>
+                    <span>Your DeepSeek key opens the channel. The selected model gives that channel a voice.</span>
                   </div>
-
                   <div className="lab-voice-binding-card">
                     <div className="lab-binding-status">
-                      <span aria-hidden="true" className={apiKey.trim() ? "is-bound" : ""} />
+                      <span aria-hidden="true" className={apiKey.trim() && !apiKeyDisabled ? "is-bound" : ""} />
                       <div>
-                        <strong>{apiKey.trim() ? "Voice bound in this browser" : "The voice remains unbound"}</strong>
-                        <small>{apiKeyDisabled ? "Your stored key is currently disabled." : "Weaver never stores this key on the server."}</small>
+                        <strong>{apiKey.trim() && !apiKeyDisabled ? "Voice bound in this browser" : "The voice remains unbound"}</strong>
+                        <small>{apiKeyDisabled ? "Your stored key is currently disabled." : "Your key stays in this browser."}</small>
                       </div>
                     </div>
-
                     <label htmlFor="spell-surface-api-key">DeepSeek key</label>
                     <div className="lab-secret-input">
                       <input
@@ -452,27 +400,19 @@ export function SpellSurfaceSettings({
                         {showApiKey ? <EyeSlashIcon /> : <EyeIcon />}
                       </button>
                     </div>
-                    <small>
-                      Stored only in this browser. Sent with each request and
-                      never saved by the server. Leave empty and save to delete it.
-                    </small>
-
+                    <small>Stored only in this browser. Sent with each request and never saved by the server. Leave empty and apply to delete it.</small>
                     <label className="lab-check-row lab-binding-toggle">
                       <input
                         checked={apiKeyDisabled}
                         onChange={(event) => setApiKeyDisabledValue(event.target.checked)}
                         type="checkbox"
                       />
-                      <span>
-                        Disable this key
-                        <small>Keep the key stored while stopping it from being sent.</small>
-                      </span>
+                      <span>Disable this key<small>Keep the key stored while stopping it from being sent.</small></span>
                     </label>
                   </div>
-
                   <fieldset className="lab-model-picker">
-                    <legend>Answering depth</legend>
-                    <p>Choose how much time Weaver spends pulling an answer from the thread.</p>
+                    <legend>Model</legend>
+                    <p>Choose which DeepSeek model answers through Weaver.</p>
                     <div>
                       {AVAILABLE_MODELS.map((model) => (
                         <button
@@ -491,22 +431,103 @@ export function SpellSurfaceSettings({
                   </fieldset>
                 </section>
               )}
+
+              {activeSection === "appearance" && (
+                <section className="lab-settings-section lab-customize-section">
+                  <div className="lab-setting-title">
+                    <p>[The Hidden Thread keeps one face.]</p>
+                    <h3>Appearance</h3>
+                    <span>The Shadow Slave edition keeps its silver Spellweave and void-dark surface. Tune readability and motion without replacing its identity.</span>
+                  </div>
+                  <aside className="lab-fixed-identity"><span aria-hidden="true">✦</span><div><strong>Hidden Thread</strong><small>Void surface · immersive messages · still Soul Sea</small></div></aside>
+                  <div className="lab-customize-block">
+                    <h4>Rune appearance</h4>
+                    <div className="lab-choice-grid three">
+                      {RUNE_OPTIONS.map((option) => (
+                        <button aria-label={option.label} aria-pressed={preferences.runeMode === option.mode} className={preferences.runeMode === option.mode ? "on" : ""} key={option.mode} onClick={() => update("runeMode", option.mode)} type="button">
+                          <strong>{option.label}</strong><span>{option.description}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="lab-customize-block">
+                    <h4>Star web</h4>
+                    <div className="lab-segmented-control">
+                      {(["quiet", "balanced", "vivid"] as StarIntensity[]).map((intensity) => (
+                        <button aria-label={intensity} aria-pressed={preferences.starIntensity === intensity} className={preferences.starIntensity === intensity ? "on" : ""} key={intensity} onClick={() => update("starIntensity", intensity)} type="button">{intensity}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="lab-customize-row">
+                    <div>
+                      <h4>Reading density</h4>
+                      <div className="lab-segmented-control">
+                        {(["compact", "comfortable"] as Density[]).map((density) => (
+                          <button aria-label={`${titleCase(density)} text`} aria-pressed={preferences.density === density} className={preferences.density === density ? "on" : ""} key={density} onClick={() => update("density", density)} type="button">{density}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <h4>Text size</h4>
+                      <div className="lab-segmented-control">
+                        {(["small", "medium", "large"] as FontSize[]).map((fontSize) => (
+                          <button aria-label={fontSize} aria-pressed={preferences.fontSize === fontSize} className={preferences.fontSize === fontSize ? "on" : ""} key={fontSize} onClick={() => update("fontSize", fontSize)} type="button">{fontSize}</button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {activeSection === "privacy" && (
+                <section className="lab-settings-section">
+                  <div className="lab-setting-title">
+                    <p>[What the thread carries.]</p>
+                    <h3>Privacy and controls</h3>
+                    <span>A clear boundary between your Weaver installation, your browser, and DeepSeek.</span>
+                  </div>
+                  <div className="lab-privacy-boundaries">
+                    <p><strong>Local library</strong><span>Threads and reading preferences stay in Weaver&apos;s local library on this Weaver installation.</span></p>
+                    <p><strong>DeepSeek</strong><span>Messages are sent to DeepSeek when Weaver answers.</span></p>
+                    <p><strong>This browser</strong><span>Your API key stays in this browser and is attached to each request. Weaver does not save it on the server.</span></p>
+                  </div>
+                  <dl className="lab-shortcuts">
+                    <div><dt><kbd>Ctrl</kbd><kbd>,</kbd></dt><dd>open settings</dd></div>
+                    <div><dt><kbd>Esc</kbd></dt><dd>close or review unsaved changes</dd></div>
+                    <div><dt><kbd>Enter</kbd></dt><dd>send a message</dd></div>
+                  </dl>
+                </section>
+              )}
+
+              {activeSection === "rite" && (
+                <section className="lab-settings-section lab-rite-settings">
+                  <div className="lab-setting-title">
+                    <p>[The hidden thread has found you.]</p>
+                    <h3>First Nightmare</h3>
+                    <span>Return to the initiation rite at any time. Your current key and reader settings remain unchanged unless you choose to alter them there.</span>
+                  </div>
+                  {onReplayFirstNightmare && (
+                    <button className="lab-rite-replay" onClick={onReplayFirstNightmare} type="button">Replay First Nightmare</button>
+                  )}
+                </section>
+              )}
             </div>
-          </div>
+          </main>
         </div>
 
         <footer className="lab-settings-actions">
-          {onReplayFirstNightmare && (
-            <button
-              className="lab-settings-replay"
-              onClick={onReplayFirstNightmare}
-              type="button"
-            >
-              Replay First Nightmare
-            </button>
+          {discardPromptOpen ? (
+            <div className="lab-discard-prompt" role="alert">
+              <p><strong>Discard unsaved changes?</strong><span>Your current settings will remain untouched.</span></p>
+              <button onClick={() => setDiscardPromptOpen(false)} type="button">Keep editing</button>
+              <button className="danger" onClick={onClose} type="button">Discard changes</button>
+            </div>
+          ) : (
+            <>
+              <button onClick={requestClose} type="button">Discard</button>
+              <button className="primary" disabled={!isDirty} onClick={saveSettings} type="button">Apply changes</button>
+            </>
           )}
-          <button onClick={onClose} type="button">Leave unchanged</button>
-          <button className="primary" onClick={saveSettings} type="button">Apply settings</button>
         </footer>
       </section>
     </div>

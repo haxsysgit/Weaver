@@ -1,11 +1,12 @@
-# Plan 027: Conversation chamber, Thread Archive, and integration trial
+# Plan 027: Reader settings, Thread Archive, and integration trial
 
 > **Executor instructions:** Build the reader's daily Shadow Slave experience
-> as one continuous frontend plan. Start from the proven v1 surface, deepen the
-> conversation chamber, replace the temporary rail with the persistent Thread
-> Archive, then prove the complete fake-mode journey on a broad phone matrix and
-> desktop. Stop at each owner checkpoint. No live model request, real key,
-> deployment, or backend contract change belongs here.
+> as one continuous frontend plan. Preserve the completed transparent
+> Conversation Chamber, rebuild reader settings as a proper Soul Sea appraisal,
+> replace the temporary rail with the persistent Thread Archive, then prove the
+> complete fake-mode journey on phones and desktop. Stop at each owner
+> checkpoint. No live model request, real key, deployment, or backend contract
+> change belongs here.
 
 ## Status
 
@@ -63,14 +64,23 @@
     The frontend distinguishes connection loss, an unavailable model or key,
     a busy or missing thread, interruption, execution limit, saved-state
     failure, and an unknown failure without exposing raw provider details.
+11. (2026-08-21) The completed Conversation Chamber becomes the foundation for
+    the remaining plan. Checkpoint one is the Soul Sea Reader Appraisal:
+    familiar settings behavior, a mobile index and detail flow, desktop thread
+    navigation, reader position joined with spoiler protection, a fixed Hidden
+    Thread Edition identity, accurate privacy copy, and First Nightmare replay
+    inside its own section.
+12. (2026-08-21) The owner accepted the Soul Sea Reader Appraisal after the
+    visible Soul Sea, clean-close, and unframed close-control repairs.
 
 ## Scope
 
-- **Checkpoint one, Conversation Chamber:** rework `Message.tsx`, Markdown,
-  Composer, and the live chat shell into the accepted transparent inscription
-  and binding-point language. Add safe chapter-reference knots from visible
-  model labels only. Preserve copy, quote, regenerate, cancel, retry, selection
-  quoting, transcript restoration, auto-scroll, and software-keyboard use.
+- **Checkpoint one, Soul Sea Reader Appraisal:** rebuild the existing settings
+  modal as a full-screen phone settings flow and a threaded desktop appraisal.
+  Join chapter position and spoiler protection, separate reading tier from
+  model choice, keep the Shadow Slave Edition identity fixed, retain useful
+  visual controls, correct privacy language, and move First Nightmare replay
+  into its own section.
 - **Checkpoint two, Thread Archive:** consume Plan 023's
   `updateConversation(conversationId, patch)` contract, add controller-level
   metadata updates, replace `SpellSurfaceRail.tsx` with `ThreadArchive.tsx`,
@@ -100,10 +110,10 @@
 
 ## Deterministic proof / verification floor
 
-1. `npm test` passes from the repository root. It includes message structure,
-   Markdown safety, composer context, bound and unbound status, streaming,
-   failure and retry, archive actions, restart persistence, and the full fake
-   integration journey.
+1. `npm test` passes from the repository root. It includes settings navigation,
+   reader state, dirty-state protection, message structure, Markdown safety,
+   bound and unbound status, streaming, failure and retry, archive actions,
+   restart persistence, and the full fake integration journey.
 2. `npm run build` passes and refreshes committed `src/weaver/web/dist/`.
 3. `uv run pytest` passes in full, including Plan 023 device-scope and
    persistence coverage.
@@ -148,13 +158,15 @@
      owner. Supersede drafted Plans 028 and 029 in the roadmap.
    - Commit admission records with `Plan 027: admit conversation and archive trial`.
 
-2. **Checkpoint one: Conversation Chamber**
-   - Inspect the existing v1 message, Markdown, composer, and chat shell.
-   - Write `conversation-contract.md`, then add failing tests for response
-     spine, reader shard, chapter knot, safe rendering, composer context, key
-     status, events, and reduced motion.
-   - Build the chamber from the accepted v1 surface, capture browser evidence,
-     run the focused floor, and ask the owner to review phone and desktop.
+2. **Checkpoint one: Soul Sea Reader Appraisal**
+   - Write `settings-contract.md` from the accepted Reader Appraisal concept
+     and inspect every existing preference and save path.
+   - Add failing tests for the mobile index and detail flow, desktop navigation,
+     chapter and volume derivation, spoiler protection, dirty-state protection,
+     accurate privacy copy, key privacy, and First Nightmare replay.
+   - Build from the existing Soul Sea and Hidden Thread materials, capture
+     browser evidence, run the focused floor, and ask the owner to review phone
+     and desktop.
    - STOP here for owner confirmation before Archive work.
 
 3. **Checkpoint two: Thread Archive**

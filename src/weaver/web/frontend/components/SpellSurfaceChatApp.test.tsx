@@ -157,10 +157,10 @@ describe("first Nightmare setup", () => {
 
     expect(screen.getByText("[The voice remains unbound.]")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Model and key settings" }));
-    const settings = await screen.findByRole("dialog", { name: "Soul Sea settings" });
-    fireEvent.click(within(settings).getByRole("button", { name: "Model" }));
+    const settings = await screen.findByRole("dialog", { name: "Reader Appraisal settings" });
+    fireEvent.click(within(settings).getByRole("button", { name: "Bound voice" }));
     fireEvent.click(within(settings).getByRole("checkbox", { name: /Disable this key/ }));
-    fireEvent.click(within(settings).getByRole("button", { name: "Apply settings" }));
+    fireEvent.click(within(settings).getByRole("button", { name: "Apply changes" }));
 
     expect(screen.queryByText("[The voice remains unbound.]")).toBeNull();
   });
@@ -173,13 +173,13 @@ describe("first Nightmare setup", () => {
     fireEvent.click(screen.getByRole("button", { name: "Model and key settings" }));
 
     const dialog = await screen.findByRole("dialog", {
-      name: "Soul Sea settings",
+      name: "Reader Appraisal settings",
     });
     expect(
       within(dialog).getByRole("img", { name: /Still Black Sea/ }),
     ).toBeVisible();
     fireEvent.click(
-      within(dialog).getByRole("button", { name: "Model" }),
+      within(dialog).getByRole("button", { name: "Bound voice" }),
     );
     const keyInput = within(dialog).getByLabelText("DeepSeek key");
     expect(keyInput).toBeVisible();
@@ -197,7 +197,10 @@ describe("first Nightmare setup", () => {
     render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
 
     fireEvent.click(screen.getByRole("button", { name: "Model and key settings" }));
-    const settings = await screen.findByRole("dialog", { name: "Soul Sea settings" });
+    const settings = await screen.findByRole("dialog", { name: "Reader Appraisal settings" });
+    fireEvent.click(
+      within(settings).getByRole("button", { name: "First Nightmare" }),
+    );
     fireEvent.click(
       within(settings).getByRole("button", { name: "Replay First Nightmare" }),
     );

@@ -414,7 +414,7 @@ export function ThemeLab() {
           onSave={(nextPreferences) => {
             setPreferences(nextPreferences);
             setSettingsOpen(false);
-            announce("[Your soul answers the change.]");
+            announce("[Reader state remembered.]");
           }}
         />
       )}

@@ -549,7 +549,7 @@ function SpellSurfaceChatSurface({
             setPreferences(nextPreferences);
             saveVisualPreferences(nextPreferences);
             setSettingsOpen(false);
-            announce("[Your soul answers the change.]");
+            announce("[Reader state remembered.]");
             void api.savePreferences(toApiPreferences(nextPreferences));
           }}
         />
