@@ -8,6 +8,18 @@ function renderInline(nodes: InlineNode[]): ReactNode[] {
     if (node.type === "text") {
       return <Fragment key={key}>{node.value}</Fragment>;
     }
+    if (node.type === "chapter-reference") {
+      return (
+        <span
+          aria-label={`Chapter reference: ${node.label}`}
+          className="chapter-reference-knot"
+          data-testid="chapter-reference-knot"
+          key={key}
+        >
+          {node.label}
+        </span>
+      );
+    }
     if (node.type === "strong") {
       return <strong key={key}>{renderInline(node.children)}</strong>;
     }

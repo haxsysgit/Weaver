@@ -112,6 +112,24 @@ describe("Composer", () => {
 
     expect(screen.queryByText("[The voice remains unbound.]")).toBeNull();
   });
+
+  it("shows the active reading boundary above the binding point", () => {
+    render(
+      <Composer
+        cancelling={false}
+        draft=""
+        onCancel={vi.fn()}
+        onDraftChange={vi.fn()}
+        onSubmit={vi.fn()}
+        onTierChange={vi.fn()}
+        tier="ascended"
+        turnActive={false}
+      />,
+    );
+
+    expect(screen.getByText("Shadow Slave")).toBeVisible();
+    expect(screen.getByText("Spoilers through your current chapter")).toBeVisible();
+  });
 describe("Composer reading tier", () => {
   it("opens the tier menu and reports the pick", async () => {
     const onTierChange = vi.fn();

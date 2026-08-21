@@ -2692,6 +2692,150 @@
   background: rgba(11, 11, 11, 0.9);
 }
 
+/* Conversation Chamber: replies are written into the Spellweave itself. */
+.spell-surface-live .message-weaver {
+  display: grid;
+  grid-template-columns: 34px minmax(0, min(680px, 88%));
+  gap: 12px;
+  align-items: stretch;
+}
+
+.spell-surface-live .weaver-response-spine {
+  position: relative;
+  display: flex;
+  min-height: 52px;
+  justify-content: center;
+}
+
+.spell-surface-live .weaver-response-spine::after {
+  position: absolute;
+  top: 33px;
+  bottom: -20px;
+  width: 1px;
+  content: "";
+  background: linear-gradient(
+    var(--edition-thread-silver),
+    rgba(203, 204, 204, 0.16) 72%,
+    transparent
+  );
+}
+
+.spell-surface-live .message-weaver:last-child .weaver-response-spine::after {
+  bottom: 12px;
+}
+
+.spell-surface-live .message-streaming .weaver-response-spine::after {
+  transform-origin: top;
+  animation: chamber-spine-extends var(--motion-smooth) var(--ease-weave) both;
+}
+
+.spell-surface-live .weaver-avatar {
+  position: relative;
+  z-index: 1;
+  width: 28px;
+  height: 28px;
+  flex-basis: 28px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.spell-surface-live .weaver-avatar .weaver-mark-icon {
+  width: 28px;
+  height: 28px;
+  filter: saturate(0.7) drop-shadow(0 0 7px rgba(183, 154, 98, 0.2));
+}
+
+.spell-surface-live .weaver-response-body {
+  min-width: 0;
+  padding: 2px 0 18px;
+}
+
+.spell-surface-live .weaver-response-body .message-role {
+  margin-bottom: 8px;
+  color: var(--edition-appraisal-gold);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.spell-surface-live .weaver-response-body .markdown-body {
+  max-width: 64ch;
+  color: var(--edition-reader-ivory);
+}
+
+.spell-surface-live .owner-message-shard {
+  padding: 14px 17px;
+  color: var(--edition-reader-ivory);
+  border: 1px solid rgba(203, 204, 204, 0.22);
+  border-radius: 16px 5px 16px 16px;
+  background:
+    linear-gradient(135deg, rgba(37, 38, 39, 0.7), rgba(5, 5, 5, 0.3)),
+    rgba(5, 5, 5, 0.3);
+  box-shadow: inset 0 1px rgba(203, 204, 204, 0.05);
+  font-size: 1rem;
+  line-height: 1.62;
+}
+
+.spell-surface-live .chapter-reference-knot {
+  display: inline-flex;
+  margin: 0 0.08em;
+  padding: 0.08em 0.42em;
+  color: var(--edition-appraisal-gold);
+  border: 1px solid rgba(183, 154, 98, 0.34);
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 0.78em;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.spell-surface-live .composer-reading-context {
+  display: flex;
+  min-width: 0;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 0 7px;
+  color: rgba(203, 204, 204, 0.74);
+  font-size: 11px;
+  letter-spacing: 0.035em;
+}
+
+.spell-surface-live .composer-reading-context span:first-child {
+  color: var(--edition-appraisal-gold);
+}
+
+@keyframes chamber-spine-extends {
+  from {
+    opacity: 0.35;
+    transform: scaleY(0.25);
+  }
+}
+
+@media (max-width: 767px) {
+  .spell-surface-live .message-weaver {
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 9px;
+  }
+
+  .spell-surface-live .owner-message-shard {
+    padding: 13px 15px;
+  }
+
+  .spell-surface-live .composer-reading-context {
+    overflow: hidden;
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spell-surface-live .message-streaming .weaver-response-spine::after {
+    animation: none;
+  }
+}
+
 .spell-surface-live .lab-thread-row.active,
 .spell-surface-live .lab-new-thread,
 .spell-surface-live .lab-rail-footer > button,

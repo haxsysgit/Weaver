@@ -1,5 +1,6 @@
 export type InlineNode =
   | { type: "text"; value: string }
+  | { type: "chapter-reference"; label: string }
   | { type: "strong"; children: InlineNode[] }
   | { type: "emphasis"; children: InlineNode[] }
   | { type: "code"; value: string }
@@ -14,6 +15,7 @@ export type MarkdownBlock =
   | { type: "rule" };
 
 const INLINE_TOKEN = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g;
+const CHAPTER_REFERENCE = /\b(?:chapter|ch\.)\s+\d+\b/gi;
 
 function isSafeLink(href: string): boolean {
   try {
@@ -25,6 +27,21 @@ function isSafeLink(href: string): boolean {
 }
 
 function appendText(nodes: InlineNode[], value: string): void {
+  if (!value) {
+    return;
+  }
+
+  let cursor = 0;
+  for (const match of value.matchAll(CHAPTER_REFERENCE)) {
+    const referenceStart = match.index ?? 0;
+    appendPlainText(nodes, value.slice(cursor, referenceStart));
+    nodes.push({ type: "chapter-reference", label: match[0] });
+    cursor = referenceStart + match[0].length;
+  }
+  appendPlainText(nodes, value.slice(cursor));
+}
+
+function appendPlainText(nodes: InlineNode[], value: string): void {
   if (!value) {
     return;
   }

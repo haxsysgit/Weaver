@@ -45,4 +45,19 @@ describe("parseMarkdown", () => {
       ],
     });
   });
+
+  it("marks visible chapter labels as reference knots without creating links", () => {
+    const blocks = parseMarkdown("Look at chapter 709, then ch. 710.");
+
+    expect(blocks[0]).toMatchObject({
+      type: "paragraph",
+      children: [
+        { type: "text", value: "Look at " },
+        { type: "chapter-reference", label: "chapter 709" },
+        { type: "text", value: ", then " },
+        { type: "chapter-reference", label: "ch. 710" },
+        { type: "text", value: "." },
+      ],
+    });
+  });
 });

@@ -9,12 +9,14 @@ const TIERS: ReadingTier[] = ["awakened", "ascended", "transcendent"];
 interface ComposerProps {
   cancelling: boolean;
   draft: string;
+  editionName?: string;
   inputLabel?: string;
   onCancel: () => void;
   onDraftChange: (value: string) => void;
   onSubmit: (value: string) => void;
   onTierChange: (tier: ReadingTier) => void;
   placeholder?: string;
+  spoilerBoundary?: string;
   sendLabel?: string;
   stopLabel?: string;
   stoppingLabel?: string;
@@ -27,12 +29,14 @@ interface ComposerProps {
 export function Composer({
   cancelling,
   draft,
+  editionName = "Shadow Slave",
   inputLabel = "Message assistant",
   onCancel,
   onDraftChange,
   onSubmit,
   onTierChange,
   placeholder = "Write a message...",
+  spoilerBoundary = "Spoilers through your current chapter",
   sendLabel = "Send message",
   stopLabel = "Stop assistant",
   stoppingLabel = "Stopping assistant",
@@ -96,6 +100,11 @@ export function Composer({
 
   return (
     <div className="composer-wrap">
+      <div aria-label="Reading boundary" className="composer-reading-context">
+        <span>{editionName}</span>
+        <span aria-hidden="true">✦</span>
+        <span>{spoilerBoundary}</span>
+      </div>
       <div className="composer-shell">
         <textarea
           aria-label={inputLabel}

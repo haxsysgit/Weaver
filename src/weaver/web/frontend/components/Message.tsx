@@ -66,7 +66,9 @@ export function Message({
     return (
       <article className="message message-owner">
         <div className="owner-message-content">
-          <div className="owner-bubble">{message.content}</div>
+          <div className="owner-message-shard" data-testid="owner-message-shard">
+            {message.content}
+          </div>
           <div className="message-actions">
             <button aria-label="Copy owner message" onClick={copyMessage} type="button">
               <CopyIcon />
@@ -82,10 +84,17 @@ export function Message({
     <article
       className={`message message-weaver ${message.streaming ? "message-streaming" : ""}`}
     >
-      <div className="weaver-avatar">
-        <Mark compact />
+      <div
+        aria-hidden="true"
+        className="weaver-response-spine"
+        data-streaming={message.streaming ? "true" : "false"}
+        data-testid="weaver-response-spine"
+      >
+        <div className="weaver-avatar">
+          <Mark compact />
+        </div>
       </div>
-      <div className="weaver-message-content">
+      <div className="weaver-response-body">
         <div className="message-role">{assistantName}</div>
         <div className="markdown-body" ref={contentRef}>
           {message.content ? <Markdown>{message.content}</Markdown> : <FateWeavingLoader />}
