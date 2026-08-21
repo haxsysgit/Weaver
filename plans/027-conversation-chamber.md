@@ -31,9 +31,10 @@
 1. (2026-08-18) Weaver replies are inscriptions on the living Spellweave:
    pale editorial text, a thin silver response spine, and a small unframed
    Weaver mark. Large assistant cards are removed.
-2. (2026-08-18) Reader messages remain compact black-glass shards aligned
-   right. They retain conversational orientation without duplicating generic
-   chat bubbles.
+2. (2026-08-21) Reader messages and Weaver replies are transparent rune text
+   written directly over the Spellweave. They have no card background, visible
+   border, glass panel, or enclosing frame. Reader text stays aligned right;
+   Weaver text stays anchored to its thin unframed response thread.
 3. (2026-08-18) The composer is a black-wood binding point with a fine silver
    inner edge, at least 16px input text, 48px phone controls, and a knot or
    needle send mark.
@@ -58,13 +59,17 @@
 9. (2026-08-21) Build from the accepted v1 UI and the Plan 025 Spellweave,
    rather than recreating the rejected prototype. The experience should feel
    alive, clear, and familiar to existing readers.
+10. (2026-08-21) Turn failures use distinct safe states and recovery actions.
+    The frontend distinguishes connection loss, an unavailable model or key,
+    a busy or missing thread, interruption, execution limit, saved-state
+    failure, and an unknown failure without exposing raw provider details.
 
 ## Scope
 
 - **Checkpoint one, Conversation Chamber:** rework `Message.tsx`, Markdown,
-  Composer, and the live chat shell into the accepted inscription, shard, and
-  binding-point language. Add safe chapter-reference knots from visible model
-  labels only. Preserve copy, quote, regenerate, cancel, retry, selection
+  Composer, and the live chat shell into the accepted transparent inscription
+  and binding-point language. Add safe chapter-reference knots from visible
+  model labels only. Preserve copy, quote, regenerate, cancel, retry, selection
   quoting, transcript restoration, auto-scroll, and software-keyboard use.
 - **Checkpoint two, Thread Archive:** consume Plan 023's
   `updateConversation(conversationId, patch)` contract, add controller-level

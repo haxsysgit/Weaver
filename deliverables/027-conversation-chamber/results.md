@@ -22,6 +22,24 @@ boundary above the binding point.
 The full frontend suite, final build verification, and Python suite remain
 reserved for checkpoint three by owner direction.
 
+### Owner checkpoint correction
+
+The owner rejected the first visual pass because reader messages still used a
+black-glass shard. The stale Plan 027 decision caused that mismatch. Checkpoint
+one remains open while both message roles return to transparent rune text on
+the Spellweave and the generic failure block becomes distinct safe recovery
+states.
+
+The repair added typed, safe recovery for connection loss, model failure,
+rate limits, a busy thread, a missing thread, interruption, incomplete output,
+execution limit, request rejection, server failure, saved-state failure, and an
+unknown failure. Raw exception and provider text no longer reaches recovery
+copy.
+
+- Focused repair Vitest passed 41/41 tests across six files.
+- `npx tsc --noEmit` passed.
+- The refreshed preview build passed and updated committed `dist/` assets.
+
 ## Status
 
 Not started.

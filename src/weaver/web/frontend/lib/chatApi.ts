@@ -63,9 +63,21 @@ interface RawStreamEvent {
   data: Record<string, unknown>;
 }
 
+export class ChatApiError extends Error {
+  readonly action: string;
+  readonly status: number;
+
+  constructor(action: string, status: number) {
+    super(`${action} failed (${status})`);
+    this.name = "ChatApiError";
+    this.action = action;
+    this.status = status;
+  }
+}
+
 async function requireJson<T>(response: Response, action: string): Promise<T> {
   if (!response.ok) {
-    throw new Error(`${action} failed (${response.status})`);
+    throw new ChatApiError(action, response.status);
   }
   return (await response.json()) as T;
 }
@@ -279,7 +291,7 @@ export function createHttpChatApi(fetcher: typeof fetch = fetch): ChatApi {
         },
       );
       if (!response.ok) {
-        throw new Error(`Sending the message failed (${response.status})`);
+        throw new ChatApiError("Sending the message", response.status);
       }
       yield* openTurnStream(conversationId);
     },
@@ -292,7 +304,7 @@ export function createHttpChatApi(fetcher: typeof fetch = fetch): ChatApi {
         { method: "POST" },
       );
       if (!response.ok) {
-        throw new Error(`Retrying failed (${response.status})`);
+        throw new ChatApiError("Retrying", response.status);
       }
       yield* openTurnStream(conversationId);
     },
@@ -307,7 +319,7 @@ export function createHttpChatApi(fetcher: typeof fetch = fetch): ChatApi {
         { method: "POST" },
       );
       if (!response.ok) {
-        throw new Error(`Regenerating failed (${response.status})`);
+        throw new ChatApiError("Regenerating", response.status);
       }
       yield* openTurnStream(conversationId);
     },
@@ -323,7 +335,7 @@ export function createHttpChatApi(fetcher: typeof fetch = fetch): ChatApi {
       if (response.status === 200) {
         return "idle";
       }
-      throw new Error(`Stopping the reply failed (${response.status})`);
+      throw new ChatApiError("Stopping the reply", response.status);
     },
   };
 }

@@ -197,16 +197,15 @@ export function ChatApp({
               />
             ))}
 
-            {chat.recoveryMessage && (
+            {chat.recovery && (
               <RecoveryPanel
                 chooseLabel={product.recoveryChooseLabel}
                 createLabel={product.recoveryCreateLabel}
-                message={chat.recoveryMessage}
+                issue={chat.recovery}
                 onChooseConversation={openConversationRail}
                 onCreateConversation={() => void createConversation()}
                 onRetry={() => void chat.retryLastTurn()}
                 retryLabel={product.recoveryRetryLabel}
-                title={product.recoveryTitle}
               />
             )}
           </div>

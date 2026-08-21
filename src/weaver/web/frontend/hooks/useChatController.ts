@@ -8,6 +8,12 @@ import type {
 } from "../lib/chatApi";
 import type { ChatProduct } from "../lib/product";
 import type { DisplayMessage } from "../lib/chatModel";
+import {
+  incompleteRecovery,
+  recoveryFromError,
+  recoveryFromStreamEvent,
+  type RecoveryIssue,
+} from "../lib/chatRecovery";
 
 export type TurnState = "idle" | "streaming" | "cancelling";
 
@@ -70,7 +76,7 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
   const [turnState, setTurnState] = useState<TurnState>("idle");
   const [liveReplyId, setLiveReplyId] = useState<string | null>(null);
   const [lastOwnerText, setLastOwnerText] = useState<string | null>(null);
-  const [recoveryMessage, setRecoveryMessage] = useState<string | null>(null);
+  const [recovery, setRecovery] = useState<RecoveryIssue | null>(null);
   const [bootError, setBootError] = useState<string | null>(null);
   const [activity, setActivity] = useState<ToolActivity[]>([]);
   const activeLoad = useRef(0);
@@ -127,9 +133,7 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
         localStorage.setItem(product.storageKey, nextConversationId);
       } catch (error) {
         if (mounted) {
-          setBootError(
-            error instanceof Error ? error.message : product.wakeErrorMessage,
-          );
+          setBootError(recoveryFromError(error).message);
         }
       }
     }
@@ -155,7 +159,7 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
     setMessages([]);
     setLastOwnerText(null);
     setLiveReplyId(null);
-    setRecoveryMessage(null);
+    setRecovery(null);
     localStorage.setItem(product.storageKey, created.conversation_id);
     await refreshConversations();
     return true;
@@ -201,7 +205,7 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
     setMessages(storedMessages.map(toDisplayMessage));
     setLastOwnerText(null);
     setLiveReplyId(null);
-    setRecoveryMessage(null);
+    setRecovery(null);
     localStorage.setItem(product.storageKey, nextConversationId);
     return true;
   }
@@ -245,7 +249,7 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
     }
 
     setMessages((current) => updateReply(current, replyId, partialReply, false));
-    setRecoveryMessage(event.message);
+    setRecovery(recoveryFromStreamEvent(event));
     return { text: partialReply, terminal: true };
   }
 
@@ -258,7 +262,7 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
     setDraft("");
     setLastOwnerText(text);
     setLiveReplyId(null);
-    setRecoveryMessage(null);
+    setRecovery(null);
     setActivity([]);
     setTurnState("streaming");
     setMessages((current) => [
@@ -280,17 +284,11 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
       }
       if (!terminalEventReceived) {
         setMessages((current) => updateReply(current, replyId, partialReply, false));
-        setRecoveryMessage(product.incompleteTurnMessage);
+        setRecovery(incompleteRecovery());
       }
     } catch (error) {
       setMessages((current) => updateReply(current, replyId, partialReply, false));
-      const message =
-        error instanceof Error ? error.message : product.connectionLostMessage;
-      setRecoveryMessage(
-        error instanceof Error
-          ? `${message} This turn cannot resume.`
-          : product.connectionLostMessage,
-      );
+      setRecovery(recoveryFromError(error));
     } finally {
       setTurnState("idle");
       try {
@@ -309,9 +307,7 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
     try {
       await api.cancelTurn(conversationId);
     } catch (error) {
-      setRecoveryMessage(
-        error instanceof Error ? error.message : product.cancelFailedMessage,
-      );
+      setRecovery(recoveryFromError(error));
       setTurnState("streaming");
     }
   }
@@ -326,7 +322,7 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
     const oldReplyId = liveReplyId;
     const replyId = localMessageId("assistant");
     setLiveReplyId(null);
-    setRecoveryMessage(null);
+    setRecovery(null);
     setActivity([]);
     setTurnState("streaming");
     setMessages((current) => [
@@ -345,7 +341,7 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
     }
     const replyId = localMessageId("assistant");
     setLiveReplyId(null);
-    setRecoveryMessage(null);
+    setRecovery(null);
     setActivity([]);
     setTurnState("streaming");
     setMessages((current) => [
@@ -377,19 +373,13 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
         setMessages((current) =>
           updateReply(current, replyId, partialReply, false),
         );
-        setRecoveryMessage(product.incompleteTurnMessage);
+        setRecovery(incompleteRecovery());
       }
     } catch (error) {
       setMessages((current) =>
         updateReply(current, replyId, partialReply, false),
       );
-      const message =
-        error instanceof Error ? error.message : product.connectionLostMessage;
-      setRecoveryMessage(
-        error instanceof Error
-          ? `${message} This turn cannot resume.`
-          : product.connectionLostMessage,
-      );
+      setRecovery(recoveryFromError(error));
     } finally {
       setTurnState("idle");
       try {
@@ -423,7 +413,8 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
     lastReplyId,
     liveReplyId,
     messages,
-    recoveryMessage,
+    recovery,
+    recoveryMessage: recovery?.message ?? null,
     regenerateReply,
     retryLastTurn,
     selectConversation,

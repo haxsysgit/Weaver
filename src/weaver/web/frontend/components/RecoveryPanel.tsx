@@ -1,32 +1,36 @@
+import type { RecoveryIssue } from "../lib/chatRecovery";
+
 interface RecoveryPanelProps {
   chooseLabel: string;
   createLabel: string;
-  message: string;
+  issue: RecoveryIssue;
   onChooseConversation: () => void;
   onCreateConversation: () => void;
   onRetry?: () => void;
   retryLabel?: string;
-  title: string;
 }
 
 export function RecoveryPanel({
   chooseLabel,
   createLabel,
-  message,
+  issue,
   onChooseConversation,
   onCreateConversation,
   onRetry,
   retryLabel,
-  title,
 }: RecoveryPanelProps) {
   return (
-    <section aria-label="Turn recovery" className="recovery-panel">
+    <section
+      aria-label="Turn recovery"
+      className="recovery-panel"
+      data-recovery-kind={issue.kind}
+    >
       <span className="recovery-knot" />
       <div>
-        <strong>{title}</strong>
-        <p>{message}</p>
+        <strong>{issue.title}</strong>
+        <p>{issue.message}</p>
         <div className="recovery-actions">
-          {onRetry && retryLabel && (
+          {issue.canRetry && onRetry && retryLabel && (
             <button className="recovery-retry" onClick={onRetry} type="button">
               {retryLabel}
             </button>

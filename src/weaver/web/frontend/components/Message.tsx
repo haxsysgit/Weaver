@@ -66,7 +66,11 @@ export function Message({
     return (
       <article className="message message-owner">
         <div className="owner-message-content">
-          <div className="owner-message-shard" data-testid="owner-message-shard">
+          <div
+            className="owner-message-runes"
+            data-surface="spellweave"
+            data-testid="owner-message-runes"
+          >
             {message.content}
           </div>
           <div className="message-actions">
@@ -94,7 +98,11 @@ export function Message({
           <Mark compact />
         </div>
       </div>
-      <div className="weaver-response-body">
+      <div
+        className="weaver-response-body"
+        data-surface="spellweave"
+        data-testid="weaver-message-runes"
+      >
         <div className="message-role">{assistantName}</div>
         <div className="markdown-body" ref={contentRef}>
           {message.content ? <Markdown>{message.content}</Markdown> : <FateWeavingLoader />}

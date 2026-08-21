@@ -495,16 +495,15 @@ function SpellSurfaceChatSurface({
                 regenerateLabel={weaverProduct.regenerateLabel}
               />
             ))}
-            {chat.recoveryMessage && (
+            {chat.recovery && (
               <RecoveryPanel
                 chooseLabel={weaverProduct.recoveryChooseLabel}
                 createLabel={weaverProduct.recoveryCreateLabel}
-                message={chat.recoveryMessage}
+                issue={chat.recovery}
                 onChooseConversation={openRail}
                 onCreateConversation={() => void createThread()}
                 onRetry={() => void chat.retryLastTurn()}
                 retryLabel={weaverProduct.recoveryRetryLabel}
-                title={weaverProduct.recoveryTitle}
               />
             )}
           </div>

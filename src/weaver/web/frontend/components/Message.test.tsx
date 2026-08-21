@@ -30,15 +30,33 @@ describe("Conversation Chamber messages", () => {
     expect(document.querySelector(".weaver-message-content")).toBeNull();
   });
 
-  it("renders the reader message as a compact shard", () => {
+  it("renders the reader message as transparent runes on the Spellweave", () => {
     renderMessage({
       content: "Was Nephis already planning that?",
       id: "owner-1",
       role: "owner",
     });
 
-    expect(screen.getByTestId("owner-message-shard")).toHaveTextContent(
+    expect(screen.getByTestId("owner-message-runes")).toHaveTextContent(
       "Was Nephis already planning that?",
+    );
+    expect(screen.getByTestId("owner-message-runes")).toHaveAttribute(
+      "data-surface",
+      "spellweave",
+    );
+    expect(document.querySelector(".owner-message-shard")).toBeNull();
+  });
+
+  it("keeps the Weaver answer on the same transparent surface", () => {
+    renderMessage({
+      content: "The answer settles directly into the weave.",
+      id: "weaver-2",
+      role: "weaver",
+    });
+
+    expect(screen.getByTestId("weaver-message-runes")).toHaveAttribute(
+      "data-surface",
+      "spellweave",
     );
   });
 

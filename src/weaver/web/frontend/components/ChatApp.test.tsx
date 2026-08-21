@@ -220,7 +220,7 @@ describe("ChatApp", () => {
       controlled.release({ type: "interrupted", message: "The weave was cut." });
     });
 
-    expect(await screen.findByText("The weave was cut.")).toBeVisible();
+    expect(await screen.findByText("[The thread was cut.]")).toBeVisible();
     expect(screen.getByRole("button", { name: "Start a new weave" })).toBeVisible();
     const chooseAnother = screen.getByRole("button", {
       name: "Choose another thread",
@@ -447,7 +447,11 @@ it("retries a broken turn from the recovery panel", async () => {
   );
   (api.streamTurn as ReturnType<typeof vi.fn>).mockReturnValue(
     (async function* () {
-      yield { type: "failed" as const, message: "Model stream failed." };
+      yield {
+        type: "failed" as const,
+        code: "model_failed",
+        message: "Model stream failed.",
+      };
     })(),
   );
 
@@ -461,13 +465,13 @@ it("retries a broken turn from the recovery panel", async () => {
   });
   fireEvent.keyDown(composer, { key: "Enter" });
 
-  const recovery = await screen.findByText("The thread broke.");
+  const recovery = await screen.findByText("[The bound voice did not answer.]");
   expect(recovery).toBeTruthy();
 
   fireEvent.click(screen.getByRole("button", { name: "Retry" }));
 
   await screen.findByText("retried answer");
-  expect(screen.queryByText("The thread broke.")).toBeNull();
+  expect(screen.queryByText("[The bound voice did not answer.]")).toBeNull();
   expect(api.retryTurn).toHaveBeenCalledTimes(1);
 });
 
