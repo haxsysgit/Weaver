@@ -29,6 +29,14 @@ function createApi(): ChatApi {
     retryTurn: vi.fn().mockReturnValue((async function* () {})()),
     savePreferences: vi.fn().mockImplementation(async (preferences) => preferences),
     streamTurn: vi.fn().mockReturnValue((async function* () {})()),
+    updateConversation: vi.fn().mockImplementation(async (_conversationId, patch) => ({
+      archived: patch.archived ?? false,
+      conversation_id: "thread-1",
+      created_at: "2026-08-21T12:00:00Z",
+      edition_id: "shadow-slave",
+      pinned: patch.pinned ?? false,
+      title: typeof patch.title === "string" ? patch.title : "New chat",
+    })),
   };
 }
 

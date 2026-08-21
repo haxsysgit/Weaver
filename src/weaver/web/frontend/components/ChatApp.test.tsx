@@ -54,8 +54,22 @@ function createApi(stream: AsyncIterable<StreamEvent>): ChatApi {
     }),
     createConversation: vi.fn().mockResolvedValue({ conversation_id: "thread-1" }),
     listConversations: vi.fn().mockResolvedValue([
-      { conversation_id: "thread-1", title: "Asterion", created_at: "2026-08-08T10:00:00Z" },
-      { conversation_id: "thread-2", title: "Cassie's choice", created_at: "2026-08-01T10:00:00Z" },
+      {
+        archived: false,
+        conversation_id: "thread-1",
+        created_at: "2026-08-08T10:00:00Z",
+        edition_id: "shadow-slave",
+        pinned: false,
+        title: "Asterion",
+      },
+      {
+        archived: false,
+        conversation_id: "thread-2",
+        created_at: "2026-08-01T10:00:00Z",
+        edition_id: "shadow-slave",
+        pinned: false,
+        title: "Cassie's choice",
+      },
     ]),
     loadMessages: vi.fn().mockImplementation(async (conversationId: string) => {
       if (conversationId === "thread-2") {
@@ -74,6 +88,7 @@ function createApi(stream: AsyncIterable<StreamEvent>): ChatApi {
     streamTurn: vi.fn().mockReturnValue(stream),
     retryTurn: vi.fn().mockReturnValue(stream),
     regenerateTurn: vi.fn().mockReturnValue(stream),
+    updateConversation: vi.fn(),
   };
 }
 

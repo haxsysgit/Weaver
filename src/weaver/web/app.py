@@ -93,8 +93,8 @@ class ConversationMetadataBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     title: str | None = Field(default=None, max_length=80)
-    archived: bool | None = None
-    pinned: bool | None = None
+    archived: bool = False
+    pinned: bool = False
 
 
 def _reject_blank(message: str) -> None:

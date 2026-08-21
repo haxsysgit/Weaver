@@ -189,6 +189,20 @@ async def test_device_scoping_isolates_conversations(client) -> None:
     await _no_canaries(hidden.text)
 
 
+async def test_conversation_listing_returns_every_device_owned_thread(client) -> None:
+    device = {"X-Device-Id": "archive-reader"}
+    conversation_ids = []
+    for _ in range(15):
+        response = await client.post("/api/conversations", headers=device)
+        conversation_ids.append(response.json()["conversation_id"])
+
+    listed = await client.get("/api/conversations", headers=device)
+
+    assert listed.status_code == 200
+    assert len(listed.json()) == 15
+    assert {row["conversation_id"] for row in listed.json()} == set(conversation_ids)
+
+
 async def test_conversation_metadata_patch_returns_durable_summary(client) -> None:
     device = {"X-Device-Id": "metadata-reader"}
     conversation_id = (
@@ -240,6 +254,8 @@ async def test_conversation_metadata_patch_returns_durable_summary(client) -> No
         {},
         {"title": "   "},
         {"title": "x" * 81},
+        {"archived": None},
+        {"pinned": None},
         {"edition_id": "another-edition"},
         {"unknown": True},
     ],

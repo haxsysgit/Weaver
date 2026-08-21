@@ -1,9 +1,18 @@
 import { weaverHeaders } from "./identity";
 
 export interface ConversationSummary {
+  archived: boolean;
   conversation_id: string;
+  created_at: string;
+  edition_id: string;
+  pinned: boolean;
   title: string;
-  created_at?: string;
+}
+
+export interface ConversationMetadataPatch {
+  archived?: boolean;
+  pinned?: boolean;
+  title?: string | null;
 }
 
 export interface StoredMessage {
@@ -46,6 +55,10 @@ export interface Passage {
 
 export interface ChatApi {
   listConversations(): Promise<ConversationSummary[]>;
+  updateConversation(
+    conversationId: string,
+    patch: ConversationMetadataPatch,
+  ): Promise<ConversationSummary>;
   createConversation(): Promise<{ conversation_id: string }>;
   loadMessages(conversationId: string): Promise<StoredMessage[]>;
   streamTurn(conversationId: string, message: string): AsyncIterable<StreamEvent>;
@@ -239,9 +252,10 @@ export function createHttpChatApi(fetcher: typeof fetch = fetch): ChatApi {
     },
 
     async deleteConversation(conversationId: string) {
-      const response = await authed(`/api/conversations/${conversationId}`, {
-        method: "DELETE",
-      });
+      const response = await authed(
+        `/api/conversations/${encodeURIComponent(conversationId)}`,
+        { method: "DELETE" },
+      );
       return requireJson<{ deleted: string }>(response, "Deleting conversation");
     },
 
@@ -264,6 +278,18 @@ export function createHttpChatApi(fetcher: typeof fetch = fetch): ChatApi {
     async listConversations() {
       const response = await authed("/api/conversations");
       return requireJson<ConversationSummary[]>(response, "Loading conversations");
+    },
+
+    async updateConversation(conversationId, patch) {
+      const response = await authed(
+        `/api/conversations/${encodeURIComponent(conversationId)}`,
+        {
+          body: JSON.stringify(patch),
+          headers: { "Content-Type": "application/json" },
+          method: "PATCH",
+        },
+      );
+      return requireJson<ConversationSummary>(response, "Updating conversation");
     },
 
     async createConversation() {

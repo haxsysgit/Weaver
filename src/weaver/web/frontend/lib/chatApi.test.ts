@@ -48,4 +48,35 @@ describe("createHttpChatApi authed wrapper", () => {
     await api.listConversations();
     expect(spy).toHaveBeenCalledTimes(1);
   });
+
+  it("persists a partial conversation update through the authenticated PATCH route", async () => {
+    const updated = {
+      archived: false,
+      conversation_id: "thread/one",
+      created_at: "2026-08-21T12:00:00Z",
+      edition_id: "shadow-slave",
+      pinned: true,
+      title: "Ariel and the Tomb",
+    };
+    const spy = vi.fn(async (_input: string, _init?: RequestInit) => {
+      return new Response(JSON.stringify(updated), {
+        headers: { "Content-Type": "application/json" },
+        status: 200,
+      });
+    });
+    const api = createHttpChatApi(spy as unknown as typeof fetch);
+
+    await api.updateConversation("thread/one", { pinned: true });
+
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0][0]).toBe("/api/conversations/thread%2Fone");
+    expect(spy.mock.calls[0][1]).toMatchObject({
+      body: JSON.stringify({ pinned: true }),
+      method: "PATCH",
+    });
+    expect(spy.mock.calls[0][1]?.headers).toMatchObject({
+      "Content-Type": "application/json",
+      "X-Device-Id": expect.any(String),
+    });
+  });
 });

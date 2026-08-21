@@ -93,4 +93,19 @@ rebuilt.
 ## Status
 
 Checkpoint one was accepted by the owner on 2026-08-21. Thread Archive work
-may begin.
+began from the locked Plan 023 metadata contract and the accepted v1 rail.
+
+The first checkpoint-two inspection found that the shipped listing stopped at
+12 conversations even though Plan 023 promised every device-owned summary.
+The owner expanded Plan 027 to full-stack work on 2026-08-21 so this dependency
+can be repaired before the Archive UI relies on it.
+
+The backend red proof returned 12 of 15 device-owned threads. It also exposed
+that explicit null archive or pin values escaped validation and raised a
+repository error. The repair removes the default listing limit while retaining
+an explicit internal limit option, and rejects null booleans with 422. The
+focused backend recheck passed 8/8 tests and Ruff passed.
+
+The browser API now carries the full Plan 023 summary and exposes the partial
+authenticated PATCH method. Its focused Vitest passed 4/4 tests and TypeScript
+passed.

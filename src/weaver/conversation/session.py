@@ -247,7 +247,7 @@ class SessionWeave:
         }
 
     async def list_conversations(
-        self, limit: int = 12, device_id: str = ""
+        self, limit: int | None = None, device_id: str = ""
     ) -> list[ConversationSummary]:
         """Return newest-first summaries owned by one exact device id."""
         assert self._repo is not None

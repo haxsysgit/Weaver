@@ -1,12 +1,13 @@
 # Plan 027: Reader settings, Thread Archive, and integration trial
 
 > **Executor instructions:** Build the reader's daily Shadow Slave experience
-> as one continuous frontend plan. Preserve the completed transparent
+> as one continuous full-stack plan. Preserve the completed transparent
 > Conversation Chamber, rebuild reader settings as a proper Soul Sea appraisal,
 > replace the temporary rail with the persistent Thread Archive, then prove the
-> complete fake-mode journey on phones and desktop. Stop at each owner
-> checkpoint. No live model request, real key, deployment, or backend contract
-> change belongs here.
+> complete fake-mode journey on phones and desktop. Repair the backend paths
+> these surfaces require, with focused Python proof before integration. Stop at
+> each owner checkpoint. No live model request, real key, or deployment belongs
+> here.
 
 ## Status
 
@@ -72,6 +73,11 @@
     inside its own section.
 12. (2026-08-21) The owner accepted the Soul Sea Reader Appraisal after the
     visible Soul Sea, clean-close, and unframed close-control repairs.
+13. (2026-08-21) Plan 027 is full-stack. The owner authorized backend and
+    frontend changes required to complete its accepted settings, Archive, and
+    integration checkpoints. The first dependency repair removes the hidden
+    12-conversation listing cap so the Archive can show every device-owned
+    thread.
 
 ## Scope
 
@@ -86,7 +92,8 @@
   metadata updates, replace `SpellSurfaceRail.tsx` with `ThreadArchive.tsx`,
   and remove local pin/archive/title state. Implement pin, rename, archive,
   restore, delete confirmation, action failure, active-thread recovery, focus,
-  safe areas, scroll lock, and desktop collapse.
+  safe areas, scroll lock, and desktop collapse. Repair conversation listing
+  so every device-owned active, pinned, and archived thread reaches the UI.
 - **Checkpoint three, Integration Trial:** add a deterministic fake API journey
   that survives remount. Verify the rite handoff, conversation states, safe
   Markdown, archive actions, reload, browser restart, service worker, motion,
@@ -97,8 +104,10 @@
 
 ## Out of scope
 
-- Backend routes, schemas, migrations, or state changes. Plan 023 already owns
-  the metadata contract this plan consumes.
+- Backend work unrelated to the settings, conversation metadata, Thread
+  Archive, or deterministic integration journey owned by this plan.
+- New persistence concepts beyond Plan 023's existing title, archive, pin,
+  Edition, device ownership, and hard-delete contract.
 - A new Edition, LOTM or Kill the Sun presentation, accounts, cloud sync,
   billing, search, folders, tags, or bulk actions.
 - Changes to model prompts, retrieval, answer quality, private source material,
@@ -136,9 +145,10 @@
 ## STOP conditions
 
 - If Plans 022, 023, 025, or 026 are no longer closed, STOP.
-- If a requested result needs a backend contract change, private source text,
-  key exposure, rendered model HTML, or a second background engine, STOP and
-  bring the conflict to the owner.
+- If a requested result needs private source text, key exposure, rendered
+  model HTML, a second background engine, or backend work outside this plan's
+  settings, conversation, Archive, and integration paths, STOP and bring the
+  conflict to the owner.
 - If a chamber checkpoint is rejected, repair it before beginning Archive work.
   If Archive is rejected, repair it before the integration trial.
 - If motion, depth, or foreground effects harm reading contrast, selection,
@@ -172,6 +182,8 @@
 3. **Checkpoint two: Thread Archive**
    - Write `archive-contract.md` from the Plan 023 API shape and current v1
      rail behavior.
+   - Repair the hidden 12-conversation listing cap with a greater-than-12
+     device-owned backend regression before building the Archive UI.
    - Add failing controller and component tests for pin, rename, archive,
      restore, delete confirmation, failure, ordering, focus, and restart.
    - Build the responsive Archive, remove temporary client metadata stores,

@@ -264,12 +264,11 @@ class ConversationRepository:
 
     async def load_conversation_summaries(
         self,
-        limit: int = 12,
+        limit: int | None = None,
         device_id: str = "",
     ) -> list[ConversationSummaryRecord]:
         """Return newest-first, device-owned conversation metadata."""
-        async with self._db.execute(
-            """
+        query = """
             SELECT
                 c.id,
                 c.created_at,
@@ -286,9 +285,15 @@ class ConversationRepository:
             FROM conversation c
             WHERE c.device_id = ?
             ORDER BY c.created_at DESC
-            LIMIT ?
-            """,
-            (device_id, limit),
+        """
+        parameters: tuple[str | int, ...] = (device_id,)
+        if limit is not None:
+            query += " LIMIT ?"
+            parameters = (device_id, limit)
+
+        async with self._db.execute(
+            query,
+            parameters,
         ) as cur:
             rows = await cur.fetchall()
         return [
