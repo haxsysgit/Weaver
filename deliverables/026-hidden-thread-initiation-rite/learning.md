@@ -53,9 +53,8 @@ no named handset represents mobile support.
   generated mask image grounded in a bounded reread and the accepted product
   identity. Supplied art remains reference-only.
 - That mask becomes the awakening image, appraisal seal, and small Weaver mark.
-- Replay-only review may use a direct random fun appraisal and must store no
-  key. The review path and its completion copy are removed at Plan 029's release
-  gate.
+- The temporary replay-only fake appraisal was removed before the owner-approved
+  1.1.0 release. Replay continues to preserve the saved first-run state.
 - Pin failure and archived-state distinction are recorded for Plan 028 after a
   read-only reproduction. They stay outside Plan 026 implementation.
 - The mask scene fits inside phone and desktop viewports, then recedes behind

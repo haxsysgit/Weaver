@@ -22,18 +22,10 @@ interface FirstNightmareSetupProps {
   onDefer: () => void;
   onKeyStored?: () => void;
   onRevealStart?: () => void;
-  reviewMode?: boolean;
+  preserveFirstRunState?: boolean;
 }
 
 const APPRAISAL_TIERS = ["Good", "Exceptional", "Remarkable", "Glorious"] as const;
-const REVIEW_APPRAISALS = [
-  "Glorious",
-  "Fated",
-  "Treacherous",
-  "Suspicious",
-  "Remarkable",
-  "Fraudulent",
-] as const;
 const FOCUSABLE_CONTROLS = [
   "a[href]",
   "button:not(:disabled)",
@@ -89,15 +81,13 @@ export function FirstNightmareSetup({
   onDefer,
   onKeyStored,
   onRevealStart,
-  reviewMode = false,
+  preserveFirstRunState = false,
 }: FirstNightmareSetupProps) {
   const [step, setStep] = useState<FirstNightmareStep>(initialStep);
   const [apiKey, setApiKeyValue] = useState(getApiKey);
   const [showApiKey, setShowApiKey] = useState(false);
   const [storageError, setStorageError] = useState(false);
   const [appraisalIndex, setAppraisalIndex] = useState(0);
-  const [previewOnly, setPreviewOnly] = useState(false);
-  const [reviewAppraisal, setReviewAppraisal] = useState<string | null>(null);
   const [revealing, setRevealing] = useState(false);
   const dialogRef = useRef<HTMLElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(
@@ -126,7 +116,7 @@ export function FirstNightmareSetup({
   }, [appraisalIndex, step]);
 
   function deferSetup() {
-    if (!reviewMode) {
+    if (!preserveFirstRunState) {
       setFirstNightmareState("deferred");
     }
     onDefer();
@@ -137,22 +127,12 @@ export function FirstNightmareSetup({
       setApiKey(apiKey);
       setFirstNightmareState("completed");
       setStorageError(false);
-      setPreviewOnly(false);
-      setReviewAppraisal(null);
       setAppraisalIndex(prefersReducedMotion() ? APPRAISAL_TIERS.length - 1 : 0);
       onKeyStored?.();
       setStep(4);
     } catch {
       setStorageError(true);
     }
-  }
-
-  function previewAppraisal() {
-    setStorageError(false);
-    setPreviewOnly(true);
-    const randomIndex = Math.floor(Math.random() * REVIEW_APPRAISALS.length);
-    setReviewAppraisal(REVIEW_APPRAISALS[randomIndex]);
-    setStep(4);
   }
 
   function beginReveal() {
@@ -171,9 +151,6 @@ export function FirstNightmareSetup({
   }
 
   function advanceAppraisal() {
-    if (previewOnly) {
-      return;
-    }
     setAppraisalIndex((current) => {
       return Math.min(current + 1, APPRAISAL_TIERS.length - 1);
     });
@@ -204,8 +181,8 @@ export function FirstNightmareSetup({
     }
   }
 
-  const appraisal = reviewAppraisal ?? APPRAISAL_TIERS[appraisalIndex];
-  const appraisalComplete = previewOnly || appraisal === "Glorious";
+  const appraisal = APPRAISAL_TIERS[appraisalIndex];
+  const appraisalComplete = appraisal === "Glorious";
   const announcement = step === 1
     ? "[The hidden thread has found you.]"
     : step === 2
@@ -334,15 +311,6 @@ export function FirstNightmareSetup({
                   <button onClick={() => setStep(2)} type="button">Back</button>
                   <button onClick={deferSetup} type="button">Enter later</button>
                 </div>
-                {reviewMode && (
-                  <button
-                    className="hidden-thread-review-action"
-                    onClick={previewAppraisal}
-                    type="button"
-                  >
-                    Preview without storing a key
-                  </button>
-                )}
               </div>
             </form>
           )}
@@ -351,7 +319,7 @@ export function FirstNightmareSetup({
             <>
               <div
                 aria-hidden="true"
-                className={`hidden-thread-appraisal-mark${previewOnly ? " is-preview" : ""}`}
+                className="hidden-thread-appraisal-mark"
                 data-testid="appraisal-mask"
               >
                 <WeaverMark compact />
@@ -367,18 +335,11 @@ export function FirstNightmareSetup({
               </div>
               {appraisalComplete && (
                 <>
-                  <h1>{previewOnly ? "The rite is complete" : "The voice is bound"}</h1>
-                  {previewOnly ? (
-                    <p>
-                      Review complete. No key was stored and your current
-                      binding remains unchanged.
-                    </p>
-                  ) : (
-                    <p>
-                      The key is stored in this browser. Weaver can now read,
-                      reread, and answer through your DeepSeek account.
-                    </p>
-                  )}
+                  <h1>The voice is bound</h1>
+                  <p>
+                    The key is stored in this browser. Weaver can now read,
+                    reread, and answer through your DeepSeek account.
+                  </p>
                   <div className="hidden-thread-actions">
                     <button data-autofocus onClick={beginReveal} type="button">
                       <span>Enter Weaver</span>

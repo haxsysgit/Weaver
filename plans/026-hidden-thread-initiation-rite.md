@@ -9,7 +9,7 @@
 
 - **Tooling:** React 19, TypeScript, CSS, original generated raster art, Vitest,
   Testing Library, Vite, and the root Python test suite.
-- **State:** admitted 2026-08-19 by owner direction.
+- **State:** closed 2026-08-21; owner accepted for the 1.1.0 release.
 - **Depends on:** Plan 022 closed for accepted lore and copy boundaries; Plan 025
   closed for the responsive Spellweave layers, materials, render profiles, and
   motion rules. The rite preserves the existing conversation handoff and has no
@@ -57,10 +57,10 @@
 12. (2026-08-19) The same distinct mask identity replaces the temporary
     appraisal seal and spider marks at suitable hero, seal, and navigation
     sizes. Threads, fragments, and motion stay code-native.
-13. (2026-08-19) The replay-only fake path may choose one fun appraisal string
-    with a direct `Math.random()` selection. It stores no key. The fake path and
-    review-complete copy are temporary and must be removed at Plan 029's
-    production release gate.
+13. (2026-08-19; amended 2026-08-21) The replay-only fake appraisal path was
+    temporary. Before the owner-approved 1.1.0 release, it and its completion
+    copy were removed. Replay remains available without changing saved
+    first-run state.
 14. (2026-08-19) Pin-button failure and weak archived-state distinction are
     accepted user feedback for Plan 028. Plan 026 may inspect and record the
     current fault but does not change archive behavior.

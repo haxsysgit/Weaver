@@ -173,7 +173,7 @@ function SpellSurfaceChatSurface({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [setupOpen, setSetupOpen] = useState(shouldOpenFirstNightmare);
   const [setupRevealing, setSetupRevealing] = useState(false);
-  const [setupReviewMode, setSetupReviewMode] = useState(false);
+  const [replayingFirstNightmare, setReplayingFirstNightmare] = useState(false);
   const [voiceBound, setVoiceBound] = useState(() => {
     return getApiKey() !== "" && !isApiKeyDisabled();
   });
@@ -333,7 +333,7 @@ function SpellSurfaceChatSurface({
   function closeSetup() {
     setSetupOpen(false);
     setSetupRevealing(false);
-    setSetupReviewMode(false);
+    setReplayingFirstNightmare(false);
     refreshVoiceBinding();
     window.setTimeout(() => composerRef.current?.focus(), 0);
   }
@@ -345,7 +345,7 @@ function SpellSurfaceChatSurface({
   function replayFirstNightmare() {
     setSettingsOpen(false);
     setSetupRevealing(false);
-    setSetupReviewMode(true);
+    setReplayingFirstNightmare(true);
     setSetupOpen(true);
   }
 
@@ -562,7 +562,7 @@ function SpellSurfaceChatSurface({
           onDefer={closeSetup}
           onKeyStored={refreshVoiceBinding}
           onRevealStart={() => setSetupRevealing(true)}
-          reviewMode={setupReviewMode}
+          preserveFirstRunState={replayingFirstNightmare}
         />
       )}
 

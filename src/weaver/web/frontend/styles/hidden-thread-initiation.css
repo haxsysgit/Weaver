@@ -434,18 +434,6 @@
   font-size: 13px;
 }
 
-.hidden-thread-actions > .hidden-thread-review-action {
-  width: auto;
-  min-height: 44px;
-  color: var(--edition-appraisal-gold);
-  font-size: 13px;
-}
-
-.hidden-thread-actions > .hidden-thread-review-action::before,
-.hidden-thread-actions > .hidden-thread-review-action::after {
-  display: none;
-}
-
 .hidden-thread-appraisal-mark {
   display: grid;
   width: 58px;
@@ -461,10 +449,6 @@
   height: 100%;
   object-fit: contain;
   filter: saturate(0.72) drop-shadow(0 0 10px rgba(183, 154, 98, 0.24));
-}
-
-.hidden-thread-appraisal-mark.is-preview {
-  opacity: 0.82;
 }
 
 .hidden-thread-appraisal {

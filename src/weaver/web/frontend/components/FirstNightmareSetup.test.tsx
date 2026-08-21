@@ -110,30 +110,6 @@ describe("Hidden Thread initiation rite", () => {
     expect(within(dialog).getByTestId("appraisal-mask")).toBeVisible();
   });
 
-  it("uses a random fun appraisal without storing a key during owner review", () => {
-    vi.spyOn(Math, "random").mockReturnValue(0.99);
-    render(
-      <FirstNightmareSetup
-        onComplete={vi.fn()}
-        onDefer={vi.fn()}
-        reviewMode
-      />,
-    );
-    const dialog = screen.getByRole("dialog", { name: "First Nightmare setup" });
-    reachKeyEntry(dialog);
-
-    fireEvent.click(
-      within(dialog).getByRole("button", { name: "Preview without storing a key" }),
-    );
-
-    expect(getApiKey()).toBe("");
-    expect(localStorage.getItem(FIRST_NIGHTMARE_STORAGE_KEY)).toBeNull();
-    expect(dialog).toHaveAttribute("data-rite-act", "appraisal");
-    expect(within(dialog).getByText("Fraudulent")).toBeVisible();
-    expect(within(dialog).getByTestId("appraisal-mask").querySelector("img")).not.toBeNull();
-    expect(within(dialog).getByText("The rite is complete")).toBeVisible();
-  });
-
   it("replaces each appraisal tier before opening into the conversation", () => {
     const { onComplete, onRevealStart } = renderRite();
     const dialog = screen.getByRole("dialog", { name: "First Nightmare setup" });

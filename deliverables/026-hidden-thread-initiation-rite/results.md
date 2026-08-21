@@ -193,3 +193,18 @@ The browser favicon and PWA manifest now use the original 512 by 512 Weaver
 mask mark instead of the legacy SVG. The production web app has one matching
 static route for the WebP, the service-worker shell caches it, and the focused
 production asset checks passed 3/3.
+
+## Final release floor, 2026-08-21
+
+The owner chose to remove the temporary no-key review path before shipping.
+`Preview without storing a key`, its random appraisal, and its review-complete
+copy are gone. Settings still offers replay, and an explicit replay state keeps
+the saved first-run decision unchanged when the owner exits it.
+
+- Focused rite and replay regression suite: 35/35 tests in six files passed.
+- Full frontend suite: 72/72 tests in 34 files passed.
+- `npm run build` passed and refreshed the committed bundle.
+- Full Python suite: 528 passed in 516.27 seconds.
+- `git diff --check` passed.
+
+No product model call or API-key validation was made.
