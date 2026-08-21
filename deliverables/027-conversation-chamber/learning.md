@@ -2,9 +2,9 @@
 
 ## Gate status
 
-**Unadmitted.** Plan 026 is closed. The owner combined the former Plans 027,
-028, and 029 into this one continuous plan on 2026-08-21. No production work is
-authorized until Plan 027 itself is admitted.
+**Admitted 2026-08-21.** Plan 026 is closed. The owner combined the former
+Plans 027, 028, and 029 into this one continuous plan and directed checkpoint
+one to begin.
 
 ## Confirmed owner direction
 
@@ -37,4 +37,6 @@ authorized until Plan 027 itself is admitted.
 ## Learning gate
 
 Pending. Admission locks the component mapping, the three checkpoint review
-rules, and the current Plan 023 API shape before production edits begin.
+rules, and the current Plan 023 API shape before production edits begin. The
+owner directed focused tests during checkpoints one and two; the full frontend,
+build, and Python floor runs only at checkpoint three.

@@ -63,7 +63,8 @@ Open questions for the owner when this plan is admitted:
   one continuous Conversation Chamber, Thread Archive, and integration trial
   with three owner checkpoints. Mobile proof covers 320 x 568 through 412 x
   915, available owner phones, and a desktop composition alongside each
-  production surface. Drafted Plans 028 and 029 are superseded.
+  production surface. Plan 027 is admitted; drafted Plans 028 and 029 are
+  superseded.
 
 ## Standing series (no plan number, runs across plans)
 

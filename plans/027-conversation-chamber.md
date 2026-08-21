@@ -12,7 +12,7 @@
 - **Tooling:** root `npm` scripts for TypeScript, Vite, and Vitest; `uv` for
   the Python floor and fake web server; browser developer tools and owner-held
   phones for evidence.
-- **State:** drafted (awaiting owner admission).
+- **State:** admitted 2026-08-21 by owner direction.
 - **Depends on:** Plans 022, 023, 025, and 026 closed. Plan 024 is a rejected
   alternate prototype and is reference for lessons only, never a visual source
   of truth.
