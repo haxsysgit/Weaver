@@ -10,6 +10,7 @@
 // flag suppresses the key header while keeping the stored value.
 
 const DEVICE_KEY = "weaver_device_id";
+const DEVICE_COOKIE = "weaver_device_id";
 const API_KEY_STORAGE = "weaver_api_key";
 const API_KEY_DISABLED_STORAGE = "weaver_api_key_disabled";
 const MODEL_STORAGE = "weaver_model_id";
@@ -22,12 +23,17 @@ export const AVAILABLE_MODELS = [
   { id: "deepseek-v4-pro", label: "DeepSeek V4 Pro" },
 ] as const;
 
+function syncDeviceCookie(deviceId: string): void {
+  document.cookie = `${DEVICE_COOKIE}=${encodeURIComponent(deviceId)}; Path=/; Max-Age=31536000; SameSite=Strict`;
+}
+
 export function getDeviceId(): string {
   let deviceId = localStorage.getItem(DEVICE_KEY);
   if (!deviceId) {
     deviceId = crypto.randomUUID();
     localStorage.setItem(DEVICE_KEY, deviceId);
   }
+  syncDeviceCookie(deviceId);
   return deviceId;
 }
 
@@ -70,12 +76,14 @@ export function setModelId(modelId: string): void {
 
 export function clearDeviceId(): void {
   localStorage.removeItem(DEVICE_KEY);
+  document.cookie = `${DEVICE_COOKIE}=; Path=/; Max-Age=0; SameSite=Strict`;
 }
 
 /**
- * Headers every API call carries: device id always, key when set and
- * not disabled, model when set (default flash is the server default, so
- * it is only sent when the user explicitly picked something else).
+ * Headers every fetch call carries: device id always, key when set and
+ * not disabled, and an explicitly selected model. The device id is also
+ * mirrored to a same-origin cookie so EventSource can preserve ownership
+ * without putting the id in the URL.
  */
 export function weaverHeaders(extra?: Record<string, string>): Record<string, string> {
   const headers: Record<string, string> = {

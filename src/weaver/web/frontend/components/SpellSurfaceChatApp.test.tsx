@@ -21,7 +21,6 @@ function createApi(): ChatApi {
     cancelTurn: vi.fn().mockResolvedValue("idle"),
     createConversation: vi.fn().mockResolvedValue({ conversation_id: "thread-1" }),
     deleteConversation: vi.fn().mockResolvedValue({ deleted: "thread-1" }),
-    getPassage: vi.fn(),
     getPreferences: vi.fn().mockResolvedValue({
       reader_chapter: 1000,
       spoiler_mode: "protect",
@@ -538,6 +537,7 @@ describe("mobile thread drawer", () => {
     if (!scrim) {
       return;
     }
+    expect(scrim).toHaveAttribute("tabindex", "-1");
     fireEvent.click(scrim);
     await waitFor(() => expect(drawer).toHaveAttribute("aria-hidden", "true"));
     expect(opener).toHaveFocus();
@@ -558,6 +558,36 @@ describe("mobile thread drawer", () => {
 
     await waitFor(() => expect(opener).toHaveFocus());
     expect(document.body.style.overflow).toBe("");
+  });
+
+  it("keeps keyboard focus inside the open drawer", () => {
+    render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
+
+    const opener = document.querySelector<HTMLButtonElement>(".lab-mobile-rail");
+    expect(opener).not.toBeNull();
+    if (!opener) {
+      return;
+    }
+    fireEvent.click(opener);
+    const drawer = screen.getByRole("dialog", { name: "Threads" });
+    const focusable = within(drawer).getAllByRole("button");
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    first.focus();
+    fireEvent.keyDown(drawer, { key: "Tab", shiftKey: true });
+    expect(last).toHaveFocus();
+  });
+
+  it("restores focus after settings close", async () => {
+    render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
+
+    const opener = screen.getByRole("button", { name: "Open Soul Sea settings from header" });
+    opener.focus();
+    fireEvent.click(opener);
+    const settings = await screen.findByRole("dialog", { name: "Reader Appraisal settings" });
+    fireEvent.click(within(settings).getByRole("button", { name: "Close settings" }));
+
+    await waitFor(() => expect(opener).toHaveFocus());
   });
 });
 

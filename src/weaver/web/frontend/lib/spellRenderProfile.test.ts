@@ -86,6 +86,7 @@ describe("Spell render profiles", () => {
     expect(firstStep.starCount).toBeLessThan(profile.starCount);
     expect(firstStep.maxThreadSegments).toBeLessThan(profile.maxThreadSegments);
     expect(secondStep.pixelRatio).toBe(1);
+    expect(secondStep.animated).toBe(false);
     expect(secondStep.starCount).toBeLessThan(firstStep.starCount);
     expect(secondStep.maxThreadSegments).toBeLessThan(firstStep.maxThreadSegments);
   });

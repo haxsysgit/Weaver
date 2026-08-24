@@ -12,6 +12,26 @@ import {
   weaverHeaders,
 } from "./identity";
 
+describe("browser-local device identity", () => {
+  it("mirrors the device id into the same-origin stream cookie", () => {
+    let cookie = "";
+    Object.defineProperty(document, "cookie", {
+      configurable: true,
+      get: () => cookie,
+      set: (value: string) => {
+        cookie = value;
+      },
+    });
+
+    const deviceId = weaverHeaders()["X-Device-Id"];
+
+    expect(deviceId).toBeTruthy();
+    expect(cookie).toContain(`weaver_device_id=${deviceId}`);
+    expect(cookie).toContain("SameSite=Strict");
+    Reflect.deleteProperty(document, "cookie");
+  });
+});
+
 describe("browser-local DeepSeek key", () => {
   it("trims, returns, and clears the key", () => {
     setApiKey("  owner-test-key  ");

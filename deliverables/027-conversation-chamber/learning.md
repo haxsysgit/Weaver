@@ -45,3 +45,8 @@ Passed. The owner accepted checkpoint two on 2026-08-24 after reviewing the
 Thread Archive and restored Soul Sea presentation. Checkpoint three is now
 active. It owns the deterministic fake journey, full command floor, browser
 evidence, independent reviews, and final owner decision.
+
+Checkpoint three preserves the accepted design as a hard boundary. Its repairs
+change only proven integration, privacy, performance, touch, and keyboard
+defects. They do not reopen the transparent conversation treatment, Soul Sea,
+settings composition, Thread Archive structure, or Hidden Thread materials.

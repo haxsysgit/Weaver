@@ -182,6 +182,7 @@ function SpellSurfaceChatSurface({
   const chat = useChatController(api, weaverProduct);
   const [preferences, setPreferences] = useState(loadInitialPreferences);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsOpenerRef = useRef<HTMLElement | null>(null);
   const [setupOpen, setSetupOpen] = useState(shouldOpenFirstNightmare);
   const [setupRevealing, setSetupRevealing] = useState(false);
   const [replayingFirstNightmare, setReplayingFirstNightmare] = useState(false);
@@ -305,6 +306,9 @@ function SpellSurfaceChatSurface({
   }
 
   async function openSettings() {
+    settingsOpenerRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
     try {
       const stored = await api.getPreferences();
       const chapter = stored.reader_chapter ?? preferences.chapter;
@@ -319,6 +323,11 @@ function SpellSurfaceChatSurface({
       setSettingsOpen(true);
       announce("[The sea within opens.]");
     }
+  }
+
+  function closeSettings() {
+    setSettingsOpen(false);
+    window.setTimeout(() => settingsOpenerRef.current?.focus(), 0);
   }
 
   function openRail() {
@@ -507,7 +516,7 @@ function SpellSurfaceChatSurface({
           </button>
         </div>
 
-        <div aria-live="polite" className="lab-transcript" ref={transcriptRef}>
+        <div className="lab-transcript" ref={transcriptRef}>
           <div className="lab-transcript-column">
             {chat.bootError && <div className="boot-error">{chat.bootError}</div>}
             {!chat.bootError && chat.messages.length === 0 && (
@@ -578,18 +587,18 @@ function SpellSurfaceChatSurface({
         </footer>
       </main>
 
-      {railOpen && <button aria-label="Close thread drawer" className="lab-rail-scrim" onClick={closeRail} type="button" />}
+      {railOpen && <button aria-hidden="true" className="lab-rail-scrim" onClick={closeRail} tabIndex={-1} type="button" />}
 
       {settingsOpen && (
         <SpellSurfaceSettings
           initial={preferences}
           onApiKeyChange={setVoiceBound}
-          onClose={() => setSettingsOpen(false)}
+          onClose={closeSettings}
           onReplayFirstNightmare={replayFirstNightmare}
           onSave={(nextPreferences) => {
             setPreferences(nextPreferences);
             saveVisualPreferences(nextPreferences);
-            setSettingsOpen(false);
+            closeSettings();
             announce("[Reader state remembered.]");
             void api.savePreferences(toApiPreferences(nextPreferences));
           }}

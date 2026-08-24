@@ -94,6 +94,7 @@ export function getAdaptiveSpellRenderProfile(
 
   return {
     ...profile,
+    animated: false,
     maxThreadSegments: Math.min(profile.maxThreadSegments, 600),
     pixelRatio: 1,
     starCount: Math.min(profile.starCount, 1_200),

@@ -28,29 +28,12 @@ export type StreamEvent =
   | { type: "completed"; text: string; tokenCount?: number; tokenBudget?: number }
   | { type: "interrupted"; message: string }
   | { type: "failed"; message: string; code?: string }
-  | {
-      type: "tool";
-      name: string;
-      status: string;
-      detail: string;
-      preview?: string;
-      handles?: string[];
-    };
+  | { type: "tool"; name: string; status: string };
 
 export interface UserPreferences {
   reader_chapter: number | null;
   spoiler_mode: "protect" | "none";
   tier: "awakened" | "ascended" | "transcendent";
-}
-
-export interface Passage {
-  handle: string;
-  chapter: number;
-  line_start: number;
-  line_end: number;
-  text: string;
-  volume: number;
-  beats: string[];
 }
 
 export interface ChatApi {
@@ -66,7 +49,6 @@ export interface ChatApi {
   regenerateTurn(conversationId: string): AsyncIterable<StreamEvent>;
   cancelTurn(conversationId: string): Promise<"cancelling" | "idle">;
   deleteConversation(conversationId: string): Promise<{ deleted: string }>;
-  getPassage(handle: string): Promise<Passage>;
   getPreferences(): Promise<UserPreferences>;
   savePreferences(prefs: UserPreferences): Promise<UserPreferences>;
 }
@@ -128,16 +110,10 @@ function toStreamEvent(rawEvent: RawStreamEvent): StreamEvent | null {
     };
   }
   if (rawEvent.event === "tool") {
-    const handles = Array.isArray(rawEvent.data.handles)
-      ? rawEvent.data.handles.filter((h): h is string => typeof h === "string")
-      : undefined;
     return {
       type: "tool",
       name: typeof rawEvent.data.name === "string" ? rawEvent.data.name : "tool",
       status: typeof rawEvent.data.status === "string" ? rawEvent.data.status : "start",
-      detail: typeof rawEvent.data.detail === "string" ? rawEvent.data.detail : "",
-      preview: typeof rawEvent.data.preview === "string" ? rawEvent.data.preview : undefined,
-      handles: handles && handles.length > 0 ? handles : undefined,
     };
   }
   return null;
@@ -257,13 +233,6 @@ export function createHttpChatApi(fetcher: typeof fetch = fetch): ChatApi {
         { method: "DELETE" },
       );
       return requireJson<{ deleted: string }>(response, "Deleting conversation");
-    },
-
-    async getPassage(handle: string) {
-      const response = await authed(
-        `/api/passages?handle=${encodeURIComponent(handle)}`,
-      );
-      return requireJson<Passage>(response, "Loading passage");
     },
 
     async savePreferences(prefs) {

@@ -40,8 +40,11 @@ MODEL_HEADER = "x-weaver-model"
 
 
 def _device_id(request: Request) -> str:
-    """The browser's device id (empty when absent)."""
-    return (request.headers.get(DEVICE_HEADER) or "").strip()[:128]
+    """The browser's device id from fetch headers or its EventSource cookie."""
+    device_id = request.headers.get(DEVICE_HEADER) or request.cookies.get(
+        "weaver_device_id", ""
+    )
+    return device_id.strip()[:128]
 
 
 def _request_key(request: Request) -> str | None:
@@ -258,57 +261,6 @@ async def _name_thread(runtime: ChatRuntime, conversation_id: str, first_message
     await runtime.session.set_generated_title(conversation_id, title)
 
 
-def _tool_preview(name: str, result: dict) -> tuple[str | None, list[str]]:
-    """Preview snippet + passage handles for the tap-to-view surface.
-
-    Reading tools return novel prose in their in-turn results; the preview
-    is a short snippet for the UI only, never persisted. Handles let the
-    frontend summon the full passage via GET /api/passages.
-    """
-    payload = result.get("result") or {}
-    if name == "read_chapters":
-        evidence = result.get("durable_evidence") or {}
-        text = str(payload.get("text", ""))
-        return text[:140] or None, [evidence["passage_handle"]] if evidence.get("passage_handle") else []
-    if name == "find_text":
-        hits = payload.get("hits") or []
-        if not hits:
-            return None, []
-        first = hits[0]
-        handles = [
-            h["passage_handle"]
-            for h in hits[:3]
-            if h.get("passage_handle")
-        ]
-        return str(first.get("text", ""))[:140] or None, handles
-    if name == "browse_chapters":
-        chapters = payload.get("chapters") or []
-        if not chapters:
-            return None, []
-        first = chapters[0]
-        return (
-            f"ch {first.get('chapter')} - {first.get('title', '')}"[:140],
-            [c["passage_handle"] for c in chapters[:3] if c.get("passage_handle")],
-        )
-    if name == "semantic_search":
-        notebook = payload.get("notebook_hits") or []
-        canonical = payload.get("canonical_hits") or []
-        if notebook:
-            return str(notebook[0].get("statement", ""))[:140] or None, []
-        if canonical:
-            first = canonical[0]
-            return (
-                f"ch {first.get('chapter')}, lines {first.get('line_start')}-{first.get('line_end')}",
-                [h["passage_handle"] for h in canonical[:3] if h.get("passage_handle")],
-            )
-        return None, []
-    if name == "who_is":
-        entity = payload.get("entity") or {}
-        body = str(entity.get("body", ""))[:140]
-        return (str(entity.get("title", "")) + " - " + body)[:140] if body else None, []
-    return None, []
-
-
 def _sse(event: str, payload: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(payload)}\n\n"
 
@@ -418,6 +370,17 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         if not field_names:
             raise HTTPException(status_code=422, detail="metadata update must not be empty")
 
+        stream = active.get(conversation_id)
+        if (
+            body.archived is True
+            and stream is not None
+            and not stream.finished
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="a turn is running in this conversation",
+            )
+
         title = body.title
         if "title" in field_names and title is not None:
             title = title.strip()
@@ -455,45 +418,6 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         if not await runtime.session.delete_conversation(conversation_id):
             raise HTTPException(status_code=404, detail="unknown conversation")
         return {"deleted": conversation_id}
-
-    @app.get("/api/passages", dependencies=[Depends(_check_local)])
-    async def get_passage(handle: str) -> dict:
-        """Ephemeral passage fetch for the tap-to-view surface.
-
-        Reads the novel straight from disk by handle; nothing is
-        persisted (the durable split: prose lives in the novel, never in
-        the conversation store).
-        """
-        if runtime.library is None:
-            raise HTTPException(status_code=404, detail="library unavailable")
-        from weaver.retrieval.library import parse_passage_handle
-
-        try:
-            parsed = parse_passage_handle(handle)
-        except ValueError as exc:
-            raise HTTPException(status_code=422, detail=str(exc))
-        if parsed is None:
-            raise HTTPException(status_code=422, detail="malformed passage handle")
-        chapter, start, end = parsed
-        try:
-            passage = runtime.library.index.open_lines(chapter, start, end)
-        except (FileNotFoundError, ValueError, IndexError):
-            raise HTTPException(status_code=404, detail="unknown chapter")
-        from weaver.spoilers.judge import volume_of
-
-        beats = [
-            beat["title"]
-            for beat in spoiler_judge.beats_for(chapter)
-        ]
-        return {
-            "handle": handle,
-            "chapter": passage.chapter,
-            "line_start": passage.line_start,
-            "line_end": passage.line_end,
-            "text": passage.text,
-            "volume": volume_of(chapter),
-            "beats": beats,
-        }
 
     @app.get("/api/conversations/{conversation_id}/messages")
     async def get_messages(conversation_id: str, request: Request) -> list[dict]:
@@ -545,22 +469,13 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
             else None
         )
 
-        # Plan 014 live-trial seam: tool activity as SSE 'tool' events so
-        # the UI can render search/open lines. Plan 15 slice 5: on
-        # success the handler's result is enriched with a preview snippet
-        # and passage handles for the tap-to-view surface. Backward
-        # compatible: the frontend parser ignores unknown fields.
+        # Tool activity crosses the browser boundary as phase metadata only.
+        # Arguments, results, chapter text, passage handles, and raw detail stay
+        # inside the agent turn.
         async def on_tool_event(
-            name: str, status: str, detail: str, result: dict | None = None
+            name: str, status: str, _detail: str, _result: dict | None = None
         ) -> None:
-            payload: dict[str, Any] = {"name": name, "status": status, "detail": detail}
-            if status == "done" and isinstance(result, dict) and result.get("ok"):
-                preview, handles = _tool_preview(name, result)
-                if preview:
-                    payload["preview"] = preview
-                if handles:
-                    payload["handles"] = handles
-            stream.emit("tool", payload)
+            stream.emit("tool", {"name": name, "status": status})
 
         # Plan 15 final reading phase: after a candidate passes the
         # mechanical checks, the packet builder re-reads the turn's

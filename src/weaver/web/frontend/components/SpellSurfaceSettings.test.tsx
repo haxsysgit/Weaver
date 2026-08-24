@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SpellSurfaceSettings, type LabPreferences } from "./SpellSurfaceSettings";
@@ -59,5 +59,23 @@ describe("Reader Appraisal settings", () => {
     expect(onSave).toHaveBeenCalledWith(
       expect.objectContaining({ soulMode: "nephis" }),
     );
+  });
+
+  it("moves focus into a mobile section and returns it to the index", async () => {
+    render(
+      <SpellSurfaceSettings
+        initial={LEGACY_PREFERENCES}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+
+    const appearance = screen.getByRole("button", { name: "Appearance" });
+    fireEvent.click(appearance);
+    const back = screen.getByRole("button", { name: /Settings/ });
+    await waitFor(() => expect(back).toHaveFocus());
+
+    fireEvent.click(back);
+    await waitFor(() => expect(appearance).toHaveFocus());
   });
 });

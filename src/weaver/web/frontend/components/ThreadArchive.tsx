@@ -99,6 +99,7 @@ export function ThreadArchive({
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
+  const [actionsOpenId, setActionsOpenId] = useState<string | null>(null);
   const [pendingIds, setPendingIds] = useState<Set<string>>(() => new Set());
   const [grouping, setGrouping] = useState<ThreadGrouping>("date");
   const [groupingMenuOpen, setGroupingMenuOpen] = useState(false);
@@ -109,6 +110,7 @@ export function ThreadArchive({
     return window.matchMedia("(max-width: 767px)").matches;
   });
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const railRef = useRef<HTMLElement>(null);
   const deleteButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const newWeaveRef = useRef<HTMLButtonElement>(null);
   const threadButtonRefs = useRef(new Map<string, HTMLButtonElement>());
@@ -227,12 +229,14 @@ export function ThreadArchive({
     const deleteOpen = confirmingDelete === thread.id;
     const pinAction = thread.pinned ? "Unpin" : "Pin";
     const archiveAction = thread.archived ? "Restore" : "Archive";
+    const actionsOpen = actionsOpenId === thread.id;
     return (
       <li
         className={[
           "lab-thread-row",
           active ? "active" : "",
           deleteOpen ? "delete-open" : "",
+          actionsOpen ? "actions-open" : "",
         ].filter(Boolean).join(" ")}
         data-testid={`thread-${thread.id}`}
         key={thread.id}
@@ -277,13 +281,25 @@ export function ThreadArchive({
             </button>
           )}
         </div>
+        <button
+          aria-expanded={actionsOpen}
+          aria-label={`Thread actions for ${thread.title}`}
+          className="lab-thread-actions-trigger"
+          onClick={() => setActionsOpenId(actionsOpen ? null : thread.id)}
+          type="button"
+        >
+          <span aria-hidden="true">...</span>
+        </button>
         <div className="lab-thread-actions">
           <button
             aria-label={`${pinAction} ${thread.title}`}
             aria-pressed={thread.pinned}
             className={thread.pinned ? "pinned" : undefined}
             disabled={pendingIds.has(thread.id)}
-            onClick={() => void runMutation(thread.id, () => onPin(thread.id))}
+            onClick={() => {
+              setActionsOpenId(null);
+              void runMutation(thread.id, () => onPin(thread.id));
+            }}
             title={pinAction}
             type="button"
           >
@@ -292,7 +308,10 @@ export function ThreadArchive({
           <button
             aria-label={`Rename ${thread.title}`}
             disabled={pendingIds.has(thread.id)}
-            onClick={() => startRename(thread)}
+            onClick={() => {
+              setActionsOpenId(null);
+              startRename(thread);
+            }}
             title="Rename"
             type="button"
           >
@@ -301,7 +320,10 @@ export function ThreadArchive({
           <button
             aria-label={`${archiveAction} ${thread.title}`}
             disabled={pendingIds.has(thread.id)}
-            onClick={() => void runMutation(thread.id, () => onArchive(thread.id))}
+            onClick={() => {
+              setActionsOpenId(null);
+              void runMutation(thread.id, () => onArchive(thread.id));
+            }}
             title={archiveAction}
             type="button"
           >
@@ -310,7 +332,10 @@ export function ThreadArchive({
           <button
             aria-label={`Delete ${thread.title}`}
             disabled={pendingIds.has(thread.id)}
-            onClick={() => requestDelete(thread.id)}
+            onClick={() => {
+              setActionsOpenId(null);
+              requestDelete(thread.id);
+            }}
             ref={(button) => {
               if (button) {
                 deleteButtonRefs.current.set(thread.id, button);
@@ -360,6 +385,24 @@ export function ThreadArchive({
       className="lab-rail"
       id="spell-surface-rail"
       inert={!railOperable}
+      onKeyDown={(event) => {
+        if (!mobileLayout || !drawerOpen || event.key !== "Tab" || !railRef.current) {
+          return;
+        }
+        const focusable = railRef.current.querySelectorAll<HTMLElement>(
+          "button:not(:disabled), input:not(:disabled), select:not(:disabled)",
+        );
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }}
+      ref={railRef}
       role={mobileLayout ? "dialog" : undefined}
     >
       <header className="lab-brand">

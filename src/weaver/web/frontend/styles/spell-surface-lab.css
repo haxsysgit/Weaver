@@ -528,6 +528,7 @@
 .lab-thread-actions button:hover { color: var(--lab-ink); background: var(--lab-faint); }
 .lab-thread-actions button.confirming { color: #fff; background: rgba(185, 75, 72, 0.72); }
 .lab-thread-actions svg { width: 9px; }
+.lab-thread-actions-trigger { display: none; }
 
 .lab-thread-empty { display: grid; min-height: 130px; place-items: center; align-content: center; color: var(--lab-dim); text-align: center; }
 .lab-thread-empty span { width: 28px; height: 28px; border: 1px solid var(--lab-line); border-radius: 50%; box-shadow: inset 0 0 14px rgba(190, 193, 211, 0.08); }
@@ -1817,6 +1818,22 @@
 .lab-desktop-rail-collapsed .lab-rail-footer { padding: 0 0 10px; }
 
 @media (hover: none) {
+  .lab-thread-actions-trigger {
+    position: absolute;
+    z-index: 4;
+    right: 4px;
+    top: 50%;
+    display: grid;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    place-items: center;
+    color: var(--lab-muted);
+    border: 0;
+    background: transparent;
+    transform: translateY(-50%);
+  }
+
   .lab-thread-actions {
     position: absolute;
     opacity: 0;
@@ -1825,7 +1842,10 @@
   }
 
   .lab-thread-row.active .lab-thread-actions,
-  .lab-thread-row:focus-within .lab-thread-actions { opacity: 1; }
+  .lab-thread-row:focus-within .lab-thread-actions,
+  .lab-thread-row.actions-open .lab-thread-actions { opacity: 1; }
+
+  .lab-thread-row.actions-open .lab-thread-actions-trigger { display: none; }
 }
 
 @media (max-width: 767px) {
@@ -3820,5 +3840,98 @@
 
   .lab-settings-nav button {
     transition: none;
+  }
+}
+
+
+/* Plan 027 checkpoint three: phone input and touch floor. */
+@media (max-width: 767px) {
+  .spell-surface-live .lab-mobile-rail,
+  .spell-surface-live .lab-header-settings,
+  .spell-surface-live .lab-rail-close {
+    width: 48px;
+    min-width: 48px;
+    height: 48px;
+    min-height: 48px;
+  }
+
+  .spell-surface-live .lab-rail button,
+  .spell-surface-live .lab-settings-panel button,
+  .spell-surface-live .lab-settings-panel a,
+  .spell-surface-live .lab-thread-select {
+    min-height: 48px;
+  }
+
+  .spell-surface-live .lab-thread-actions button {
+    width: 48px;
+    height: 48px;
+  }
+
+  .spell-surface-live .lab-settings-close,
+  .spell-surface-live .lab-secret-input button {
+    width: 48px;
+    min-width: 48px;
+    height: 48px;
+  }
+
+  .spell-surface-live .composer-shell textarea {
+    min-height: 48px;
+    font-size: 16px;
+  }
+
+  .spell-surface-live .tier-pill {
+    min-height: 48px;
+  }
+
+  .spell-surface-live .composer-action {
+    flex-basis: 48px;
+    width: 48px;
+    height: 48px;
+  }
+}
+
+
+@media (max-height: 500px) and (hover: none) {
+  .spell-surface-live .lab-mobile-rail,
+  .spell-surface-live .lab-header-settings,
+  .spell-surface-live .lab-rail-close {
+    width: 48px;
+    min-width: 48px;
+    height: 48px;
+    min-height: 48px;
+  }
+
+  .spell-surface-live .lab-rail button,
+  .spell-surface-live .lab-settings-panel button,
+  .spell-surface-live .lab-settings-panel a,
+  .spell-surface-live .lab-thread-select {
+    min-height: 48px;
+  }
+
+  .spell-surface-live .lab-thread-actions button {
+    width: 48px;
+    height: 48px;
+  }
+
+  .spell-surface-live .lab-settings-close,
+  .spell-surface-live .lab-secret-input button {
+    width: 48px;
+    min-width: 48px;
+    height: 48px;
+  }
+
+  .spell-surface-live .composer-shell textarea {
+    min-height: 48px;
+    font-size: 16px;
+  }
+
+  .spell-surface-live .tier-pill {
+    min-height: 48px;
+  }
+
+  .spell-surface-live .composer-action {
+    flex-basis: 48px;
+    width: 48px;
+    height: 48px;
   }
 }

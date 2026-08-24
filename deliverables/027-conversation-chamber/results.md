@@ -190,3 +190,59 @@ motion cutoff.
 
 The owner accepted checkpoint two on 2026-08-24 and directed checkpoint three
 to begin.
+
+## Checkpoint three, integration trial
+
+The deterministic browser journey now starts from First Nightmare, defers key
+binding without a live request, sends through the fake server, receives tool,
+delta, and completion events, renders safe Markdown, renames and pins the
+thread, archives it, survives a remount, then restores and deletes it. Raw HTML
+and unsafe links remain text. Conversation identity and archived state also
+survive a complete browser restart under the same device identity.
+
+Browser evidence is private under `private/design-evidence/027/`. The final
+matrix covers 320 x 568, 360 x 800, 390 x 844, 412 x 915, 844 x 390 touch
+landscape, and 1440 x 900 desktop. It also covers keyboard resize, 200 percent
+zoom, reduced motion, pinned and archived states, offline recovery, service
+worker control, restart persistence, and a complete fake streamed answer.
+Portrait pages have no horizontal overflow, the composer remains 16px, and
+phone controls reach the 48px floor.
+
+Performance evidence uses a 390 x 844, DPR 2, touch-emulated browser with 4x
+CPU throttling and SwiftShader. The truthful adaptive profile settled at DPR 1
+with 1,200 stars and 600 thread segments. The 60-second idle trace recorded no
+long tasks. A direct ten-second answering trace recorded no long tasks or long
+frames. The full fake-send trace recorded six long tasks, so the evidence is
+kept as a real integration cost rather than relabelled as a clean renderer
+trace. The background now keeps one canvas while activity and pause state
+change; adaptive level two also stops continuous animation.
+
+The trial found and repaired four integration defects:
+
+- Native `EventSource` could not carry the device header, so streaming failed
+  with 404 after a successful turn start. The browser now mirrors the same
+  device id into a strict same-origin cookie, and the server accepts the header
+  or that cookie.
+- Tool SSE frames crossed the browser boundary with private chapter snippets
+  and passage handles. Public tool activity now contains only safe name and
+  status fields, and the public passage route and its dead frontend reader were
+  removed.
+- Archiving the actively streaming thread could leave an archived thread open.
+  The server now rejects that mutation with 409 until the turn ends.
+- Touch-only row actions, modal focus, two 44px settings controls, duplicate
+  live regions, and the untested background lifecycle failed accessibility
+  review. Narrow repairs preserve the accepted layout while making those paths
+  operable.
+
+Final command floor:
+
+- `npm test`: 105/105 tests passed across 50 files.
+- `npm run build`: passed; 475 modules transformed and committed `dist/`
+  refreshed.
+- `uv run pytest`: 533/533 tests passed in 509.01 seconds.
+- Focused final accessibility and lifecycle recheck: 24/24 passed.
+
+The independent behavior, privacy, and persistence review passes after repair.
+The independent visual, mobile, and accessibility review passes after repair.
+Plan 027 remains admitted until the owner gives the final accept or reject
+decision.

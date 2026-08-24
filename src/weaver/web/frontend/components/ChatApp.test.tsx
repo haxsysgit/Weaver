@@ -33,15 +33,6 @@ function createApi(stream: AsyncIterable<StreamEvent>): ChatApi {
   return {
     cancelTurn: vi.fn().mockResolvedValue("cancelling"),
     deleteConversation: vi.fn().mockResolvedValue({ deleted: "thread-2" }),
-    getPassage: vi.fn().mockResolvedValue({
-      handle: "novel:0098:3-81",
-      chapter: 98,
-      line_start: 3,
-      line_end: 81,
-      text: "The kunai spun in the dark.",
-      volume: 2,
-      beats: [],
-    }),
     getPreferences: vi.fn().mockResolvedValue({
       reader_chapter: null,
       spoiler_mode: "protect",
@@ -265,13 +256,10 @@ describe("ChatApp private tool activity", () => {
           type: "tool",
           name: "semantic_search",
           status: "start",
-          detail: "private-library-path",
-          preview: "private chapter text",
-          handles: ["private:0098:3-81"],
         };
         toolEventReached = true;
         await sleep(60);
-        yield { type: "tool", name: "semantic_search", status: "done", detail: "ok" };
+        yield { type: "tool", name: "semantic_search", status: "done" };
         await sleep(60);
         yield { type: "delta", text: "Sunny slew the leader with the kunai." };
         yield { type: "completed", text: "Sunny slew the leader with the kunai." };
@@ -293,8 +281,6 @@ describe("ChatApp private tool activity", () => {
     });
     expect(screen.queryByText(/semantic_search/)).not.toBeInTheDocument();
     expect(screen.queryByText(/private-library-path/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/private chapter text/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/private:0098:3-81/)).not.toBeInTheDocument();
 
     expect(
       await screen.findByText("Sunny slew the leader with the kunai."),
@@ -307,8 +293,8 @@ describe("ChatApp private tool activity", () => {
   it("clears activity on the next turn", async () => {
     const api = createApi(
       (async function* (): AsyncGenerator<StreamEvent> {
-        yield { type: "tool", name: "semantic_search", status: "start", detail: "" };
-        yield { type: "tool", name: "semantic_search", status: "done", detail: "ok" };
+        yield { type: "tool", name: "semantic_search", status: "start" };
+        yield { type: "tool", name: "semantic_search", status: "done" };
         yield { type: "completed", text: "First answer." };
       })(),
     );
@@ -405,23 +391,12 @@ describe("ChatApp weave management", () => {
     expect(listMock.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("keeps passage previews and handles private", async () => {
-    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-    let passageEventReached = false;
+  it("keeps tool activity to safe phase fields", async () => {
     const api = createApi(
       (async function* () {
-        yield {
-          type: "tool",
-          name: "read_chapters",
-          status: "done",
-          detail: "ok",
-          preview: "The kunai spun in the dark",
-          handles: ["novel:0098:3-81"],
-        };
-        passageEventReached = true;
-        await sleep(100);
-        yield { type: "delta", text: "Sunny slew the leader." };
-        yield { type: "completed", text: "Sunny slew the leader." };
+        yield { type: "tool", name: "read_chapters", status: "start" } as const;
+        yield { type: "tool", name: "read_chapters", status: "done" } as const;
+        yield { type: "completed", text: "Sunny slew the leader." } as const;
       })(),
     );
     localStorage.setItem("weaver.active-conversation", "thread-1");
@@ -431,15 +406,10 @@ describe("ChatApp weave management", () => {
     fireEvent.change(composer, { target: { value: "who killed the leader" } });
     fireEvent.keyDown(composer, { key: "Enter" });
 
-    await waitFor(() => {
-      expect(passageEventReached).toBe(true);
-    });
-    expect(screen.queryByText(/The kunai spun in the dark/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/novel:0098:3-81/)).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /recalled passage/i })).not.toBeInTheDocument();
     expect(await screen.findByText("Sunny slew the leader.")).toBeVisible();
-    expect(api.getPassage).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: /recalled passage/i })).not.toBeInTheDocument();
   });
+
 });
 
 it("retries a broken turn from the recovery panel", async () => {

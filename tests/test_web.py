@@ -449,6 +449,99 @@ async def test_stream_replays_the_full_log_for_a_fresh_client(client) -> None:
     assert "completed" in events
 
 
+async def test_stream_accepts_same_device_cookie_used_by_event_source(client) -> None:
+    device_id = "browser-stream-device"
+    created = await client.post(
+        "/api/conversations", headers={"X-Device-Id": device_id}
+    )
+    conv = created.json()["conversation_id"]
+    started = await client.post(
+        f"/api/conversations/{conv}/turns",
+        headers={"X-Device-Id": device_id},
+        json={"message": "hello"},
+    )
+    assert started.status_code == 202
+
+    async with client.stream(
+        "GET",
+        f"/api/conversations/{conv}/stream",
+        cookies={"weaver_device_id": device_id},
+    ) as stream_resp:
+        body = await stream_resp.aread()
+
+    assert stream_resp.status_code == 200
+    assert b"event: completed" in body
+
+
+async def test_tool_stream_never_sends_private_reading_payload(tmp_path) -> None:
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+
+    async def send_with_private_tool_result(
+        conversation_id,
+        text,
+        cancel_event=None,
+        on_delta=None,
+        on_tool_event=None,
+        tool_budget=None,
+        reasoning=None,
+        packet_builder=None,
+    ):
+        assert on_tool_event is not None
+        await on_tool_event(
+            "read_chapters",
+            "done",
+            "PRIVATE_TOOL_DETAIL",
+            {
+                "ok": True,
+                "result": {"text": "PRIVATE_CHAPTER_CANARY"},
+                "durable_evidence": {
+                    "passage_handle": "PRIVATE_PASSAGE_HANDLE"
+                },
+            },
+        )
+        return type(
+            "R",
+            (),
+            {
+                "turn_id": "private-tool-turn",
+                "exit_reason": TurnExitReason.COMPLETED,
+                "final_text": "safe answer",
+                "token_count": 0,
+                "token_budget": 0,
+            },
+        )()
+
+    runtime.session.send = send_with_private_tool_result  # type: ignore[method-assign]
+    app = create_app(runtime)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://127.0.0.1",
+        headers=SAME_ORIGIN_HEADERS,
+    ) as private_client:
+        conv = (await private_client.post("/api/conversations")).json()[
+            "conversation_id"
+        ]
+        started = await private_client.post(
+            f"/api/conversations/{conv}/turns", json={"message": "read"}
+        )
+        assert started.status_code == 202
+        async with private_client.stream(
+            "GET", f"/api/conversations/{conv}/stream"
+        ) as stream_resp:
+            body = await stream_resp.aread()
+
+    await runtime.close()
+    assert stream_resp.status_code == 200
+    assert b"event: tool" in body
+    assert b"PRIVATE_CHAPTER_CANARY" not in body
+    assert b"PRIVATE_PASSAGE_HANDLE" not in body
+    assert b"PRIVATE_TOOL_DETAIL" not in body
+    assert b'"preview"' not in body
+    assert b'"handles"' not in body
+    assert b'"detail"' not in body
+
+
 async def test_stream_does_not_resend_events_already_seen(client) -> None:
     # Last-Event-ID resume: a reconnecting client that already saw the
     # whole turn gets nothing replayed (no duplicated deltas).
@@ -540,6 +633,68 @@ async def test_concurrent_turn_409(tmp_path) -> None:
             await stream_resp.aread()
     await runtime.close()
     runtime.session.send = original_send  # type: ignore[method-assign]
+
+
+async def test_cannot_archive_the_active_weaving_thread(tmp_path) -> None:
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    gate = asyncio.Event()
+    entered = asyncio.Event()
+
+    async def gated_send(
+        conversation_id,
+        text,
+        cancel_event=None,
+        on_delta=None,
+        on_tool_event=None,
+        tool_budget=None,
+        reasoning=None,
+        packet_builder=None,
+    ):
+        entered.set()
+        await gate.wait()
+        return type(
+            "R",
+            (),
+            {
+                "turn_id": "archive-gate-turn",
+                "exit_reason": TurnExitReason.COMPLETED,
+                "final_text": "ok",
+                "token_count": 0,
+                "token_budget": 0,
+            },
+        )()
+
+    runtime.session.send = gated_send  # type: ignore[method-assign]
+    app = create_app(runtime)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://127.0.0.1",
+        headers=SAME_ORIGIN_HEADERS,
+    ) as active_client:
+        conv = (await active_client.post("/api/conversations")).json()[
+            "conversation_id"
+        ]
+        started = await active_client.post(
+            f"/api/conversations/{conv}/turns", json={"message": "slow"}
+        )
+        assert started.status_code == 202
+        await entered.wait()
+
+        archived = await active_client.patch(
+            f"/api/conversations/{conv}", json={"archived": True}
+        )
+        assert archived.status_code == 409
+        listed = await active_client.get("/api/conversations")
+        assert listed.json()[0]["archived"] is False
+
+        gate.set()
+        async with active_client.stream(
+            "GET", f"/api/conversations/{conv}/stream"
+        ) as stream_resp:
+            await stream_resp.aread()
+
+    await runtime.close()
 
 
 async def test_cancel_active_turn_returns_202_and_interrupted_event(tmp_path) -> None:
@@ -1075,13 +1230,6 @@ async def test_tier_validation_rejects_unknown_mode(client) -> None:
     resp = await client.put("/api/preferences", json={"tier": "transcendent"})
     assert resp.status_code == 200
     assert resp.json()["tier"] == "transcendent"
-
-
-async def test_passages_rejects_bad_handle(client) -> None:
-    resp = await client.get("/api/passages", params={"handle": "nonsense"})
-    assert resp.status_code == 422
-    resp = await client.get("/api/passages", params={"handle": "novel:99999:1-5"})
-    assert resp.status_code == 404
 
 
 async def test_retry_route_reruns_and_streams(tmp_path) -> None:

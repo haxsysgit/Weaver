@@ -22,9 +22,6 @@ export type TurnState = "idle" | "streaming" | "cancelling";
 export interface ToolActivity {
   name: string;
   status: string;
-  detail: string;
-  preview?: string;
-  handles?: string[];
 }
 
 function localMessageId(prefix: string): string {
@@ -255,10 +252,6 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
     }
   }
 
-  async function loadPassage(handle: string) {
-    return api.getPassage(handle);
-  }
-
   async function selectConversation(nextConversationId: string) {
     if (turnActive || nextConversationId === conversationId) {
       return false;
@@ -306,9 +299,6 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
         {
           name: event.name,
           status: event.status,
-          detail: event.detail,
-          preview: event.preview,
-          handles: event.handles,
         },
       ]);
       if (activityTimer.current) {
@@ -479,7 +469,6 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
     conversations,
     createConversation,
     deleteConversation,
-    loadPassage,
     draft,
     lastReplyId,
     liveReplyId,

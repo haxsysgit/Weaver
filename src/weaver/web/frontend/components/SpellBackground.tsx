@@ -262,6 +262,9 @@ export function StarWebScene(
     transparent = false,
     threadAlpha,
   } = opts;
+  canvas.dataset.adaptiveLevel = "0";
+  canvas.dataset.paused = String(paused);
+  canvas.dataset.spellMode = mode;
   // jsdom and browsers without WebGL must keep the chat usable and quiet.
   const hasWebGL = typeof window.WebGLRenderingContext !== "undefined"
     || typeof window.WebGL2RenderingContext !== "undefined";
@@ -520,7 +523,7 @@ export function StarWebScene(
     inspectionRecorded = false;
     applyResize();
     updateInspectionData();
-    if (adaptiveLevel >= 2) {
+    if (!activeProfile.animated) {
       renderer.setAnimationLoop(null);
     }
   };
@@ -544,7 +547,7 @@ export function StarWebScene(
     starMat.uniforms.uTime.value = t;
     threadMat.uniforms.uTime.value = t;
     dMat.uniforms.uTime.value = t;
-    if (mode === "alive" && profile.animated) {
+    if (canvas.dataset.spellMode === "alive" && profile.animated) {
       netTimer += 1 / 30;
       if (netTimer > 3.2) {
         netTimer = 0;
@@ -582,7 +585,7 @@ export function StarWebScene(
   };
 
   renderFrame();
-  if (profile.animated && !paused) {
+  if (profile.animated) {
     renderer.setAnimationLoop(tick);
   }
 
@@ -653,6 +656,13 @@ export function SpellBackground({
 
   useEffect(() => {
     const canvas = canvasRef.current;
+    if (canvas) {
+      canvas.dataset.spellMode = mode;
+    }
+  }, [mode]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
     if (!canvas) return;
     const dispose = StarWebScene(canvas, mode, {
       paused,
@@ -661,7 +671,7 @@ export function SpellBackground({
       transparent,
     });
     return dispose;
-  }, [mode, paused, profile, transparent, threadAlpha]);
+  }, [profile, transparent, threadAlpha]);
 
   return (
     <canvas

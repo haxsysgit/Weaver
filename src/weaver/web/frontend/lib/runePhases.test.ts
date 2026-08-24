@@ -7,12 +7,10 @@ describe("rune phase messages", () => {
     const locating = runeMessageForActivity({
       name: "semantic_search",
       status: "start",
-      detail: "secret search arguments",
     });
     const reading = runeMessageForActivity({
       name: "read_chapters",
       status: "start",
-      detail: "secret chapter path",
     });
 
     expect(locating).toMatch(/fate|thread|chapters/i);
@@ -26,7 +24,6 @@ describe("rune phase messages", () => {
       runeMessageForActivity({
         name: "read_chapters",
         status: "done",
-        detail: "done",
       }),
     ).toBeNull();
   });

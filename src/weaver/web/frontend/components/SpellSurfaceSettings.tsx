@@ -131,6 +131,8 @@ export function SpellSurfaceSettings({
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [discardPromptOpen, setDiscardPromptOpen] = useState(false);
   const panelRef = useRef<HTMLElement>(null);
+  const backButtonRef = useRef<HTMLButtonElement>(null);
+  const sectionButtonRefs = useRef(new Map<SettingsSection, HTMLButtonElement>());
   const initialApiKey = useRef(apiKey);
   const initialApiKeyDisabled = useRef(apiKeyDisabled);
   const initialModelId = useRef(modelId);
@@ -169,6 +171,13 @@ export function SpellSurfaceSettings({
   function openSection(section: SettingsSection) {
     setActiveSection(section);
     setMobileDetailOpen(true);
+    window.setTimeout(() => backButtonRef.current?.focus(), 0);
+  }
+
+  function returnToIndex() {
+    const section = activeSection;
+    setMobileDetailOpen(false);
+    window.setTimeout(() => sectionButtonRefs.current.get(section)?.focus(), 0);
   }
 
   function requestClose() {
@@ -269,6 +278,11 @@ export function SpellSurfaceSettings({
                   className={activeSection === section.id ? "on" : ""}
                   key={section.id}
                   onClick={() => openSection(section.id)}
+                  ref={(button) => {
+                    if (button) {
+                      sectionButtonRefs.current.set(section.id, button);
+                    }
+                  }}
                   type="button"
                 >
                   <strong>{section.label}</strong>
@@ -281,7 +295,8 @@ export function SpellSurfaceSettings({
           <main className="lab-settings-main">
             <button
               className="lab-settings-back"
-              onClick={() => setMobileDetailOpen(false)}
+              onClick={returnToIndex}
+              ref={backButtonRef}
               type="button"
             >
               ‹ Settings
