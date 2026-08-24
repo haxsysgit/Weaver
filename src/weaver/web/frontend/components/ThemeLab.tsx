@@ -9,9 +9,9 @@ import {
 } from "./Icons";
 import { SpellBackground } from "./SpellBackground";
 import {
-  SpellSurfaceRail,
+  ThreadArchive,
   type LabThread,
-} from "./SpellSurfaceRail";
+} from "./ThreadArchive";
 import { SpellSurfaceRunes } from "./SpellSurfaceRunes";
 import {
   SpellSurfaceSettings,
@@ -94,7 +94,7 @@ const INITIAL_PREFERENCES: LabPreferences = {
   fontSize: "small",
   glass: "immersive",
   runeMode: "particles",
-  soulMode: "still",
+  soulMode: "sunny",
   spoilerMode: "protect",
   starIntensity: "balanced",
   theme: "void",
@@ -317,7 +317,8 @@ export function ThemeLab() {
 
       <SpellSurfaceSoulSea mode={preferences.soulMode} state={soulState} />
 
-      <SpellSurfaceRail
+      <ThreadArchive
+        actionError={null}
         activeThreadId={activeThreadId}
         archivedOpen={archivedOpen}
         collapsed={desktopRailCollapsed}

@@ -78,6 +78,22 @@
     integration checkpoints. The first dependency repair removes the hidden
     12-conversation listing cap so the Archive can show every device-owned
     thread.
+14. (2026-08-22) Restore Soul Sea presentation choices in Settings and return
+    the selected Soul Sea to the live Spellweave. Before changing production
+    art, read a bounded private packet of no more than twelve Shadow Slave
+    chapters located by exact Soul Sea and soul-core terms, record chapter-only
+    public citations, and generate one private concept for owner review. Also
+    repair Thread Archive delete consistency, visible pin and unpin states, and
+    action tooltips before checkpoint-two acceptance.
+15. (2026-08-22) The owner accepted the bounded Sunny Soul Sea concept and
+    locked three selectable identities: Sunny's mature dark Soul Sea with
+    seven turning Shadow Cores, an ordinary bright Soul Sea with one warm core,
+    and Nephis' radiant Soul Sea with seven suns. Keep the selected realm
+    beneath the existing star web and preserve the Spellweave foreground.
+16. (2026-08-24) The owner completed the visual review and accepted checkpoint
+    two as good for the current release lane. Begin checkpoint three without
+    reopening the accepted Archive, settings, or Soul Sea direction unless the
+    integration trial proves a defect.
 
 ## Scope
 
@@ -94,6 +110,12 @@
   restore, delete confirmation, action failure, active-thread recovery, focus,
   safe areas, scroll lock, and desktop collapse. Repair conversation listing
   so every device-owned active, pinned, and archived thread reaches the UI.
+  Repair delete confirmation so one explicit action always precedes deletion,
+  show distinct pin and unpin controls, and expose readable action tooltips.
+- **Soul Sea correction inside checkpoint two:** inspect the bounded canon
+  packet, generate one review concept, stop for owner visual confirmation, then
+  restore the accepted Soul Sea choices and selected live background without
+  replacing the Spellweave.
 - **Checkpoint three, Integration Trial:** add a deterministic fake API journey
   that survives remount. Verify the rite handoff, conversation states, safe
   Markdown, archive actions, reload, browser restart, service worker, motion,
@@ -110,8 +132,9 @@
   Edition, device ownership, and hard-delete contract.
 - A new Edition, LOTM or Kill the Sun presentation, accounts, cloud sync,
   billing, search, folders, tags, or bulk actions.
-- Changes to model prompts, retrieval, answer quality, private source material,
-  `novels/`, `.weaver/`, `config.toml`, or `.env`.
+- Changes to model prompts, retrieval, answer quality, `.weaver/`,
+  `config.toml`, or `.env`. Private source material stays immutable and may be
+  read only through owner direction 14's bounded chapter packet.
 - Live DeepSeek calls, real key entry, deployment, release, AWS, Tailscale, CI
   secrets, domains, or production state.
 - Treating a chapter-reference knot as canonical proof. It decorates a visible
@@ -189,6 +212,12 @@
    - Build the responsive Archive, remove temporary client metadata stores,
      capture browser evidence, run the focused floor, and ask the owner to
      review phone and desktop.
+   - Repair the reported delete, pin/unpin, and action-tooltip defects with
+     focused regressions.
+   - Locate and read the bounded Soul Sea packet straight through, record the
+     canon visual facts separately from interpretation, and generate one
+     private concept. STOP for owner visual confirmation before using that art
+     direction in the live Spellweave or restoring the Soul Sea selector.
    - STOP here for owner confirmation before integration work.
 
 4. **Checkpoint three: Integration and owner decision**

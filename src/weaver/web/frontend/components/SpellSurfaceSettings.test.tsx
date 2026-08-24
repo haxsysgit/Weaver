@@ -9,7 +9,7 @@ const LEGACY_PREFERENCES: LabPreferences = {
   fontSize: "small",
   glass: "subtle",
   runeMode: "particles",
-  soulMode: "living",
+  soulMode: "sunny",
   spoilerMode: "protect",
   starIntensity: "balanced",
   theme: "crimson",
@@ -38,5 +38,26 @@ describe("Reader Appraisal settings", () => {
 
     expect(onClose).toHaveBeenCalledOnce();
     expect(screen.queryByText("Discard unsaved changes?")).not.toBeInTheDocument();
+  });
+
+  it("offers three lore-grounded Soul Seas and saves the selected realm", () => {
+    const onSave = vi.fn();
+    render(
+      <SpellSurfaceSettings
+        initial={LEGACY_PREFERENCES}
+        onClose={vi.fn()}
+        onSave={onSave}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Appearance" }));
+    expect(screen.getByRole("button", { name: "Sunny's Soul Sea" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Awakened Soul Sea" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Nephis' Soul Sea" }));
+    fireEvent.click(screen.getByRole("button", { name: "Apply changes" }));
+
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ soulMode: "nephis" }),
+    );
   });
 });

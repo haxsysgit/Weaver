@@ -11,7 +11,12 @@ import {
 } from "../lib/identity";
 import { EyeIcon, EyeSlashIcon } from "./Icons";
 import { RUNE_OPTIONS, type RuneMode } from "./SpellSurfaceRunes";
-import { SpellSurfaceSoulSea, type SoulSeaMode } from "./SpellSurfaceSoulSea";
+import {
+  SOUL_SEA_DESCRIPTIONS,
+  SOUL_SEA_LABELS,
+  SpellSurfaceSoulSea,
+  type SoulSeaMode,
+} from "./SpellSurfaceSoulSea";
 
 export type Density = "compact" | "comfortable";
 export type FontSize = "small" | "medium" | "large";
@@ -90,7 +95,6 @@ function withHiddenThreadIdentity(preferences: LabPreferences): LabPreferences {
   return {
     ...preferences,
     glass: "immersive",
-    soulMode: "still",
     theme: "void",
   };
 }
@@ -242,7 +246,7 @@ export function SpellSurfaceSettings({
         role="dialog"
       >
         <div className="lab-settings-atmosphere">
-          <SpellSurfaceSoulSea compact mode="still" state="idle" />
+          <SpellSurfaceSoulSea compact mode={preferences.soulMode} state="idle" />
           <span>The Soul Sea holds your place.</span>
           <button
             aria-label="Close settings"
@@ -439,7 +443,27 @@ export function SpellSurfaceSettings({
                     <h3>Appearance</h3>
                     <span>The Shadow Slave edition keeps its silver Spellweave and void-dark surface. Tune readability and motion without replacing its identity.</span>
                   </div>
-                  <aside className="lab-fixed-identity"><span aria-hidden="true">✦</span><div><strong>Hidden Thread</strong><small>Void surface · immersive messages · still Soul Sea</small></div></aside>
+                  <aside className="lab-fixed-identity"><span aria-hidden="true">✦</span><div><strong>Hidden Thread</strong><small>Void surface · immersive messages · {SOUL_SEA_LABELS[preferences.soulMode]}</small></div></aside>
+                  <div className="lab-customize-block lab-soul-sea-picker">
+                    <h4>Soul Sea</h4>
+                    <p>Choose the distant realm beneath the Spellweave.</p>
+                    <div className="lab-choice-grid three">
+                      {(Object.keys(SOUL_SEA_LABELS) as SoulSeaMode[]).map((mode) => (
+                        <button
+                          aria-label={SOUL_SEA_LABELS[mode]}
+                          aria-pressed={preferences.soulMode === mode}
+                          className={preferences.soulMode === mode ? "on" : ""}
+                          key={mode}
+                          onClick={() => update("soulMode", mode)}
+                          type="button"
+                        >
+                          <SpellSurfaceSoulSea compact mode={mode} state="idle" />
+                          <strong>{SOUL_SEA_LABELS[mode]}</strong>
+                          <span>{SOUL_SEA_DESCRIPTIONS[mode]}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   <div className="lab-customize-block">
                     <h4>Rune appearance</h4>
                     <div className="lab-choice-grid three">

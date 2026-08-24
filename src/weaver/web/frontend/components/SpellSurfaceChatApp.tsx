@@ -3,8 +3,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type Dispatch,
-  type SetStateAction,
 } from "react";
 
 import { useChatController } from "../hooks/useChatController";
@@ -25,8 +23,13 @@ import {
   SpellweaveBackdrop,
   type SpellweaveActivityState,
 } from "./SpellweaveBackdrop";
-import { SpellSurfaceRail, type LabThread } from "./SpellSurfaceRail";
+import { ThreadArchive, type LabThread } from "./ThreadArchive";
 import { SpellSurfaceRunes } from "./SpellSurfaceRunes";
+import {
+  SpellSurfaceSoulSea,
+  type SoulSeaMode,
+  type SoulSeaState,
+} from "./SpellSurfaceSoulSea";
 import {
   SpellSurfaceSettings,
   type LabPreferences,
@@ -45,7 +48,7 @@ const INITIAL_PREFERENCES: LabPreferences = {
   fontSize: "small",
   glass: "immersive",
   runeMode: "particles",
-  soulMode: "still",
+  soulMode: "sunny",
   spoilerMode: "protect",
   starIntensity: "balanced",
   theme: "void",
@@ -63,6 +66,18 @@ function savedChoice<T extends string>(
   return typeof value === "string" && choices.includes(value as T)
     ? value as T
     : fallback;
+}
+
+function savedSoulSeaMode(value: unknown): SoulSeaMode {
+  const legacyModes: Record<string, SoulSeaMode> = {
+    living: "awakened",
+    mirror: "nephis",
+    still: "sunny",
+  };
+  if (typeof value === "string" && value in legacyModes) {
+    return legacyModes[value];
+  }
+  return savedChoice(value, ["sunny", "awakened", "nephis"], "sunny");
 }
 
 function loadInitialPreferences(): LabPreferences {
@@ -95,11 +110,7 @@ function loadInitialPreferences(): LabPreferences {
         ["particles", "voice", "threads"],
         INITIAL_PREFERENCES.runeMode,
       ),
-      soulMode: savedChoice(
-        saved.soulMode,
-        ["still", "living", "mirror"],
-        INITIAL_PREFERENCES.soulMode,
-      ),
+      soulMode: savedSoulSeaMode(saved.soulMode),
       starIntensity: savedChoice(
         saved.starIntensity,
         ["quiet", "balanced", "vivid"],
@@ -180,9 +191,6 @@ function SpellSurfaceChatSurface({
   const [railOpen, setRailOpen] = useState(false);
   const [desktopRailCollapsed, setDesktopRailCollapsed] = useState(false);
   const [archivedOpen, setArchivedOpen] = useState(false);
-  const [archivedIds, setArchivedIds] = useState<Set<string>>(new Set());
-  const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set());
-  const [threadNames, setThreadNames] = useState<Map<string, string>>(new Map());
   const [spellState, setSpellState] = useState<SpellweaveActivityState>("idle");
   const [announcement, setAnnouncement] = useState("[The Spell listens.]");
   const [announcementKey, setAnnouncementKey] = useState(0);
@@ -195,15 +203,15 @@ function SpellSurfaceChatSurface({
 
   const threads = useMemo(
     () => chat.conversations.map((conversation: ConversationSummary): LabThread => ({
-      archived: archivedIds.has(conversation.conversation_id),
+      archived: conversation.archived,
       dateGroup: dateGroupFor(conversation.created_at),
       id: conversation.conversation_id,
-      pinned: pinnedIds.has(conversation.conversation_id),
+      pinned: conversation.pinned,
       preview: "private reading thread",
-      title: threadNames.get(conversation.conversation_id) ?? conversation.title,
+      title: conversation.title,
       volume: null,
     })),
-    [archivedIds, chat.conversations, pinnedIds, threadNames],
+    [chat.conversations],
   );
 
   useEffect(() => {
@@ -364,24 +372,46 @@ function SpellSurfaceChatSurface({
     announce("[The thread is recalled.]");
   }
 
-  function renameThread(threadId: string, title: string) {
-    setThreadNames((current) => new Map(current).set(threadId, title));
-    announce("[The thread accepts a new name.]");
+  async function renameThread(threadId: string, title: string) {
+    const updated = await chat.updateConversation(threadId, { title });
+    if (updated) {
+      announce("[The thread accepts a new name.]");
+    }
+    return updated;
   }
 
-  function toggleSet(
-    update: Dispatch<SetStateAction<Set<string>>>,
-    threadId: string,
-  ) {
-    update((current) => {
-      const next = new Set(current);
-      if (next.has(threadId)) {
-        next.delete(threadId);
-      } else {
-        next.add(threadId);
-      }
-      return next;
+  async function togglePinnedThread(threadId: string) {
+    const thread = threads.find((candidate) => candidate.id === threadId);
+    if (!thread) {
+      return false;
+    }
+    const updated = await chat.updateConversation(threadId, {
+      pinned: !thread.pinned,
     });
+    if (updated) {
+      const message = thread.pinned
+        ? "[The thread is released.]"
+        : "[The Spell holds the thread close.]";
+      announce(message);
+    }
+    return updated;
+  }
+
+  async function toggleArchivedThread(threadId: string) {
+    const thread = threads.find((candidate) => candidate.id === threadId);
+    if (!thread) {
+      return false;
+    }
+    const updated = await chat.updateConversation(threadId, {
+      archived: !thread.archived,
+    });
+    if (updated) {
+      const message = thread.archived
+        ? "[The thread returns from silence.]"
+        : "[The thread sinks into silence.]";
+      announce(message);
+    }
+    return updated;
   }
 
   function sendMessage(message: string) {
@@ -409,6 +439,15 @@ function SpellSurfaceChatSurface({
     : setupRevealing
       ? "reaching"
       : spellState;
+  const soulSeaState: SoulSeaState = chat.recoveryMessage
+    ? "error"
+    : backdropState === "answering"
+      ? "weaving"
+      : backdropState === "reading" || backdropState === "reaching"
+        ? "rippling"
+        : backdropState === "complete"
+          ? "complete"
+          : "idle";
   return (
     <div
       className={[
@@ -426,6 +465,7 @@ function SpellSurfaceChatSurface({
       data-theme={preferences.theme}
       data-testid="spell-surface-live"
     >
+      <SpellSurfaceSoulSea mode={preferences.soulMode} state={soulSeaState} />
       <SpellweaveBackdrop
         distantRendererEnabled={!setupOpen || setupRevealing}
         paused={settingsOpen || (setupOpen && !setupRevealing)}
@@ -433,18 +473,19 @@ function SpellSurfaceChatSurface({
         threadAlpha={threadAlpha}
       />
 
-      <SpellSurfaceRail
+      <ThreadArchive
         activeThreadId={chat.conversationId ?? ""}
         archivedOpen={archivedOpen}
         collapsed={desktopRailCollapsed}
         drawerOpen={railOpen}
-        onArchive={(threadId) => toggleSet(setArchivedIds, threadId)}
+        actionError={chat.conversationActionError}
+        onArchive={toggleArchivedThread}
         onClose={closeRail}
         onCreate={() => void createThread()}
-        onDelete={(threadId) => void chat.deleteConversation(threadId)}
+        onDelete={(threadId) => chat.deleteConversation(threadId)}
         onOpen={openRail}
         onOpenSettings={() => void openSettings()}
-        onPin={(threadId) => toggleSet(setPinnedIds, threadId)}
+        onPin={togglePinnedThread}
         onRename={renameThread}
         onSelect={(threadId) => void selectThread(threadId)}
         onSetArchivedOpen={setArchivedOpen}

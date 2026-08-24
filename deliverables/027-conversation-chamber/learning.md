@@ -14,6 +14,11 @@ one to begin.
 - Checkpoint two is the Thread Archive: persistent server-backed rename, pin,
   archive, restore, delete confirmation, clear pinned and archived sections,
   plus one phone and desktop component.
+- On 2026-08-22 the owner restored Soul Sea presentation choices, the selected
+  Soul Sea behind the live Spellweave, clear pin and unpin controls, action
+  tooltips, and one consistent delete confirmation. The owner accepted the
+  bounded-canon Sunny concept and locked Sunny, ordinary Awakened, and Nephis
+  as the three selectable Soul Sea identities.
 - Checkpoint three proves the complete fake-mode journey: integration,
   restart, accessibility, motion, performance, broad phone support, desktop,
   independent review, and owner decision.
@@ -36,7 +41,7 @@ one to begin.
 
 ## Learning gate
 
-Pending. Admission locks the component mapping, the three checkpoint review
-rules, and the current Plan 023 API shape before production edits begin. The
-owner directed focused tests during checkpoints one and two; the full frontend,
-build, and Python floor runs only at checkpoint three.
+Passed. The owner accepted checkpoint two on 2026-08-24 after reviewing the
+Thread Archive and restored Soul Sea presentation. Checkpoint three is now
+active. It owns the deterministic fake journey, full command floor, browser
+evidence, independent reviews, and final owner decision.

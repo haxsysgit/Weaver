@@ -12,6 +12,7 @@ import {
   faMagnifyingGlass,
   faPen,
   faThumbtack,
+  faThumbtackSlash,
   faPlus,
   faRotateRight,
   faSquare,
@@ -91,6 +92,12 @@ export function EditIcon(props: IconProps) {
 
 export function PinIcon(props: IconProps) {
   return <FontAwesomeIcon aria-hidden="true" icon={faThumbtack} {...props} />;
+}
+
+export function UnpinIcon(props: IconProps) {
+  return (
+    <FontAwesomeIcon aria-hidden="true" icon={faThumbtackSlash} {...props} />
+  );
 }
 
 export function SearchIcon(props: IconProps) {

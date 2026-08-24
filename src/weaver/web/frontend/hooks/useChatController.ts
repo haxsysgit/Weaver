@@ -2,10 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import type {
   ChatApi,
+  ConversationMetadataPatch,
   ConversationSummary,
   StoredMessage,
   StreamEvent,
 } from "../lib/chatApi";
+import { ChatApiError } from "../lib/chatApi";
 import type { ChatProduct } from "../lib/product";
 import type { DisplayMessage } from "../lib/chatModel";
 import {
@@ -67,6 +69,22 @@ function findConversationTitle(
   );
 }
 
+function conversationActionMessage(error: unknown): string {
+  if (!(error instanceof ChatApiError)) {
+    return "The change could not be saved. Try again.";
+  }
+  if (error.status === 404) {
+    return "That thread can no longer be found.";
+  }
+  if (error.status === 409) {
+    return "That thread is still weaving. Let its answer settle first.";
+  }
+  if (error.status === 422) {
+    return "The Spell could not accept that change.";
+  }
+  return "The change could not be saved. Try again.";
+}
+
 export function useChatController(api: ChatApi, product: ChatProduct) {
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -79,6 +97,7 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
   const [recovery, setRecovery] = useState<RecoveryIssue | null>(null);
   const [bootError, setBootError] = useState<string | null>(null);
   const [activity, setActivity] = useState<ToolActivity[]>([]);
+  const [conversationActionError, setConversationActionError] = useState<string | null>(null);
   const activeLoad = useRef(0);
   const activityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -111,11 +130,15 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
         let availableConversations = await api.listConversations();
         let nextConversationId = localStorage.getItem(product.storageKey);
         const savedConversationExists = availableConversations.some(
-          (conversation) => conversation.conversation_id === nextConversationId,
+          (conversation) =>
+            conversation.conversation_id === nextConversationId &&
+            !conversation.archived,
         );
 
         if (!savedConversationExists) {
-          nextConversationId = availableConversations[0]?.conversation_id ?? null;
+          nextConversationId = availableConversations.find(
+            (conversation) => !conversation.archived,
+          )?.conversation_id ?? null;
         }
         if (!nextConversationId) {
           const created = await api.createConversation();
@@ -145,15 +168,12 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
   }, [api, product.storageKey, product.wakeErrorMessage]);
 
   async function refreshConversations() {
-    setConversations(await api.listConversations());
+    const refreshed = await api.listConversations();
+    setConversations(refreshed);
+    return refreshed;
   }
 
-  async function createConversation() {
-    // ChatGPT-style: inside a fresh, unused weave a New weave click is a
-    // no-op - there is nothing to leave.
-    if (turnActive || messages.length === 0) {
-      return false;
-    }
+  async function startFreshConversation() {
     const created = await api.createConversation();
     setConversationId(created.conversation_id);
     setMessages([]);
@@ -162,27 +182,77 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
     setRecovery(null);
     localStorage.setItem(product.storageKey, created.conversation_id);
     await refreshConversations();
+  }
+
+  async function createConversation() {
+    // ChatGPT-style: inside a fresh, unused weave a New weave click is a
+    // no-op - there is nothing to leave.
+    if (turnActive || messages.length === 0) {
+      return false;
+    }
+    await startFreshConversation();
     return true;
   }
 
   async function deleteConversation(conversationId: string) {
-    if (turnActive) {
-      return;
-    }
-    await api.deleteConversation(conversationId);
-    if (conversationId === conversationIdState) {
-      // the active weave is gone: land on the newest remaining one or a
-      // fresh weave
+    setConversationActionError(null);
+    try {
+      await api.deleteConversation(conversationId);
       const remaining = (await api.listConversations()).filter(
         (item) => item.conversation_id !== conversationId,
       );
-      if (remaining.length > 0) {
-        await selectConversation(remaining[0].conversation_id);
-      } else {
-        await createConversation();
+      setConversations(remaining);
+      if (conversationId === conversationIdState) {
+        const nextActive = remaining.find((item) => !item.archived);
+        if (nextActive) {
+          await selectConversation(nextActive.conversation_id);
+        } else {
+          await startFreshConversation();
+        }
       }
+      return true;
+    } catch (error) {
+      setConversationActionError(conversationActionMessage(error));
+      return false;
     }
-    await refreshConversations();
+  }
+
+  async function updateConversation(
+    conversationId: string,
+    patch: ConversationMetadataPatch,
+  ) {
+    setConversationActionError(null);
+    try {
+      const updated = await api.updateConversation(conversationId, patch);
+      const nextConversations = conversations.map((conversation) => {
+        return conversation.conversation_id === conversationId
+          ? updated
+          : conversation;
+      });
+      setConversations(nextConversations);
+
+      if (updated.archived && conversationId === conversationIdState) {
+        const nextActive = nextConversations.find((conversation) => {
+          return !conversation.archived && conversation.conversation_id !== conversationId;
+        });
+        if (nextActive) {
+          await selectConversation(nextActive.conversation_id);
+        } else {
+          await startFreshConversation();
+        }
+      }
+      return true;
+    } catch (error) {
+      setConversationActionError(conversationActionMessage(error));
+      if (error instanceof ChatApiError && error.status === 404) {
+        try {
+          await refreshConversations();
+        } catch {
+          // Keep the safe action error visible if the refresh also fails.
+        }
+      }
+      return false;
+    }
   }
 
   async function loadPassage(handle: string) {
@@ -405,6 +475,7 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
     bootError,
     cancelTurn,
     conversationId,
+    conversationActionError,
     conversations,
     createConversation,
     deleteConversation,
@@ -422,5 +493,6 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
     setDraft,
     turnActive,
     turnState,
+    updateConversation,
   };
 }

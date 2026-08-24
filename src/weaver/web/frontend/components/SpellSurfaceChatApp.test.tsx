@@ -1,7 +1,11 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { ChatApi } from "../lib/chatApi";
+import {
+  ChatApiError,
+  type ChatApi,
+  type ConversationSummary,
+} from "../lib/chatApi";
 import { FIRST_NIGHTMARE_STORAGE_KEY } from "../lib/firstNightmare";
 import { getApiKey } from "../lib/identity";
 import { SpellSurfaceChatApp } from "./SpellSurfaceChatApp";
@@ -38,6 +42,36 @@ function createApi(): ChatApi {
       title: typeof patch.title === "string" ? patch.title : "New chat",
     })),
   };
+}
+
+function createMetadataApi(initial: ConversationSummary[]): ChatApi {
+  const api = createApi();
+  let conversations = initial;
+  api.listConversations = vi.fn(async () => conversations);
+  api.updateConversation = vi.fn(async (conversationId, patch) => {
+    const current = conversations.find((item) => {
+      return item.conversation_id === conversationId;
+    });
+    if (!current) {
+      throw new Error("missing test conversation");
+    }
+    const updated: ConversationSummary = {
+      ...current,
+      ...patch,
+      title: patch.title ?? current.title,
+    };
+    conversations = conversations.map((item) => {
+      return item.conversation_id === conversationId ? updated : item;
+    });
+    return updated;
+  });
+  api.deleteConversation = vi.fn(async (conversationId) => {
+    conversations = conversations.filter((item) => {
+      return item.conversation_id !== conversationId;
+    });
+    return { deleted: conversationId };
+  });
+  return api;
 }
 
 function setDesktopMedia() {
@@ -184,7 +218,7 @@ describe("first Nightmare setup", () => {
       name: "Reader Appraisal settings",
     });
     expect(
-      within(dialog).getByRole("img", { name: /Still Black Sea/ }),
+      within(dialog).getByRole("img", { name: /Sunny's Soul Sea/ }),
     ).toBeVisible();
     fireEvent.click(
       within(dialog).getByRole("button", { name: "Bound voice" }),
@@ -198,6 +232,16 @@ describe("first Nightmare setup", () => {
     expect(
       within(dialog).getByRole("button", { name: /DeepSeek V4 Flash/ }),
     ).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("restores a saved Soul Sea beneath the live Spellweave", async () => {
+    localStorage.setItem(FIRST_NIGHTMARE_STORAGE_KEY, "completed");
+    localStorage.setItem("weaver.spell-surface", JSON.stringify({ soulMode: "nephis" }));
+    render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
+
+    expect(screen.getByTestId("spellweave-backdrop")).toBeVisible();
+    expect(screen.getByRole("img", { name: /Nephis' Soul Sea/ })).toBeVisible();
+    expect(screen.getByTestId("spell-surface-live")).toHaveAttribute("data-soul", "nephis");
   });
 
   it("replays the rite from settings without changing the saved first-run state", async () => {
@@ -217,6 +261,247 @@ describe("first Nightmare setup", () => {
     expect(within(rite).getByText("The Spell has found you")).toBeVisible();
     fireEvent.click(within(rite).getByRole("button", { name: "Enter later" }));
     expect(localStorage.getItem(FIRST_NIGHTMARE_STORAGE_KEY)).toBe("completed");
+  });
+});
+
+describe("Thread Archive", () => {
+  beforeEach(() => {
+    setDesktopMedia();
+    localStorage.clear();
+    localStorage.setItem(FIRST_NIGHTMARE_STORAGE_KEY, "completed");
+  });
+
+  it("separates server-backed pinned, active, and archived threads", async () => {
+    const api = createApi();
+    vi.mocked(api.listConversations).mockResolvedValue([
+      {
+        archived: false,
+        conversation_id: "pinned-thread",
+        created_at: "2026-08-21T12:00:00Z",
+        edition_id: "shadow-slave",
+        pinned: true,
+        title: "Ariel and the Tomb",
+      },
+      {
+        archived: false,
+        conversation_id: "active-thread",
+        created_at: "2026-08-21T11:00:00Z",
+        edition_id: "shadow-slave",
+        pinned: false,
+        title: "Sunny and Nephis",
+      },
+      {
+        archived: true,
+        conversation_id: "archived-thread",
+        created_at: "2026-08-19T12:00:00Z",
+        edition_id: "shadow-slave",
+        pinned: false,
+        title: "Forgotten Shore",
+      },
+    ]);
+
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+
+    const pinned = await screen.findByRole("region", { name: "Pinned threads" });
+    expect(within(pinned).getByText("Ariel and the Tomb")).toBeVisible();
+    const unpinButton = within(pinned).getByRole("button", {
+      name: "Unpin Ariel and the Tomb",
+    });
+    expect(unpinButton).toHaveAttribute("title", "Unpin");
+    expect(unpinButton.querySelector("svg")).toHaveAttribute(
+      "data-icon",
+      "thumbtack-slash",
+    );
+    const active = screen.getByRole("navigation", { name: "Active threads" });
+    expect(within(active).getByText("Sunny and Nephis")).toBeVisible();
+    expect(within(active).queryByText("Ariel and the Tomb")).toBeNull();
+    expect(
+      within(active).getByRole("button", { name: "Pin Sunny and Nephis" }),
+    ).toHaveAttribute("title", "Pin");
+    expect(
+      within(active).getByRole("button", { name: "Rename Sunny and Nephis" }),
+    ).toHaveAttribute("title", "Rename");
+
+    fireEvent.click(screen.getByRole("button", { name: /Open archived threads/ }));
+    expect(screen.getByRole("heading", { name: "Archived threads" })).toBeVisible();
+    expect(screen.getByRole("navigation", { name: "Archived threads" })).toHaveTextContent("Forgotten Shore");
+    expect(screen.getByRole("button", { name: "Return to active threads" })).toBeVisible();
+  });
+
+  it("opens an explicit delete confirmation before deleting", async () => {
+    const api = createMetadataApi([
+      {
+        archived: false,
+        conversation_id: "thread-1",
+        created_at: "2026-08-21T12:00:00Z",
+        edition_id: "shadow-slave",
+        pinned: false,
+        title: "Ariel and the Tomb",
+      },
+    ]);
+
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+    const row = await screen.findByTestId("thread-thread-1");
+    fireEvent.click(within(row).getByRole("button", { name: "Delete Ariel and the Tomb" }));
+
+    expect(api.deleteConversation).not.toHaveBeenCalled();
+    const confirmation = within(row).getByRole("dialog", { name: "Delete Ariel and the Tomb" });
+    expect(within(confirmation).getByText("Delete thread?")).toBeVisible();
+    expect(within(confirmation).getByRole("button", { name: "Cancel" })).toBeVisible();
+    fireEvent.click(within(confirmation).getByRole("button", { name: "Delete thread" }));
+    expect(api.deleteConversation).toHaveBeenCalledWith("thread-1");
+    await waitFor(() => {
+      expect(screen.queryByTestId("thread-thread-1")).toBeNull();
+    });
+  });
+
+  it("deletes another thread while the current answer is still weaving", async () => {
+    let finishAnswer: (() => void) | undefined;
+    const answerCanFinish = new Promise<void>((resolve) => {
+      finishAnswer = resolve;
+    });
+    const api = createMetadataApi([
+      {
+        archived: false,
+        conversation_id: "current-thread",
+        created_at: "2026-08-22T12:00:00Z",
+        edition_id: "shadow-slave",
+        pinned: false,
+        title: "Current answer",
+      },
+      {
+        archived: false,
+        conversation_id: "other-thread",
+        created_at: "2026-08-22T11:00:00Z",
+        edition_id: "shadow-slave",
+        pinned: false,
+        title: "Old theory",
+      },
+    ]);
+    api.streamTurn = vi.fn().mockImplementation(() => {
+      return (async function* () {
+        await answerCanFinish;
+        yield { type: "completed" as const, text: "Finished." };
+      })();
+    });
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+    await screen.findByTestId("thread-current-thread");
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Message Weaver" }), {
+      target: { value: "keep weaving" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+    await screen.findByRole("button", { name: "Stop Weaver" });
+
+    const oldThread = screen.getByTestId("thread-other-thread");
+    fireEvent.click(
+      within(oldThread).getByRole("button", { name: "Delete Old theory" }),
+    );
+    fireEvent.click(
+      within(oldThread).getByRole("button", { name: "Delete thread" }),
+    );
+
+    await waitFor(() => {
+      expect(api.deleteConversation).toHaveBeenCalledWith("other-thread");
+    });
+    finishAnswer?.();
+  });
+
+  it("keeps a server-confirmed pin after the app remounts", async () => {
+    const api = createMetadataApi([
+      {
+        archived: false,
+        conversation_id: "durable-thread",
+        created_at: "2026-08-21T12:00:00Z",
+        edition_id: "shadow-slave",
+        pinned: false,
+        title: "Durable theory",
+      },
+    ]);
+    const firstRender = render(
+      <SpellSurfaceChatApp api={api} privacyLabel="Private" />,
+    );
+    const row = await screen.findByTestId("thread-durable-thread");
+
+    fireEvent.click(
+      within(row).getByRole("button", { name: "Pin Durable theory" }),
+    );
+
+    const pinned = await screen.findByRole("region", { name: "Pinned threads" });
+    expect(within(pinned).getByText("Durable theory")).toBeVisible();
+    firstRender.unmount();
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+
+    const restoredPinned = await screen.findByRole("region", {
+      name: "Pinned threads",
+    });
+    expect(within(restoredPinned).getByText("Durable theory")).toBeVisible();
+  });
+
+  it("keeps the thread unchanged and shows safe copy when a mutation fails", async () => {
+    const api = createMetadataApi([
+      {
+        archived: false,
+        conversation_id: "failed-thread",
+        created_at: "2026-08-21T12:00:00Z",
+        edition_id: "shadow-slave",
+        pinned: false,
+        title: "Unbroken thread",
+      },
+    ]);
+    api.updateConversation = vi.fn().mockRejectedValue(
+      new ChatApiError("Updating conversation", 500),
+    );
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+    const row = await screen.findByTestId("thread-failed-thread");
+
+    fireEvent.click(
+      within(row).getByRole("button", { name: "Pin Unbroken thread" }),
+    );
+
+    expect(
+      await screen.findByText("The change could not be saved. Try again."),
+    ).toBeVisible();
+    expect(screen.queryByRole("region", { name: "Pinned threads" })).toBeNull();
+    expect(
+      within(screen.getByRole("navigation", { name: "Active threads" }))
+        .getByText("Unbroken thread"),
+    ).toBeVisible();
+  });
+
+  it("moves to another active thread after archiving the current thread", async () => {
+    const api = createMetadataApi([
+      {
+        archived: false,
+        conversation_id: "current-thread",
+        created_at: "2026-08-21T12:00:00Z",
+        edition_id: "shadow-slave",
+        pinned: false,
+        title: "Current thread",
+      },
+      {
+        archived: false,
+        conversation_id: "next-thread",
+        created_at: "2026-08-21T11:00:00Z",
+        edition_id: "shadow-slave",
+        pinned: false,
+        title: "Next active thread",
+      },
+    ]);
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+    const currentRow = await screen.findByTestId("thread-current-thread");
+
+    fireEvent.click(
+      within(currentRow).getByRole("button", { name: "Archive Current thread" }),
+    );
+
+    const nextRow = await screen.findByTestId("thread-next-thread");
+    await waitFor(() => {
+      expect(
+        within(nextRow).getByRole("button", { name: "Next active thread" }),
+      ).toHaveAttribute("aria-current", "page");
+    });
+    expect(api.loadMessages).toHaveBeenCalledWith("next-thread");
   });
 });
 

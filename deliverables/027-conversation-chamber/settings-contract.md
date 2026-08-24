@@ -14,13 +14,17 @@ motion without obscuring what a control does.
 1. Reader position joins chapter reach and spoiler protection.
 2. Answer depth owns Awakened, Ascended, and Transcendent reading tiers.
 3. Bound voice owns the browser-local DeepSeek key and model choice.
-4. Appearance owns rune motion, star-web intensity, density, and text size.
+4. Appearance owns the selected Soul Sea, rune motion, star-web intensity,
+   density, and text size.
 5. Privacy and controls states the real browser, local-library, and DeepSeek
    boundaries alongside keyboard shortcuts.
 6. First Nightmare owns the replay action.
 
 Shadow Slave keeps one fixed Hidden Thread Edition identity. Reader-facing
-theme, message-glass, and Soul Sea variant pickers leave the settings UI.
+message-glass controls leave the settings UI. The owner accepted three Soul Sea
+identities on 2026-08-22: Sunny's mature dark sea, an ordinary bright Soul Sea,
+and Nephis' radiant sea. Selection changes the distant realm beneath the
+existing star web and never replaces the Spellweave.
 
 ## Phone behavior
 

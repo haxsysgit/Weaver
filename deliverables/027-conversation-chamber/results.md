@@ -109,3 +109,84 @@ focused backend recheck passed 8/8 tests and Ruff passed.
 The browser API now carries the full Plan 023 summary and exposes the partial
 authenticated PATCH method. Its focused Vitest passed 4/4 tests and TypeScript
 passed.
+
+### Thread Archive implementation
+
+The temporary rail has been replaced by a responsive Thread Archive backed by
+the server metadata contract. Pinned threads now form a labelled section below
+New Weave and above Chats. Archived opens a distinct view with its own heading,
+empty state, restore actions, and a clear return to active threads.
+
+Rename, pin, archive, restore, and delete update only after the server confirms
+the change. A failed mutation keeps the current row unchanged and shows safe
+reader-facing copy. Delete opens an explicit side confirmation before the
+request is sent. Archiving or deleting the active thread selects another active
+thread, or creates a fresh weave when none remains.
+
+The first focused run exposed that Yesterday and Others were collapsed by
+default. Their action buttons existed but were inaccessible until the reader
+expanded each group. The Archive now opens every date group by default and
+keeps folding as an optional reader action.
+
+- Focused frontend Vitest passed 29/29 tests across `chatApi`, the live app,
+  and the theme lab.
+- `npm exec tsc -- --noEmit` passed.
+- `npm run build` passed and refreshed `src/weaver/web/dist/`.
+- The focused backend metadata recheck passed 8/8 tests and Ruff passed before
+  the Archive UI was built.
+- The full frontend and Python suites remain reserved for checkpoint three by
+  owner direction.
+
+### Owner correction: Archive actions and Soul Sea
+
+The owner reported that delete felt inconsistent, pin did not expose a clear
+unpin state, icon actions had no visible hover labels, and the accepted Soul
+Sea choices and live background had disappeared.
+
+The delete diagnosis found two real interaction defects. The controller
+blocked every conversation action while any answer was streaming, including
+deleting or pinning a different idle thread. The confirmation also used
+`Unmake this thread?` beside a separate Delete action, and its absolute panel
+could be clipped by the scrolling rail. The repair lets the server decide
+whether the specific thread is busy, uses one inline `Delete thread?` panel,
+shows a pending state, and keeps the row until the delete response succeeds.
+Pinned rows use a separate unpin icon and selected color. Every row action now
+has its plain hover title.
+
+The focused Archive red run failed 3 tests before the repair. Its green recheck
+passed 6/6 tests, including deletion of an idle thread while another answer is
+streaming. TypeScript passed.
+
+The bounded Soul Sea packet contains chapters 16, 104 through 106, 352, 591,
+1661, 2130, 2131, and 1518. It establishes Sunny's still dark water,
+transparent lightless cores appearing as black suns, Memory lights, motionless
+slain shadows, the black Nameless Temple, and the eventual seven-core sky with
+tens of thousands of shadows. Chapter 16 also distinguishes the ordinary Soul
+Sea as one warm, bright core. Chapter 1518 establishes Nephis' calm radiant
+ocean, golden-cloud light, seven bright suns, and the incandescent white flame
+revealed beneath its surface.
+
+The owner accepted the private Sunny concept and locked three production
+identities. Settings now presents Sunny's dark Soul Sea, an ordinary Awakened
+Soul Sea, and Nephis' radiant Soul Sea as illustrated choices. The selected
+realm persists in browser visual preferences, old `still`, `living`, and
+`mirror` values migrate to their closest new identity, and the live Chamber
+places the Soul Sea between the distant star renderer and the sharp foreground
+Spellweave. It never replaces the accepted v1 star web.
+
+Sunny renders seven slowly turning lightless cores, the Nameless Temple,
+Memory lights, and the shadow legion. The ordinary sea renders one warm core
+over bright living water. Nephis renders seven radiant suns over a golden sea
+that responds to active weaving. Reduced motion inherits the existing global
+motion cutoff.
+
+- The first live capture exposed an opaque-canvas stacking defect that hid the
+  Soul Sea. The repaired order is distant stars, Soul Sea, Spellweave threads,
+  then conversation UI.
+- Focused Soul Sea, settings, live-app, and Theme Lab Vitest passed 32/32 tests.
+- `npm run build` passed and refreshed `src/weaver/web/dist/`.
+- Phone captures at 390 x 844 confirmed the selector and live layering for
+  Sunny and Nephis.
+
+The owner accepted checkpoint two on 2026-08-24 and directed checkpoint three
+to begin.
