@@ -607,6 +607,66 @@ describe("live Spellweave foundation", () => {
     expect(screen.getByRole("textbox")).toBeVisible();
   });
 
+  it("keeps the foreground weave stable while a reply is running", async () => {
+    let finishAnswer: (() => void) | undefined;
+    const answerCanFinish = new Promise<void>((resolve) => {
+      finishAnswer = resolve;
+    });
+    const api = createApi();
+    api.streamTurn = vi.fn().mockImplementation(() => {
+      return (async function* () {
+        await answerCanFinish;
+        yield { type: "completed" as const, text: "The answer settles." };
+      })();
+    });
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+    await waitFor(() => expect(api.createConversation).toHaveBeenCalled());
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Message Weaver" }), {
+      target: { value: "Keep the star web still" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    const foreground = document.querySelector(".spellweave-field-foreground");
+    expect(foreground).not.toHaveAttribute("data-spell-state");
+    finishAnswer?.();
+  });
+
+  it("keeps the composer focused through send and reply completion", async () => {
+    let finishAnswer: (() => void) | undefined;
+    const answerCanFinish = new Promise<void>((resolve) => {
+      finishAnswer = resolve;
+    });
+    const api = createApi();
+    api.streamTurn = vi.fn().mockImplementation(() => {
+      return (async function* () {
+        await answerCanFinish;
+        yield { type: "completed" as const, text: "The answer settles." };
+      })();
+    });
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+    await waitFor(() => expect(api.createConversation).toHaveBeenCalled());
+
+    const composer = screen.getByRole("textbox", { name: "Message Weaver" });
+    fireEvent.change(composer, { target: { value: "Hold my focus" } });
+    fireEvent.keyDown(composer, { key: "Enter" });
+
+    await waitFor(() => expect(composer).toHaveFocus());
+    expect(composer).toHaveAttribute("readonly");
+
+    finishAnswer?.();
+    await screen.findByText("The answer settles.");
+    await waitFor(() => expect(composer).toHaveFocus());
+    expect(composer).not.toHaveAttribute("readonly");
+  });
+
+  it("shows Soul Sea cores without a visible caption in the chat", () => {
+    render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
+
+    expect(document.querySelectorAll(".lab-soul-sun")).toHaveLength(7);
+    expect(document.querySelector(".lab-soul-caption")).toBeNull();
+  });
+
   it("keeps the collapsed desktop rail operable so it can reopen", () => {
     render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
 

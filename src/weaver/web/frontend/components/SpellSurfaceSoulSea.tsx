@@ -6,6 +6,7 @@ export type SoulSeaState = "idle" | "rippling" | "weaving" | "complete" | "error
 interface SoulSeaProps {
   compact?: boolean;
   mode: SoulSeaMode;
+  showCaption?: boolean;
   state: SoulSeaState;
 }
 
@@ -29,7 +30,12 @@ function indexedStyle(index: number): CSSProperties {
   return { "--index": index } as CSSProperties;
 }
 
-export function SpellSurfaceSoulSea({ compact = false, mode, state }: SoulSeaProps) {
+export function SpellSurfaceSoulSea({
+  compact = false,
+  mode,
+  showCaption = true,
+  state,
+}: SoulSeaProps) {
   const coreCount = mode === "awakened" ? 1 : 7;
 
   return (
@@ -70,7 +76,7 @@ export function SpellSurfaceSoulSea({ compact = false, mode, state }: SoulSeaPro
         <span className="water-plane water-plane-front" />
         <span className="water-flash" />
       </div>
-      {!compact && (
+      {!compact && showCaption && (
         <p className="lab-soul-caption">
           <span>{SOUL_SEA_LABELS[mode]}</span>
           {SOUL_SEA_DESCRIPTIONS[mode]}

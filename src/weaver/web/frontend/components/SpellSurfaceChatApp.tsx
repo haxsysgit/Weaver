@@ -279,6 +279,7 @@ function SpellSurfaceChatSurface({
       window.clearTimeout(completionTimer.current);
     }
     completionTimer.current = window.setTimeout(() => setSpellState("idle"), 900);
+    window.setTimeout(focusComposerIfAvailable, 0);
   }, [chat.activity.length, chat.turnActive]);
 
   useEffect(() => {
@@ -315,6 +316,13 @@ function SpellSurfaceChatSurface({
   function announce(message: string) {
     setAnnouncement(message);
     setAnnouncementKey((current) => current + 1);
+  }
+
+  function focusComposerIfAvailable() {
+    if (railOpen || settingsOpen || setupOpen) {
+      return;
+    }
+    composerRef.current?.focus({ preventScroll: true });
   }
 
   async function openSettings() {
@@ -440,6 +448,7 @@ function SpellSurfaceChatSurface({
     setSpellState("reaching");
     announce("[The Spell reaches for the first thread.]");
     void chat.sendMessage(message);
+    window.setTimeout(focusComposerIfAvailable, 0);
   }
 
   function regenerateReply() {
@@ -486,9 +495,14 @@ function SpellSurfaceChatSurface({
       data-theme={preferences.theme}
       data-testid="spell-surface-live"
     >
-      <SpellSurfaceSoulSea mode={preferences.soulMode} state={soulSeaState} />
+      <SpellSurfaceSoulSea
+        mode={preferences.soulMode}
+        showCaption={false}
+        state={soulSeaState}
+      />
       <SpellweaveBackdrop
         distantRendererEnabled={!setupOpen || setupRevealing}
+        foregroundRespondsToActivity={false}
         paused={settingsOpen || (setupOpen && !setupRevealing)}
         state={backdropState}
         threadAlpha={threadAlpha}

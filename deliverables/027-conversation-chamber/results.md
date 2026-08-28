@@ -314,3 +314,28 @@ preserved in `/tmp/plan027-final-vitest.json` for this session.
 
 Both extension independent code reviews pass after repair. Plan 027 remains
 admitted at the owner decision gate.
+
+## Post-review chat surface repair
+
+The owner found a repeatable flash of bright lines whenever a message entered
+the send, reading, and completion states. The foreground SVG copied the full
+Spellweave geometry and raised its opacity from 0.08 to as high as 0.48 during
+those states. The live chat now keeps that decorative layer stable. The distant
+star web, middle weave, rune status, and Soul Sea core motion continue to show
+activity without drawing a second bright web over the transcript.
+
+The composer now stays focused after submission by using a read-only state
+while Weaver replies, then receives focus again when the reply settles. Focus
+is not moved while Settings, the Thread Archive, or the First Nightmare is
+open. The live Soul Sea keeps its selected core animation and removes its
+visible name and description; Settings still carries the labels needed to
+choose a Soul Sea.
+
+Focused repair floor:
+
+- `npm test -- SpellSurfaceChatApp.test.tsx --reporter=dot`: 25/25 passed.
+- `npm test -- Composer.test.tsx SpellSurfaceSoulSea.test.tsx SpellweaveBackdrop.test.tsx --reporter=dot`: 14/14 passed.
+- `npm run build`: passed; 475 modules transformed and `dist/` refreshed.
+
+The full Plan 027 floor remains reserved for the final owner decision. Plan 027
+stays admitted.

@@ -19,11 +19,13 @@ export type SpellweaveActivityState =
 
 export function SpellweaveBackdrop({
   distantRendererEnabled = true,
+  foregroundRespondsToActivity = true,
   paused,
   state,
   threadAlpha,
 }: {
   distantRendererEnabled?: boolean;
+  foregroundRespondsToActivity?: boolean;
   paused: boolean;
   state: SpellweaveActivityState;
   threadAlpha: number;
@@ -51,7 +53,10 @@ export function SpellweaveBackdrop({
         <div className="lab-star-flare flare-two" />
       </div>
       <SpellweaveField depth="middle" />
-      <SpellweaveField depth="foreground" state={state} />
+      <SpellweaveField
+        depth="foreground"
+        state={foregroundRespondsToActivity ? state : undefined}
+      />
     </div>
   );
 }

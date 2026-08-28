@@ -99,10 +99,10 @@ export function Composer({
       <div className="composer-shell">
         <textarea
           aria-label={inputLabel}
-          disabled={turnActive}
           onChange={(event) => onDraftChange(event.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
+          readOnly={turnActive}
           ref={resolvedRef}
           rows={1}
           value={draft}
