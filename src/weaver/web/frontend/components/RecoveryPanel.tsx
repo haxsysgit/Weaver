@@ -24,6 +24,7 @@ export function RecoveryPanel({
       aria-label="Turn recovery"
       className="recovery-panel"
       data-recovery-kind={issue.kind}
+      role="region"
     >
       <span className="recovery-knot" />
       <div>

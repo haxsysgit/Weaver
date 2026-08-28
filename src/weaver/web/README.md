@@ -44,6 +44,25 @@ npm run build
 uv run weaver web --fake
 ```
 
+Fake mode is Weaver's permanent development simulator. It uses the real
+conversation database, turn loop, tool activity, SSE stream, and browser UI,
+with synthetic reading fixtures and zero provider calls. Normal pacing is the
+default. Use `--fake-speed instant` for quick checks or `--fake-speed slow` for
+cancellation and motion review.
+
+Manual fake prompts:
+
+- `/fake help` lists the available scenarios in the conversation.
+- `/fake normal` runs a two-tool, multi-turn reply.
+- `/fake markdown` renders a blockquote, lists, code, and safe and unsafe links.
+- `/fake long` creates a long scrolling answer.
+- `/fake slow` leaves time to inspect phases or press Stop.
+- `/fake error model` opens the safe model recovery state.
+- `/fake incomplete` opens the unfinished-answer recovery state.
+
+Any ordinary prompt also receives a conversational synthetic reply. Fake
+claims are labelled as development fixtures and never represent novel canon.
+
 Vite writes to `src/weaver/web/dist/`. The backend only serves those built
 files. It never runs npm or builds assets itself.
 

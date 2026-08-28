@@ -45,3 +45,54 @@ The recheck confirmed the narrow repairs:
 
 The focused frontend recheck passed 24/24 tests and the production build
 passed. No visual, mobile, or accessibility blocker remains from this review.
+
+## Permanent fake simulator extension review
+
+**Status:** Pass after repair, 2026-08-28.
+
+The extension review checked fake and live isolation, private-library access,
+the real turn and persistence path, SSE privacy, deterministic tool-call IDs,
+multi-turn continuity, restart behavior, cancellation, and safe failure
+recovery. The fake web runtime selects the synthetic provider and reading tools,
+keeps the private library closed, publishes only validated answer deltas, and
+keeps tool activity frames to name and status. Live mode retains its separate
+DeepSeek provider path and receives none of the fake pacing or retry controls.
+
+The first focused recheck passed 13/13 selected tests, including real-socket SSE
+cancellation after visible output, direct cancellation after the first delta,
+failure retry, and restart-safe public transcripts. It still found one closure
+blocker: the plan required a direct proof that `weaver web --fake` made no
+outbound network call, while the startup test only replaced the web server and
+checked its host, mode, and pacing.
+
+The repair added a fake-web startup regression that fails if
+`DeepSeekProvider` is constructed or `socket.connect` is called. The final
+recheck ran:
+
+```text
+uv run pytest -q tests/test_web_server.py::test_web_fake_never_constructs_a_live_provider_or_opens_network tests/test_chat_runtime.py::test_fake_web_runtime_never_opens_the_private_library tests/test_fake_chat.py
+```
+
+It passed 7/7 tests. No behavior, privacy, persistence, cancellation, restart,
+or fake/live isolation blocker remains from the simulator extension review.
+
+## Permanent fake simulator visual and accessibility review
+
+**Status:** Pass after repair, 2026-08-28.
+
+The initial review found five defects: error and incomplete retries repeated
+their failure forever, failed and interrupted turns announced completion,
+phone recovery controls were 34px, fake model copy incorrectly named DeepSeek,
+and only the Markdown journey had browser evidence.
+
+The code recheck passed after the real retry route completed both deliberate
+failure scenarios, the existing rune live region announced recovery truth,
+phone actions reached 48px, and fake copy named the artificial voice. It also
+confirmed that the accepted transparent messages, response spine, Settings,
+Archive, Soul Sea, composer, and Spellweave presentation did not drift.
+
+The remaining manual evidence was then captured through the production browser
+surface: normal continuity, long answers, simulated failure and successful
+retry, and visible-output Stop plus successful retry. The 320px check found and
+repaired intrinsic grid overflow before the final capture. No visual, mobile,
+or accessibility blocker remains from the simulator extension review.

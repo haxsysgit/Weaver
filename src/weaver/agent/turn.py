@@ -122,14 +122,20 @@ async def _complete_buffered_stream(
 async def _publish_deltas(
     deltas: tuple[str, ...],
     on_delta: DeltaCallback | None,
-) -> None:
+    cancel_event: asyncio.Event,
+) -> bool:
     if on_delta is None:
-        return
+        return True
     for delta in deltas:
+        if cancel_event.is_set():
+            return False
         try:
             await on_delta(delta)
         except Exception:
             logger.warning("delta callback failed", exc_info=True)
+        if cancel_event.is_set():
+            return False
+    return True
 
 
 # Plan 15 (owner 2026-08-08): the answer call must never truncate. The
@@ -536,12 +542,13 @@ async def run_turn(
     async def persist_answer(
         answer: AssistantMessage,
         deltas: tuple[str, ...],
-    ) -> bool:
+    ) -> tuple[bool, bool]:
         new_messages.append(answer)
         persisted = await _persist(answer, persist_message)
-        if persisted:
-            await _publish_deltas(deltas, on_delta)
-        return persisted
+        if not persisted:
+            return False, False
+        published = await _publish_deltas(deltas, on_delta, cancel_event)
+        return True, published
 
     while model_steps < max_steps:
         if cancel_event.is_set():
@@ -681,12 +688,17 @@ async def run_turn(
             # The final reading pass only enhances an answer that already
             # passed validation. A provider failure cannot erase it.
             assert validated_candidate is not None
-            if not await persist_answer(
+            persisted, published = await persist_answer(
                 validated_candidate,
                 validated_candidate_deltas,
-            ):
+            )
+            if not persisted:
                 exit_reason = TurnExitReason.PERSISTENCE_FAILED
                 safe_failure = safe_error("assistant_persistence")
+                break
+            if not published:
+                exit_reason = TurnExitReason.INTERRUPTED
+                safe_failure = safe_error("interrupted")
                 break
             final_text = validated_candidate.content
             completed_response = True
@@ -725,9 +737,14 @@ async def run_turn(
                         response_message=response_message,
                     )
                     answer_deltas = response_deltas
-            if not await persist_answer(answer, answer_deltas):
+            persisted, published = await persist_answer(answer, answer_deltas)
+            if not persisted:
                 exit_reason = TurnExitReason.PERSISTENCE_FAILED
                 safe_failure = safe_error("assistant_persistence")
+                break
+            if not published:
+                exit_reason = TurnExitReason.INTERRUPTED
+                safe_failure = safe_error("interrupted")
                 break
             final_text = answer.content
             completed_response = True
@@ -765,7 +782,16 @@ async def run_turn(
                 exit_reason = TurnExitReason.PERSISTENCE_FAILED
                 safe_failure = safe_error("assistant_persistence")
                 break
-            await _publish_deltas(response_deltas, on_delta)
+            published = await _publish_deltas(
+                response_deltas,
+                on_delta,
+                cancel_event,
+            )
+            if not published:
+                exit_reason = TurnExitReason.INTERRUPTED
+                final_text = interrupted.content
+                safe_failure = safe_error("interrupted")
+                break
             exit_reason = TurnExitReason.INCOMPLETE
             final_text = interrupted.content
             safe_failure = safe_error("incomplete")
@@ -798,9 +824,17 @@ async def run_turn(
                 continue
 
             if forced_answer:
-                if not await persist_answer(assistant, response_deltas):
+                persisted, published = await persist_answer(
+                    assistant,
+                    response_deltas,
+                )
+                if not persisted:
                     exit_reason = TurnExitReason.PERSISTENCE_FAILED
                     safe_failure = safe_error("assistant_persistence")
+                    break
+                if not published:
+                    exit_reason = TurnExitReason.INTERRUPTED
+                    safe_failure = safe_error("interrupted")
                     break
                 final_text = assistant.content
                 completed_response = True
@@ -827,9 +861,14 @@ async def run_turn(
                 final_packet = packet
                 continue
 
-            if not await persist_answer(assistant, response_deltas):
+            persisted, published = await persist_answer(assistant, response_deltas)
+            if not persisted:
                 exit_reason = TurnExitReason.PERSISTENCE_FAILED
                 safe_failure = safe_error("assistant_persistence")
+                break
+            if not published:
+                exit_reason = TurnExitReason.INTERRUPTED
+                safe_failure = safe_error("interrupted")
                 break
             final_text = assistant.content
             completed_response = True

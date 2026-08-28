@@ -67,6 +67,25 @@ async def test_web_profile_has_reading_tools_and_read_only_policy(tmp_path) -> N
         await runtime.close()
 
 
+async def test_fake_web_runtime_never_opens_the_private_library(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    def private_library_must_not_open():
+        raise AssertionError("fake mode must not open the private library")
+
+    monkeypatch.setattr(
+        "weaver.chat_runtime._web_library_service",
+        private_library_must_not_open,
+    )
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    try:
+        assert runtime.library is None
+        assert runtime.session._tool_registry.has("semantic_search")
+    finally:
+        await runtime.close()
+
+
 async def test_web_prompt_makes_library_claim_with_truth_rule(tmp_path) -> None:
     runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
     try:

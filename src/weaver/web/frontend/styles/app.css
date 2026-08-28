@@ -1868,6 +1868,10 @@ a:focus-visible {
     margin-left: 41px;
   }
 
+  .recovery-actions button {
+    min-height: 48px;
+  }
+
   .composer-dock {
     padding: 0 10px calc(9px + env(safe-area-inset-bottom));
   }

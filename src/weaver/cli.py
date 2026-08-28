@@ -146,6 +146,12 @@ def _parser() -> argparse.ArgumentParser:
         help="Use deterministic fake mode; default is live DeepSeek.",
     )
     web.add_argument(
+        "--fake-speed",
+        choices=("instant", "normal", "slow"),
+        default="normal",
+        help="Pace fake reading and streaming for UI review (default normal).",
+    )
+    web.add_argument(
         "--host",
         default="127.0.0.1",
         help="Interface to bind (default 127.0.0.1; use 0.0.0.0 in the container).",
@@ -191,7 +197,14 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
-async def _run_web(state_dir: Path, *, live: bool, host: str, port: int) -> int:
+async def _run_web(
+    state_dir: Path,
+    *,
+    live: bool,
+    host: str,
+    port: int,
+    fake_speed: str = "normal",
+) -> int:
     """Serve the local browser chat on 127.0.0.1.
 
     Missing live credentials exit 2 before state is opened or a socket
@@ -204,10 +217,12 @@ async def _run_web(state_dir: Path, *, live: bool, host: str, port: int) -> int:
             "session. No call was made."
         )
         return 2
+    fake_delays = {"instant": 0.0, "normal": 0.35, "slow": 1.2}
     runtime = await open_chat_runtime(
         state_dir,
         live=live,
         surface="web",
+        fake_delay_seconds=0 if live else fake_delays[fake_speed],
     )
     try:
         return await serve_web(runtime, host=host, port=port)
@@ -311,7 +326,13 @@ def run(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "web":
         return asyncio.run(
-            _run_web(_chat_state_dir(), live=not args.fake, host=args.host, port=args.port)
+            _run_web(
+                _chat_state_dir(),
+                live=not args.fake,
+                host=args.host,
+                port=args.port,
+                fake_speed=args.fake_speed,
+            )
         )
 
     if args.command == "doctor":

@@ -125,7 +125,7 @@ describe("first Nightmare setup", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Enter later" }));
     expect(localStorage.getItem(FIRST_NIGHTMARE_STORAGE_KEY)).toBe("deferred");
     expect(screen.queryByRole("dialog", { name: "First Nightmare setup" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Model and key settings" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Open Soul Sea settings" })).toBeVisible();
 
   }, 10_000);
 
@@ -174,7 +174,7 @@ describe("first Nightmare setup", () => {
     expect(screen.queryByText("[The voice remains unbound.]")).toBeNull();
     expect(
       screen.getByRole("button", {
-        name: "Model and key settings",
+        name: "Open Soul Sea settings",
       }),
     ).toBeVisible();
   });
@@ -197,7 +197,7 @@ describe("first Nightmare setup", () => {
     render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
 
     expect(screen.getByText("[The voice remains unbound.]")).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Model and key settings" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open Soul Sea settings" }));
     const settings = await screen.findByRole("dialog", { name: "Reader Appraisal settings" });
     fireEvent.click(within(settings).getByRole("button", { name: "Bound voice" }));
     fireEvent.click(within(settings).getByRole("checkbox", { name: /Disable this key/ }));
@@ -211,7 +211,7 @@ describe("first Nightmare setup", () => {
     localStorage.setItem("weaver_api_key", "owner-test-key");
     render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Model and key settings" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open Soul Sea settings" }));
 
     const dialog = await screen.findByRole("dialog", {
       name: "Reader Appraisal settings",
@@ -247,7 +247,7 @@ describe("first Nightmare setup", () => {
     localStorage.setItem(FIRST_NIGHTMARE_STORAGE_KEY, "completed");
     render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Model and key settings" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open Soul Sea settings" }));
     const settings = await screen.findByRole("dialog", { name: "Reader Appraisal settings" });
     fireEvent.click(
       within(settings).getByRole("button", { name: "First Nightmare" }),
@@ -624,5 +624,50 @@ describe("live Spellweave foundation", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Open threads" }));
     expect(screen.getByRole("button", { name: "Close threads" })).toBeEnabled();
+  });
+
+  it("announces a failed turn instead of calling it complete", async () => {
+    const api = createApi();
+    api.streamTurn = vi.fn().mockReturnValue((async function* () {
+      await Promise.resolve();
+      yield {
+        code: "simulated_model",
+        message: "Safe simulated failure.",
+        type: "failed" as const,
+      };
+    })());
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+    await waitFor(() => expect(api.createConversation).toHaveBeenCalled());
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Message Weaver" }), {
+      target: { value: "/fake error model" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    expect(
+      (await screen.findAllByText("[The simulated voice did not answer.]"))[0],
+    ).toBeVisible();
+    expect(screen.queryByText("[The weave is complete.]")).toBeNull();
+  });
+
+  it("announces an interrupted turn instead of calling it complete", async () => {
+    const api = createApi();
+    api.streamTurn = vi.fn().mockReturnValue((async function* () {
+      await Promise.resolve();
+      yield {
+        message: "The turn was interrupted.",
+        type: "interrupted" as const,
+      };
+    })());
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+    await waitFor(() => expect(api.createConversation).toHaveBeenCalled());
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Message Weaver" }), {
+      target: { value: "/fake slow" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    expect((await screen.findAllByText("[The thread was cut.]"))[0]).toBeVisible();
+    expect(screen.queryByText("[The weave is complete.]")).toBeNull();
   });
 });

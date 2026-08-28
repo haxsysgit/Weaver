@@ -246,3 +246,71 @@ The independent behavior, privacy, and persistence review passes after repair.
 The independent visual, mobile, and accessibility review passes after repair.
 Plan 027 remains admitted until the owner gives the final accept or reject
 decision.
+
+### Owner extension before the final decision
+
+On 2026-08-25 the owner kept Plan 027 admitted and extended its integration
+checkpoint. The fixed fake reply does not support real manual product testing.
+The plan now replaces it with a permanent deterministic conversation simulator
+before returning to the decision and `v1.2.0` release gates. Earlier design,
+browser, test, and review evidence remains valid; the affected fake runtime,
+streaming, UI, and review evidence will be repeated after the extension.
+
+## Permanent fake conversation simulator
+
+`weaver web --fake` now runs a deterministic artificial model through Weaver's
+real agent loop, synthetic reading tools, conversation store, SSE stream,
+controller, Markdown renderer, and accepted Spellweave UI. It supports normal,
+Markdown, long, slow, simulated model failure, and incomplete-answer prompts.
+Normal conversation keeps multi-turn context. `--fake-speed` controls visible
+pacing without affecting live mode.
+
+The simulator opens no private library and constructs no live provider. A
+fail-fast startup regression rejects both `DeepSeekProvider` construction and
+outbound socket connection. The real browser request log contains only the
+local `127.0.0.1` app, assets, and API routes.
+
+The first independent review found that deliberate failures repeated forever,
+failed and cancelled turns announced successful completion, fake failure copy
+named DeepSeek, and mobile recovery actions were 34px. The repairs make error
+and incomplete scenarios fail once and complete through the real retry route,
+give fake failures honest artificial-voice copy, announce failure and
+interruption through the existing rune live region, and raise phone recovery
+controls to 48px.
+
+The behavior review also proved that Stop only worked before answer playback.
+The shared delta publisher now checks cancellation before and after each
+visible chunk. A direct regression stops after one published chunk, while a
+real uvicorn/SSE regression cancels during visible output, ends interrupted,
+emits no completion, and keeps the completed long answer out of the public
+transcript.
+
+Private browser evidence under `private/design-evidence/027/` covers normal
+two-turn continuity, long replies at 320 x 568, 390 x 844, and 1440 x 900,
+simulated failure and successful retry, and visible-output cancellation plus
+successful retry. The captured interrupted state remains `[The thread was
+cut.]` after waiting and never changes to completion. The 320px long-answer
+trial exposed an 11px intrinsic grid overflow. A phone-only grid constraint
+repairs it: the final transcript is 320px, its content column is 296px, and the
+page has no horizontal overflow.
+
+The duplicate Archive footer shortcut named `Model & key` is removed. The
+accepted Settings entry, Soul Sea, Archive, transparent messages, response
+spine, composer, and Spellweave presentation remain unchanged.
+
+Final extension floor:
+
+- `npm run build`: passed; 475 modules transformed and committed `dist/`
+  refreshed.
+- `npm test`: 107/107 tests passed across 50 files.
+- `uv run pytest`: 543/543 tests passed in 446.04 seconds.
+- Focused fake runtime, web server, and no-network recheck: 24/24 passed.
+- `git diff --check`: passed.
+
+One parallel full frontend run recorded three suite timeouts while the full
+Python floor was saturating the machine. No assertion failed. The same complete
+frontend command then ran alone and passed 107/107; the failed JSON report is
+preserved in `/tmp/plan027-final-vitest.json` for this session.
+
+Both extension independent code reviews pass after repair. Plan 027 remains
+admitted at the owner decision gate.

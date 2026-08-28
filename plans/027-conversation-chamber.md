@@ -94,6 +94,15 @@
     two as good for the current release lane. Begin checkpoint three without
     reopening the accepted Archive, settings, or Soul Sea direction unless the
     integration trial proves a defect.
+17. (2026-08-25) Extend checkpoint three with a permanent development
+    simulator before the Plan 027 decision and `v1.2.0` release. `weaver web
+    --fake` must behave like a deterministic artificial model: visible reading
+    phases, paced text streaming, multi-turn replies, rich Markdown fixtures,
+    long and slow answers, cancellation, and safe failure scenarios. It must
+    use the real conversation, persistence, SSE, and React paths while making
+    zero provider calls and reading no private novel text. Remove the duplicate
+    Model and key button from the Thread Archive footer; Settings remains the
+    single route to those controls.
 
 ## Scope
 
@@ -120,6 +129,13 @@
   that survives remount. Verify the rite handoff, conversation states, safe
   Markdown, archive actions, reload, browser restart, service worker, motion,
   performance, accessibility, and responsive compositions.
+- **Permanent development simulator inside checkpoint three:** replace the
+  one-line fake response with a deterministic artificial conversation model.
+  Give manual testers documented fake-only scenarios for normal multi-turn
+  conversation, tool-heavy reading phases, blockquotes and Markdown, long and
+  slow streaming, interruption, and safe errors. Keep simulator delays out of
+  unit tests, keep controls out of live mode, and exercise the same durable
+  conversation and browser stream used in production.
 - Record public-safe results in `deliverables/027-conversation-chamber/` and
   private captures, traces, and recordings under `private/design-evidence/027/`.
 - Rebuild and commit `src/weaver/web/dist/` whenever the root build changes it.
@@ -164,6 +180,9 @@
 8. Two independent reviews pass: behavior/privacy/persistence, then
    visual/mobile/accessibility. The owner gives the final accept or reject
    decision.
+9. `weaver web --fake` proves normal, Markdown, long, slow, cancellation, and
+   failure scenarios manually without a credential, network request, private
+   chapter read, or alternate frontend.
 
 ## STOP conditions
 
@@ -229,3 +248,14 @@
    - Present results, deviations, and staged-file audit to the owner. Stop for
      the dated accept or reject decision, then record and commit closure with
      `Plan 027: close conversation and archive trial`.
+
+5. **Checkpoint-three extension: permanent fake conversation simulator**
+   - Record the fake/live boundary and manual scenario language before code.
+   - Add red tests for a two-tool simulated turn, paced validated deltas,
+     multi-turn continuity, rich Markdown, slow cancellation, and safe model
+     failures. Prove fake startup makes no network call and reads no novel.
+   - Replace the fixed reply, document the manual prompts and speed control,
+     remove the duplicate Archive footer button, and test through the real web
+     SSE and React surface.
+   - Repeat the affected verification and both independent reviews, then
+     return to the owner decision gate. Plan 027 remains admitted until then.

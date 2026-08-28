@@ -11,6 +11,7 @@ Surface profiles:
   tools until a later owner-approved plan.
 """
 
+import asyncio
 import dataclasses
 import os
 from pathlib import Path
@@ -36,6 +37,7 @@ from .model_layer import (
     ModelResponse,
     ModelStopReason,
 )
+from .model_layer.fake_chat import FakeChatProvider
 
 Surface = Literal["developer", "web"]
 
@@ -296,6 +298,101 @@ def _web_tool_registry() -> ToolRegistry:
     return registry
 
 
+def _fake_web_tool_registry(delay_seconds: float) -> ToolRegistry:
+    """Synthetic reading tools for fake mode. No private library is opened."""
+    registry = ToolRegistry()
+
+    async def wait_for_fixture(context) -> None:
+        if delay_seconds <= 0:
+            return
+        try:
+            await asyncio.wait_for(
+                context.cancel_event.wait(),
+                timeout=delay_seconds,
+            )
+        except asyncio.TimeoutError:
+            return
+        context.raise_if_cancelled()
+
+    async def semantic_search(arguments: dict, context) -> dict:
+        await wait_for_fixture(context)
+        return {
+            "ok": True,
+            "result": {
+                "query": arguments.get("query", ""),
+                "hits": [
+                    {
+                        "chapter": 184,
+                        "handle": "fixture:0184:1-12",
+                        "summary": "Synthetic development evidence.",
+                    }
+                ],
+            },
+        }
+
+    async def read_chapters(arguments: dict, context) -> dict:
+        await wait_for_fixture(context)
+        return {
+            "ok": True,
+            "result": {
+                "handle": arguments.get("handle", "fixture:0184:1-12"),
+                "text": (
+                    "Synthetic passage for development only. The character makes "
+                    "a choice, then learns that its consequence reaches further "
+                    "than intended."
+                ),
+            },
+        }
+
+    async def generic_fixture(arguments: dict, context) -> dict:
+        await wait_for_fixture(context)
+        return {"ok": True, "result": {"fixture": True, "input": arguments}}
+
+    registry.register(
+        ToolDefinition(
+            name="semantic_search",
+            description="Search a synthetic development story fixture.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string"},
+                    "surface": {"type": "string"},
+                },
+                "required": ["query"],
+            },
+            handler=semantic_search,
+            effect_kind=EffectKind.READ,
+            retry_safe=True,
+        )
+    )
+    registry.register(
+        ToolDefinition(
+            name="read_chapters",
+            description="Open a synthetic development passage.",
+            parameters={
+                "type": "object",
+                "properties": {"handle": {"type": "string"}},
+                "required": ["handle"],
+            },
+            handler=read_chapters,
+            effect_kind=EffectKind.READ,
+            retry_safe=True,
+        )
+    )
+    for tool_name in ("find_text", "browse_chapters", "who_is"):
+        registry.register(
+            ToolDefinition(
+                name=tool_name,
+                description=f"Run the synthetic {tool_name} development fixture.",
+                parameters={"type": "object", "additionalProperties": True},
+                handler=generic_fixture,
+                effect_kind=EffectKind.READ,
+                retry_safe=True,
+            )
+        )
+    return registry
+
+
 class ChatRuntime:
     """Owns the open session, mode label, preferences, and close lifecycle."""
 
@@ -310,6 +407,7 @@ class ChatRuntime:
         library=None,
         model_layer: ModelLayer | None = None,
         model=None,
+        fake_delta_delay_seconds: float = 0,
     ) -> None:
         self.session = session
         self.surface = surface
@@ -320,6 +418,7 @@ class ChatRuntime:
         # Plan 15 slice 5: the thread-naming call runs on this layer.
         self.model_layer = model_layer
         self.model = model
+        self.fake_delta_delay_seconds = max(0, fake_delta_delay_seconds)
 
     async def close(self) -> None:
         if self.prefs is not None:
@@ -332,6 +431,7 @@ async def open_chat_runtime(
     *,
     live: bool,
     surface: Surface,
+    fake_delay_seconds: float = 0,
 ) -> ChatRuntime:
     """Build the exact chat session for a surface (test seam).
 
@@ -351,6 +451,12 @@ async def open_chat_runtime(
         provider = DeepSeekProvider(
             api_key,
             timeout_seconds=DEFAULT_TIMEOUT_SECONDS,
+        )
+    elif surface == "web":
+        provider = FakeChatProvider(
+            "deepseek",
+            models=DEEPSEEK_MODELS,
+            delay_seconds=fake_delay_seconds,
         )
     else:
         # The scripted response carries the requested model id so
@@ -388,10 +494,12 @@ async def open_chat_runtime(
     else:
         from .retrieval.tools import register_reading_tools
 
-        library = _web_library_service()
+        library = _web_library_service() if live else None
         registry = ToolRegistry()
-        if library is not None:
+        if live and library is not None:
             register_reading_tools(registry, library)
+        elif not live:
+            registry = _fake_web_tool_registry(fake_delay_seconds)
         active_tools = WEB_ACTIVE_TOOLS
         # Plan v1 (2026-08-17): tell the model the real shelf length.
         # Without the library (no novel on this machine) fall back to
@@ -432,4 +540,7 @@ async def open_chat_runtime(
         live=live,
         prefs=prefs,
         library=library if surface == "web" else None,
+        fake_delta_delay_seconds=(
+            fake_delay_seconds / 8 if surface == "web" and not live else 0
+        ),
     )

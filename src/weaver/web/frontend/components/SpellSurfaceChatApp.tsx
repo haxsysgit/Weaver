@@ -252,6 +252,18 @@ function SpellSurfaceChatSurface({
   }, [chat.activity, chat.messages, chat.recoveryMessage]);
 
   useEffect(() => {
+    if (!chat.recovery) {
+      return;
+    }
+    previousTurnActive.current = false;
+    setSpellState("failed");
+    announce(chat.recovery.title);
+    if (completionTimer.current) {
+      window.clearTimeout(completionTimer.current);
+    }
+  }, [chat.recovery]);
+
+  useEffect(() => {
     if (chat.turnActive) {
       previousTurnActive.current = true;
       setSpellState(chat.activity.length > 0 ? "reading" : "reaching");

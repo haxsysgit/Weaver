@@ -32,6 +32,13 @@ describe("chat recovery language", () => {
         message: "The turn was interrupted.",
       }).kind,
     ).toBe("interrupted");
+    expect(
+      recoveryFromStreamEvent({
+        type: "failed",
+        code: "simulated_model",
+        message: "Safe simulated failure.",
+      }).kind,
+    ).toBe("simulated-model");
   });
 
   it("separates HTTP conflict and missing-thread failures", () => {

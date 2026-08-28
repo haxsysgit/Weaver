@@ -10,6 +10,7 @@ export type RecoveryKind =
   | "model"
   | "rate-limit"
   | "request"
+  | "simulated-model"
   | "server"
   | "storage"
   | "unknown";
@@ -76,6 +77,12 @@ const ISSUES: Record<RecoveryKind, RecoveryIssue> = {
     message: "Review the question and try sending it again.",
     title: "[The question could not enter the weave.]",
   },
+  "simulated-model": {
+    canRetry: true,
+    kind: "simulated-model",
+    message: "This development scenario paused the artificial voice. Pull the thread again to prove recovery.",
+    title: "[The simulated voice did not answer.]",
+  },
   server: {
     canRetry: true,
     kind: "server",
@@ -107,6 +114,9 @@ export function recoveryFromStreamEvent(
     return issue("interrupted");
   }
 
+  if (event.code === "simulated_model") {
+    return issue("simulated-model");
+  }
   if (event.code === "model_failed") {
     return issue("model");
   }

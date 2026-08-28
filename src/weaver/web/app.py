@@ -27,6 +27,7 @@ from weaver.agent.errors import safe_error
 from weaver.agent.turn import REASONING_TIERS, TOOL_BUDGET_TIERS, TurnExitReason
 from weaver.chat_runtime import ChatRuntime
 from weaver.model_layer.deepseek import current_api_key, current_model_id
+from weaver.model_layer.fake_chat import current_fake_retry
 from weaver.prefs import MAX_CHAPTER
 
 MAX_MESSAGE_CHARS = 32_000
@@ -468,6 +469,9 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
             if request_model is not None
             else None
         )
+        fake_retry_token = (
+            current_fake_retry.set(retry) if not runtime.live else None
+        )
 
         # Tool activity crosses the browser boundary as phase metadata only.
         # Arguments, results, chapter text, passage handles, and raw detail stay
@@ -476,6 +480,13 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
             name: str, status: str, _detail: str, _result: dict | None = None
         ) -> None:
             stream.emit("tool", {"name": name, "status": status})
+
+        async def on_delta(delta: str) -> None:
+            stream.emit("delta", {"text": delta})
+            if runtime.fake_delta_delay_seconds > 0:
+                await asyncio.sleep(runtime.fake_delta_delay_seconds)
+
+        delta_callback = on_delta if not runtime.live else None
 
         # Plan 15 final reading phase: after a candidate passes the
         # mechanical checks, the packet builder re-reads the turn's
@@ -507,7 +518,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 regenerated = await runtime.session.regenerate_last_turn(
                     conversation_id,
                     cancel_event=stream.cancel_event,
-                    on_delta=None,
+                    on_delta=delta_callback,
                     on_tool_event=on_tool_event,
                     tool_budget=TOOL_BUDGET_TIERS[tier],
                     reasoning=REASONING_TIERS[tier],
@@ -527,7 +538,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 retried = await runtime.session.retry_last_turn(
                     conversation_id,
                     cancel_event=stream.cancel_event,
-                    on_delta=None,
+                    on_delta=delta_callback,
                     on_tool_event=on_tool_event,
                     tool_budget=TOOL_BUDGET_TIERS[tier],
                     reasoning=REASONING_TIERS[tier],
@@ -545,7 +556,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                     conversation_id,
                     message,
                     cancel_event=stream.cancel_event,
-                    on_delta=None,
+                    on_delta=delta_callback,
                     on_tool_event=on_tool_event,
                     # Plan 15: the tier is a user preference (the mode
                     # selector). Tool calls are capped at 50/70/90; the final
@@ -586,10 +597,13 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 )
             else:
                 # MODEL_FAILED, LIMIT_REACHED, PERSISTENCE_FAILED, INCOMPLETE.
+                failure_code = reason.value
+                if getattr(result, "error_category", "") == "simulated_model":
+                    failure_code = "simulated_model"
                 stream.emit(
                     "failed",
                     {
-                        "code": reason.value,
+                        "code": failure_code,
                         "message": result.safe_failure or safe_error("turn"),
                     },
                 )
@@ -612,6 +626,8 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 current_api_key.reset(key_token)
             if model_token is not None:
                 current_model_id.reset(model_token)
+            if fake_retry_token is not None:
+                current_fake_retry.reset(fake_retry_token)
 
     @app.post(
         "/api/conversations/{conversation_id}/turns",

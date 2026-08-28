@@ -50,3 +50,22 @@ Checkpoint three preserves the accepted design as a hard boundary. Its repairs
 change only proven integration, privacy, performance, touch, and keyboard
 defects. They do not reopen the transparent conversation treatment, Soul Sea,
 settings composition, Thread Archive structure, or Hidden Thread materials.
+
+On 2026-08-25 the owner rejected the fixed one-line fake reply as an adequate
+development environment. Plan 027 now owns a permanent artificial conversation
+simulator behind `weaver web --fake`. It must exercise realistic tool phases,
+streaming, formatting, continuity, cancellation, and failures through the same
+runtime and UI paths as live Weaver while making zero provider calls. A branch
+is temporary implementation isolation only; the accepted simulator merges into
+the product codebase and remains available for future development.
+
+The extension trial established two reusable integration rules. Delayed UI
+playback must observe cancellation even after the final answer is persisted,
+and deliberate fake failures must become recoverable through the same retry
+route the live product uses. A fake scenario that only displays an error does
+not test recovery.
+
+The smallest phone check also established that `min-width: 0` on children is
+not enough when an implicit CSS grid track still uses intrinsic content width.
+The phone chat grid now uses `minmax(0, 1fr)`, which keeps long Markdown inside
+the viewport without changing the accepted presentation.

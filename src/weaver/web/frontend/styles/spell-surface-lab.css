@@ -3118,7 +3118,26 @@
 }
 
 @media (max-width: 767px) {
+  .spell-surface-live .lab-chat-main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .spell-surface-live .lab-transcript {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .spell-surface-live .lab-transcript-column {
+    width: calc(100% - 24px);
+    min-width: 0;
+    max-width: calc(100% - 24px);
+  }
+
   .spell-surface-live .message-weaver {
+    width: 100%;
+    max-width: 100%;
     grid-template-columns: 28px minmax(0, 1fr);
     gap: 9px;
   }
