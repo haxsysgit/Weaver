@@ -362,3 +362,29 @@ Focused icon floor:
   backgrounds.
 
 The full Plan 027 floor remains reserved for the release gate.
+
+## Final release floor, 2026-08-31
+
+The release gate reran the complete floor sequentially after the final focus,
+Spellweave, Soul Sea caption, and icon repairs:
+
+- `npm run build`: passed; 475 modules transformed and committed `dist/`
+  refreshed.
+- `npm test`: 110/110 tests passed across 21 files in 58.56 seconds.
+- `uv run pytest`: 544/544 tests passed in 358.95 seconds.
+- Final behavior, privacy, persistence, and fake/live isolation review: PASS.
+- Final visual, mobile, accessibility, and icon review: PASS.
+
+The first frontend floor attempt recorded one timeout in the four-act key and
+appraisal journey after 5.27 seconds. The same path completed with every
+assertion intact in 4.58 seconds when isolated. The journey mounts the lazy 3D
+background after exercising the complete rite, so its explicit test budget now
+matches the neighboring 10-second First Nightmare journey. The full frontend
+floor then passed 110/110. No production behavior changed for this repair.
+
+The build retains Vite's existing warning for the lazy 519.36 kB background
+chunk. The chunk remains lazy, the build passes, and changing its architecture
+is outside this closure repair.
+
+No live provider request, real API-key validation, private chapter read, or
+application infrastructure deployment occurred during the release floor.

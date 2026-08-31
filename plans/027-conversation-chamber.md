@@ -14,7 +14,7 @@
 - **Tooling:** root `npm` scripts for TypeScript, Vite, and Vitest; `uv` for
   the Python floor and fake web server; browser developer tools and owner-held
   phones for evidence.
-- **State:** admitted 2026-08-21 by owner direction.
+- **State:** closed 2026-08-31; owner accepted for the 1.2.0 release.
 - **Depends on:** Plans 022, 023, 025, and 026 closed. Plan 024 is a rejected
   alternate prototype and is reference for lessons only, never a visual source
   of truth.
@@ -103,6 +103,12 @@
     zero provider calls and reading no private novel text. Remove the duplicate
     Model and key button from the Thread Archive footer; Settings remains the
     single route to those controls.
+18. (2026-08-31) The owner accepted the final visual state and authorized the
+    Plan 027 release gate. After the complete verification floor and both
+    independent reviews pass, close Plan 027, bump Weaver to `1.2.0`, push the
+    closure commit, create the annotated `v1.2.0` tag, and publish one GitHub
+    release. This authorization does not include a live provider call or an
+    application infrastructure deployment.
 
 ## Scope
 
@@ -151,8 +157,10 @@
 - Changes to model prompts, retrieval, answer quality, `.weaver/`,
   `config.toml`, or `.env`. Private source material stays immutable and may be
   read only through owner direction 14's bounded chapter packet.
-- Live DeepSeek calls, real key entry, deployment, release, AWS, Tailscale, CI
-  secrets, domains, or production state.
+- Live DeepSeek calls, real key entry, application infrastructure deployment,
+  AWS, Tailscale, CI secrets, domains, or production state. The single git tag
+  and GitHub release authorized by owner direction 18 are the only release
+  operations inside this plan.
 - Treating a chapter-reference knot as canonical proof. It decorates a visible
   label; the underlying answer still needs Weaver's reading evidence.
 
@@ -248,6 +256,9 @@
    - Present results, deviations, and staged-file audit to the owner. Stop for
      the dated accept or reject decision, then record and commit closure with
      `Plan 027: close conversation and archive trial`.
+   - After acceptance and a green final floor, follow owner direction 18 to
+     publish the `v1.2.0` git tag and GitHub release. Do not deploy application
+     infrastructure.
 
 5. **Checkpoint-three extension: permanent fake conversation simulator**
    - Record the fake/live boundary and manual scenario language before code.

@@ -2,9 +2,9 @@
 
 ## Gate status
 
-**Admitted 2026-08-21.** Plan 026 is closed. The owner combined the former
-Plans 027, 028, and 029 into this one continuous plan and directed checkpoint
-one to begin.
+**Closed 2026-08-31; owner accepted.** Plan 026 is closed. The owner combined
+the former Plans 027, 028, and 029 into this one continuous plan and directed
+checkpoint one to begin.
 
 ## Confirmed owner direction
 
@@ -69,3 +69,9 @@ The smallest phone check also established that `min-width: 0` on children is
 not enough when an implicit CSS grid track still uses intrinsic content width.
 The phone chat grid now uses `minmax(0, 1fr)`, which keeps long Markdown inside
 the viewport without changing the accepted presentation.
+
+On 2026-08-31 the owner accepted the final visual state and directed the final
+Plan 027 floor, closure, and Weaver `v1.2.0` git and GitHub release if the floor
+and independent reviews pass. This is a narrow release authorization. Live
+provider calls and application infrastructure deployment remain outside the
+plan.

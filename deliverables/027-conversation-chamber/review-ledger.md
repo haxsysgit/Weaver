@@ -96,3 +96,25 @@ surface: normal continuity, long answers, simulated failure and successful
 retry, and visible-output Stop plus successful retry. The 320px check found and
 repaired intrinsic grid overflow before the final capture. No visual, mobile,
 or accessibility blocker remains from the simulator extension review.
+
+## Final release reviews
+
+**Status:** Pass, 2026-08-31.
+
+The final behavior, privacy, persistence, and release-readiness review found no
+production blocker. Its focused suite passed 22/22 tests covering fake/live
+isolation, outbound-network rejection, private SSE canaries, device ownership,
+restart persistence, retry, active-thread mutation guards, and cancellation
+after visible output. Package version resolution returns `1.2.0`, and the Plan
+027 commit range contains no credential or private-library path.
+
+The final visual, mobile, and accessibility review found no blocker. Its
+focused frontend suite passed 48/48 tests and its production icon/static route
+checks passed 3/3. It confirmed transparent messages, stable Spellweave
+foreground, caption-free live Soul Sea cores, composer focus restoration,
+Archive states and actions, phone touch and input floors, reduced motion, and
+the complete favicon and PWA icon set.
+
+The behavior reviewer found one closure wording defect: the roadmap called
+Plan 027 frontend-only after the owner had admitted it as full-stack. The
+closure record corrects that description.

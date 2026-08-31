@@ -177,7 +177,7 @@ describe("first Nightmare setup", () => {
         name: "Open Soul Sea settings",
       }),
     ).toBeVisible();
-  });
+  }, 10_000);
 
   it("keeps the deferred chat honest about its unbound voice", async () => {
     render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
