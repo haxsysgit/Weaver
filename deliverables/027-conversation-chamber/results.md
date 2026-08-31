@@ -339,3 +339,26 @@ Focused repair floor:
 
 The full Plan 027 floor remains reserved for the final owner decision. Plan 027
 stays admitted.
+
+## First Nightmare icon set
+
+The browser tab previously reduced the full opaque 512px mask artwork into one
+16px square, which preserved the black tile and lost most of the mask. The
+replacement uses the same approved First Nightmare artwork with a feathered
+alpha edge and a tighter favicon crop. No generated sigil replaced the product
+identity.
+
+The first background-removal trial selected only the bright horns and forehead
+because the black mask merged with the black background. A second model kept
+more of the brow but still removed the lower face. The accepted deterministic
+pass keeps the original pixels, removes the hard square with a soft alpha mask,
+and exports dedicated 16px, 32px, 192px, 512px, and maskable 512px assets.
+
+Focused icon floor:
+
+- `npm run build`: passed; 475 modules transformed and `dist/` refreshed.
+- Focused production asset, manifest, and route checks: 3/3 passed.
+- The 16px and 32px icons were inspected on dark, light, and neutral tab
+  backgrounds.
+
+The full Plan 027 floor remains reserved for the release gate.

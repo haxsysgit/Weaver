@@ -850,6 +850,35 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
             media_type="image/webp",
         )
 
+    @app.get("/favicon-16.png")
+    async def favicon_16() -> Response:
+        return FileResponse(FRONTEND_DIST / "favicon-16.png", media_type="image/png")
+
+    @app.get("/favicon-32.png")
+    async def favicon_32() -> Response:
+        return FileResponse(FRONTEND_DIST / "favicon-32.png", media_type="image/png")
+
+    @app.get("/weaver-icon-192.png")
+    async def weaver_icon_192() -> Response:
+        return FileResponse(
+            FRONTEND_DIST / "weaver-icon-192.png",
+            media_type="image/png",
+        )
+
+    @app.get("/weaver-icon-512.png")
+    async def weaver_icon_512() -> Response:
+        return FileResponse(
+            FRONTEND_DIST / "weaver-icon-512.png",
+            media_type="image/png",
+        )
+
+    @app.get("/weaver-icon-maskable-512.png")
+    async def weaver_icon_maskable_512() -> Response:
+        return FileResponse(
+            FRONTEND_DIST / "weaver-icon-maskable-512.png",
+            media_type="image/png",
+        )
+
     @app.get("/")
     async def index() -> HTMLResponse:
         html = (FRONTEND_DIST / "index.html").read_text(encoding="utf-8")

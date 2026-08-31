@@ -40,8 +40,13 @@ SAME_ORIGIN_HEADERS = {"Origin": "http://127.0.0.1"}
 
 def test_production_frontend_assets_exist() -> None:
     expected_assets = (
+        "favicon-16.png",
+        "favicon-32.png",
         "index.html",
         "manifest.webmanifest",
+        "weaver-icon-192.png",
+        "weaver-icon-512.png",
+        "weaver-icon-maskable-512.png",
         "weaver-mark.svg",
         "weaver-mask-mark.webp",
         "sw.js",
@@ -50,6 +55,38 @@ def test_production_frontend_assets_exist() -> None:
         assert (FRONTEND_DIST / relative_path).is_file(), relative_path
     assert list((FRONTEND_DIST / "assets").glob("weaver-*.js"))
     assert list((FRONTEND_DIST / "assets").glob("weaver-*.css"))
+
+
+def test_production_icon_set_uses_the_first_nightmare_mask_at_real_sizes() -> None:
+    html = (FRONTEND_DIST / "index.html").read_text(encoding="utf-8")
+    manifest = json.loads(
+        (FRONTEND_DIST / "manifest.webmanifest").read_text(encoding="utf-8"),
+    )
+
+    assert 'href="/favicon-16.png"' in html
+    assert 'href="/favicon-32.png"' in html
+    assert 'href="/weaver-icon-192.png"' in html
+    assert 'href="/weaver-mask-mark.webp"' not in html
+    assert manifest["icons"] == [
+        {
+            "purpose": "any",
+            "sizes": "192x192",
+            "src": "/weaver-icon-192.png",
+            "type": "image/png",
+        },
+        {
+            "purpose": "any",
+            "sizes": "512x512",
+            "src": "/weaver-icon-512.png",
+            "type": "image/png",
+        },
+        {
+            "purpose": "maskable",
+            "sizes": "512x512",
+            "src": "/weaver-icon-maskable-512.png",
+            "type": "image/png",
+        },
+    ]
 
 
 def built_asset_paths() -> tuple[str, str]:
@@ -908,7 +945,12 @@ async def test_new_static_assets_serve(client) -> None:
     for path in [
         style_path,
         script_path,
+        "/favicon-16.png",
+        "/favicon-32.png",
         "/manifest.webmanifest",
+        "/weaver-icon-192.png",
+        "/weaver-icon-512.png",
+        "/weaver-icon-maskable-512.png",
         "/weaver-mask-mark.webp",
         "/assets/font-awesome-license.txt",
         "/sw.js",
