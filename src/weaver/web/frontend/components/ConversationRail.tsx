@@ -6,6 +6,7 @@ import { PlusIcon, RailCloseIcon, SettingsIcon, ThreadIcon, TrashIcon } from "./
 import type { WeaverMarkProps } from "./WeaverMark";
 
 interface ConversationRailProps {
+  actionError?: string | null;
   Mark: ComponentType<WeaverMarkProps>;
   activeConversationId: string | null;
   conversations: ConversationSummary[];
@@ -66,6 +67,7 @@ function groupConversations(
 }
 
 export function ConversationRail({
+  actionError = null,
   Mark,
   activeConversationId,
   conversations,
@@ -182,6 +184,12 @@ export function ConversationRail({
           <PlusIcon />
           <span>{product.newConversationLabel}</span>
         </button>
+
+        {actionError && (
+          <p className="conversation-action-error" role="alert">
+            {actionError}
+          </p>
+        )}
 
         <div className="rail-scroll">
           <section aria-label="Threads" className="rail-section">

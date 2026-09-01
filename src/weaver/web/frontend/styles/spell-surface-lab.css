@@ -1917,6 +1917,17 @@
     #050406;
 }
 
+.spell-surface-live > .lab-chat-main {
+  transition: opacity var(--motion-smooth) var(--ease-weave);
+}
+
+.spell-surface-live[data-startup="waiting"] > .lab-soul-sea,
+.spell-surface-live[data-startup="waiting"] > .lab-rail,
+.spell-surface-live[data-startup="waiting"] > .lab-chat-main {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .spell-surface-live[data-glass="immersive"] {
   --lab-glass-strong: rgba(20, 5, 8, 0.4);
   --lab-glass-soft: rgba(19, 4, 8, 0.22);
@@ -2778,7 +2789,7 @@
   .lab-rail,
   .lab-desktop-rail-collapsed .lab-rail {
     z-index: 41;
-    height: 100dvh;
+    height: 100%;
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
     transition: transform var(--motion-smooth) var(--ease-weave);
@@ -3168,6 +3179,12 @@
 .spell-surface-live .lab-live-mode {
   border-color: var(--edition-depth-line);
   background: rgba(203, 204, 204, 0.045);
+}
+
+.spell-surface-live .lab-new-thread:active {
+  border-color: rgba(183, 154, 98, 0.48);
+  background: rgba(183, 154, 98, 0.1);
+  transform: scale(0.985);
 }
 
 .spell-surface-live .lab-chat-main::before {
@@ -3721,7 +3738,7 @@
 
   .lab-settings-panel {
     width: 100%;
-    height: 100dvh;
+    height: 100%;
     max-height: none;
     grid-template-rows: 104px minmax(0, 1fr) auto;
     border: 0;
@@ -3848,6 +3865,27 @@
   .lab-discard-prompt p {
     grid-column: 1 / -1;
   }
+}
+
+/* The installed PWA owns a standalone window between the operating system's
+   status and navigation bars. Keep that window continuous and stop animation
+   work hidden behind its full-screen settings surface. */
+@media (display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui) {
+  html,
+  body,
+  #root {
+    background: #030405;
+  }
+
+  .spell-surface-live .lab-chat-main {
+    height: 100%;
+  }
+}
+
+.lab-settings-open > .lab-soul-sea *,
+.lab-settings-open .spellweave-field-foreground,
+.lab-settings-panel .lab-soul-sea * {
+  animation-play-state: paused !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

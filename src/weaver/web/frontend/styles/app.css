@@ -119,6 +119,13 @@ a:focus-visible {
   transform: translateX(-100%);
 }
 
+.conversation-action-error {
+  margin: 0 14px 10px;
+  color: var(--danger);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
 .conversation-rail::after {
   position: absolute;
   inset: 74px 0 auto;

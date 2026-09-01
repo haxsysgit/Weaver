@@ -2,11 +2,12 @@
   "name": "Weaver: Story Weave",
   "short_name": "Weaver",
   "description": "A source-grounded Shadow Slave discussion companion.",
+  "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#08090c",
-  "theme_color": "#08090c",
+  "background_color": "#030405",
+  "theme_color": "#030405",
   "icons": [
     {
       "src": "/weaver-icon-192.png",

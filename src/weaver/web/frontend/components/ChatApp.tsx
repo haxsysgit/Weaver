@@ -86,12 +86,14 @@ export function ChatApp({
   async function createConversation() {
     if (await chat.createConversation()) {
       setDrawerOpen(false);
+      window.setTimeout(() => composerRef.current?.focus(), 0);
     }
   }
 
   async function selectConversation(conversationId: string) {
-    await chat.selectConversation(conversationId);
-    setDrawerOpen(false);
+    if (await chat.selectConversation(conversationId)) {
+      setDrawerOpen(false);
+    }
   }
 
   function openConversationRail() {
@@ -122,6 +124,7 @@ export function ChatApp({
       />
       <ConversationRail
         Mark={Mark}
+        actionError={chat.conversationActionError}
         activeConversationId={chat.conversationId}
         conversations={chat.conversations}
         desktopCollapsed={desktopRailCollapsed}

@@ -5,6 +5,7 @@ export type SoulSeaState = "idle" | "rippling" | "weaving" | "complete" | "error
 
 interface SoulSeaProps {
   compact?: boolean;
+  hiddenFromAccessibility?: boolean;
   mode: SoulSeaMode;
   showCaption?: boolean;
   state: SoulSeaState;
@@ -32,6 +33,7 @@ function indexedStyle(index: number): CSSProperties {
 
 export function SpellSurfaceSoulSea({
   compact = false,
+  hiddenFromAccessibility = false,
   mode,
   showCaption = true,
   state,
@@ -40,8 +42,10 @@ export function SpellSurfaceSoulSea({
 
   return (
     <div
+      aria-hidden={hiddenFromAccessibility ? true : undefined}
       aria-label={`${SOUL_SEA_LABELS[mode]}, ${state}`}
       className={`lab-soul-sea soul-${mode} soul-state-${state} ${compact ? "soul-compact" : ""}`}
+      inert={hiddenFromAccessibility}
       role="img"
     >
       <div className="lab-soul-sky">

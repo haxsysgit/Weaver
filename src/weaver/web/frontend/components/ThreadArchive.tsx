@@ -74,6 +74,7 @@ interface ThreadArchiveProps {
   onSelect: (threadId: string) => void;
   onSetArchivedOpen: (open: boolean) => void;
   readerStatus: string;
+  startupReady?: boolean;
   threads: LabThread[];
 }
 
@@ -94,6 +95,7 @@ export function ThreadArchive({
   onSelect,
   onSetArchivedOpen,
   readerStatus,
+  startupReady = true,
   threads,
 }: ThreadArchiveProps) {
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -144,7 +146,7 @@ export function ThreadArchive({
   const threadGroups = groupThreads(activeThreads, grouping);
   const archivedCount = threads.filter((thread) => thread.archived).length;
   const railVisible = mobileLayout ? drawerOpen : !collapsed;
-  const railOperable = mobileLayout ? drawerOpen : true;
+  const railOperable = startupReady && (mobileLayout ? drawerOpen : true);
 
   function startRename(thread: LabThread) {
     setRenamingId(thread.id);

@@ -9,7 +9,7 @@ import {
 import { describe, expect, it, vi } from "vitest";
 
 import { ChatApp } from "./ChatApp";
-import type { ChatApi, StreamEvent } from "../lib/chatApi";
+import { ChatApiError, type ChatApi, type StreamEvent } from "../lib/chatApi";
 import type { ChatProduct } from "../lib/product";
 
 function deferredStream() {
@@ -347,7 +347,7 @@ it("opens reader settings, saves the chapter and the knob", async () => {
 });
 
 describe("ChatApp weave management", () => {
-  it("new weave is a no-op inside a fresh unused weave", async () => {
+  it("keeps a fresh unused weave and returns focus to the composer", async () => {
     const api = createApi((async function* () {})());
     localStorage.setItem("weaver.active-conversation", "thread-1");
     render(<ChatApp api={api} modeLabel="fake" privacyLabel="Local fake mode" />);
@@ -356,6 +356,9 @@ describe("ChatApp weave management", () => {
     fireEvent.click(screen.getByRole("button", { name: "New weave" }));
     await waitFor(() => {
       expect(api.createConversation).not.toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("textbox", { name: "Message Weaver" })).toHaveFocus();
     });
   });
 
@@ -369,6 +372,40 @@ describe("ChatApp weave management", () => {
     fireEvent.click(screen.getByRole("button", { name: "New weave" }));
     await waitFor(() => {
       expect(api.createConversation).toHaveBeenCalled();
+    });
+  });
+
+  it("keeps the mobile rail open and explains a failed thread recall", async () => {
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      value: 390,
+    });
+    const api = createApi((async function* () {})());
+    api.loadMessages = vi.fn().mockImplementation(async (conversationId: string) => {
+      if (conversationId === "thread-2") {
+        throw new ChatApiError("Loading the conversation", 404);
+      }
+      return [];
+    });
+    localStorage.setItem("weaver.active-conversation", "thread-1");
+    render(<ChatApp api={api} modeLabel="fake" privacyLabel="Local fake mode" />);
+
+    await screen.findByText("What thread are we pulling?");
+    fireEvent.click(screen.getByRole("button", { name: "Open conversation rail" }));
+    const rail = screen.getByRole("dialog", { name: "Conversation threads" });
+    fireEvent.click(
+      within(rail).getByRole("button", { name: "Cassie's choice thread" }),
+    );
+
+    expect(
+      await within(rail).findByText("That thread can no longer be found."),
+    ).toBeVisible();
+    expect(rail).toHaveAttribute("aria-hidden", "false");
+    expect(localStorage.getItem("weaver.active-conversation")).toBe("thread-1");
+
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      value: 1024,
     });
   });
 

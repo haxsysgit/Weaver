@@ -78,4 +78,41 @@ describe("Reader Appraisal settings", () => {
     fireEvent.click(back);
     await waitFor(() => expect(appearance).toHaveFocus());
   });
+
+  it("adopts delayed saved preferences until the reader edits the draft", () => {
+    const savedPreferences: LabPreferences = {
+      ...LEGACY_PREFERENCES,
+      chapter: 1200,
+      tier: "transcendent",
+      volume: 6,
+    };
+    const { rerender } = render(
+      <SpellSurfaceSettings
+        initial={LEGACY_PREFERENCES}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+
+    rerender(
+      <SpellSurfaceSettings
+        initial={savedPreferences}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText("Current chapter")).toHaveValue(1200);
+
+    fireEvent.change(screen.getByLabelText("Current chapter"), {
+      target: { value: "1210" },
+    });
+    rerender(
+      <SpellSurfaceSettings
+        initial={{ ...savedPreferences, chapter: 1300, volume: 7 }}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText("Current chapter")).toHaveValue(1210);
+  });
 });

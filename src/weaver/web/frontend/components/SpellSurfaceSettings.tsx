@@ -152,6 +152,15 @@ export function SpellSurfaceSettings({
     panelRef.current?.querySelector<HTMLElement>(".lab-settings-nav button.on")?.focus();
   }, []);
 
+  useEffect(() => {
+    if (isDirty) {
+      return;
+    }
+    const savedPreferences = withHiddenThreadIdentity(initial);
+    initialPreferences.current = savedPreferences;
+    setPreferences(savedPreferences);
+  }, [initial]);
+
   function update<K extends keyof LabPreferences>(
     key: K,
     value: LabPreferences[K],

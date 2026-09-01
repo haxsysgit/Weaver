@@ -82,6 +82,18 @@ function conversationActionMessage(error: unknown): string {
   return "The change could not be saved. Try again.";
 }
 
+function conversationRecallMessage(error: unknown): string {
+  if (error instanceof ChatApiError) {
+    if (error.status === 404) {
+      return "That thread can no longer be found.";
+    }
+    if (error.status === 409) {
+      return "That thread is still weaving. Let its answer settle first.";
+    }
+  }
+  return "That thread could not be recalled. Try again.";
+}
+
 export function useChatController(api: ChatApi, product: ChatProduct) {
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -92,6 +104,7 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
   const [liveReplyId, setLiveReplyId] = useState<string | null>(null);
   const [lastOwnerText, setLastOwnerText] = useState<string | null>(null);
   const [recovery, setRecovery] = useState<RecoveryIssue | null>(null);
+  const [booting, setBooting] = useState(true);
   const [bootError, setBootError] = useState<string | null>(null);
   const [activity, setActivity] = useState<ToolActivity[]>([]);
   const [conversationActionError, setConversationActionError] = useState<string | null>(null);
@@ -121,6 +134,8 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
 
   useEffect(() => {
     let mounted = true;
+    const loadId = activeLoad.current + 1;
+    activeLoad.current = loadId;
 
     async function bootstrap() {
       try {
@@ -144,7 +159,7 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
         }
 
         const storedMessages = await api.loadMessages(nextConversationId);
-        if (!mounted) {
+        if (!mounted || activeLoad.current !== loadId) {
           return;
         }
         setConversations(availableConversations);
@@ -152,8 +167,12 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
         setMessages(storedMessages.map(toDisplayMessage));
         localStorage.setItem(product.storageKey, nextConversationId);
       } catch (error) {
-        if (mounted) {
+        if (mounted && activeLoad.current === loadId) {
           setBootError(recoveryFromError(error).message);
+        }
+      } finally {
+        if (mounted && activeLoad.current === loadId) {
+          setBooting(false);
         }
       }
     }
@@ -171,24 +190,42 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
   }
 
   async function startFreshConversation() {
-    const created = await api.createConversation();
-    setConversationId(created.conversation_id);
-    setMessages([]);
-    setLastOwnerText(null);
-    setLiveReplyId(null);
-    setRecovery(null);
-    localStorage.setItem(product.storageKey, created.conversation_id);
-    await refreshConversations();
+    const loadId = activeLoad.current + 1;
+    activeLoad.current = loadId;
+    try {
+      const created = await api.createConversation();
+      setConversationId(created.conversation_id);
+      setMessages([]);
+      setLastOwnerText(null);
+      setLiveReplyId(null);
+      setRecovery(null);
+      localStorage.setItem(product.storageKey, created.conversation_id);
+      await refreshConversations();
+    } finally {
+      if (activeLoad.current === loadId) {
+        setBooting(false);
+      }
+    }
   }
 
   async function createConversation() {
-    // ChatGPT-style: inside a fresh, unused weave a New weave click is a
-    // no-op - there is nothing to leave.
-    if (turnActive || messages.length === 0) {
+    setConversationActionError(null);
+    if (turnActive) {
+      setConversationActionError(
+        "That thread is still weaving. Let its answer settle first.",
+      );
       return false;
     }
-    await startFreshConversation();
-    return true;
+    if (messages.length === 0) {
+      return true;
+    }
+    try {
+      await startFreshConversation();
+      return true;
+    } catch (error) {
+      setConversationActionError(conversationActionMessage(error));
+      return false;
+    }
   }
 
   async function deleteConversation(conversationId: string) {
@@ -253,24 +290,42 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
   }
 
   async function selectConversation(nextConversationId: string) {
-    if (turnActive || nextConversationId === conversationId) {
+    setConversationActionError(null);
+    if (turnActive) {
+      setConversationActionError(
+        "That thread is still weaving. Let its answer settle first.",
+      );
       return false;
+    }
+    if (nextConversationId === conversationId) {
+      return true;
     }
 
     const loadId = activeLoad.current + 1;
     activeLoad.current = loadId;
-    const storedMessages = await api.loadMessages(nextConversationId);
-    if (activeLoad.current !== loadId) {
-      return false;
-    }
+    try {
+      const storedMessages = await api.loadMessages(nextConversationId);
+      if (activeLoad.current !== loadId) {
+        return false;
+      }
 
-    setConversationId(nextConversationId);
-    setMessages(storedMessages.map(toDisplayMessage));
-    setLastOwnerText(null);
-    setLiveReplyId(null);
-    setRecovery(null);
-    localStorage.setItem(product.storageKey, nextConversationId);
-    return true;
+      setConversationId(nextConversationId);
+      setMessages(storedMessages.map(toDisplayMessage));
+      setLastOwnerText(null);
+      setLiveReplyId(null);
+      setRecovery(null);
+      localStorage.setItem(product.storageKey, nextConversationId);
+      return true;
+    } catch (error) {
+      if (activeLoad.current === loadId) {
+        setConversationActionError(conversationRecallMessage(error));
+      }
+      return false;
+    } finally {
+      if (activeLoad.current === loadId) {
+        setBooting(false);
+      }
+    }
   }
 
   function handleStreamEvent(
@@ -462,6 +517,7 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
   return {
     activeTitle,
     activity,
+    booting,
     bootError,
     cancelTurn,
     conversationId,

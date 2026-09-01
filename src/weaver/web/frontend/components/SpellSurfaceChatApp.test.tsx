@@ -1,13 +1,24 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   ChatApiError,
   type ChatApi,
   type ConversationSummary,
+  type StoredMessage,
 } from "../lib/chatApi";
 import { FIRST_NIGHTMARE_STORAGE_KEY } from "../lib/firstNightmare";
 import { getApiKey } from "../lib/identity";
+import { weaverProduct } from "../lib/product";
+import { useChatController } from "../hooks/useChatController";
 import { SpellSurfaceChatApp } from "./SpellSurfaceChatApp";
 
 vi.mock("./SpellBackground", () => ({
@@ -73,6 +84,20 @@ function createMetadataApi(initial: ConversationSummary[]): ChatApi {
   return api;
 }
 
+function deferred<Value>() {
+  let resolvePromise: (value: Value) => void = () => undefined;
+  let rejectPromise: (reason?: unknown) => void = () => undefined;
+  const promise = new Promise<Value>((resolve, reject) => {
+    resolvePromise = resolve;
+    rejectPromise = reject;
+  });
+  return {
+    promise,
+    reject: rejectPromise,
+    resolve: resolvePromise,
+  };
+}
+
 function setDesktopMedia() {
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
@@ -109,6 +134,15 @@ function setMobileMedia() {
   });
 }
 
+async function waitForLiveApp() {
+  await waitFor(() => {
+    expect(screen.getByTestId("spell-surface-live")).toHaveAttribute(
+      "data-startup",
+      "ready",
+    );
+  });
+}
+
 describe("first Nightmare setup", () => {
   beforeEach(setDesktopMedia);
 
@@ -125,6 +159,7 @@ describe("first Nightmare setup", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Enter later" }));
     expect(localStorage.getItem(FIRST_NIGHTMARE_STORAGE_KEY)).toBe("deferred");
     expect(screen.queryByRole("dialog", { name: "First Nightmare setup" })).toBeNull();
+    await waitForLiveApp();
     expect(screen.getByRole("button", { name: "Open Soul Sea settings" })).toBeVisible();
 
   }, 10_000);
@@ -170,6 +205,7 @@ describe("first Nightmare setup", () => {
     );
     fireEvent.animationEnd(dialog);
     expect(screen.queryByRole("dialog", { name: "First Nightmare setup" })).toBeNull();
+    await waitForLiveApp();
     await waitFor(() => expect(screen.getByRole("textbox")).toHaveFocus());
     expect(screen.queryByText("[The voice remains unbound.]")).toBeNull();
     expect(
@@ -196,6 +232,12 @@ describe("first Nightmare setup", () => {
     localStorage.setItem("weaver_api_key_disabled", "1");
     render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
 
+    await waitFor(() => {
+      expect(screen.getByTestId("spell-surface-live")).toHaveAttribute(
+        "data-startup",
+        "ready",
+      );
+    });
     expect(screen.getByText("[The voice remains unbound.]")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Open Soul Sea settings" }));
     const settings = await screen.findByRole("dialog", { name: "Reader Appraisal settings" });
@@ -211,6 +253,7 @@ describe("first Nightmare setup", () => {
     localStorage.setItem("weaver_api_key", "owner-test-key");
     render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
 
+    await waitForLiveApp();
     fireEvent.click(screen.getByRole("button", { name: "Open Soul Sea settings" }));
 
     const dialog = await screen.findByRole("dialog", {
@@ -238,6 +281,7 @@ describe("first Nightmare setup", () => {
     localStorage.setItem("weaver.spell-surface", JSON.stringify({ soulMode: "nephis" }));
     render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
 
+    await waitForLiveApp();
     expect(screen.getByTestId("spellweave-backdrop")).toBeVisible();
     expect(screen.getByRole("img", { name: /Nephis' Soul Sea/ })).toBeVisible();
     expect(screen.getByTestId("spell-surface-live")).toHaveAttribute("data-soul", "nephis");
@@ -247,6 +291,7 @@ describe("first Nightmare setup", () => {
     localStorage.setItem(FIRST_NIGHTMARE_STORAGE_KEY, "completed");
     render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
 
+    await waitForLiveApp();
     fireEvent.click(screen.getByRole("button", { name: "Open Soul Sea settings" }));
     const settings = await screen.findByRole("dialog", { name: "Reader Appraisal settings" });
     fireEvent.click(
@@ -512,6 +557,7 @@ describe("mobile thread drawer", () => {
 
   it("locks page scroll and closes from the solid scrim", async () => {
     render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
+    await waitForLiveApp();
 
     const drawer = document.querySelector<HTMLElement>("#spell-surface-rail");
     expect(drawer).not.toBeNull();
@@ -560,8 +606,9 @@ describe("mobile thread drawer", () => {
     expect(document.body.style.overflow).toBe("");
   });
 
-  it("keeps keyboard focus inside the open drawer", () => {
+  it("keeps keyboard focus inside the open drawer", async () => {
     render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
+    await waitForLiveApp();
 
     const opener = document.querySelector<HTMLButtonElement>(".lab-mobile-rail");
     expect(opener).not.toBeNull();
@@ -578,9 +625,171 @@ describe("mobile thread drawer", () => {
     expect(last).toHaveFocus();
   });
 
+  it("keeps the drawer open until an older thread is actually recalled", async () => {
+    const conversations: ConversationSummary[] = [
+      {
+        archived: false,
+        conversation_id: "current-thread",
+        created_at: "2026-08-31T12:00:00Z",
+        edition_id: "shadow-slave",
+        pinned: false,
+        title: "Current thread",
+      },
+      {
+        archived: false,
+        conversation_id: "older-thread",
+        created_at: "2026-08-30T12:00:00Z",
+        edition_id: "shadow-slave",
+        pinned: false,
+        title: "Older thread",
+      },
+    ];
+    const olderMessages = deferred<StoredMessage[]>();
+    const api = createMetadataApi(conversations);
+    api.loadMessages = vi.fn(async (conversationId) => {
+      if (conversationId === "older-thread") {
+        return olderMessages.promise;
+      }
+      return [{
+        content: "The current answer.",
+        created_at: "2026-08-31T12:00:00Z",
+        message_id: "current-message",
+        role: "weaver" as const,
+        turn_id: "current-turn",
+      }];
+    });
+    localStorage.setItem("weaver.active-conversation", "current-thread");
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+
+    await screen.findByText("The current answer.");
+    const opener = document.querySelector<HTMLButtonElement>(".lab-mobile-rail");
+    const drawer = document.querySelector<HTMLElement>("#spell-surface-rail");
+    expect(opener).not.toBeNull();
+    expect(drawer).not.toBeNull();
+    if (!opener || !drawer) {
+      return;
+    }
+    fireEvent.click(opener);
+    fireEvent.click(within(drawer).getByRole("button", { name: "Older thread" }));
+
+    expect(drawer).toHaveAttribute("aria-hidden", "false");
+    olderMessages.resolve([{
+      content: "The older answer returns.",
+      created_at: "2026-08-30T12:00:00Z",
+      message_id: "older-message",
+      role: "weaver",
+      turn_id: "older-turn",
+    }]);
+    expect(await screen.findByText("The older answer returns.")).toBeVisible();
+    await waitFor(() => expect(drawer).toHaveAttribute("aria-hidden", "true"));
+  });
+
+  it("keeps the drawer open and explains a failed thread recall", async () => {
+    const api = createMetadataApi([
+      {
+        archived: false,
+        conversation_id: "current-thread",
+        created_at: "2026-08-31T12:00:00Z",
+        edition_id: "shadow-slave",
+        pinned: false,
+        title: "Current thread",
+      },
+      {
+        archived: false,
+        conversation_id: "missing-thread",
+        created_at: "2026-08-30T12:00:00Z",
+        edition_id: "shadow-slave",
+        pinned: false,
+        title: "Missing thread",
+      },
+    ]);
+    api.loadMessages = vi.fn(async (conversationId) => {
+      if (conversationId === "missing-thread") {
+        throw new ChatApiError("Loading the conversation", 404);
+      }
+      return [];
+    });
+    localStorage.setItem("weaver.active-conversation", "current-thread");
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+
+    await screen.findByTestId("thread-current-thread");
+    const opener = document.querySelector<HTMLButtonElement>(".lab-mobile-rail");
+    const drawer = document.querySelector<HTMLElement>("#spell-surface-rail");
+    expect(opener).not.toBeNull();
+    expect(drawer).not.toBeNull();
+    if (!opener || !drawer) {
+      return;
+    }
+    fireEvent.click(opener);
+    fireEvent.click(within(drawer).getByRole("button", { name: "Missing thread" }));
+
+    expect(await within(drawer).findByText("That thread can no longer be found.")).toBeVisible();
+    expect(drawer).toHaveAttribute("aria-hidden", "false");
+    expect(localStorage.getItem("weaver.active-conversation")).toBe("current-thread");
+  });
+
+  it("keeps the drawer open when the current thread is still weaving", async () => {
+    const answerCanFinish = deferred<void>();
+    const api = createMetadataApi([
+      {
+        archived: false,
+        conversation_id: "current-thread",
+        created_at: "2026-08-31T12:00:00Z",
+        edition_id: "shadow-slave",
+        pinned: false,
+        title: "Current thread",
+      },
+      {
+        archived: false,
+        conversation_id: "older-thread",
+        created_at: "2026-08-30T12:00:00Z",
+        edition_id: "shadow-slave",
+        pinned: false,
+        title: "Older thread",
+      },
+    ]);
+    api.streamTurn = vi.fn().mockImplementation(() => {
+      return (async function* () {
+        yield { type: "delta" as const, text: "The answer begins." };
+        await answerCanFinish.promise;
+        yield { type: "completed" as const, text: "The answer settles." };
+      })();
+    });
+    localStorage.setItem("weaver.active-conversation", "current-thread");
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+
+    await screen.findByTestId("thread-current-thread");
+    fireEvent.change(screen.getByRole("textbox", { name: "Message Weaver" }), {
+      target: { value: "Keep weaving" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+    await screen.findByRole("button", { name: "Stop Weaver" });
+
+    const opener = document.querySelector<HTMLButtonElement>(".lab-mobile-rail");
+    const drawer = document.querySelector<HTMLElement>("#spell-surface-rail");
+    expect(opener).not.toBeNull();
+    expect(drawer).not.toBeNull();
+    if (!opener || !drawer) {
+      answerCanFinish.resolve();
+      return;
+    }
+    fireEvent.click(opener);
+    fireEvent.click(within(drawer).getByRole("button", { name: "Older thread" }));
+
+    expect(
+      await within(drawer).findByText(
+        "That thread is still weaving. Let its answer settle first.",
+      ),
+    ).toBeVisible();
+    expect(drawer).toHaveAttribute("aria-hidden", "false");
+    expect(api.loadMessages).not.toHaveBeenCalledWith("older-thread");
+    answerCanFinish.resolve();
+  });
+
   it("restores focus after settings close", async () => {
     render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
 
+    await waitForLiveApp();
     const opener = screen.getByRole("button", { name: "Open Soul Sea settings from header" });
     opener.focus();
     fireEvent.click(opener);
@@ -588,6 +797,41 @@ describe("mobile thread drawer", () => {
     fireEvent.click(within(settings).getByRole("button", { name: "Close settings" }));
 
     await waitFor(() => expect(opener).toHaveFocus());
+  });
+
+  it("opens Settings before the saved reader request settles", async () => {
+    const storedPreferences = deferred<{
+      reader_chapter: number;
+      spoiler_mode: "protect";
+      tier: "awakened" | "ascended" | "transcendent";
+    }>();
+    const api = createApi();
+    api.getPreferences = vi.fn(() => storedPreferences.promise);
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+    await waitForLiveApp();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Open Soul Sea settings from header" }),
+    );
+
+    expect(
+      screen.getByRole("dialog", { name: "Reader Appraisal settings" }),
+    ).toBeVisible();
+    expect(screen.getByTestId("spell-background")).toHaveAttribute(
+      "data-paused",
+      "true",
+    );
+
+    await act(async () => {
+      storedPreferences.resolve({
+        reader_chapter: 1200,
+        spoiler_mode: "protect",
+        tier: "transcendent",
+      });
+    });
+    await waitFor(() => {
+      expect(screen.getByLabelText("Current chapter")).toHaveValue(1200);
+    });
   });
 });
 
@@ -597,14 +841,170 @@ describe("live Spellweave foundation", () => {
     localStorage.setItem(FIRST_NIGHTMARE_STORAGE_KEY, "deferred");
   });
 
-  it("mounts one decorative three-depth backdrop around the existing chat", () => {
+  it("mounts one decorative three-depth backdrop around the existing chat", async () => {
     render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
 
     const backdrop = screen.getByTestId("spellweave-backdrop");
     expect(backdrop).toHaveAttribute("aria-hidden", "true");
     expect(backdrop.querySelectorAll("[data-spell-depth]")).toHaveLength(3);
     expect(backdrop.querySelector("button, input, textarea, a")).toBeNull();
+    await waitFor(() => {
+      expect(screen.getByTestId("spell-surface-live")).toHaveAttribute(
+        "data-startup",
+        "ready",
+      );
+    });
     expect(screen.getByRole("textbox")).toBeVisible();
+  });
+
+  it("shows the Spellweave before conversation startup reveals the interface", async () => {
+    const conversations = deferred<ConversationSummary[]>();
+    const api = createApi();
+    api.listConversations = vi.fn(() => conversations.promise);
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+
+    expect(screen.getByTestId("spellweave-backdrop")).toBeVisible();
+    expect(screen.getByTestId("spell-surface-live")).toHaveAttribute(
+      "data-startup",
+      "waiting",
+    );
+    expect(document.querySelector(".lab-chat-main")).toHaveAttribute("inert");
+    expect(document.querySelector(".lab-chat-main")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    expect(document.querySelector("#spell-surface-rail")).toHaveAttribute("inert");
+    expect(document.querySelector("#spell-surface-rail")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    expect(document.querySelector(".lab-soul-sea")).toHaveAttribute("inert");
+    expect(document.querySelector(".lab-soul-sea")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    const backdrop = screen.getByTestId("spellweave-backdrop");
+    const chatMain = document.querySelector(".lab-chat-main");
+    expect(chatMain).not.toBeNull();
+    if (!chatMain) {
+      return;
+    }
+    expect(
+      backdrop.compareDocumentPosition(chatMain) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    conversations.resolve([]);
+    await waitFor(() => {
+      expect(screen.getByTestId("spell-surface-live")).toHaveAttribute(
+        "data-startup",
+        "ready",
+      );
+    });
+    expect(document.querySelector(".lab-chat-main")).not.toHaveAttribute("inert");
+    expect(document.querySelector("#spell-surface-rail")).not.toHaveAttribute("inert");
+    expect(document.querySelector(".lab-soul-sea")).not.toHaveAttribute("inert");
+  });
+
+  it("lets a newer thread selection settle startup without stale overwrite", async () => {
+    const startupMessages = deferred<StoredMessage[]>();
+    const api = createMetadataApi([
+      {
+        archived: false,
+        conversation_id: "startup-thread",
+        created_at: "2026-08-31T12:00:00Z",
+        edition_id: "shadow-slave",
+        pinned: false,
+        title: "Startup thread",
+      },
+      {
+        archived: false,
+        conversation_id: "newer-thread",
+        created_at: "2026-08-31T12:01:00Z",
+        edition_id: "shadow-slave",
+        pinned: false,
+        title: "Newer thread",
+      },
+    ]);
+    api.loadMessages = vi.fn(async (conversationId) => {
+      if (conversationId === "startup-thread") {
+        return startupMessages.promise;
+      }
+      return [{
+        content: "The newer answer remains.",
+        created_at: "2026-08-31T12:01:00Z",
+        message_id: "newer-message",
+        role: "weaver" as const,
+        turn_id: "newer-turn",
+      }];
+    });
+    localStorage.setItem("weaver.active-conversation", "startup-thread");
+    const { result } = renderHook(() => useChatController(api, weaverProduct));
+
+    await waitFor(() => {
+      expect(api.loadMessages).toHaveBeenCalledWith("startup-thread");
+    });
+    await act(async () => {
+      expect(await result.current.selectConversation("newer-thread")).toBe(true);
+    });
+
+    expect(result.current.booting).toBe(false);
+    expect(result.current.conversationId).toBe("newer-thread");
+    expect(result.current.messages[0]?.content).toBe("The newer answer remains.");
+
+    startupMessages.resolve([{
+      content: "The stale startup answer.",
+      created_at: "2026-08-31T12:00:00Z",
+      message_id: "startup-message",
+      role: "weaver",
+      turn_id: "startup-turn",
+    }]);
+    await act(async () => Promise.resolve());
+
+    expect(result.current.conversationId).toBe("newer-thread");
+    expect(result.current.messages[0]?.content).toBe("The newer answer remains.");
+  });
+
+  it("acknowledges an already empty New Weave and returns focus to chat", async () => {
+    setMobileMedia();
+    const api = createMetadataApi([
+      {
+        archived: false,
+        conversation_id: "empty-thread",
+        created_at: "2026-08-31T12:00:00Z",
+        edition_id: "shadow-slave",
+        pinned: false,
+        title: "Empty thread",
+      },
+      {
+        archived: false,
+        conversation_id: "new-thread",
+        created_at: "2026-08-31T12:01:00Z",
+        edition_id: "shadow-slave",
+        pinned: false,
+        title: "New thread",
+      },
+    ]);
+    localStorage.setItem("weaver.active-conversation", "empty-thread");
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+
+    await screen.findByTestId("thread-empty-thread");
+    const opener = document.querySelector<HTMLButtonElement>(".lab-mobile-rail");
+    const drawer = document.querySelector<HTMLElement>("#spell-surface-rail");
+    expect(opener).not.toBeNull();
+    expect(drawer).not.toBeNull();
+    if (!opener || !drawer) {
+      return;
+    }
+    fireEvent.click(opener);
+    fireEvent.click(within(drawer).getByRole("button", { name: "Start a new weave" }));
+
+    expect(api.createConversation).not.toHaveBeenCalled();
+    await waitFor(() => expect(drawer).toHaveAttribute("aria-hidden", "true"));
+    await waitFor(() => {
+      expect(screen.getByRole("textbox", { name: "Message Weaver" })).toHaveFocus();
+    });
+    expect(screen.getByText("[An empty thread waits in the void.]")).toBeVisible();
+    expect(localStorage.getItem("weaver.active-conversation")).toBe("empty-thread");
   });
 
   it("keeps the foreground weave stable while a reply is running", async () => {
@@ -667,8 +1067,9 @@ describe("live Spellweave foundation", () => {
     expect(document.querySelector(".lab-soul-caption")).toBeNull();
   });
 
-  it("keeps the collapsed desktop rail operable so it can reopen", () => {
+  it("keeps the collapsed desktop rail operable so it can reopen", async () => {
     render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
+    await waitForLiveApp();
 
     const rail = document.querySelector<HTMLElement>("#spell-surface-rail");
     expect(rail).not.toBeNull();

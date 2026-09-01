@@ -36,38 +36,6 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 }
 
-function setSurfaceInert(dialog: HTMLElement): () => void {
-  const surface = dialog.closest(".spell-surface-lab");
-  if (!surface) {
-    return () => undefined;
-  }
-
-  const hiddenSiblings = Array.from(surface.children).filter((child) => {
-    return child !== dialog;
-  }) as HTMLElement[];
-  const previousStates = hiddenSiblings.map((element) => ({
-    ariaHidden: element.getAttribute("aria-hidden"),
-    element,
-    inert: element.inert,
-  }));
-
-  for (const element of hiddenSiblings) {
-    element.inert = true;
-    element.setAttribute("aria-hidden", "true");
-  }
-
-  return () => {
-    for (const previousState of previousStates) {
-      previousState.element.inert = previousState.inert;
-      if (previousState.ariaHidden === null) {
-        previousState.element.removeAttribute("aria-hidden");
-      } else {
-        previousState.element.setAttribute("aria-hidden", previousState.ariaHidden);
-      }
-    }
-  };
-}
-
 function riteAct(step: FirstNightmareStep): string {
   if (step === 1) return "awakening";
   if (step === 2) return "initiation";
@@ -95,13 +63,7 @@ export function FirstNightmareSetup({
   );
 
   useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) {
-      return;
-    }
-    const restoreSurface = setSurfaceInert(dialog);
     return () => {
-      restoreSurface();
       previousFocusRef.current?.focus();
     };
   }, []);

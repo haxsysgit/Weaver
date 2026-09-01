@@ -197,6 +197,7 @@ function SpellSurfaceChatSurface({
   const [announcementKey, setAnnouncementKey] = useState(0);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const railOpenerRef = useRef<HTMLButtonElement>(null);
+  const focusComposerAfterRailClose = useRef(false);
   const transcriptRef = useRef<HTMLDivElement>(null);
   const previousTurnActive = useRef(false);
   const answerPhaseAnnounced = useRef(false);
@@ -242,6 +243,14 @@ function SpellSurfaceChatSurface({
     return () => {
       document.body.style.overflow = previousOverflow;
     };
+  }, [railOpen]);
+
+  useEffect(() => {
+    if (railOpen || !focusComposerAfterRailClose.current) {
+      return;
+    }
+    focusComposerAfterRailClose.current = false;
+    composerRef.current?.focus({ preventScroll: true });
   }, [railOpen]);
 
   useEffect(() => {
@@ -329,6 +338,8 @@ function SpellSurfaceChatSurface({
     settingsOpenerRef.current = document.activeElement instanceof HTMLElement
       ? document.activeElement
       : null;
+    setSettingsOpen(true);
+    announce("[The sea within opens.]");
     try {
       const stored = await api.getPreferences();
       const chapter = stored.reader_chapter ?? preferences.chapter;
@@ -339,9 +350,8 @@ function SpellSurfaceChatSurface({
         tier: stored.tier,
         volume: volumeForChapter(chapter),
       }));
-    } finally {
-      setSettingsOpen(true);
-      announce("[The sea within opens.]");
+    } catch {
+      // The local settings remain usable when the server preference read fails.
     }
   }
 
@@ -389,14 +399,24 @@ function SpellSurfaceChatSurface({
   async function createThread() {
     const created = await chat.createConversation();
     if (created) {
-      setRailOpen(false);
+      if (railOpen) {
+        focusComposerAfterRailClose.current = true;
+        setRailOpen(false);
+      } else {
+        window.setTimeout(() => {
+          composerRef.current?.focus({ preventScroll: true });
+        }, 0);
+      }
       announce("[An empty thread waits in the void.]");
-      window.setTimeout(() => composerRef.current?.focus(), 0);
     }
   }
 
   async function selectThread(threadId: string) {
-    await chat.selectConversation(threadId);
+    const selected = await chat.selectConversation(threadId);
+    if (!selected) {
+      announce("[The thread could not be recalled.]");
+      return;
+    }
     setRailOpen(false);
     announce("[The thread is recalled.]");
   }
@@ -484,6 +504,7 @@ function SpellSurfaceChatSurface({
         "spell-surface-lab",
         "spell-surface-live",
         railOpen ? "lab-rail-open" : "",
+        settingsOpen ? "lab-settings-open" : "",
         desktopRailCollapsed ? "lab-desktop-rail-collapsed" : "",
       ].filter(Boolean).join(" ")}
       data-density={preferences.density}
@@ -491,21 +512,23 @@ function SpellSurfaceChatSurface({
       data-glass={preferences.glass}
       data-runes={preferences.runeMode}
       data-soul={preferences.soulMode}
+      data-startup={chat.booting ? "waiting" : "ready"}
       data-star-intensity={preferences.starIntensity}
       data-theme={preferences.theme}
       data-testid="spell-surface-live"
     >
-      <SpellSurfaceSoulSea
-        mode={preferences.soulMode}
-        showCaption={false}
-        state={soulSeaState}
-      />
       <SpellweaveBackdrop
         distantRendererEnabled={!setupOpen || setupRevealing}
         foregroundRespondsToActivity={false}
         paused={settingsOpen || (setupOpen && !setupRevealing)}
         state={backdropState}
         threadAlpha={threadAlpha}
+      />
+      <SpellSurfaceSoulSea
+        hiddenFromAccessibility={chat.booting || setupOpen}
+        mode={preferences.soulMode}
+        showCaption={false}
+        state={soulSeaState}
       />
 
       <ThreadArchive
@@ -525,13 +548,14 @@ function SpellSurfaceChatSurface({
         onSelect={(threadId) => void selectThread(threadId)}
         onSetArchivedOpen={setArchivedOpen}
         readerStatus={readerStatus}
+        startupReady={!chat.booting && !setupOpen}
         threads={threads}
       />
 
       <main
-        aria-hidden={railOpen ? true : undefined}
+        aria-hidden={chat.booting || railOpen || setupOpen ? true : undefined}
         className="lab-chat-main"
-        inert={railOpen}
+        inert={chat.booting || railOpen || setupOpen}
       >
         <div className="lab-chat-controls">
           <button aria-controls="spell-surface-rail" aria-expanded={railOpen} aria-label="Open threads" className="lab-mobile-rail" onClick={openRail} ref={railOpenerRef} type="button">
