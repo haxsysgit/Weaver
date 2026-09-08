@@ -119,6 +119,26 @@ Open questions for the owner when this plan is admitted:
   phones; v1 is a normal website).
 - Pooled-key subscription tier so casual fans who won't top up a deepseek
   account can still use the app (v1 is BYOK-only).
+- Reserved side UI Plan 029.5, Spellweave formation: after Plan 029 closes,
+  replace the temporary circular reveal with a real one-time formation event.
+  Conversations appear first on a lightless void. A central knot ignites, stars
+  expand toward their final positions with staggered depth, silver threads grow
+  only between arrived stars, one quiet pulse crosses the completed network,
+  and the scene settles into the normal living Star Web.
+  - Use the existing Three.js `BufferGeometry`, shader uniforms, and animation
+    loop. Keep star origin and final positions on the GPU and update one shared
+    progress value per frame.
+  - Keep mobile render profiles, adaptive quality, the 30 FPS background cap,
+    delayed renderer loading, WebGL fallback, and immediate reduced-motion
+    state. Add no bloom, post-processing chain, per-star React state, or
+    per-frame geometry rebuild.
+  - Preserve the accepted Conversation Chamber, Soul Seas, Balanced intensity,
+    composer, Archive, First Nightmare, and desktop composition.
+  - Prove startup order, formation stages, cancellation on hidden pages, and
+    settled-state continuity with deterministic tests. Profile real mobile and
+    desktop hardware before accepting any frame-time claim.
+  - This is fake-only UI work with no provider calls, private chapter reading,
+    retrieval changes, persistence changes, or AWS work.
 - Privacy-light analytics (umami-style) if the public launch is real enough
   to need it.
 

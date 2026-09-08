@@ -57,7 +57,7 @@
   inset: 8% -20% auto 18%;
   width: 112%;
   height: 48%;
-  opacity: 0.28;
+  opacity: 0.18;
   filter: blur(12px);
   transform: rotate(-11deg);
   background:
@@ -75,14 +75,16 @@
 }
 
 [data-star-intensity="quiet"] .lab-galactic-band,
-[data-star-intensity="quiet"] .lab-star-flare { opacity: 0.14; }
-[data-star-intensity="vivid"] .lab-galactic-band { opacity: 0.44; }
+[data-star-intensity="quiet"] .lab-star-flare { opacity: 0.08; }
+[data-star-intensity="vivid"] .lab-galactic-band { opacity: 0.36; }
+[data-star-intensity="vivid"] .lab-star-flare { opacity: 1; }
 
 .lab-star-flare {
   z-index: -2;
   inset: auto;
   width: 3px;
   height: 3px;
+  opacity: 0.58;
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 0 5px #fff, 0 0 18px #bcd5ff, 0 0 44px rgba(129, 165, 224, 0.7);
@@ -2922,14 +2924,16 @@
 }
 
 .spell-surface-live .composer-shell {
-  border-color: rgba(203, 204, 204, 0.24);
+  isolation: isolate;
+  border-color: rgba(203, 204, 204, 0.2);
   background:
-    linear-gradient(96deg, transparent 0 18%, rgba(255, 255, 255, 0.018) 19%, transparent 20% 56%, rgba(255, 255, 255, 0.014) 57%, transparent 58%),
-    repeating-linear-gradient(4deg, rgba(255, 255, 255, 0.012) 0 1px, transparent 1px 6px),
-    linear-gradient(145deg, #131210, var(--edition-black-wood) 54%, #050505);
+    linear-gradient(96deg, transparent 0 18%, rgba(255, 255, 255, 0.014) 19%, transparent 20% 56%, rgba(255, 255, 255, 0.01) 57%, transparent 58%),
+    repeating-linear-gradient(3deg, rgba(255, 255, 255, 0.009) 0 1px, transparent 1px 7px),
+    linear-gradient(145deg, #090807, #030303 56%, #000);
   box-shadow:
-    0 18px 50px rgba(0, 0, 0, 0.34),
-    inset 0 1px rgba(203, 204, 204, 0.07);
+    0 18px 50px rgba(0, 0, 0, 0.48),
+    inset 0 1px rgba(203, 204, 204, 0.055),
+    inset 0 -14px 30px rgba(0, 0, 0, 0.42);
 }
 
 .spell-surface-live .composer-shell:focus-within {
@@ -2938,6 +2942,62 @@
     0 18px 50px rgba(0, 0, 0, 0.34),
     0 0 0 1px rgba(183, 154, 98, 0.1),
     inset 0 1px rgba(203, 204, 204, 0.08);
+}
+
+.spell-surface-live .composer-rune-border {
+  position: absolute;
+  z-index: 0;
+  inset: 4px 62px 4px 10px;
+  color: rgba(203, 204, 204, 0.28);
+  pointer-events: none;
+  transition: color var(--motion-smooth) var(--ease-weave);
+}
+
+.spell-surface-live .composer-rune-border span {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-top: 1px solid currentColor;
+  border-left: 1px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.spell-surface-live .composer-rune-border span:nth-child(1) {
+  top: -1px;
+  left: 18%;
+}
+
+.spell-surface-live .composer-rune-border span:nth-child(2) {
+  top: -1px;
+  left: 50%;
+}
+
+.spell-surface-live .composer-rune-border span:nth-child(3) {
+  top: -1px;
+  right: 18%;
+}
+
+.spell-surface-live .composer-rune-border span:nth-child(4) {
+  bottom: -1px;
+  left: 34%;
+  transform: rotate(225deg);
+}
+
+.spell-surface-live .composer-rune-border span:nth-child(5) {
+  right: 34%;
+  bottom: -1px;
+  transform: rotate(225deg);
+}
+
+.spell-surface-live .composer-shell:focus-within .composer-rune-border {
+  color: rgba(232, 192, 120, 0.52);
+}
+
+.spell-surface-live .composer-shell > textarea,
+.spell-surface-live .composer-shell > .composer-tier,
+.spell-surface-live .composer-shell > .composer-action {
+  position: relative;
+  z-index: 1;
 }
 
 .spell-surface-live[data-theme] .composer-action {

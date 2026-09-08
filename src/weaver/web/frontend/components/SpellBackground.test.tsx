@@ -1,7 +1,7 @@
 import { render } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { SpellBackground } from "./SpellBackground";
+import { isSpellBackgroundPaused, SpellBackground } from "./SpellBackground";
 
 describe("SpellBackground lifecycle", () => {
   beforeEach(() => {
@@ -26,5 +26,22 @@ describe("SpellBackground lifecycle", () => {
     expect(container.querySelector("canvas")).toBe(canvas);
     expect(canvas).toHaveAttribute("data-spell-mode", "alive");
     expect(canvas).toHaveAttribute("data-paused", "true");
+  });
+
+  it("marks the fallback ready when WebGL is unavailable", () => {
+    const onReady = vi.fn();
+
+    render(<SpellBackground mode="alive" onReady={onReady} />);
+
+    expect(onReady).toHaveBeenCalledOnce();
+  });
+
+  it("reads pause state from the live canvas instead of its mount state", () => {
+    const canvas = document.createElement("canvas");
+    canvas.dataset.paused = "true";
+    expect(isSpellBackgroundPaused(canvas)).toBe(true);
+
+    canvas.dataset.paused = "false";
+    expect(isSpellBackgroundPaused(canvas)).toBe(false);
   });
 });

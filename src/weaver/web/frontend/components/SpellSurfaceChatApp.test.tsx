@@ -21,10 +21,29 @@ import { weaverProduct } from "../lib/product";
 import { useChatController } from "../hooks/useChatController";
 import { SpellSurfaceChatApp } from "./SpellSurfaceChatApp";
 
+const distantRenderer = vi.hoisted(() => ({
+  onReady: undefined as undefined | (() => void),
+}));
+
 vi.mock("./SpellBackground", () => ({
-  SpellBackground: ({ paused }: { paused: boolean }) => (
-    <canvas data-paused={paused} data-testid="spell-background" />
-  ),
+  SpellBackground: ({
+    onReady,
+    paused,
+    threadAlpha,
+  }: {
+    onReady?: () => void;
+    paused: boolean;
+    threadAlpha?: number;
+  }) => {
+    distantRenderer.onReady = onReady;
+    return (
+      <canvas
+        data-paused={paused}
+        data-testid="spell-background"
+        data-thread-alpha={threadAlpha}
+      />
+    );
+  },
 }));
 
 function createApi(): ChatApi {
@@ -282,6 +301,8 @@ describe("first Nightmare setup", () => {
     render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
 
     await waitForLiveApp();
+    await screen.findByTestId("spell-background");
+    act(() => distantRenderer.onReady?.());
     expect(screen.getByTestId("spellweave-backdrop")).toBeVisible();
     expect(screen.getByRole("img", { name: /Nephis' Soul Sea/ })).toBeVisible();
     expect(screen.getByTestId("spell-surface-live")).toHaveAttribute("data-soul", "nephis");
@@ -855,15 +876,23 @@ describe("live Spellweave foundation", () => {
       );
     });
     expect(screen.getByRole("textbox")).toBeVisible();
+    expect(await screen.findByTestId("spell-background")).toHaveAttribute(
+      "data-thread-alpha",
+      "0.2",
+    );
   });
 
-  it("shows the Spellweave before conversation startup reveals the interface", async () => {
+  it("loads conversations before starting and revealing the Star Web", async () => {
     const conversations = deferred<ConversationSummary[]>();
     const api = createApi();
     api.listConversations = vi.fn(() => conversations.promise);
     render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
 
-    expect(screen.getByTestId("spellweave-backdrop")).toBeVisible();
+    expect(screen.queryByTestId("spell-background")).toBeNull();
+    expect(screen.getByTestId("spellweave-backdrop")).toHaveAttribute(
+      "data-renderer-ready",
+      "false",
+    );
     expect(screen.getByTestId("spell-surface-live")).toHaveAttribute(
       "data-startup",
       "waiting",
@@ -900,6 +929,16 @@ describe("live Spellweave foundation", () => {
         "ready",
       );
     });
+    expect(await screen.findByTestId("spell-background")).toBeInTheDocument();
+    expect(screen.getByTestId("spellweave-backdrop")).toHaveAttribute(
+      "data-renderer-ready",
+      "false",
+    );
+    act(() => distantRenderer.onReady?.());
+    expect(screen.getByTestId("spellweave-backdrop")).toHaveAttribute(
+      "data-renderer-ready",
+      "true",
+    );
     expect(document.querySelector(".lab-chat-main")).not.toHaveAttribute("inert");
     expect(document.querySelector("#spell-surface-rail")).not.toHaveAttribute("inert");
     expect(document.querySelector(".lab-soul-sea")).not.toHaveAttribute("inert");

@@ -282,10 +282,10 @@ export function ThemeLab() {
 
   const readerStatus = `Vol ${preferences.volume} · ch ${preferences.chapter} · ${preferences.tier}`;
   const threadAlpha = preferences.starIntensity === "quiet"
-    ? 0.2
+    ? 0.12
     : preferences.starIntensity === "vivid"
-      ? 0.56
-      : 0.36;
+      ? 0.46
+      : 0.2;
 
   return (
     <div

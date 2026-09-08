@@ -9,7 +9,7 @@ import {
 
 /**
  * The Nightmare Spell background: the space between dream and reality from
- * the end of Sunny's First Nightmare (ch15:5-7) —
+ * the end of Sunny's First Nightmare (ch15:5-7):
  *   "an endless black void illuminated by a myriad of stars. Between those
  *   stars, countless strings of silver light were woven into a beautiful and
  *   inconceivably complex net, forming various nexuses and constellations."
@@ -20,6 +20,10 @@ import {
 
 export type SpellBgMode = "subtle" | "alive";
 
+export function isSpellBackgroundPaused(canvas: HTMLCanvasElement): boolean {
+  return document.hidden || canvas.dataset.paused === "true";
+}
+
 const STAR_COLOR = new THREE.Color(0xc2c6d2);
 const THREAD_COLOR = new THREE.Color(0xc8ccd6);
 // 91 divine cores shining especially well among the myriad of stars:
@@ -29,12 +33,32 @@ const THREAD_COLOR = new THREE.Color(0xc8ccd6);
 const DIVINE_COUNT = 91;
 const DIVINE_FLARE_COUNT = 42;
 const DIVINE_COLOR = new THREE.Color(0xe8c078);
+const REVEAL_MOTION_INTERVALS = 8;
+const FALLBACK_SMOOTH_MOTION_MS = 240;
+
+function spellweaveRevealDurationMs(): number {
+  const motionValue = getComputedStyle(document.documentElement)
+    .getPropertyValue("--motion-smooth")
+    .trim();
+  const parsedValue = Number.parseFloat(motionValue);
+  if (!Number.isFinite(parsedValue)) {
+    return FALLBACK_SMOOTH_MOTION_MS * REVEAL_MOTION_INTERVALS;
+  }
+  const smoothMotionMs = motionValue.endsWith("ms")
+    ? parsedValue
+    : motionValue.endsWith("s")
+      ? parsedValue * 1_000
+      : FALLBACK_SMOOTH_MOTION_MS;
+  return smoothMotionMs * REVEAL_MOTION_INTERVALS;
+}
 
 const STAR_VERT = /* glsl */ `
   attribute float phase;
   attribute float size;
   uniform float uTime;
   uniform float uPixelRatio;
+  uniform float uReveal;
+  varying float vReveal;
   varying float vTwinkle;
   void main() {
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
@@ -42,18 +66,27 @@ const STAR_VERT = /* glsl */ `
     vTwinkle = tw * tw;
     gl_PointSize = size * uPixelRatio * (140.0 / -mv.z);
     gl_Position = projectionMatrix * mv;
+    vec2 screenPosition = gl_Position.xy / max(gl_Position.w, 0.0001);
+    float revealDistance = length(screenPosition - vec2(0.0, 0.08));
+    vReveal = 1.0 - smoothstep(
+      uReveal - 0.14,
+      uReveal + 0.08,
+      revealDistance + phase * 0.14
+    );
   }
 `;
 
 const STAR_FRAG = /* glsl */ `
   varying float vTwinkle;
+  varying float vReveal;
   uniform vec3 uColor;
+  uniform float uIntensity;
   void main() {
     vec2 uv = gl_PointCoord - 0.5;
     float d = length(uv);
     float a = smoothstep(0.5, 0.05, d);
     a *= 0.35 + 0.65 * vTwinkle;
-    gl_FragColor = vec4(uColor, a * 0.9);
+    gl_FragColor = vec4(uColor, a * 0.9 * vReveal * uIntensity);
   }
 `;
 
@@ -61,22 +94,35 @@ const THREAD_VERT = /* glsl */ `
   attribute float lineUV;
   attribute float segPhase;
   uniform float uTime;
+  uniform float uReveal;
   varying float vPulse;
   varying float vFade;
+  varying float vReveal;
   void main() {
     vFade = 0.35 + 0.65 * (0.5 + 0.5 * sin(uTime * 0.25 + segPhase * 6.2831));
     vPulse = pow(max(0.0, sin(lineUV * 3.14159 - uTime * 1.2 + segPhase * 6.2831)), 6.0);
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    vec2 screenPosition = gl_Position.xy / max(gl_Position.w, 0.0001);
+    float revealDistance = length(screenPosition - vec2(0.0, 0.08));
+    vReveal = 1.0 - smoothstep(
+      uReveal - 0.1,
+      uReveal + 0.08,
+      revealDistance + segPhase * 0.1
+    );
   }
 `;
 
 const THREAD_FRAG = /* glsl */ `
   varying float vPulse;
   varying float vFade;
+  varying float vReveal;
   uniform vec3 uColor;
   uniform float uAlpha;
   void main() {
-    gl_FragColor = vec4(uColor, uAlpha * vFade * (0.25 + 0.75 * vPulse));
+    gl_FragColor = vec4(
+      uColor,
+      uAlpha * vFade * (0.25 + 0.75 * vPulse) * vReveal
+    );
   }
 `;
 
@@ -89,21 +135,31 @@ const DIVINE_VERT = /* glsl */ `
   attribute float size;
   uniform float uTime;
   uniform float uPixelRatio;
+  uniform float uReveal;
   varying float vFlare;
   varying float vGlow;
+  varying float vReveal;
   void main() {
     float breath = 0.78 + 0.22 * sin(uTime * 0.55 + phase * 6.2831);
     vFlare = flare;
     vGlow = breath;
     gl_PointSize = size * uPixelRatio;
     gl_Position = vec4(position.xy, 0.25, 1.0);
+    float revealDistance = length(position.xy - vec2(0.0, 0.08));
+    vReveal = 1.0 - smoothstep(
+      uReveal - 0.12,
+      uReveal + 0.07,
+      revealDistance + phase * 0.1
+    );
   }
 `;
 
 const DIVINE_FRAG = /* glsl */ `
   varying float vFlare;
   varying float vGlow;
+  varying float vReveal;
   uniform vec3 uColor;
+  uniform float uIntensity;
   void main() {
     vec2 uv = gl_PointCoord - 0.5;
     float d = length(uv);
@@ -116,7 +172,7 @@ const DIVINE_FRAG = /* glsl */ `
     float subtleFlare = max(horizontalFlare, verticalFlare) * 0.22 * vFlare;
     float breath = 0.88 + 0.12 * vGlow;
     float alpha = min(0.78, (crispCore * 0.7 + definedEdge + subtleFlare) * breath);
-    gl_FragColor = vec4(uColor, alpha);
+    gl_FragColor = vec4(uColor, alpha * vReveal * uIntensity);
   }
 `;
 
@@ -242,6 +298,7 @@ export function StarWebScene(
   canvas: HTMLCanvasElement,
   mode: SpellBgMode,
   opts: {
+    onReady?: () => void;
     paused?: boolean;
     profile?: SpellRenderProfile;
     transparent?: boolean;
@@ -269,6 +326,7 @@ export function StarWebScene(
   const hasWebGL = typeof window.WebGLRenderingContext !== "undefined"
     || typeof window.WebGL2RenderingContext !== "undefined";
   if (!hasWebGL) {
+    opts.onReady?.();
     return () => undefined;
   }
 
@@ -281,9 +339,15 @@ export function StarWebScene(
       powerPreference: "high-performance",
     });
   } catch {
+    opts.onReady?.();
     return () => undefined;
   }
   renderer.setPixelRatio(profile.pixelRatio);
+  const initialRevealRadius = profile.animated ? -0.08 : 2;
+  const rendererIntensity = Math.min(
+    1,
+    Math.max(0.26, (threadAlpha ?? 0.2) / 0.46),
+  );
   const scene = new THREE.Scene();
   scene.background = transparent ? null : new THREE.Color(0x050508);
   const camera = new THREE.PerspectiveCamera(62, 1, 0.1, 200);
@@ -301,7 +365,9 @@ export function StarWebScene(
     uniforms: {
       uTime: { value: 0 },
       uPixelRatio: { value: renderer.getPixelRatio() },
+      uReveal: { value: initialRevealRadius },
       uColor: { value: STAR_COLOR },
+      uIntensity: { value: rendererIntensity },
     },
     transparent: true,
     depthWrite: false,
@@ -322,7 +388,9 @@ export function StarWebScene(
     uniforms: {
       uTime: { value: 0 },
       uPixelRatio: { value: renderer.getPixelRatio() },
+      uReveal: { value: initialRevealRadius },
       uColor: { value: DIVINE_COLOR },
+      uIntensity: { value: rendererIntensity },
     },
     transparent: true,
     depthTest: false,
@@ -346,6 +414,7 @@ export function StarWebScene(
     fragmentShader: THREAD_FRAG,
     uniforms: {
       uTime: { value: 0 },
+      uReveal: { value: initialRevealRadius },
       uColor: { value: THREAD_COLOR },
       uAlpha: {
         value:
@@ -498,7 +567,25 @@ export function StarWebScene(
   let expensiveFrameCount = 0;
   let previousAnimationFrame = 0;
   const adaptiveWarmupUntil = performance.now() + 4_000;
+  let revealStartedAt: number | null = null;
+  const revealDuration = spellweaveRevealDurationMs();
   const canAdapt = profile.name !== "desktop";
+
+  const updateReveal = (frameTime: number) => {
+    if (!profile.animated) {
+      return;
+    }
+    if (revealStartedAt === null) {
+      revealStartedAt = frameTime;
+    }
+    const elapsed = Math.max(0, frameTime - revealStartedAt);
+    const progress = Math.min(1, elapsed / revealDuration);
+    const easedProgress = progress * progress * (3 - 2 * progress);
+    const revealRadius = -0.08 + easedProgress * 1.88;
+    starMat.uniforms.uReveal.value = revealRadius;
+    threadMat.uniforms.uReveal.value = revealRadius;
+    dMat.uniforms.uReveal.value = revealRadius;
+  };
 
   const updateInspectionData = () => {
     canvas.dataset.drawCalls = String(renderer.info.render.calls);
@@ -563,10 +650,12 @@ export function StarWebScene(
   };
 
   const tick = (frameTime: number) => {
-    if (document.hidden || paused || canvas.dataset.paused === "true") {
+    if (isSpellBackgroundPaused(canvas)) {
       previousAnimationFrame = frameTime;
       return;
     }
+
+    updateReveal(frameTime);
 
     if (
       canAdapt
@@ -585,6 +674,7 @@ export function StarWebScene(
   };
 
   renderFrame();
+  opts.onReady?.();
   if (profile.animated) {
     renderer.setAnimationLoop(tick);
   }
@@ -614,19 +704,26 @@ function currentRenderProfile(): SpellRenderProfile {
 
 export function SpellBackground({
   mode,
+  onReady,
   paused = false,
   transparent = false,
   threadAlpha,
   className = "spell-bg",
 }: {
   mode: SpellBgMode;
+  onReady?: () => void;
   paused?: boolean;
   transparent?: boolean;
   threadAlpha?: number;
   className?: string;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const onReadyRef = useRef(onReady);
   const [profile, setProfile] = useState(currentRenderProfile);
+
+  useEffect(() => {
+    onReadyRef.current = onReady;
+  }, [onReady]);
 
   useEffect(() => {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -665,6 +762,7 @@ export function SpellBackground({
     const canvas = canvasRef.current;
     if (!canvas) return;
     const dispose = StarWebScene(canvas, mode, {
+      onReady: () => onReadyRef.current?.(),
       paused,
       profile,
       threadAlpha,

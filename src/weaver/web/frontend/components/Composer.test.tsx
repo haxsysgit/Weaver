@@ -130,6 +130,25 @@ describe("Composer", () => {
     expect(screen.queryByLabelText("Reading boundary")).toBeNull();
     expect(screen.queryByText("Shadow Slave")).toBeNull();
   });
+
+  it("keeps the rune-cut border decorative", () => {
+    const { container } = render(
+      <Composer
+        cancelling={false}
+        draft=""
+        onCancel={vi.fn()}
+        onDraftChange={vi.fn()}
+        onSubmit={vi.fn()}
+        onTierChange={vi.fn()}
+        tier="ascended"
+        turnActive={false}
+      />,
+    );
+
+    const decoration = container.querySelector(".composer-rune-border");
+    expect(decoration).toHaveAttribute("aria-hidden", "true");
+    expect(decoration?.querySelectorAll("span")).toHaveLength(5);
+  });
 describe("Composer reading tier", () => {
   it("opens the tier menu and reports the pick", async () => {
     const onTierChange = vi.fn();

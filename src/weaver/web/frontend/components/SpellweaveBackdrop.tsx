@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 
 import { SpellweaveField } from "./SpellweaveField";
 import "../styles/spellweave.css";
@@ -30,11 +30,21 @@ export function SpellweaveBackdrop({
   state: SpellweaveActivityState;
   threadAlpha: number;
 }) {
+  const [rendererReady, setRendererReady] = useState(false);
+  const revealSpellweave = useCallback(() => setRendererReady(true), []);
+
+  useEffect(() => {
+    if (!distantRendererEnabled) {
+      setRendererReady(false);
+    }
+  }, [distantRendererEnabled]);
+
   return (
     <div
       aria-hidden="true"
       className="spellweave-backdrop"
       data-spell-state={state}
+      data-renderer-ready={String(rendererReady)}
       data-testid="spellweave-backdrop"
     >
       <div className="spellweave-distant" data-spell-depth="distant">
@@ -43,6 +53,7 @@ export function SpellweaveBackdrop({
             <SpellBackground
               className="lab-spell-background"
               mode="alive"
+              onReady={revealSpellweave}
               paused={paused}
               threadAlpha={threadAlpha}
             />

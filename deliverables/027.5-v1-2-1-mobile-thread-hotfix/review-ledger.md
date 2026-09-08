@@ -151,3 +151,33 @@ Result: 36/36 tests passed across two files. `git diff --check` passes for the
 rechecked source and tests. The last blocker is repaired, the accepted visual
 surface and privacy boundary remain intact, and the independent Plan 027.5
 verdict is PASS.
+
+## Final release review, 2026-09-08
+
+### Behavior and privacy
+
+PASS. Startup still uses the ordered load guard, the Three.js renderer remains
+deferred until conversation startup settles, browser fallbacks release the SVG
+weave, fake-mode and private-data boundaries remain unchanged, and the
+accepted settings, Archive, Soul Sea, rite, and conversation surfaces remain
+intact.
+
+### Visual and performance
+
+The first review found one lifecycle defect: when the renderer finished loading
+while Settings was open, it could retain the initial paused value after
+Settings closed. The animation loop now reads the live canvas pause state. A
+paused-at-mount to unpaused regression passed, and the independent recheck
+returned PASS with no remaining visual or performance blocker.
+
+### Final evidence
+
+- Focused reviewer suite: 40/40 tests passed.
+- Spell Background and Backdrop repair recheck: 8/8 tests passed.
+- TypeScript check and production build: PASS.
+- Full frontend floor: 123/123 tests passed.
+- Full Python floor: 544/544 tests passed.
+- Real headless Chrome compiled the shader with three draw calls and no WebGL
+  or shader console error.
+
+Final verdict: PASS. Ready for the owner-authorized v1.2.1 release.

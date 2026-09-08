@@ -97,6 +97,13 @@ export function Composer({
   return (
     <div className="composer-wrap">
       <div className="composer-shell">
+        <span aria-hidden="true" className="composer-rune-border">
+          <span />
+          <span />
+          <span />
+          <span />
+          <span />
+        </span>
         <textarea
           aria-label={inputLabel}
           onChange={(event) => onDraftChange(event.target.value)}

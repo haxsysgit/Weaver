@@ -2,7 +2,8 @@
 
 ## Status
 
-Verified implementation complete. Pending independent review and owner decision.
+Accepted and closed 2026-09-08. Released as Weaver v1.2.1 after the full
+verification floor and independent review passed.
 
 ## Root causes repaired
 
@@ -45,12 +46,41 @@ Verified implementation complete. Pending independent review and owner decision.
 
 - `npm run build`: PASS. Vite transformed 475 modules and refreshed committed
   `src/weaver/web/dist/`.
-- `npm test`: PASS, 21 files and 119 tests.
-- `uv run pytest`: PASS, 544 tests in 313.98 seconds.
+- `npm test`: PASS, 21 files and 123 tests on the final checkout.
+- `uv run pytest`: PASS, 544 tests in 428.67 seconds on the final checkout.
 - Focused New Weave contract: PASS, 3 tests across the production and legacy
   chat surfaces.
 - Production component regression: PASS, 30 tests.
 - `git diff --check`: PASS.
+
+## Deferred Star Web and composer repair
+
+- The 519 KB Three.js chunk no longer mounts while conversations are loading.
+  The ready conversation chamber appears on the dark void first, then the
+  renderer starts.
+- The renderer reports readiness only after its first frame. Browsers without
+  WebGL reveal the existing SVG fallback instead of holding the background
+  hidden.
+- The first 480 ms CSS wipe failed owner inspection. Chrome discarded its
+  multiplied duration, and renderer setup time consumed part of the shader
+  animation before anything was visible.
+- The repaired reveal starts its shader clock after compilation and runs for
+  eight `--motion-smooth` intervals (1.92 seconds with the current token).
+  Stars and thread fragments wake in delayed rings from the central knot while
+  the SVG layers open through five visible stages.
+- Balanced intensity now lowers the WebGL stars, gold points, silver threads,
+  galactic band, flares, and SVG middle weave together. Quiet and Vivid remain
+  distinct settings.
+- The composer keeps its existing controls and gains a near-black wood surface
+  with five decorative rune cuts. The marks are hidden from assistive
+  technology and do not accept pointer input.
+- Focused frontend verification: PASS, 56 tests across five component files.
+- TypeScript check: PASS.
+- Production build: PASS before the final intensity adjustment; the refreshed
+  build is repeated at the owner review boundary.
+- Real Chrome shader inspection: PASS. The phone renderer reported its phone
+  profile and no shader compilation error. Forced timeline inspection recorded
+  distinct reveal states at 0, 480, 960, 1440, and 1920 ms.
 
 ## Fake-mode phone trial
 
@@ -69,3 +99,22 @@ browser surface at 390 x 844 with device scale factor 2.
   in 80.8 ms and the distant renderer was already paused.
 
 No provider call or private chapter read was used.
+
+## Final release gate, 2026-09-08
+
+- The first attempt to run the frontend and Python suites concurrently caused
+  five frontend timeouts from local resource contention. The assertions did
+  not fail. The failure was retained as evidence, and the suites were repeated
+  sequentially.
+- `npm run build`: PASS. Vite transformed 475 modules and refreshed the
+  committed production bundle.
+- `npm test`: PASS. 21 files and 123 tests passed in 60.52 seconds.
+- `uv run pytest`: PASS. 544 tests passed in 428.67 seconds.
+- The independent behavior review returned PASS.
+- The independent visual review found one paused-at-mount renderer lifecycle
+  defect. The renderer now reads its live pause state, and the added regression
+  proves it resumes when Settings closes. The review recheck returned PASS.
+- `git diff --check`: PASS before the release audit.
+- Version source updated to `1.2.1`.
+
+The owner accepted the result and directed deployment, tagging, and release.

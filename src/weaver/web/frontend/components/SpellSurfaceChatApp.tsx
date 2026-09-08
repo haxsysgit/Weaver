@@ -480,10 +480,10 @@ function SpellSurfaceChatSurface({
 
   const readerStatus = `Vol ${preferences.volume} · ch ${preferences.chapter} · ${preferences.tier}`;
   const threadAlpha = preferences.starIntensity === "quiet"
-    ? 0.2
+    ? 0.12
     : preferences.starIntensity === "vivid"
-      ? 0.56
-      : 0.36;
+      ? 0.46
+      : 0.2;
   const backdropState = chat.recoveryMessage
     ? "failed"
     : setupRevealing
@@ -518,7 +518,9 @@ function SpellSurfaceChatSurface({
       data-testid="spell-surface-live"
     >
       <SpellweaveBackdrop
-        distantRendererEnabled={!setupOpen || setupRevealing}
+        distantRendererEnabled={
+          !chat.booting && (!setupOpen || setupRevealing)
+        }
         foregroundRespondsToActivity={false}
         paused={settingsOpen || (setupOpen && !setupRevealing)}
         state={backdropState}

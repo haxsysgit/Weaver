@@ -1,10 +1,19 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+const renderer = vi.hoisted(() => ({ onReady: undefined as undefined | (() => void) }));
+
 vi.mock("./SpellBackground", () => ({
-  SpellBackground: ({ paused }: { paused?: boolean }) => (
-    <canvas data-paused={String(paused)} data-testid="distant-spell-field" />
-  ),
+  SpellBackground: ({
+    onReady,
+    paused,
+  }: {
+    onReady?: () => void;
+    paused?: boolean;
+  }) => {
+    renderer.onReady = onReady;
+    return <canvas data-paused={String(paused)} data-testid="distant-spell-field" />;
+  },
 }));
 
 import { SpellweaveBackdrop } from "./SpellweaveBackdrop";
@@ -57,6 +66,20 @@ describe("Spellweave backdrop", () => {
       "data-paused",
       "true",
     );
+  });
+
+  it("reveals all three depths only after the renderer has a first frame", async () => {
+    render(
+      <SpellweaveBackdrop paused={false} state="idle" threadAlpha={0.36} />,
+    );
+
+    const backdrop = screen.getByTestId("spellweave-backdrop");
+    await screen.findByTestId("distant-spell-field");
+    expect(backdrop).toHaveAttribute("data-renderer-ready", "false");
+
+    act(() => renderer.onReady?.());
+
+    expect(backdrop).toHaveAttribute("data-renderer-ready", "true");
   });
 
   it("keeps the distant renderer unmounted while a full-screen surface hides it", () => {
