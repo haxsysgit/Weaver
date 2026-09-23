@@ -6,24 +6,25 @@ evidence, review, and human decision gates must also be complete.
 
 | Plan | Status | Depends on | Scope |
 | --- | --- | --- | --- |
-| [001 - Experimental foundation](001-experimental-foundation.md) | Accepted 2026-07-29 | None | Safe repository boundary, thin DeepSeek client, private receipts, deterministic tests, synthetic live smoke |
-| [002 - Trusted Shadow Slave library](002-trusted-shadow-slave-library.md) | Accepted 2026-07-30 | Plan 001 accepted | Maintain the private Shadow Slave library through deterministic agent tools without interpreting it |
-| [003 - Weaver model layer and preserved tool protocol](003-preserve-tool-protocol.md) | Accepted 2026-07-30 | Plan 002 accepted | Add a provider-independent model layer, keep complete tool calls, and refuse inactive tools |
-| [004 - Make cancellation and side effects explicit](004-cancellation-and-side-effects.md) | Accepted 2026-07-30 | Plan 003 accepted | Cancel running async tools cooperatively and block unapproved effect classes |
-| [005 - Provider-neutral tool payload contract](005-provider-tool-contract.md) | Accepted 2026-07-30 | Plan 004 accepted | Prove the neutral two-request tool round trip through the real SDK path for Flash and Pro |
-| [006 - Durable conversation architecture](006-durable-conversation-architecture.md) | Accepted | Plan 005 accepted | Record direct coordination, canonical conversation evidence, recovery, context, and optional adapters |
-| [007 - Restart-safe conversation proof](007-restart-safe-conversation-proof.md) | Implemented; repair applied | Plan 006 accepted | Prove exact fake conversation history survives a subprocess restart without replay or duplicates |
-| [007.5 - Audit repair](007.5-audit-repair.md) | Implemented | Plan 007 complete | Retry method, tool-call uniqueness constraint, single-tx start, dedup, repo tests, stale docs |
-| [008 - Wire the conversation loop](008-wire-conversation-loop.md) | Accepted 2026-07-31 | Plan 007 accepted | Zip conversation/ and agent/ into one working conversation: SessionWeave.send() calls run_turn() |
-| [009 - Context assembler](009-context-assembler.md) | Accepted 2026-07-31 | Plan 008 accepted | Give run_turn() a context window it can't exceed: token budget, truncation, pinned owner message |
-| [010 - TUI entrypoint](010-tui-entrypoint.md) | Accepted and closed 2026-08-02; surface retired by Plan 013 | Plan 009 accepted | Historical terminal experiment, later removed when the browser became the single product surface |
-| [011 - Local browser chat entrypoint](011-web-chat-entrypoint.md) | Accepted 2026-08-03 | Plan 010 closed; checkpoint 001-010 complete | Appraise current ChatGPT behaviour, then prove one private local browser conversation |
-| [012 - Direct reading baseline](012-direct-reading-baseline.md) | Accepted 2026-08-04 | Plan 011 accepted | Private chapter-evidenced notebook and connection map completed through chapter 1000, without retrieval changing the reading method |
-| [013 - Responsive interface and installable PWA](013-responsive-interface-pwa.md) | Accepted and closed 2026-08-05 | Plan 012 accepted | One responsive React chat surface with the Shadow Slave theme, real conversation controls, safe Markdown, and PWA |
-| [014 - Reading tools and the 1-1000 retrieval experiment](014-weaver-reads-from-the-shelf.md) | Completed and owner-accepted 2026-08-07 | Plan 013 accepted | Split tool results into temporary and durable forms, run the 1-1000 retrieval experiment on Qdrant (exact, notebook, vector, hybrid, connections), then build search_library and open_chapters around the winner |
-| [015 - Weaver the agent (context + agentic parts)](015-reader-trials-1-1000.md) | Closed 2026-08-14 (accepted, scope cut) | Plan 014 accepted | Whole-novel search, spoiler map + judge, preferences, two-phase turn, spell surface. Skills / router / compaction deferred after v1 |
-| [016 - Refresh the shelf safely](016-refresh-the-shelf-safely.md) | Completed and owner-accepted 2026-08-10 | Plan 014 accepted | `weaver refresh`: preview-first (no network, no shelf writes), explicit `--apply` confirmation, Plan 002 validation and atomic repair, metadata-only receipts, never a model tool |
-| [017 - Reading continuation to 3148](017-reading-continuation.md) | Completed and owner-accepted 2026-08-14 | Plan 012, 014, 016 | Direct sequential source reading of Shadow Slave 1501-3148 into the private story notebook, checker at milestones 2000/2500/3000/3148, no stopping until the shelf end |
+| [001 - Experimental foundation](001-experimental-foundation.md) | Closed 2026-07-29; owner accepted | None | Safe repository boundary, thin DeepSeek client, private receipts, deterministic tests, synthetic live smoke |
+| [002 - Trusted Shadow Slave library](002-trusted-shadow-slave-library.md) | Closed 2026-07-30; owner accepted | Plan 001 closed | Maintain the private Shadow Slave library through deterministic agent tools without interpreting it |
+| [003 - Weaver model layer and preserved tool protocol](003-preserve-tool-protocol.md) | Closed 2026-07-30; owner accepted | Plan 002 closed | Add a provider-independent model layer, keep complete tool calls, and refuse inactive tools |
+| [004 - Make cancellation and side effects explicit](004-cancellation-and-side-effects.md) | Closed 2026-07-30; owner accepted | Plan 003 closed | Cancel running async tools cooperatively and block unapproved effect classes |
+| [005 - Provider-neutral tool payload contract](005-provider-tool-contract.md) | Closed 2026-07-30; owner accepted | Plan 004 closed | Prove the neutral two-request tool round trip through the real SDK path for Flash and Pro |
+| [006 - Durable conversation architecture](006-durable-conversation-architecture.md) | Closed 2026-07-30; owner accepted | Plan 005 closed | Record direct coordination, canonical conversation evidence, recovery, context, and optional adapters |
+| [007 - Restart-safe conversation proof](007-restart-safe-conversation-proof.md) | Closed 2026-07-30; owner accepted and repaired | Plan 006 closed | Prove exact fake conversation history survives a subprocess restart without replay or duplicates |
+| [007.5 - Audit repair](007.5-audit-repair.md) | Closed 2026-08-01; absorbed into Plan 007 | Plan 007 closed | Retry method, tool-call uniqueness constraint, single-tx start, dedup, repo tests, stale docs |
+| [008 - Wire the conversation loop](008-wire-conversation-loop.md) | Closed 2026-07-31; owner accepted | Plan 007 closed | Zip conversation/ and agent/ into one working conversation: SessionWeave.send() calls run_turn() |
+| [009 - Context assembler](009-context-assembler.md) | Closed 2026-07-31; owner accepted | Plan 008 closed | Give run_turn() a context window it can't exceed: token budget, truncation, pinned owner message |
+| [010 - TUI entrypoint](010-tui-entrypoint.md) | Closed 2026-08-02; owner accepted, surface retired by Plan 013 | Plan 009 closed | Historical terminal experiment, later removed when the browser became the single product surface |
+| [011 - Local browser chat entrypoint](011-web-chat-entrypoint.md) | Closed 2026-08-03; owner accepted | Plan 010 closed; checkpoint 001-010 complete | Appraise current ChatGPT behaviour, then prove one private local browser conversation |
+| [012 - Direct reading baseline](012-direct-reading-baseline.md) | Closed 2026-08-04; owner accepted | Plan 011 closed | Private chapter-evidenced notebook and connection map completed through chapter 1000, without retrieval changing the reading method |
+| [013 - Responsive interface and installable PWA](013-responsive-interface-pwa.md) | Closed 2026-08-05; owner accepted | Plan 012 closed | One responsive React chat surface with the Shadow Slave theme, real conversation controls, safe Markdown, and PWA |
+| [014 - Reading tools and the 1-1000 retrieval experiment](014-weaver-reads-from-the-shelf.md) | Closed 2026-08-07; owner accepted | Plan 013 closed | Split tool results into temporary and durable forms, run the 1-1000 retrieval experiment on Qdrant (exact, notebook, vector, hybrid, connections), then build search_library and open_chapters around the winner |
+| [015 - Weaver the agent (context + agentic parts)](015-reader-trials-1-1000.md) | Closed 2026-08-14; owner accepted with scope cut | Plan 014 closed | Whole-novel search, spoiler map + judge, preferences, two-phase turn, spell surface. Skills / router / compaction deferred after v1 |
+| [016 - Refresh the shelf safely](016-refresh-the-shelf-safely.md) | Closed 2026-08-10; owner accepted | Plan 014 closed | `weaver refresh`: preview-first (no network, no shelf writes), explicit `--apply` confirmation, Plan 002 validation and atomic repair, metadata-only receipts, never a model tool |
+| [017 - Reading continuation to 3148](017-reading-continuation.md) | Closed 2026-08-11; owner accepted | Plans 012, 014, and 016 closed | Direct sequential source reading of Shadow Slave 1501-3148 into the private story notebook, checker at milestones 2000/2500/3000/3148, no stopping until the shelf end |
+| [018 - Pre-v1 cleanup and standard docs](018-pre-v1.md) | Closed 2026-08-14; owner accepted | Plans 015-017 closed | Close Plan 015, clean stale context, standardize docs, record chapter-reference policy, and audit retrieval before v1 |
 | [v1 - Deploy Weaver](v1-deploy-weaver.md) | Closed 2026-08-18; owner accepted and published `v1.0.0` | Plan 018 closed | Docker, EC2, CI/CD, Funnel, BYOK, device scoping, and the first published release |
 | [018.5 - Refresh stabilization + full re-embed](018.5-refresh-and-reembed.md) | Closed 2026-08-18; owner accepted with scope cut | v1 side plan | Refresh stabilization, shelf refresh, benchmark, and rebuild tooling accepted; full re-embed and evaluations deferred, current index ends at chapter 3127 |
 | [019 - Notebook structure and importance](019-notebook-structure-and-importance.md) | Closed 2026-08-16 | 018.5 slices 1-4 (side plan, disjoint files) | Finish reading 3149-3160, wiki structure study, page standard, character importance ranking, overview articles, structure checker |
@@ -36,10 +37,10 @@ evidence, review, and human decision gates must also be complete.
 | [026 - Hidden Thread initiation rite](026-hidden-thread-initiation-rite.md) | Closed 2026-08-21; owner accepted | Plans 022 and 025 closed | Replace the setup card with the four-act full-screen rite while preserving first-run and BYOK behavior |
 | [027 - Conversation chamber, Thread Archive, and integration trial](027-conversation-chamber.md) | Closed 2026-08-31; owner accepted | Plans 022, 023, 025, and 026 closed | One continuous full-stack plan with chamber, archive, and full fake-mode integration checkpoints |
 | [027.5 - v1.2.1 mobile thread hotfix](027.5-v1-2-1-mobile-thread-hotfix.md) | Closed 2026-09-08 | Plan 027 closed and Weaver 1.2.0 released | Repaired startup ordering, New Weave, mobile thread recall, installed-app behavior, and conversation-first Spellweave loading |
-| [028 - Thread Archive](028-thread-archive.md) | Drafted, superseded by Plan 027 | None | Historical draft retained; work moved into Plan 027 checkpoint two |
-| [029 - Hidden Thread integration and phone trial](029-hidden-thread-integration-and-phone-trial.md) | Drafted, superseded by Plan 027 | None | Historical draft retained; work moved into Plan 027 checkpoint three |
-| Later - Founding Reader Trials | Not yet drafted | Reading continuation | The finished-product bar: Ariel and the Unholy Titan, Sunny 3120+ versus Azarax, Anvil versus Azarax what-if |
-| Later - Durable reader memory | Not yet drafted | Founding trials | Reader opinions, favorites, theories, and unresolved disagreements kept separately from canon |
+| [028 - Sponsored DeepSeek access](028-sponsored-deepseek-access.md) | Drafted 2026-09-23 | Plan 027.5 closed; Plans 003, 005, and 015 foundations | Owner-funded daily allowance, preserved DeepSeek BYOK, atomic cost limits, anonymous access, and privacy controls |
+| [029 - Weaver intelligence and conversation](029-weaver-intelligence-and-conversation.md) | Drafted 2026-08-24; amended 2026-09-23 | Plan 028 closed and owner-accepted | Fiction retrieval, direct rereading, context and evidence, conversation continuity, answer planning, voice, and bounded inspection |
+| [030 - Weaver v2.0.0 qualification and rollout](030-weaver-v2-qualification-and-rollout.md) | Drafted 2026-09-23 | Plans 028 and 029 closed and owner-accepted; Plan 029.5 too if admitted | DeepSeek qualification, sponsored allowance tuning, release candidate, Foundational Reader Trials, and public v2.0.0 launch |
+| Later - Durable reader memory | Not yet drafted | Plan 030 closed | Reader opinions, favorites, theories, and unresolved disagreements kept separately from canon |
 
 ## Execution order
 
@@ -66,17 +67,32 @@ Plans 001-010 are complete (007.5 applied). The next sequence is:
    probe, last-chapter reporting) + full re-embed redo + sweep
    baseline before quantization. Closed 2026-08-18 with a scope cut. Refresh,
    benchmark, and tooling landed; full re-embed and evaluations are deferred.
-10. **019 (side plan)**: notebook structure + character importance:
-   finish reading 3149-3160, wiki structure study, page standard,
-   importance ranking, overview articles, structure checker.
-   Admitted 2026-08-15 (`plans/019-notebook-structure-and-importance.md`).
+10. **019 (side plan)**: closed 2026-08-16 after reading 3149-3160,
+    studying wiki structure, defining the page standard and importance ranking,
+    and building overview articles plus the structure checker.
 11. **020 (side plan)**: closed 2026-08-18 with tier 0 and tier 1 accepted;
    remaining tiers and overview work deferred.
 12. **022-027**: Hidden Thread identity, backend metadata, visual engine, rite,
    then one continuous Conversation Chamber, Thread Archive, and integration
-   trial with broad phone support and three owner checkpoints. Drafted Plans
-   028 and 029 are superseded planning records.
-13. **Later**: the founding Reader Trials, then durable reader memory.
+   trial with broad phone support and three owner checkpoints.
+13. **028**: after Plan 027.5 closes, add owner-funded sponsored DeepSeek
+   access with a small daily reader allowance, hard global budget, signed
+   anonymous passes, preserved BYOK, and measured cost accounting.
+14. **029**: after Plan 028 closes, build Weaver's fiction reading, context,
+   evidence, conversation, answer, voice, and bounded inspection system.
+15. **030**: after Plan 029 closes, qualify DeepSeek through the finished
+   system, tune the sponsored allowance from measured cost, prove the release
+   candidate and rollback, run the Foundational Reader Trials, and publish
+   Weaver v2.0.0 only after the owner launch gate.
+16. **Later**: durable reader memory after Plan 030.
+
+Historical references to Plans 028 and 029 inside Plans 023-027 refer to the
+old Thread Archive and integration drafts that Plan 027 absorbed. They do not
+refer to the replacement Plans 028-030. Plan 028 and Plan 030 were rewritten
+for the DeepSeek-only sponsored direction on 2026-09-23.
+
+After Plan 030 closes, the standing 021-030 checkpoint must run before any
+Plan 031 is drafted or admitted.
 
 Native Android and iOS remain deferred until Plan 013 proves a concrete PWA
 limitation.

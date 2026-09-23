@@ -1,8 +1,8 @@
 # TODO_future.md
 
-Backlog of work that is deliberately NOT part of the current or next plan.
-Each item gets its own admitted numbered plan when it becomes the focus.
-Owner-confirmed as future work, 2026-08-10.
+Backlog and roadmap for work outside the currently admitted plan. Each item
+gets its own admitted numbered plan when it becomes the focus.
+Owner-confirmed as future work, 2026-08-10. Roadmap last updated 2026-09-23.
 
 ## Weaver memory system (design shape confirmed 2026-08-10, own plan after v1)
 
@@ -38,7 +38,7 @@ Open questions for the owner when this plan is admitted:
 - User-facing Memories vault: quote-sized items with rank flavor (per the
   no-bulk-reproduction product rule)?
 
-## Roadmap (plan order, owner-set 2026-08-10, updated 2026-08-14)
+## Roadmap (plan order, owner-set 2026-08-10, updated 2026-09-23)
 
 - Plan 16: done, owner-accepted (refresh the shelf safely).
 - Plan 17: done, owner-accepted (notebook read through chapter 3148).
@@ -58,13 +58,17 @@ Open questions for the owner when this plan is admitted:
   and question evaluations remain deferred.
 - Plan 020 closed 2026-08-18 with tier 0 and tier 1 accepted. Tiers 2-4,
   missing-page creation, and overview verification remain deferred.
-- Plans 022-027 are the current Hidden Thread lane: canon and identity,
+- Plans 022-027 completed the Hidden Thread lane: canon and identity,
   conversation metadata foundations, visual foundation, initiation rite, then
   one continuous Conversation Chamber, Thread Archive, and integration trial
   with three owner checkpoints. Mobile proof covers 320 x 568 through 412 x
   915, available owner phones, and a desktop composition alongside each
-  production surface. Plan 027 is admitted; drafted Plans 028 and 029 are
-  superseded.
+  production surface. Plan 027 and Plan 027.5 are closed. The old drafted
+  Plans 028 and 029 were superseded. The replacement sequence is now drafted:
+  Plan 028 builds sponsored DeepSeek access, Plan 029 builds Weaver's reading
+  and conversation intelligence, reserved side UI Plan 029.5 forms the
+  Spellweave during initial load, and Plan 030 qualifies, rolls out, and
+  launches v2.0.0.
 
 ## Standing series (no plan number, runs across plans)
 
@@ -107,18 +111,30 @@ Open questions for the owner when this plan is admitted:
 
 ## Product backlog (owner gates that stay open)
 
-- Auth and multi-user (users, accounts, where conversations live).
+- DeepSeek access direction: OWNER-CONFIRMED 2026-09-23 and split across
+  drafted Plans 028-030. Weaver stays DeepSeek-only. Normal readers receive an
+  owner-funded shared daily allowance; optional browser-local DeepSeek BYOK
+  remains under Advanced.
+- Plan 028 starting limits: three sponsored questions per reader per UTC day,
+  one active sponsored turn, a $1 global daily ceiling, and a manually funded
+  $10 wallet. Automatic top-up and silent fallback are forbidden.
+- Anonymous sponsored access uses a signed browser pass, atomic server-side
+  reservations, coarse abuse protection, safe cost accounting, and the global
+  ceiling as the final financial boundary.
 - Memory panel design for the chat UI.
 - Spoiler-free mode.
 - Chapter-link integration: DECIDED OUT (2026-08-14). No chapter links in
   the product. Weaver references the chapter number and quotes prose in a
   `>` blockquote when asked; novel sources stay server-side and invisible.
-- More model providers: openai, anthropic claude, gemini, grok (deepseek
-  only for v1, all BYOK).
 - PWA installability, then a native mobile app (webnovel fans are mostly on
   phones; v1 is a normal website).
-- Pooled-key subscription tier so casual fans who won't top up a deepseek
-  account can still use the app (v1 is BYOK-only).
+- Sponsored DeepSeek funding remains a fan-project allowance. Accounts,
+  subscriptions, reader payments, donations, ads, automatic recharge, and
+  multiple accounts used to evade limits remain outside v2.0.0.
+- Weaver intelligence under Plan 029: fiction-specific retrieval and direct
+  rereading, time-aware context, evidence and contradiction tracking,
+  conversational continuity, answer planning, poetic-reader voice, quote-safe
+  em-dash removal, and targeted generic-AI style repair.
 - Reserved side UI Plan 029.5, Spellweave formation: after Plan 029 closes,
   replace the temporary circular reveal with a real one-time formation event.
   Conversations appear first on a lightless void. A central knot ignites, stars
@@ -139,6 +155,14 @@ Open questions for the owner when this plan is admitted:
     desktop hardware before accepting any frame-time claim.
   - This is fake-only UI work with no provider calls, private chapter reading,
     retrieval changes, persistence changes, or AWS work.
+  - Scaffold the full plan only after Plan 027.5 closes. If Plan 029.5 is later
+    admitted, amend Plan 030 to depend on its owner-accepted closure before v2
+    qualification begins.
+- Weaver v2.0.0 under Plan 030: final DeepSeek qualification through the
+  finished system, measured sponsored allowance, release candidate,
+  Foundational Reader Trials, rollback proof, and public launch.
+- After Plan 030 closes, run the standing 021-030 checkpoint before drafting or
+  admitting Plan 031.
 - Privacy-light analytics (umami-style) if the public launch is real enough
   to need it.
 

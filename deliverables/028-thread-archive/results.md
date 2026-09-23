@@ -1,5 +1,0 @@
-# Results
-
-## Status
-
-Not started.
