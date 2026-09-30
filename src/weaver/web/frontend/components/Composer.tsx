@@ -8,6 +8,7 @@ const TIERS: ReadingTier[] = ["awakened", "ascended", "transcendent"];
 
 interface ComposerProps {
   cancelling: boolean;
+  disabled?: boolean;
   draft: string;
   inputLabel?: string;
   onCancel: () => void;
@@ -18,6 +19,7 @@ interface ComposerProps {
   sendLabel?: string;
   stopLabel?: string;
   stoppingLabel?: string;
+  statusText?: string;
   textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
   tier: ReadingTier;
   turnActive: boolean;
@@ -26,6 +28,7 @@ interface ComposerProps {
 
 export function Composer({
   cancelling,
+  disabled = false,
   draft,
   inputLabel = "Message assistant",
   onCancel,
@@ -36,6 +39,7 @@ export function Composer({
   sendLabel = "Send message",
   stopLabel = "Stop assistant",
   stoppingLabel = "Stopping assistant",
+  statusText,
   textareaRef,
   tier,
   turnActive,
@@ -80,7 +84,7 @@ export function Composer({
 
   function submitDraft() {
     const message = draft.trim();
-    if (!message || turnActive) {
+    if (!message || turnActive || disabled) {
       return;
     }
     onSubmit(message);
@@ -109,7 +113,7 @@ export function Composer({
           onChange={(event) => onDraftChange(event.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          readOnly={turnActive}
+          readOnly={turnActive || disabled}
           ref={resolvedRef}
           rows={1}
           value={draft}
@@ -120,7 +124,7 @@ export function Composer({
             aria-haspopup="listbox"
             aria-label={`Reading tier: ${tier}`}
             className="tier-pill"
-            disabled={turnActive}
+            disabled={turnActive || disabled}
             onClick={() => setTierOpen((open) => !open)}
             type="button"
           >
@@ -164,7 +168,7 @@ export function Composer({
           <button
             aria-label={sendLabel}
             className="composer-action composer-send"
-            disabled={!draft.trim()}
+            disabled={disabled || !draft.trim()}
             onClick={submitDraft}
             type="button"
           >
@@ -172,9 +176,11 @@ export function Composer({
           </button>
         )}
       </div>
-      {!voiceBound && (
+      {statusText ? (
+        <p className="composer-binding-status">{statusText}</p>
+      ) : !voiceBound ? (
         <p className="composer-binding-status">[The voice remains unbound.]</p>
-      )}
+      ) : null}
     </div>
   );
 }

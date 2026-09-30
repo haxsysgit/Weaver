@@ -1,8 +1,10 @@
 import { ChatApiError, type StreamEvent } from "./chatApi";
 
 export type RecoveryKind =
+  | "allowance"
   | "busy"
   | "connection"
+  | "consent"
   | "incomplete"
   | "interrupted"
   | "limit"
@@ -23,6 +25,12 @@ export interface RecoveryIssue {
 }
 
 const ISSUES: Record<RecoveryKind, RecoveryIssue> = {
+  allowance: {
+    canRetry: false,
+    kind: "allowance",
+    message: "Your conversations are still here. Return after the UTC reset, or bind your own DeepSeek key in Advanced.",
+    title: "[The shared thread rests for now.]",
+  },
   busy: {
     canRetry: false,
     kind: "busy",
@@ -34,6 +42,12 @@ const ISSUES: Record<RecoveryKind, RecoveryIssue> = {
     kind: "connection",
     message: "Check your connection, then pull the thread again.",
     title: "[The answering thread lost contact.]",
+  },
+  consent: {
+    canRetry: false,
+    kind: "consent",
+    message: "Review the DeepSeek notice in the First Nightmare before using the shared allowance.",
+    title: "[The hidden thread awaits your consent.]",
   },
   incomplete: {
     canRetry: true,
@@ -138,6 +152,15 @@ export function incompleteRecovery(): RecoveryIssue {
 
 export function recoveryFromError(error: unknown): RecoveryIssue {
   if (error instanceof ChatApiError) {
+    if (["global_exhausted", "reader_exhausted"].includes(error.code ?? "")) {
+      return issue("allowance");
+    }
+    if (error.code === "consent_required") {
+      return issue("consent");
+    }
+    if (error.code === "network_busy") {
+      return issue("rate-limit");
+    }
     if (error.status === 404) {
       return issue("missing-thread");
     }

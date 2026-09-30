@@ -48,6 +48,19 @@ describe("chat recovery language", () => {
     );
   });
 
+  it("separates allowance exhaustion and notice consent", () => {
+    expect(
+      recoveryFromError(
+        new ChatApiError("Sending", 429, "reader_exhausted"),
+      ).kind,
+    ).toBe("allowance");
+    expect(
+      recoveryFromError(
+        new ChatApiError("Sending", 428, "consent_required"),
+      ).kind,
+    ).toBe("consent");
+  });
+
   it("turns browser transport failures into safe connection copy", () => {
     const issue = recoveryFromError(new TypeError("Failed to fetch secret URL"));
 

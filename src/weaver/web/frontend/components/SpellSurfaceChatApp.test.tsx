@@ -16,7 +16,6 @@ import {
   type StoredMessage,
 } from "../lib/chatApi";
 import { FIRST_NIGHTMARE_STORAGE_KEY } from "../lib/firstNightmare";
-import { getApiKey } from "../lib/identity";
 import { weaverProduct } from "../lib/product";
 import { useChatController } from "../hooks/useChatController";
 import { SpellSurfaceChatApp } from "./SpellSurfaceChatApp";
@@ -48,6 +47,13 @@ vi.mock("./SpellBackground", () => ({
 
 function createApi(): ChatApi {
   return {
+    acceptSponsoredNotice: vi.fn().mockResolvedValue({
+      consented: true,
+      enabled: true,
+      remaining_questions: 3,
+      reset_at: "2026-10-01T00:00:00+00:00",
+      source: "sponsored",
+    }),
     cancelTurn: vi.fn().mockResolvedValue("idle"),
     createConversation: vi.fn().mockResolvedValue({ conversation_id: "thread-1" }),
     deleteConversation: vi.fn().mockResolvedValue({ deleted: "thread-1" }),
@@ -55,6 +61,13 @@ function createApi(): ChatApi {
       reader_chapter: 1000,
       spoiler_mode: "protect",
       tier: "ascended",
+    }),
+    getAccess: vi.fn().mockResolvedValue({
+      consented: false,
+      enabled: true,
+      remaining_questions: 3,
+      reset_at: "2026-10-01T00:00:00+00:00",
+      source: "sponsored",
     }),
     listConversations: vi.fn().mockResolvedValue([]),
     loadMessages: vi.fn().mockResolvedValue([]),
@@ -190,7 +203,7 @@ describe("first Nightmare setup", () => {
     expect(screen.queryByRole("dialog", { name: "First Nightmare setup" })).toBeNull();
   });
 
-  it("stores a trimmed key and completes the appraisal", async () => {
+  it("accepts the shared allowance and completes the appraisal", async () => {
     render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
 
     const dialog = await screen.findByRole("dialog", {
@@ -199,20 +212,23 @@ describe("first Nightmare setup", () => {
     fireEvent.click(
       within(dialog).getByRole("button", { name: "Enter the First Nightmare" }),
     );
-    fireEvent.click(within(dialog).getByRole("button", { name: "I have a key" }));
-    fireEvent.change(within(dialog).getByLabelText("Your DeepSeek API key"), {
-      target: { value: "  owner-test-key  " },
-    });
     fireEvent.click(
-      within(dialog).getByRole("button", { name: "Store key and continue" }),
+      within(dialog).getByRole("button", {
+        name: "Continue with the shared allowance",
+      }),
+    );
+    fireEvent.click(
+      within(dialog).getByRole("button", {
+        name: "I understand. Bind the shared voice",
+      }),
     );
 
+    await within(dialog).findByText("Good");
     for (const tier of ["Good", "Exceptional", "Remarkable"]) {
       fireEvent.animationEnd(within(dialog).getByText(tier));
     }
-    expect(await within(dialog).findByText("The voice is bound")).toBeVisible();
+    expect(await within(dialog).findByText("The hidden thread listens")).toBeVisible();
     expect(within(dialog).getByText("Glorious")).toBeInTheDocument();
-    expect(getApiKey()).toBe("owner-test-key");
     expect(localStorage.getItem(FIRST_NIGHTMARE_STORAGE_KEY)).toBe("completed");
     expect(screen.queryByTestId("spell-background")).toBeNull();
 
@@ -234,7 +250,7 @@ describe("first Nightmare setup", () => {
     ).toBeVisible();
   }, 10_000);
 
-  it("keeps the deferred chat honest about its unbound voice", async () => {
+  it("shows the shared allowance after the rite is deferred", async () => {
     render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
 
     const dialog = await screen.findByRole("dialog", {
@@ -242,7 +258,9 @@ describe("first Nightmare setup", () => {
     });
     fireEvent.click(within(dialog).getByRole("button", { name: "Enter later" }));
 
-    expect(screen.getByText("[The voice remains unbound.]")).toBeVisible();
+    expect(
+      await screen.findByText("3 shared questions remain. Renews at 00:00 UTC."),
+    ).toBeVisible();
   });
 
   it("updates the unbound inscription when settings enable a stored key", async () => {
@@ -257,10 +275,12 @@ describe("first Nightmare setup", () => {
         "ready",
       );
     });
-    expect(screen.getByText("[The voice remains unbound.]")).toBeVisible();
+    expect(
+      await screen.findByText("3 shared questions remain. Renews at 00:00 UTC."),
+    ).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Open Soul Sea settings" }));
     const settings = await screen.findByRole("dialog", { name: "Reader Appraisal settings" });
-    fireEvent.click(within(settings).getByRole("button", { name: "Bound voice" }));
+    fireEvent.click(within(settings).getByRole("button", { name: "Advanced" }));
     fireEvent.click(within(settings).getByRole("checkbox", { name: /Disable this key/ }));
     fireEvent.click(within(settings).getByRole("button", { name: "Apply changes" }));
 
@@ -282,7 +302,7 @@ describe("first Nightmare setup", () => {
       within(dialog).getByRole("img", { name: /Sunny's Soul Sea/ }),
     ).toBeVisible();
     fireEvent.click(
-      within(dialog).getByRole("button", { name: "Bound voice" }),
+      within(dialog).getByRole("button", { name: "Advanced" }),
     );
     const keyInput = within(dialog).getByLabelText("DeepSeek key");
     expect(keyInput).toBeVisible();
@@ -291,8 +311,30 @@ describe("first Nightmare setup", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Show API key" }));
     expect(keyInput).toHaveAttribute("type", "text");
     expect(
-      within(dialog).getByRole("button", { name: /DeepSeek V4 Flash/ }),
+      within(dialog).getByRole("button", { name: /DeepSeek V4.1 Flash/ }),
     ).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("shows the exhausted shared-thread state without hiding conversations", async () => {
+    localStorage.setItem(FIRST_NIGHTMARE_STORAGE_KEY, "completed");
+    const api = createApi();
+    api.getAccess = vi.fn().mockResolvedValue({
+      consented: true,
+      enabled: true,
+      remaining_questions: 0,
+      reset_at: "2026-10-01T00:00:00+00:00",
+      source: "sponsored",
+    });
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+
+    await waitForLiveApp();
+    expect(
+      await screen.findByText(/The shared thread rests until 00:00 UTC/),
+    ).toBeVisible();
+    expect(screen.getByRole("textbox", { name: "Message Weaver" })).toHaveAttribute(
+      "readonly",
+    );
+    expect(screen.getByText("What are we reading?")).toBeVisible();
   });
 
   it("restores a saved Soul Sea beneath the live Spellweave", async () => {

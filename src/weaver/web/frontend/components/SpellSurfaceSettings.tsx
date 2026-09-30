@@ -39,7 +39,7 @@ export interface LabPreferences {
   volume: number;
 }
 
-type SettingsSection =
+export type SettingsSection =
   | "reader"
   | "reading"
   | "model"
@@ -48,6 +48,7 @@ type SettingsSection =
   | "rite";
 
 interface SpellSurfaceSettingsProps {
+  initialSection?: SettingsSection;
   initial: LabPreferences;
   onApiKeyChange?: (hasApiKey: boolean) => void;
   onClose: () => void;
@@ -79,7 +80,7 @@ const TIER_COPY: Record<Tier, string> = {
 };
 
 const MODEL_DESCRIPTIONS: Record<string, string> = {
-  "deepseek-v4-flash": "Fast responses for everyday chapter questions.",
+  "deepseek-flash": "Fast responses for everyday chapter questions.",
   "deepseek-v4-pro": "More reasoning for hard canon debates and theories.",
 };
 
@@ -117,6 +118,7 @@ function preferencesMatch(left: LabPreferences, right: LabPreferences) {
 
 export function SpellSurfaceSettings({
   initial,
+  initialSection = "reader",
   onApiKeyChange,
   onClose,
   onReplayFirstNightmare,
@@ -127,8 +129,8 @@ export function SpellSurfaceSettings({
   const [showApiKey, setShowApiKey] = useState(false);
   const [apiKeyDisabled, setApiKeyDisabledValue] = useState(isApiKeyDisabled);
   const [modelId, setModelIdValue] = useState(getModelId);
-  const [activeSection, setActiveSection] = useState<SettingsSection>("reader");
-  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState<SettingsSection>(initialSection);
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(initialSection !== "reader");
   const [discardPromptOpen, setDiscardPromptOpen] = useState(false);
   const panelRef = useRef<HTMLElement>(null);
   const backButtonRef = useRef<HTMLButtonElement>(null);
@@ -241,7 +243,7 @@ export function SpellSurfaceSettings({
     {
       hint: `${selectedModel?.label ?? "DeepSeek"} · ${apiKey.trim() && !apiKeyDisabled ? "bound" : "unbound"}`,
       id: "model",
-      label: "Bound voice",
+      label: "Advanced",
     },
     {
       hint: `${titleCase(preferences.runeMode)} runes · ${titleCase(preferences.starIntensity)} stars`,
@@ -396,9 +398,9 @@ export function SpellSurfaceSettings({
               {activeSection === "model" && (
                 <section className="lab-settings-section lab-model-settings">
                   <div className="lab-setting-title">
-                    <p>[Voice binding.]</p>
-                    <h3>Bound voice</h3>
-                    <span>Your DeepSeek key opens the channel. The selected model gives that channel a voice.</span>
+                    <p>[A private binding.]</p>
+                    <h3>Direct DeepSeek key</h3>
+                    <span>Optional controls for readers who want to use their own DeepSeek account instead of the shared daily allowance.</span>
                   </div>
                   <div className="lab-voice-binding-card">
                     <div className="lab-binding-status">
@@ -440,7 +442,7 @@ export function SpellSurfaceSettings({
                   </div>
                   <fieldset className="lab-model-picker">
                     <legend>Model</legend>
-                    <p>Choose which DeepSeek model answers through Weaver.</p>
+                    <p>This choice applies only while your own key is active.</p>
                     <div>
                       {AVAILABLE_MODELS.map((model) => (
                         <button
@@ -536,8 +538,9 @@ export function SpellSurfaceSettings({
                   </div>
                   <div className="lab-privacy-boundaries">
                     <p><strong>Local library</strong><span>Threads and reading preferences stay in Weaver&apos;s local library on this Weaver installation.</span></p>
-                    <p><strong>DeepSeek</strong><span>Messages are sent to DeepSeek when Weaver answers.</span></p>
-                    <p><strong>This browser</strong><span>Your API key stays in this browser and is attached to each request. Weaver does not save it on the server.</span></p>
+                    <p><strong>DeepSeek</strong><span>Your question and the story passages Weaver opens are sent to DeepSeek to generate a reply.</span></p>
+                    <p><strong>Shared allowance</strong><span>Weaver uses the owner-funded server connection after you accept the notice. The server records only anonymous allowance and cost totals.</span></p>
+                    <p><strong>Your own key</strong><span>An optional key stays in this browser and is attached to each request. Weaver does not save it on the server.</span></p>
                   </div>
                   <dl className="lab-shortcuts">
                     <div><dt><kbd>Ctrl</kbd><kbd>,</kbd></dt><dd>open settings</dd></div>

@@ -40,9 +40,15 @@ current_model_id: ContextVar[str | None] = ContextVar(
     "weaver_current_model_id", default=None
 )
 
+# Plan 028: a sponsored turn owns its reservation and provider-call limits.
+# The request layer binds it per task, just like the BYOK key.
+current_sponsored_turn: ContextVar[Any | None] = ContextVar(
+    "weaver_current_sponsored_turn", default=None
+)
+
 DEEPSEEK_FLASH = ModelSpec(
     provider_id="deepseek",
-    model_id="deepseek-v4-flash",
+    model_id="deepseek-flash",
     api_family="openai-chat-completions",
     default_output_tokens=4096,
     supports_reasoning=True,
@@ -140,6 +146,8 @@ class DeepSeekProvider:
         because partial output cannot be safely resumed.
         """
         attempt = 0
+        sponsored_turn = current_sponsored_turn.get()
+        max_attempts = 1 if sponsored_turn is not None else self.RETRY_MAX_ATTEMPTS
         while True:
             key = current_api_key.get() or self._api_key
             client = self._client_for(key)
@@ -156,7 +164,7 @@ class DeepSeekProvider:
 
             if (
                 category not in self.RETRYABLE_CATEGORIES
-                or attempt >= self.RETRY_MAX_ATTEMPTS - 1
+                or attempt >= max_attempts - 1
             ):
                 return None, category
             attempt += 1
@@ -189,11 +197,19 @@ class DeepSeekProvider:
             request,
             max_output_tokens=max_output_tokens,
         )
+        sponsored_turn = current_sponsored_turn.get()
+        if sponsored_turn is not None:
+            await sponsored_turn.before_call(
+                payload,
+                has_tools=bool(request.tools),
+            )
         stream, error_category = await self._create_with_retry(
             payload,
             cancel_event,
         )
         if error_category is not None:
+            if sponsored_turn is not None:
+                await sponsored_turn.record_usage(None)
             yield self._error_event(model, error_category)
             return
 
@@ -207,6 +223,8 @@ class DeepSeekProvider:
             async for chunk in stream:
                 if cancel_event.is_set():
                     await self._close_stream(stream)
+                    if sponsored_turn is not None:
+                        await sponsored_turn.record_usage(None)
                     yield self._terminal_event(
                         model=model,
                         stop_reason=ModelStopReason.ABORTED,
@@ -254,6 +272,8 @@ class DeepSeekProvider:
                     self._add_tool_delta(tool_buffers, tool_delta)
         except asyncio.CancelledError:
             await self._close_stream(stream)
+            if sponsored_turn is not None:
+                await sponsored_turn.record_usage(None)
             yield self._terminal_event(
                 model=model,
                 stop_reason=ModelStopReason.ABORTED,
@@ -262,8 +282,13 @@ class DeepSeekProvider:
             )
             return
         except Exception:
+            if sponsored_turn is not None:
+                await sponsored_turn.record_usage(None)
             yield self._error_event(model, "provider")
             return
+
+        if sponsored_turn is not None:
+            await sponsored_turn.record_usage(usage)
 
         tool_calls = self._build_tool_calls(tool_buffers)
         stop_reason = self._normalize_stop_reason(raw_stop_reason)

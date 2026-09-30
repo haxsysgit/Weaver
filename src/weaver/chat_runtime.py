@@ -23,9 +23,15 @@ from .agent.tools import (
     ToolExecutionPolicy,
     ToolRegistry,
 )
-from .config import DEFAULT_TIMEOUT_SECONDS
+from .config import DEFAULT_TIMEOUT_SECONDS, normalize_model_id
 from .conversation.session import SessionWeave
 from .prefs import PreferencesStore
+from .sponsored import (
+    DeepSeekBalance,
+    FixedBalance,
+    SponsoredAccess,
+    config_from_environment,
+)
 from .corpus.tools import register_chat_tools, service_from_environment
 from .model_layer import (
     DEEPSEEK_FLASH,
@@ -407,6 +413,8 @@ class ChatRuntime:
         library=None,
         model_layer: ModelLayer | None = None,
         model=None,
+        sponsored: SponsoredAccess | None = None,
+        sponsored_balance: DeepSeekBalance | FixedBalance | None = None,
         fake_delta_delay_seconds: float = 0,
     ) -> None:
         self.session = session
@@ -418,9 +426,13 @@ class ChatRuntime:
         # Plan 15 slice 5: the thread-naming call runs on this layer.
         self.model_layer = model_layer
         self.model = model
+        self.sponsored = sponsored
+        self.sponsored_balance = sponsored_balance
         self.fake_delta_delay_seconds = max(0, fake_delta_delay_seconds)
 
     async def close(self) -> None:
+        if self.sponsored is not None:
+            await self.sponsored.close()
         if self.prefs is not None:
             await self.prefs.close()
         await self.session.close()
@@ -442,14 +454,16 @@ async def open_chat_runtime(
         raise ValueError(f"unknown surface: {surface}")
 
     # Config [chat] model (alias or id) picks the model; flash is the default.
-    model_id = os.environ.get("WEAVER_CHAT_MODEL") or DEEPSEEK_FLASH.model_id
+    model_id = normalize_model_id(
+        os.environ.get("WEAVER_CHAT_MODEL") or DEEPSEEK_FLASH.model_id
+    )
 
+    server_api_key = os.environ.get("DEEPSEEK_KEY")
     if live:
-        api_key = os.environ.get("DEEPSEEK_KEY")
-        if not api_key:
+        if not server_api_key:
             raise ValueError("live chat requires DEEPSEEK_KEY")
         provider = DeepSeekProvider(
-            api_key,
+            server_api_key,
             timeout_seconds=DEFAULT_TIMEOUT_SECONDS,
         )
     elif surface == "web":
@@ -533,6 +547,30 @@ async def open_chat_runtime(
     await sw.open()
     prefs = PreferencesStore(state_dir / "weaver.sqlite3")
     await prefs.open()
+    sponsored = None
+    sponsored_balance = None
+    sponsored_config = config_from_environment()
+    if surface == "web" and sponsored_config.enabled:
+        sponsored_secret = os.environ.get("WEAVER_SPONSORED_PASS_SECRET", "")
+        if len(sponsored_secret.encode()) < 32:
+            await prefs.close()
+            await sw.close()
+            raise ValueError(
+                "sponsored access requires WEAVER_SPONSORED_PASS_SECRET "
+                "with at least 32 bytes"
+            )
+        sponsored = SponsoredAccess(
+            state_dir / "sponsored.sqlite3",
+            secret=sponsored_secret,
+            config=sponsored_config,
+        )
+        await sponsored.open()
+        await sponsored.recover_stale()
+        sponsored_balance = (
+            DeepSeekBalance(server_api_key)
+            if live and server_api_key is not None
+            else FixedBalance()
+        )
     return ChatRuntime(
         sw,
         surface=surface,
@@ -540,6 +578,10 @@ async def open_chat_runtime(
         live=live,
         prefs=prefs,
         library=library if surface == "web" else None,
+        model_layer=model_layer,
+        model=model,
+        sponsored=sponsored,
+        sponsored_balance=sponsored_balance,
         fake_delta_delay_seconds=(
             fake_delay_seconds / 8 if surface == "web" and not live else 0
         ),

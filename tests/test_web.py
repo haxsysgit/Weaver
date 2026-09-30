@@ -117,6 +117,117 @@ async def _no_canaries(text: str) -> None:
         assert canary not in text
 
 
+@pytest.fixture
+async def sponsored_client(tmp_path, monkeypatch):
+    monkeypatch.setenv("WEAVER_SPONSORED_ENABLED", "1")
+    monkeypatch.setenv(
+        "WEAVER_SPONSORED_PASS_SECRET",
+        "test-only-sponsored-secret-with-32-bytes",
+    )
+    monkeypatch.setenv(
+        "WEAVER_SPONSORED_PRICE_VALID_UNTIL",
+        "2099-01-01T00:00:00+00:00",
+    )
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    app = create_app(runtime)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://127.0.0.1",
+        headers=SAME_ORIGIN_HEADERS,
+    ) as client:
+        yield client
+    await runtime.close()
+
+
+async def test_sponsored_access_requires_notice_then_counts_fake_turn(
+    sponsored_client,
+) -> None:
+    access = await sponsored_client.get("/api/access")
+    assert access.status_code == 200
+    assert access.json()["enabled"] is True
+    assert access.json()["remaining_questions"] == 3
+    assert access.json()["consented"] is False
+    cookie = access.headers["set-cookie"]
+    assert "HttpOnly" in cookie
+    assert "SameSite=strict" in cookie
+
+    conversation_id = (
+        await sponsored_client.post("/api/conversations")
+    ).json()["conversation_id"]
+    refused = await sponsored_client.post(
+        f"/api/conversations/{conversation_id}/turns",
+        json={"message": "before consent"},
+    )
+    assert refused.status_code == 428
+    assert refused.json()["detail"]["code"] == "consent_required"
+
+    consented = await sponsored_client.post("/api/access/consent")
+    assert consented.status_code == 200
+    assert consented.json()["consented"] is True
+
+    started = await sponsored_client.post(
+        f"/api/conversations/{conversation_id}/turns",
+        json={"message": "sponsored fake journey"},
+    )
+    assert started.status_code == 202
+    streamed = await sponsored_client.get(
+        f"/api/conversations/{conversation_id}/stream"
+    )
+    assert "event: completed" in streamed.text
+
+    status = await sponsored_client.get("/api/access")
+    assert status.json()["remaining_questions"] == 2
+
+
+async def test_byok_bypasses_sponsored_allowance(sponsored_client) -> None:
+    await sponsored_client.get("/api/access")
+    await sponsored_client.post("/api/access/consent")
+    conversation_id = (
+        await sponsored_client.post("/api/conversations")
+    ).json()["conversation_id"]
+    byok_headers = {"X-Weaver-Key": "test-reader-key"}
+
+    started = await sponsored_client.post(
+        f"/api/conversations/{conversation_id}/turns",
+        headers=byok_headers,
+        json={"message": "reader funded"},
+    )
+    assert started.status_code == 202
+    streamed = await sponsored_client.get(
+        f"/api/conversations/{conversation_id}/stream"
+    )
+    assert "event: completed" in streamed.text
+
+    status = await sponsored_client.get("/api/access")
+    assert status.json()["remaining_questions"] == 3
+
+
+async def test_live_source_never_falls_back_to_server_key(tmp_path) -> None:
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    runtime.live = True
+    app = create_app(runtime)
+    transport = ASGITransport(app=app)
+    try:
+        async with AsyncClient(
+            transport=transport,
+            base_url="http://127.0.0.1",
+            headers=SAME_ORIGIN_HEADERS,
+        ) as client:
+            conversation_id = (
+                await client.post("/api/conversations")
+            ).json()["conversation_id"]
+
+            refused = await client.post(
+                f"/api/conversations/{conversation_id}/turns",
+                json={"message": "must not use server fallback"},
+            )
+            assert refused.status_code == 503
+            assert refused.json()["detail"]["code"] == "disabled"
+    finally:
+        await runtime.close()
+
+
 async def test_preferences_defaults(client) -> None:
     resp = await client.get("/api/preferences")
     assert resp.status_code == 200

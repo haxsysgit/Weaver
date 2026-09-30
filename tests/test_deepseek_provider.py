@@ -17,6 +17,7 @@ from weaver import (
     ModelToolCall,
     ModelToolSchema,
 )
+from weaver.model_layer.deepseek import current_sponsored_turn
 
 
 class StubStream:
@@ -160,7 +161,7 @@ async def test_payload_conversion_and_exact_tool_json() -> None:
         asyncio.Event(),
     )
 
-    assert completions.payload["model"] == "deepseek-v4-flash"
+    assert completions.payload["model"] == "deepseek-flash"
     assert completions.payload["max_tokens"] == 321
     assert completions.payload["messages"][0]["tool_calls"][0]["function"] == {
         "name": "synthetic_tool",
@@ -583,6 +584,59 @@ class TestReasoningPassbackAndRetry:
         assert events[-1].response.error_category is None
 
     @pytest.mark.asyncio
+    async def test_sponsored_turn_never_retries_provider_request(self) -> None:
+        completions = StubCompletions(
+            [],
+            error=openai.APIStatusError(
+                "synthetic rate limit",
+                response=httpx.Response(
+                    429,
+                    request=httpx.Request(
+                        "POST",
+                        "https://api.deepseek.com/chat/completions",
+                    ),
+                ),
+                body=None,
+            ),
+            failures=1,
+        )
+        provider = DeepSeekProvider(
+            "test-only-key",
+            sdk_client=sdk_with(completions),
+        )
+
+        class SponsoredTracker:
+            def __init__(self) -> None:
+                self.usage = []
+
+            async def before_call(self, payload, *, has_tools) -> None:
+                payload["extra_body"]["user_id"] = "opaque-reader"
+
+            async def record_usage(self, usage) -> None:
+                self.usage.append(usage)
+
+        tracker = SponsoredTracker()
+        token = current_sponsored_turn.set(tracker)
+        try:
+            events = [
+                event
+                async for event in provider.stream(
+                    DEEPSEEK_FLASH,
+                    ModelRequest(messages=()),
+                    asyncio.Event(),
+                    max_output_tokens=512,
+                )
+            ]
+        finally:
+            current_sponsored_turn.reset(token)
+
+        assert completions.starts == 1
+        assert completions.payload["extra_body"]["user_id"] == "opaque-reader"
+        assert tracker.usage == [None]
+        assert events[-1].response is not None
+        assert events[-1].response.error_category == "rate_limit"
+
+    @pytest.mark.asyncio
     async def test_invalid_request_is_not_retried(self) -> None:
         completions = StubCompletions(
             [chunk(content="ok")],
@@ -707,8 +761,6 @@ def test_request_payload_sends_reasoning_content_back() -> None:
     ]
     assert assistant_off[0]["reasoning_content"] == "the stored thinking"
     assert assistant_off[1]["reasoning_content"] == ""
-
-
 
 
 

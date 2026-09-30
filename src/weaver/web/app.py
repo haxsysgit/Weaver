@@ -26,9 +26,14 @@ from pydantic import BaseModel, ConfigDict, Field
 from weaver.agent.errors import safe_error
 from weaver.agent.turn import REASONING_TIERS, TOOL_BUDGET_TIERS, TurnExitReason
 from weaver.chat_runtime import ChatRuntime
-from weaver.model_layer.deepseek import current_api_key, current_model_id
+from weaver.model_layer.deepseek import (
+    current_api_key,
+    current_model_id,
+    current_sponsored_turn,
+)
 from weaver.model_layer.fake_chat import current_fake_retry
 from weaver.prefs import MAX_CHAPTER
+from weaver.sponsored import SponsoredTurn, SponsoredUnavailable
 
 MAX_MESSAGE_CHARS = 32_000
 
@@ -38,6 +43,7 @@ MAX_MESSAGE_CHARS = 32_000
 KEY_HEADER = "x-weaver-key"
 DEVICE_HEADER = "x-device-id"
 MODEL_HEADER = "x-weaver-model"
+SPONSORED_PASS_COOKIE = "weaver_sponsored_pass"
 
 
 def _device_id(request: Request) -> str:
@@ -58,6 +64,23 @@ def _request_model(request: Request) -> str | None:
     """The per-request model id (None when absent/blank)."""
     model = (request.headers.get(MODEL_HEADER) or "").strip()
     return model or None
+
+
+def _client_address(request: Request) -> str:
+    """Use a forwarded address only from an explicitly trusted proxy."""
+    direct_address = request.client.host if request.client is not None else "unknown"
+    trusted_proxies = {
+        address.strip()
+        for address in os.environ.get(
+            "WEAVER_TRUSTED_PROXY_ADDRESSES", ""
+        ).split(",")
+        if address.strip()
+    }
+    header_name = os.environ.get("WEAVER_ORIGINAL_ADDRESS_HEADER", "").strip()
+    if direct_address not in trusted_proxies or not header_name:
+        return direct_address
+    forwarded = request.headers.get(header_name, "").split(",", 1)[0].strip()
+    return forwarded or direct_address
 
 FRONTEND_DIST = Path(__file__).with_name("dist")
 
@@ -297,6 +320,96 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
     )
     app.state.runtime = runtime
 
+    def _set_sponsored_pass(response: Response, pass_token: str) -> None:
+        response.set_cookie(
+            SPONSORED_PASS_COOKIE,
+            pass_token,
+            httponly=True,
+            max_age=365 * 24 * 60 * 60,
+            samesite="strict",
+        )
+
+    async def _access_status(
+        request: Request,
+        response: Response,
+        pass_token_override: str | None = None,
+    ) -> dict:
+        if runtime.sponsored is None or runtime.sponsored_balance is None:
+            return {
+                "enabled": False,
+                "remaining_questions": 0,
+                "reset_at": None,
+                "consented": False,
+                "source": "reader_byok" if _request_key(request) else "unavailable",
+            }
+
+        pass_token = pass_token_override
+        if pass_token is None:
+            pass_token = request.cookies.get(SPONSORED_PASS_COOKIE, "")
+        try:
+            status = await runtime.sponsored.status(pass_token)
+        except SponsoredUnavailable:
+            pass_token = runtime.sponsored.issue_pass()
+            _set_sponsored_pass(response, pass_token)
+            status = await runtime.sponsored.status(pass_token)
+
+        balance = await runtime.sponsored_balance.available_microdollars()
+        enough_balance = (
+            balance is not None
+            and balance >= runtime.sponsored.config.reservation_microdollars
+        )
+        return {
+            "enabled": status.enabled and enough_balance,
+            "remaining_questions": status.remaining_questions,
+            "reset_at": status.reset_at,
+            "consented": status.consented,
+            "source": "reader_byok" if _request_key(request) else "sponsored",
+        }
+
+    def _raise_sponsored_error(error: SponsoredUnavailable) -> None:
+        status_codes = {
+            "active_turn": 409,
+            "consent_required": 428,
+            "global_exhausted": 429,
+            "reader_exhausted": 429,
+            "network_busy": 429,
+            "invalid_pass": 401,
+            "insufficient_balance": 503,
+            "disabled": 503,
+            "stale_price": 503,
+        }
+        raise HTTPException(
+            status_code=status_codes.get(error.code, 503),
+            detail={"code": error.code},
+        ) from None
+
+    async def _prepare_turn_access(
+        request: Request,
+    ) -> tuple[str | None, str | None, SponsoredTurn | None]:
+        request_key = _request_key(request)
+        if request_key is not None:
+            return request_key, _request_model(request), None
+        if not runtime.live and runtime.sponsored is None:
+            return None, _request_model(request), None
+        if runtime.sponsored is None or runtime.sponsored_balance is None:
+            _raise_sponsored_error(SponsoredUnavailable("disabled"))
+
+        pass_token = request.cookies.get(SPONSORED_PASS_COOKIE, "")
+        available_balance = (
+            await runtime.sponsored_balance.available_microdollars()
+        )
+        if available_balance is None:
+            _raise_sponsored_error(SponsoredUnavailable("insufficient_balance"))
+        try:
+            reservation = await runtime.sponsored.reserve(
+                pass_token,
+                network_address=_client_address(request),
+                available_balance_microdollars=available_balance,
+            )
+        except SponsoredUnavailable as error:
+            _raise_sponsored_error(error)
+        return None, None, SponsoredTurn(runtime.sponsored, reservation)
+
     async def _own_conversation(conversation_id: str, request: Request) -> None:
         """404 unless the conversation exists AND belongs to this device.
 
@@ -332,6 +445,30 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
             "spoiler_mode": prefs.spoiler_mode,
             "tier": prefs.tier,
         }
+
+    @app.get("/api/access", dependencies=[Depends(_check_local_hostname)])
+    async def get_access(request: Request, response: Response) -> dict:
+        return await _access_status(request, response)
+
+    @app.post("/api/access/consent", dependencies=[Depends(_check_local)])
+    async def consent_to_sponsored_access(
+        request: Request,
+        response: Response,
+    ) -> dict:
+        if runtime.sponsored is None:
+            _raise_sponsored_error(SponsoredUnavailable("disabled"))
+        pass_token = request.cookies.get(SPONSORED_PASS_COOKIE, "")
+        try:
+            await runtime.sponsored.record_consent(pass_token)
+        except SponsoredUnavailable:
+            pass_token = runtime.sponsored.issue_pass()
+            _set_sponsored_pass(response, pass_token)
+            await runtime.sponsored.record_consent(pass_token)
+        return await _access_status(
+            request,
+            response,
+            pass_token_override=pass_token,
+        )
 
     @app.put("/api/preferences", dependencies=[Depends(_check_local)])
     async def put_preferences(body: PreferencesBody) -> dict:
@@ -452,6 +589,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         regenerate: bool = False,
         request_key: str | None = None,
         request_model: str | None = None,
+        sponsored_turn: SponsoredTurn | None = None,
     ) -> None:
         """Run the send (or the last-turn retry/regenerate), then emit
         only the validated terminal answer."""
@@ -472,6 +610,19 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         fake_retry_token = (
             current_fake_retry.set(retry) if not runtime.live else None
         )
+        sponsored_token = (
+            current_sponsored_turn.set(sponsored_turn)
+            if sponsored_turn is not None
+            else None
+        )
+        sponsored_finished = False
+
+        async def finish_sponsored(failure_category: str | None) -> None:
+            nonlocal sponsored_finished
+            if sponsored_turn is None or sponsored_finished:
+                return
+            await sponsored_turn.finish(failure_category=failure_category)
+            sponsored_finished = True
 
         # Tool activity crosses the browser boundary as phase metadata only.
         # Arguments, results, chapter text, passage handles, and raw detail stay
@@ -510,6 +661,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         try:
             prefs = await runtime.prefs.get() if runtime.prefs is not None else None
             tier = prefs.tier if prefs is not None else "ascended"
+            tool_budget = 4 if sponsored_turn is not None else TOOL_BUDGET_TIERS[tier]
             # the naming call runs once, after the very first turn
             is_first_turn = (
                 len(await runtime.session.load_transcript(conversation_id)) == 0
@@ -520,7 +672,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                     cancel_event=stream.cancel_event,
                     on_delta=delta_callback,
                     on_tool_event=on_tool_event,
-                    tool_budget=TOOL_BUDGET_TIERS[tier],
+                    tool_budget=tool_budget,
                     reasoning=REASONING_TIERS[tier],
                     packet_builder=on_packet,
                 )
@@ -540,7 +692,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                     cancel_event=stream.cancel_event,
                     on_delta=delta_callback,
                     on_tool_event=on_tool_event,
-                    tool_budget=TOOL_BUDGET_TIERS[tier],
+                    tool_budget=tool_budget,
                     reasoning=REASONING_TIERS[tier],
                     packet_builder=on_packet,
                 )
@@ -562,23 +714,33 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                     # selector). Tool calls are capped at 50/70/90; the final
                     # answer call is always guaranteed. Thinking is always on;
                     # the tier picks the reasoning effort.
-                    tool_budget=TOOL_BUDGET_TIERS[tier],
+                    tool_budget=tool_budget,
                     reasoning=REASONING_TIERS[tier],
                     packet_builder=on_packet,
                 )
             reason = result.exit_reason
             if reason == TurnExitReason.COMPLETED:
+                await finish_sponsored(None)
                 if is_first_turn:
-                    asyncio.create_task(
-                        _name_thread(
-                            runtime,
-                            conversation_id,
-                            regenerated_message
-                            if regenerate
-                            else (retried_message if retry else message),
-                            result.final_text,
-                        )
+                    first_message = (
+                        regenerated_message
+                        if regenerate
+                        else (retried_message if retry else message)
                     )
+                    if sponsored_turn is not None:
+                        await runtime.session.set_generated_title(
+                            conversation_id,
+                            _derived_title(first_message),
+                        )
+                    else:
+                        asyncio.create_task(
+                            _name_thread(
+                                runtime,
+                                conversation_id,
+                                first_message,
+                                result.final_text,
+                            )
+                        )
                 stream.emit(
                     "completed",
                     {
@@ -588,6 +750,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                     },
                 )
             elif reason == TurnExitReason.INTERRUPTED:
+                await finish_sponsored("cancelled")
                 stream.emit(
                     "interrupted",
                     {
@@ -600,6 +763,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 failure_code = reason.value
                 if getattr(result, "error_category", "") == "simulated_model":
                     failure_code = "simulated_model"
+                await finish_sponsored(failure_code)
                 stream.emit(
                     "failed",
                     {
@@ -609,8 +773,12 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 )
         except asyncio.CancelledError:
             # Caller-side disconnect during startup; nothing was sent.
-            pass
+            await finish_sponsored("cancelled")
         except Exception:
+            try:
+                await finish_sponsored("turn")
+            except Exception:
+                pass
             stream.emit(
                 "failed",
                 {"code": "turn", "message": safe_error("turn")},
@@ -622,12 +790,19 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
             # terminal has been served. A size cap bounds streams whose
             # client never came back.
             stream.finished = True
+            if sponsored_turn is not None and not sponsored_finished:
+                try:
+                    await finish_sponsored("turn")
+                except Exception:
+                    pass
             if key_token is not None:
                 current_api_key.reset(key_token)
             if model_token is not None:
                 current_model_id.reset(model_token)
             if fake_retry_token is not None:
                 current_fake_retry.reset(fake_retry_token)
+            if sponsored_token is not None:
+                current_sponsored_turn.reset(sponsored_token)
 
     @app.post(
         "/api/conversations/{conversation_id}/turns",
@@ -651,13 +826,22 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 if stale.finished:
                     active.pop(stale_id, None)
                     break
+        try:
+            request_key, request_model, sponsored_turn = (
+                await _prepare_turn_access(request)
+            )
+        except Exception:
+            if active.get(conversation_id) is stream:
+                active.pop(conversation_id, None)
+            raise
         stream.task = asyncio.create_task(
             _run_turn(
                 conversation_id,
                 body.message,
                 stream,
-                request_key=_request_key(request),
-                request_model=_request_model(request),
+                request_key=request_key,
+                request_model=request_model,
+                sponsored_turn=sponsored_turn,
             )
         )
         # The turn runs server-side; the reply is streamed over the GET
@@ -693,14 +877,23 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 if stale.finished:
                     active.pop(stale_id, None)
                     break
+        try:
+            request_key, request_model, sponsored_turn = (
+                await _prepare_turn_access(request)
+            )
+        except Exception:
+            if active.get(conversation_id) is stream:
+                active.pop(conversation_id, None)
+            raise
         stream.task = asyncio.create_task(
             _run_turn(
                 conversation_id,
                 "",
                 stream,
                 retry=True,
-                request_key=_request_key(request),
-                request_model=_request_model(request),
+                request_key=request_key,
+                request_model=request_model,
+                sponsored_turn=sponsored_turn,
             )
         )
         return Response(
@@ -734,14 +927,23 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 if stale.finished:
                     active.pop(stale_id, None)
                     break
+        try:
+            request_key, request_model, sponsored_turn = (
+                await _prepare_turn_access(request)
+            )
+        except Exception:
+            if active.get(conversation_id) is stream:
+                active.pop(conversation_id, None)
+            raise
         stream.task = asyncio.create_task(
             _run_turn(
                 conversation_id,
                 "",
                 stream,
                 regenerate=True,
-                request_key=_request_key(request),
-                request_model=_request_model(request),
+                request_key=request_key,
+                request_model=request_model,
+                sponsored_turn=sponsored_turn,
             )
         )
         return Response(

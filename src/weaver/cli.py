@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import dataclasses
 import json
 import os
 from pathlib import Path
@@ -30,6 +31,7 @@ from .model_layer import (
     FakeModelProvider,
     ModelLayer,
 )
+from .sponsored import SponsoredAccess, config_from_environment
 from .web import serve_web
 
 # NOTE: the developer surface's system prompt and fake responses live in
@@ -63,6 +65,10 @@ def _parser() -> argparse.ArgumentParser:
     subcommands.add_parser(
         "doctor",
         help="Check local configuration without a network call.",
+    )
+    subcommands.add_parser(
+        "shared-allowance",
+        help="Inspect today's anonymous shared-allowance totals.",
     )
     experiment = subcommands.add_parser(
         "experiment",
@@ -346,6 +352,31 @@ def run(argv: Sequence[str] | None = None) -> int:
                 marker = "WARN"
             print(f"{marker} {check['name']}: {check['detail']}")
         return 0 if all(bool(check["ok"]) for check in checks) else 1
+
+    if args.command == "shared-allowance":
+        database_path = _chat_state_dir() / "sponsored.sqlite3"
+        secret = os.environ.get("WEAVER_SPONSORED_PASS_SECRET", "")
+        if not database_path.is_file():
+            print("ERROR shared allowance ledger does not exist.")
+            return 2
+        if len(secret.encode()) < 32:
+            print("ERROR WEAVER_SPONSORED_PASS_SECRET is missing or too short.")
+            return 2
+
+        async def inspect_allowance() -> dict:
+            access = SponsoredAccess(
+                database_path,
+                secret=secret,
+                config=config_from_environment(),
+            )
+            await access.open()
+            try:
+                return dataclasses.asdict(await access.summary())
+            finally:
+                await access.close()
+
+        print(json.dumps(asyncio.run(inspect_allowance()), indent=2, sort_keys=True))
+        return 0
 
     if args.command == "refresh":
         return _run_refresh(

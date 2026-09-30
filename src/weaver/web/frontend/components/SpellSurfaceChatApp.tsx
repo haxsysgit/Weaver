@@ -6,7 +6,12 @@ import {
 } from "react";
 
 import { useChatController } from "../hooks/useChatController";
-import type { ChatApi, ConversationSummary, UserPreferences } from "../lib/chatApi";
+import type {
+  AccessStatus,
+  ChatApi,
+  ConversationSummary,
+  UserPreferences,
+} from "../lib/chatApi";
 import { weaverProduct } from "../lib/product";
 import { runeMessageForActivity } from "../lib/runePhases";
 import {
@@ -33,6 +38,7 @@ import {
 import {
   SpellSurfaceSettings,
   type LabPreferences,
+  type SettingsSection,
 } from "./SpellSurfaceSettings";
 import { WeaverMark } from "./WeaverMark";
 import "../styles/spell-surface-lab.css";
@@ -182,6 +188,8 @@ function SpellSurfaceChatSurface({
   const chat = useChatController(api, weaverProduct);
   const [preferences, setPreferences] = useState(loadInitialPreferences);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsInitialSection, setSettingsInitialSection] =
+    useState<SettingsSection>("reader");
   const settingsOpenerRef = useRef<HTMLElement | null>(null);
   const [setupOpen, setSetupOpen] = useState(shouldOpenFirstNightmare);
   const [setupRevealing, setSetupRevealing] = useState(false);
@@ -189,6 +197,7 @@ function SpellSurfaceChatSurface({
   const [voiceBound, setVoiceBound] = useState(() => {
     return getApiKey() !== "" && !isApiKeyDisabled();
   });
+  const [access, setAccess] = useState<AccessStatus | null>(null);
   const [railOpen, setRailOpen] = useState(false);
   const [desktopRailCollapsed, setDesktopRailCollapsed] = useState(false);
   const [archivedOpen, setArchivedOpen] = useState(false);
@@ -215,6 +224,10 @@ function SpellSurfaceChatSurface({
     })),
     [chat.conversations],
   );
+
+  useEffect(() => {
+    void refreshAccess();
+  }, []);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -270,6 +283,7 @@ function SpellSurfaceChatSurface({
     if (completionTimer.current) {
       window.clearTimeout(completionTimer.current);
     }
+    void refreshAccess();
   }, [chat.recovery]);
 
   useEffect(() => {
@@ -288,6 +302,7 @@ function SpellSurfaceChatSurface({
       window.clearTimeout(completionTimer.current);
     }
     completionTimer.current = window.setTimeout(() => setSpellState("idle"), 900);
+    void refreshAccess();
     window.setTimeout(focusComposerIfAvailable, 0);
   }, [chat.activity.length, chat.turnActive]);
 
@@ -327,6 +342,17 @@ function SpellSurfaceChatSurface({
     setAnnouncementKey((current) => current + 1);
   }
 
+  async function refreshAccess() {
+    if (!api.getAccess) {
+      return;
+    }
+    try {
+      setAccess(await api.getAccess());
+    } catch {
+      // A temporary status failure must not hide local conversations.
+    }
+  }
+
   function focusComposerIfAvailable() {
     if (railOpen || settingsOpen || setupOpen) {
       return;
@@ -338,6 +364,7 @@ function SpellSurfaceChatSurface({
     settingsOpenerRef.current = document.activeElement instanceof HTMLElement
       ? document.activeElement
       : null;
+    setSettingsInitialSection("reader");
     setSettingsOpen(true);
     announce("[The sea within opens.]");
     try {
@@ -382,11 +409,33 @@ function SpellSurfaceChatSurface({
     setSetupRevealing(false);
     setReplayingFirstNightmare(false);
     refreshVoiceBinding();
+    void refreshAccess();
     window.setTimeout(() => composerRef.current?.focus(), 0);
   }
 
   function refreshVoiceBinding() {
     setVoiceBound(getApiKey() !== "" && !isApiKeyDisabled());
+  }
+
+  async function acceptSponsoredNotice(): Promise<boolean> {
+    if (!api.acceptSponsoredNotice) {
+      return true;
+    }
+    try {
+      const status = await api.acceptSponsoredNotice();
+      setAccess(status);
+      return status.consented && status.enabled;
+    } catch {
+      return false;
+    }
+  }
+
+  function openAdvancedFromSetup() {
+    setSetupOpen(false);
+    setSetupRevealing(false);
+    setReplayingFirstNightmare(false);
+    setSettingsInitialSection("model");
+    setSettingsOpen(true);
   }
 
   function replayFirstNightmare() {
@@ -479,6 +528,20 @@ function SpellSurfaceChatSurface({
   }
 
   const readerStatus = `Vol ${preferences.volume} · ch ${preferences.chapter} · ${preferences.tier}`;
+  const sharedExhausted = (
+    !voiceBound
+    && access?.enabled === true
+    && access.remaining_questions === 0
+  );
+  const accessMessage = voiceBound
+    ? undefined
+    : access?.enabled && access.remaining_questions > 0
+      ? `${access.remaining_questions} shared questions remain. Renews at 00:00 UTC.`
+      : sharedExhausted
+        ? "[The shared thread rests until 00:00 UTC.] Your conversations are still here. Return after the reset, or bind your own DeepSeek key in Advanced."
+        : access?.source === "unavailable"
+          ? "[The shared thread is unavailable.] Bind your own DeepSeek key in Advanced."
+          : undefined;
   const threadAlpha = preferences.starIntensity === "quiet"
     ? 0.12
     : preferences.starIntensity === "vivid"
@@ -616,6 +679,7 @@ function SpellSurfaceChatSurface({
         <footer className="lab-composer-dock">
           <Composer
             cancelling={chat.turnState === "cancelling"}
+            disabled={sharedExhausted}
             draft={chat.draft}
             inputLabel={weaverProduct.inputLabel}
             onCancel={() => void chat.cancelTurn()}
@@ -630,6 +694,7 @@ function SpellSurfaceChatSurface({
             sendLabel={weaverProduct.sendLabel}
             stopLabel={weaverProduct.stopLabel}
             stoppingLabel={weaverProduct.stoppingLabel}
+            statusText={accessMessage}
             textareaRef={composerRef}
             tier={preferences.tier}
             turnActive={chat.turnActive}
@@ -644,7 +709,11 @@ function SpellSurfaceChatSurface({
       {settingsOpen && (
         <SpellSurfaceSettings
           initial={preferences}
-          onApiKeyChange={setVoiceBound}
+          initialSection={settingsInitialSection}
+          onApiKeyChange={(hasApiKey) => {
+            setVoiceBound(hasApiKey);
+            window.setTimeout(() => void refreshAccess(), 0);
+          }}
           onClose={closeSettings}
           onReplayFirstNightmare={replayFirstNightmare}
           onSave={(nextPreferences) => {
@@ -659,10 +728,11 @@ function SpellSurfaceChatSurface({
 
       {setupOpen && (
         <FirstNightmareSetup
+          onAcceptSponsored={acceptSponsoredNotice}
           onComplete={closeSetup}
           onDefer={closeSetup}
-          onKeyStored={refreshVoiceBinding}
           onRevealStart={() => setSetupRevealing(true)}
+          onUseOwnKey={openAdvancedFromSetup}
           preserveFirstRunState={replayingFirstNightmare}
         />
       )}

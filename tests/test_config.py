@@ -65,8 +65,21 @@ def test_config_toml_key_and_model(tmp_path, monkeypatch) -> None:
     table = config.load_startup_config()
 
     assert os.environ["DEEPSEEK_KEY"] == "sk-cfg"
-    assert os.environ["WEAVER_CHAT_MODEL"] == "deepseek-v4-flash"
+    assert os.environ["WEAVER_CHAT_MODEL"] == "deepseek-flash"
     assert table["api"]["key"] == "sk-cfg"
+
+
+def test_legacy_flash_model_id_migrates(tmp_path, monkeypatch) -> None:
+    _write(
+        tmp_path,
+        ".weaver/config.toml",
+        '[chat]\nmodel = "deepseek-v4-flash"\n',
+    )
+    monkeypatch.chdir(tmp_path)
+
+    config.load_startup_config()
+
+    assert os.environ["WEAVER_CHAT_MODEL"] == "deepseek-flash"
 
 
 def test_env_wins_over_config_file(tmp_path, monkeypatch) -> None:
@@ -94,13 +107,13 @@ def test_dotenv_wins_over_config_file(tmp_path, monkeypatch) -> None:
 def test_invalid_config_model_ignored_when_model_already_set(tmp_path, monkeypatch) -> None:
     """A bogus [chat] model in config.toml must not raise when a valid
     model is already set by .env or the environment."""
-    monkeypatch.setenv("WEAVER_CHAT_MODEL", "deepseek-v4-flash")
+    monkeypatch.setenv("WEAVER_CHAT_MODEL", "deepseek-flash")
     _write(tmp_path, ".weaver/config.toml", '[chat]\nmodel = "bogus"\n')
     monkeypatch.chdir(tmp_path)
 
     config.load_startup_config()
 
-    assert os.environ["WEAVER_CHAT_MODEL"] == "deepseek-v4-flash"
+    assert os.environ["WEAVER_CHAT_MODEL"] == "deepseek-flash"
 
 
 def test_invalid_chat_model_rejected(tmp_path, monkeypatch) -> None:
@@ -153,20 +166,20 @@ def test_cli_run_loads_startup_config(tmp_path, monkeypatch, capsys) -> None:
 async def test_web_runtime_uses_configured_model(tmp_path, monkeypatch) -> None:
     """[chat] model still drives the web runtime after the TUI is removed."""
     monkeypatch.setenv("DEEPSEEK_KEY", "sk-test")
-    monkeypatch.setenv("WEAVER_CHAT_MODEL", "deepseek-v4-flash")
+    monkeypatch.setenv("WEAVER_CHAT_MODEL", "deepseek-flash")
 
     from weaver.chat_runtime import open_chat_runtime
 
     runtime = await open_chat_runtime(tmp_path / "state", live=True, surface="web")
     try:
-        assert runtime.mode_label == "live deepseek-v4-flash"
-        assert runtime.session._runner._model.model_id == "deepseek-v4-flash"
+        assert runtime.mode_label == "live deepseek-flash"
+        assert runtime.session._runner._model.model_id == "deepseek-flash"
     finally:
         await runtime.close()
 
 
 async def test_fake_web_works_with_configured_model(tmp_path, monkeypatch) -> None:
-    monkeypatch.setenv("WEAVER_CHAT_MODEL", "deepseek-v4-flash")
+    monkeypatch.setenv("WEAVER_CHAT_MODEL", "deepseek-flash")
     monkeypatch.delenv("DEEPSEEK_KEY", raising=False)
 
     from weaver.chat_runtime import open_chat_runtime

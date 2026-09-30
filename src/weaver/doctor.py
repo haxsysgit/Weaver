@@ -26,10 +26,10 @@ def check_state_path(path: Path) -> tuple[bool, str]:
 def run_doctor(state_path: Path, *, credential_present: bool) -> list[dict[str, object]]:
     checks: list[dict[str, object]] = []
     expected_aliases = {
-        "flash": "deepseek-v4-flash",
+        "flash": "deepseek-flash",
     }
     expected_model_ids = {
-        "deepseek-v4-flash",
+        "deepseek-flash",
         "deepseek-v4-pro",
     }
     checks.append(

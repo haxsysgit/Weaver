@@ -15,11 +15,12 @@ const API_KEY_STORAGE = "weaver_api_key";
 const API_KEY_DISABLED_STORAGE = "weaver_api_key_disabled";
 const MODEL_STORAGE = "weaver_model_id";
 
-export const DEFAULT_MODEL_ID = "deepseek-v4-flash";
+export const DEFAULT_MODEL_ID = "deepseek-flash";
+const LEGACY_FLASH_MODEL_ID = "deepseek-v4-flash";
 
 /** Models the server accepts (DeepSeek API model ids). */
 export const AVAILABLE_MODELS = [
-  { id: "deepseek-v4-flash", label: "DeepSeek V4 Flash" },
+  { id: "deepseek-flash", label: "DeepSeek V4.1 Flash" },
   { id: "deepseek-v4-pro", label: "DeepSeek V4 Pro" },
 ] as const;
 
@@ -63,7 +64,12 @@ export function setApiKeyDisabled(disabled: boolean): void {
 }
 
 export function getModelId(): string {
-  return localStorage.getItem(MODEL_STORAGE) ?? DEFAULT_MODEL_ID;
+  const stored = localStorage.getItem(MODEL_STORAGE);
+  if (stored === LEGACY_FLASH_MODEL_ID) {
+    localStorage.removeItem(MODEL_STORAGE);
+    return DEFAULT_MODEL_ID;
+  }
+  return stored ?? DEFAULT_MODEL_ID;
 }
 
 export function setModelId(modelId: string): void {

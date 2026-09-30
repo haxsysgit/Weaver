@@ -222,6 +222,8 @@ class FakeChatProvider:
         *,
         max_output_tokens: int,
     ) -> AsyncIterator[ModelStreamEvent]:
+        from .deepseek import current_sponsored_turn
+
         self.calls.append(
             FakeModelCall(
                 model=model,
@@ -234,8 +236,28 @@ class FakeChatProvider:
         scenario = _scenario(prompt)
         if current_fake_retry.get() and scenario in {"model-error", "incomplete"}:
             scenario = "normal"
+        sponsored_turn = current_sponsored_turn.get()
+        if sponsored_turn is not None:
+            if cancel_event.is_set():
+                yield self._terminal(self._aborted_response(model))
+                return
+            payload = {
+                "model": model.model_id,
+                "messages": [
+                    {"role": message.role, "content": message.content}
+                    for message in request.messages
+                ],
+                "max_tokens": max_output_tokens,
+                "extra_body": {},
+            }
+            await sponsored_turn.before_call(
+                payload,
+                has_tools=bool(request.tools),
+            )
         response_delay = 1.2 if scenario == "slow" else self.delay_seconds
         if not await _wait(response_delay, cancel_event):
+            if sponsored_turn is not None:
+                await sponsored_turn.record_usage(None)
             yield self._terminal(self._aborted_response(model))
             return
 
@@ -244,12 +266,16 @@ class FakeChatProvider:
         if content:
             for chunk in _content_chunks(content):
                 if cancel_event.is_set():
+                    if sponsored_turn is not None:
+                        await sponsored_turn.record_usage(None)
                     yield self._terminal(self._aborted_response(model))
                     return
                 yield ModelStreamEvent(
                     event_type=ModelStreamEventType.TEXT_DELTA,
                     delta=chunk,
                 )
+        if sponsored_turn is not None:
+            await sponsored_turn.record_usage(response.usage)
         yield self._terminal(response)
 
     def _response(

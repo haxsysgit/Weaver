@@ -7,10 +7,8 @@ import {
 } from "react";
 
 import { setFirstNightmareState } from "../lib/firstNightmare";
-import { getApiKey, setApiKey } from "../lib/identity";
 import { FirstNightmareRunes } from "./FirstNightmareRunes";
 import { HiddenThreadMask } from "./HiddenThreadMask";
-import { EyeIcon, EyeSlashIcon } from "./Icons";
 import { WeaverMark } from "./WeaverMark";
 import "../styles/hidden-thread-initiation.css";
 
@@ -18,10 +16,11 @@ export type FirstNightmareStep = 1 | 2 | 3 | 4;
 
 interface FirstNightmareSetupProps {
   initialStep?: FirstNightmareStep;
+  onAcceptSponsored?: () => Promise<boolean>;
   onComplete: () => void;
   onDefer: () => void;
-  onKeyStored?: () => void;
   onRevealStart?: () => void;
+  onUseOwnKey?: () => void;
   preserveFirstRunState?: boolean;
 }
 
@@ -45,16 +44,16 @@ function riteAct(step: FirstNightmareStep): string {
 
 export function FirstNightmareSetup({
   initialStep = 1,
+  onAcceptSponsored,
   onComplete,
   onDefer,
-  onKeyStored,
   onRevealStart,
+  onUseOwnKey,
   preserveFirstRunState = false,
 }: FirstNightmareSetupProps) {
   const [step, setStep] = useState<FirstNightmareStep>(initialStep);
-  const [apiKey, setApiKeyValue] = useState(getApiKey);
-  const [showApiKey, setShowApiKey] = useState(false);
-  const [storageError, setStorageError] = useState(false);
+  const [accepting, setAccepting] = useState(false);
+  const [accessError, setAccessError] = useState(false);
   const [appraisalIndex, setAppraisalIndex] = useState(0);
   const [revealing, setRevealing] = useState(false);
   const dialogRef = useRef<HTMLElement>(null);
@@ -84,17 +83,30 @@ export function FirstNightmareSetup({
     onDefer();
   }
 
-  function storeKey() {
+  async function acceptSharedAllowance() {
+    setAccepting(true);
+    setAccessError(false);
     try {
-      setApiKey(apiKey);
+      const accepted = await (onAcceptSponsored?.() ?? Promise.resolve(true));
+      if (!accepted) {
+        setAccessError(true);
+        return;
+      }
       setFirstNightmareState("completed");
-      setStorageError(false);
       setAppraisalIndex(prefersReducedMotion() ? APPRAISAL_TIERS.length - 1 : 0);
-      onKeyStored?.();
       setStep(4);
     } catch {
-      setStorageError(true);
+      setAccessError(true);
+    } finally {
+      setAccepting(false);
     }
+  }
+
+  function useOwnKey() {
+    if (!preserveFirstRunState) {
+      setFirstNightmareState("deferred");
+    }
+    onUseOwnKey?.();
   }
 
   function beginReveal() {
@@ -150,9 +162,8 @@ export function FirstNightmareSetup({
     : step === 2
       ? "[A buried knowledge answers.]"
       : step === 3
-        ? "[Bind a voice to the hidden thread.]"
+        ? "[The shared thread waits for your assent.]"
         : `[Appraisal: ${appraisal}.]`;
-  const beadCount = Math.min(apiKey.length, 24);
 
   return (
     <section
@@ -196,85 +207,65 @@ export function FirstNightmareSetup({
 
           {step === 2 && (
             <>
-              <h1>Bring your DeepSeek key</h1>
+              <h1>The hidden thread can answer</h1>
               <p>
-                A DeepSeek API key is a private code that lets Weaver send your
-                questions to DeepSeek and charge the model usage to your
-                DeepSeek account.
+                Weaver gives each reader three shared questions every day. The
+                allowance renews at 00:00 UTC and your conversations remain
+                here when it rests.
               </p>
               <aside className="hidden-thread-privacy">
-                Your key stays in this browser. Weaver sends it with each
-                request and the server does not save it.
+                The voice is paid for by the keeper of this Spell. You do not
+                need an API key to begin.
               </aside>
-              <a href="https://platform.deepseek.com/" rel="noreferrer" target="_blank">
-                Get a key from DeepSeek
-                <span className="sr-only">, opens the DeepSeek Platform in a new tab</span>
-              </a>
               <div className="hidden-thread-actions">
                 <button data-autofocus onClick={() => setStep(3)} type="button">
-                  <span>I have a key</span>
+                  <span>Continue with the shared allowance</span>
                 </button>
                 <div className="hidden-thread-quiet-actions">
                   <button onClick={() => setStep(1)} type="button">Back</button>
-                  <button onClick={deferSetup} type="button">Enter later</button>
+                  <button onClick={useOwnKey} type="button">Use my own key</button>
                 </div>
               </div>
             </>
           )}
 
           {step === 3 && (
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                storeKey();
-              }}
-            >
-              <h1>Bind a voice to the thread</h1>
-              <label htmlFor="first-nightmare-api-key">Your DeepSeek API key</label>
-              <div className="hidden-thread-key-channel">
-                <input
-                  autoCapitalize="none"
-                  autoComplete="off"
-                  data-autofocus
-                  id="first-nightmare-api-key"
-                  onChange={(event) => setApiKeyValue(event.target.value)}
-                  placeholder="sk-..."
-                  spellCheck={false}
-                  type={showApiKey ? "text" : "password"}
-                  value={apiKey}
-                />
-                <button
-                  aria-label={showApiKey ? "Hide API key" : "Show API key"}
-                  className="hidden-thread-key-visibility"
-                  onClick={() => setShowApiKey((visible) => !visible)}
-                  type="button"
-                >
-                  {showApiKey ? <EyeSlashIcon /> : <EyeIcon />}
-                </button>
-                <div aria-hidden="true" className="hidden-thread-binding-beads" data-testid="key-binding-beads">
-                  {Array.from({ length: beadCount }, (_, index) => <span key={index} />)}
-                </div>
-              </div>
-              <small>
-                Stored only in this browser. You can replace or remove it later
-                in Settings.
-              </small>
-              {storageError && (
+            <>
+              <h1>Know what the thread carries</h1>
+              <aside className="hidden-thread-privacy">
+                Weaver sends your question and the story passages it opens to
+                DeepSeek to generate a reply. DeepSeek may retain and process
+                that content under its terms and privacy policy, including on
+                servers in China. Do not include private or sensitive
+                information. Weaver&apos;s replies are AI-generated and can be
+                wrong, so use the chapter references to check the story.
+              </aside>
+              <p>
+                <a href="https://cdn.deepseek.com/policies/en-US/deepseek-open-platform-terms-of-service.html" rel="noreferrer" target="_blank">DeepSeek terms</a>
+                {" · "}
+                <a href="https://cdn.deepseek.com/policies/en-US/deepseek-privacy-policy.html" rel="noreferrer" target="_blank">privacy policy</a>
+              </p>
+              {accessError && (
                 <p className="hidden-thread-error" role="alert">
-                  The key could not be stored in this browser. Check browser
-                  storage and try again.
+                  The shared thread could not be bound. You can try again or
+                  use your own key in Advanced.
                 </p>
               )}
               <div className="hidden-thread-actions">
-                <button disabled={apiKey.trim() === ""} type="submit">
-                  <span>Store key and continue</span>
+                <button
+                  data-autofocus
+                  disabled={accepting}
+                  onClick={() => void acceptSharedAllowance()}
+                  type="button"
+                >
+                  <span>{accepting ? "Binding the shared voice..." : "I understand. Bind the shared voice"}</span>
                 </button>
                 <div className="hidden-thread-quiet-actions">
                   <button onClick={() => setStep(2)} type="button">Back</button>
-                  <button onClick={deferSetup} type="button">Enter later</button>
+                  <button onClick={useOwnKey} type="button">Use my own key</button>
                 </div>
               </div>
-            </form>
+            </>
           )}
 
           {step === 4 && (
@@ -297,10 +288,10 @@ export function FirstNightmareSetup({
               </div>
               {appraisalComplete && (
                 <>
-                  <h1>The voice is bound</h1>
+                  <h1>The hidden thread listens</h1>
                   <p>
-                    The key is stored in this browser. Weaver can now read,
-                    reread, and answer through your DeepSeek account.
+                    Weaver can now read, reread, and answer through the shared
+                    daily allowance.
                   </p>
                   <div className="hidden-thread-actions">
                     <button data-autofocus onClick={beginReveal} type="button">
