@@ -45,13 +45,58 @@ contract are recorded in `learning.md`.
 
 ## Allowance and cost proof
 
-Pending atomic reader and global reservations, usage reconciliation, pricing,
-parallel requests, restart recovery, BYOK separation, and failure evidence.
+Implemented in commit `8b9edcb`.
+
+- A signed HttpOnly, SameSite=Strict anonymous pass authorizes sponsored use.
+  Conversation ownership remains on the existing device id and does not grant
+  spend.
+- The SQLite ledger reserves one question and $0.37 atomically with
+  `BEGIN IMMEDIATE`. A partial unique index permits one active sponsored turn
+  per reader. Two worst-case reservations fit under the $1 daily ceiling; a
+  third is refused.
+- Reservations move through `reserved`, `started`, `settled`, `released`, or
+  `uncertain`. Pre-provider failures release. Started work with missing usage,
+  cancellation, ambiguous failure, or process loss charges the full
+  reservation.
+- Sponsored calls are fixed to `deepseek-flash`, eight model calls, four tool
+  rounds, a 120 KiB payload, 4,096 search-output tokens, 12,288 answer-output
+  tokens, and zero provider retries. A first-turn title uses the deterministic
+  fallback and spends no additional call.
+- Cost reconciliation uses integer microdollars and the accepted peak Flash
+  cache-hit, cache-miss, and output prices. Deterministic tests cover multiple
+  calls and a changed price schedule.
+- A short-lived official balance check fails closed. Disabled mode, stale
+  prices, insufficient balance, reader exhaustion, global exhaustion, and
+  network bursts all refuse a new sponsored turn.
+- The network control persists only a keyed daily digest. The reader ledger,
+  DeepSeek `user_id`, and network key use separate HMAC purposes.
+- BYOK remains browser-local under Advanced, keeps Flash and Pro selection,
+  and bypasses the shared ledger. A turn chooses sponsored or BYOK before it
+  begins and never changes source.
+- `weaver shared-allowance` reports only counts, microdollar totals, remaining
+  capacity, the price version, and reset time.
+
+Focused deterministic evidence on 2026-09-30:
+
+- `uv run pytest -q tests/test_sponsored_access.py tests/test_deepseek_provider.py tests/test_provider_tool_contract.py tests/test_chat_runtime.py tests/test_web.py tests/test_web_server.py tests/test_cli.py tests/test_config.py tests/test_config_and_fake.py`
+  passed: **168 tests**.
+- The real OpenAI-compatible SDK ran through `httpx.MockTransport` for
+  sponsored and BYOK request construction, streaming, tools, usage, errors,
+  and reader-key authorization.
+- The fake web journey passed the one-time notice, completed a sponsored
+  conversation, reduced the allowance from three to two, and proved a BYOK
+  turn leaves the allowance at three.
+- `npm test -- --run src/weaver/web/frontend/lib/chatApi.test.ts src/weaver/web/frontend/lib/chatRecovery.test.ts src/weaver/web/frontend/lib/identity.test.ts src/weaver/web/frontend/components/FirstNightmareSetup.test.tsx src/weaver/web/frontend/components/SpellSurfaceChatApp.test.tsx src/weaver/web/frontend/components/SpellSurfaceSettings.test.tsx`
+  passed: **63 tests**.
+- No live DeepSeek request was sent and no owner-funded token was used.
 
 ## Bounded live cost proof
 
-Pending explicit owner authorization within the $0.25 ceiling. Record only safe
-request, token, timing, outcome, and cost totals.
+Waiting at the separate slice 6 owner gate. The accepted maximum is three live
+sponsored turns with an immediate combined stop at $0.25. The evidence will
+record only request count, usage totals, timing, outcome, price version, and
+calculated cost. It will not record prompts, answers, chapter text, passes,
+keys, provider bodies, or private reasoning.
 
 ## Handoff to Plan 029
 
