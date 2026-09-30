@@ -10,8 +10,7 @@
 - **Tooling:** `uv`, pytest, Ruff, the real DeepSeek SDK through
   `httpx.MockTransport`, Weaver fake mode, root Vitest and Vite commands, and
   explicit bounded live DeepSeek cost proof after the owner learning gate.
-- **State:** drafted 2026-09-23 after the owner replaced the multi-provider
-  direction with DeepSeek-only sponsored access. Awaiting explicit admission.
+- **State:** admitted 2026-09-30 by owner direction.
 - **Depends on:** Plan 027.5 closed and Weaver v1.2.1 released. Plans 003, 005,
   and 015 supply the accepted provider, turn-loop, and private-reasoning
   boundaries.

@@ -2,9 +2,9 @@
 
 ## Gate status
 
-**Drafted, not admitted.** The owner approved the DeepSeek-only direction and
-asked for the plan rewrite on 2026-09-23. Implementation still requires an
-explicit Plan 028 admission.
+**Admitted 2026-09-30 by owner direction.** The DeepSeek-only sponsored-access
+contract is accepted for learning and implementation. Code changes and live
+calls still wait for the owner learning gate below.
 
 ## Owner-confirmed direction
 
@@ -37,7 +37,8 @@ explicit Plan 028 admission.
   spending controls. Weaver therefore needs its own one-turn and global cost
   limits regardless of provider concurrency.
 
-These observations must be refreshed from official sources after admission.
+These observations must be refreshed from official sources before the owner
+learning gate.
 
 Official sources checked on 2026-09-23:
 
