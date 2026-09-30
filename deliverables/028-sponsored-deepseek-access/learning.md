@@ -2,9 +2,11 @@
 
 ## Gate status
 
-**Admitted 2026-09-30 by owner direction.** The DeepSeek-only sponsored-access
-contract is accepted for learning and implementation. Code changes and live
-calls still wait for the owner learning gate below.
+**Accepted 2026-09-30 by owner direction.** The owner approved the connection
+source, model, reservation, ledger recovery, signed pass, retry rule, reader
+copy, First Nightmare adjustment, proxy proof requirement, and bounded-live
+proof contract below. Implementation may proceed. Live DeepSeek calls still
+require the separate slice 6 live gate.
 
 ## Owner-confirmed direction
 
@@ -66,10 +68,9 @@ Official sources checked on 2026-09-30:
 - [DeepSeek balance](https://api-docs.deepseek.com/api/get-user-balance/)
 - [DeepSeek rate limits and user isolation](https://api-docs.deepseek.com/quick_start/rate_limit/)
 
-## Proposed contract for the owner learning gate
+## Accepted implementation contract
 
-The items below are hypotheses and proposed decisions. They are not accepted
-until the owner confirms this gate.
+The owner accepted the items below on 2026-09-30.
 
 ### Connection source and model
 
@@ -201,8 +202,6 @@ Advanced. The reader confirms the notice once before the first sponsored turn.
 
 ## Owner learning gate
 
-Pending. Before code changes or live DeepSeek calls, the owner confirms or
-changes the proposed connection source, model, $0.37 maximum reservation,
-ledger recovery, signed pass, no automatic sponsored retry, reader copy,
-First Nightmare adjustment, proxy proof requirement, and three-request live
-proof within the $0.25 ceiling.
+Accepted 2026-09-30. The owner approved implementation of the full contract.
+This approval does not authorize live DeepSeek calls. Slice 6 stops again for
+the separate live gate before any request can spend the owner's balance.

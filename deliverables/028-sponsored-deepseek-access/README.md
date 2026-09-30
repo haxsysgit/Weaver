@@ -3,8 +3,8 @@
 | File | Purpose | Current state |
 | --- | --- | --- |
 | `plan.md` | Pointer to the canonical implementation plan | Current |
-| `learning.md` | DeepSeek cost, allowance, privacy, and architecture gate | Admitted; learning gate pending |
-| `results.md` | Deterministic allowance and bounded cost evidence | Audit and research recorded; build pending gate |
+| `learning.md` | DeepSeek cost, allowance, privacy, and architecture gate | Accepted 2026-09-30 |
+| `results.md` | Deterministic allowance and bounded cost evidence | Audit and research recorded; build starting |
 | `review-ledger.md` | Independent findings, repairs, and rechecks | Not started |
 | `decision.md` | Owner's sponsored-access decision | Pending |
 
