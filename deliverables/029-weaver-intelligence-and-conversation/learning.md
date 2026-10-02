@@ -6,6 +6,51 @@
 freeze the honest baseline; production retrieval changes remain behind the
 owner baseline and retrieval gate.
 
+**Checkpoint one baseline complete 2026-10-02.** Production retrieval has not
+changed. Work is stopped for the owner baseline and retrieval decision.
+
+## Checkpoint one observations
+
+- The web prompt and registered tool set had drifted: `lore_path` existed but
+  was absent from the active web tools. The wiring now agrees.
+- Current dense search finds the expected chapter in the top eight for 40.0%
+  of the 40 historical cases and overlaps the expected lines for 37.5%.
+- Notebook search reaches 37.5% chapter hit at eight. Either arm reaches 62.5%,
+  but neither result proves a claim without direct chapter reading.
+- Direct questions perform worse than paraphrases under dense search. Exact
+  phrase and speaker finding need their own recipe.
+- The packet builder's fixed 360,000-character cap conflicts with the 120 KiB
+  sponsored request boundary. Reading-tier propagation is not a safe repair.
+- Nine historical questions overlap the first Foundational Reader Trial. They
+  are contaminated for tuning and cannot count as independent trial evidence.
+- The existing question set does not deliberately cover all Plan 029 reading
+  work. The missing categories need bounded private development cases.
+- No live answer-quality run occurred. Plan 028's live evidence proves access
+  and accounting only.
+
+## Proposed development boundary
+
+- Use the 31 non-overlapping whole-novel questions for active retrieval work.
+- Keep the nine overlapping Ariel and Tomb cases as historical baseline only.
+- Add private bounded cases for exact quotation, chronology, versions,
+  contradictions, interpretation, theory, what-if, correction, pushback, and
+  multi-turn continuity.
+- Leave Foundational Reader Trial acceptance and unseen Plan 030 holdouts to
+  Plan 030.
+
+## Checkpoint two proposal
+
+Use deterministic question-type recipes rather than one global ranking:
+exact finder for exact work; semantic and notebook leads followed by direct
+reading for canon; chapter neighborhoods through scene resolution for event
+reconstruction; version and range constraints for time-aware comparisons; and
+multiple labelled evidence buckets for contradiction, interpretation, theory,
+and what-if work.
+
+Measure discovery, direct proof, scene completion, timeline fit, contradiction
+visibility, answer-part coverage, follow-up continuity, requests, tokens,
+packet size, latency, and cost separately.
+
 ## Owner-confirmed direction
 
 - Fiction-specific retrieval is the main intelligence problem.

@@ -53,6 +53,7 @@ async def test_web_profile_has_reading_tools_and_read_only_policy(tmp_path) -> N
             "find_text",
             "browse_chapters",
             "who_is",
+            "lore_path",
         )
         registry = runtime.session._tool_registry
         assert registry.has("semantic_search")
@@ -60,6 +61,7 @@ async def test_web_profile_has_reading_tools_and_read_only_policy(tmp_path) -> N
         assert registry.has("find_text")
         assert registry.has("browse_chapters")
         assert registry.has("who_is")
+        assert registry.has("lore_path")
         assert not registry.has("echo")
         policy = runtime.session._execution_policy
         assert policy == ToolExecutionPolicy.read_only()
@@ -94,6 +96,7 @@ async def test_web_prompt_makes_library_claim_with_truth_rule(tmp_path) -> None:
         assert "read_chapters" in prompt
         assert "find_text" in prompt
         assert "who_is" in prompt
+        assert "lore_path" in prompt
         assert "source of truth" in prompt
         assert "<find_text: ...>" in prompt
         assert "angle-bracket stage directions" in prompt

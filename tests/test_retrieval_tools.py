@@ -155,7 +155,14 @@ def test_registration(service: LibraryService):
 
     reg = ToolRegistry()
     register_reading_tools(reg, service)
-    expected = ["semantic_search", "read_chapters", "find_text", "browse_chapters", "who_is"]
+    expected = [
+        "semantic_search",
+        "read_chapters",
+        "find_text",
+        "browse_chapters",
+        "who_is",
+        "lore_path",
+    ]
     for name in expected:
         assert reg.has(name), name
     schemas = reg.active_schemas(tuple(expected))

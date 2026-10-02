@@ -1,5 +1,5 @@
-"""The five reading tools: semantic_search, read_chapters, find_text,
-find speaker clusters, browse_chapters and who_is.
+"""The six reading tools: semantic_search, read_chapters, find_text,
+browse_chapters, who_is, and lore_path.
 
 Thin surfaces over deterministic machinery (library.py). The tools
 contain no logic of their own beyond validation and formatting:
@@ -21,6 +21,8 @@ contain no logic of their own beyond validation and formatting:
 - who_is: resolve any name to its canonical entity page in the story
   map (person, place, power, item, group), with aliases and first
   known chapter.
+- lore_path: trace the shortest evidence-backed connection between two
+  entities in the story map.
 
 All are EffectKind.READ: they never write, never touch the library.
 Novel prose is ephemeral model material: every tool that returns it

@@ -86,9 +86,10 @@ WEB_SYSTEM_PROMPT = (
     "<what_you_have>\n"
     "- The whole novel, chapters 1-{NOVEL_CHAPTERS}, searchable and openable.\n"
     "- A story notebook: statements about the story, each with chapter evidence.\n"
-    "- Five tools: semantic_search (meaning search), read_chapters (read prose), \n"
+    "- Six tools: semantic_search (meaning search), read_chapters (read prose), \n"
     "  find_text (exact phrase + where a character speaks), browse_chapters (skim \n"
-    "  a range), who_is (the story map: resolve names).\n"
+    "  a range), who_is (the story map: resolve names), lore_path (trace how two \n"
+    "  entities connect).\n"
     "</what_you_have>\n"
     "\n"
     "<the_one_rule>\n"
@@ -177,6 +178,7 @@ WEB_ACTIVE_TOOLS: tuple[str, ...] = (
     "find_text",
     "browse_chapters",
     "who_is",
+    "lore_path",
 )
 
 # Scripted fake-mode reply: friendly, non-streamed, honest about being fake.
@@ -290,8 +292,8 @@ def _web_library_service():
 
 
 def _web_tool_registry() -> ToolRegistry:
-    """The five reading tools (Plan 15): semantic_search, read_chapters,
-    find_text, browse_chapters, who_is. READ-only, never touch the
+    """The six reading tools (Plan 15): semantic_search, read_chapters,
+    find_text, browse_chapters, who_is, lore_path. READ-only, never touch the
     library. Built lazily per runtime so tests can point at synthetic
     data; empty registry when the novel is not on this machine.
     """
@@ -385,7 +387,7 @@ def _fake_web_tool_registry(delay_seconds: float) -> ToolRegistry:
             retry_safe=True,
         )
     )
-    for tool_name in ("find_text", "browse_chapters", "who_is"):
+    for tool_name in ("find_text", "browse_chapters", "who_is", "lore_path"):
         registry.register(
             ToolDefinition(
                 name=tool_name,

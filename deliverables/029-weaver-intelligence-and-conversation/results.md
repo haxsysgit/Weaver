@@ -2,29 +2,170 @@
 
 ## Status
 
-Not started. Plan 029 is drafted and waits for Plan 028 closure.
+Checkpoint one is complete through the baseline and retrieval proposal. The
+production reading path has not changed. Work is stopped at the owner baseline
+and retrieval gate.
 
-## Baseline and retrieval
+## Development and holdout boundary
 
-Pending isolated retrieval results, direct-reading verification, failures,
-question-type recipes, and scene-resolution evidence.
+The existing private whole-novel set contains 40 questions: 30 paraphrased and
+10 direct, split evenly between chapters 1 to 1000 and chapters 1001 onward.
+Every case has an expected chapter and expected line range. The questions,
+answers, and chapter prose remain in ignored owner-only state.
 
-## Context and conversation
+Nine historical cases overlap the first Foundational Reader Trial's Ariel and
+Tomb evidence. They remain useful historical measurements, but Plan 029 must
+not tune production rules against them or present them as independent trial
+proof. The proposed active development boundary is therefore:
 
-Pending turn-brief, evidence-board, packet-size, restart, referent, version,
-position, disagreement, and follow-up results.
+- 31 non-overlapping whole-novel cases for retrieval development;
+- new bounded private cases for the missing reading-work categories;
+- all three Foundational Reader Trials reserved for owner acceptance in Plan
+  030;
+- Plan 030 holdouts neither authored nor inspected during Plan 029.
 
-## Answer and style
+The 40-case set mainly covers factual recall, locations, event mechanics, and
+event reconstruction. Exact quotation, chronology, character-version
+comparison, contradictions, interpretation, theory, what-if branches,
+corrections, reader pushback, and multi-turn continuity are absent or only
+incidental. Checkpoint two must add bounded cases for those gaps instead of
+pretending the current set covers them.
 
-Pending response-mode examples, claim inspection, quote preservation, em-dash
-checks, AI-tone findings, repairs, and cancellation/fallback evidence.
+## Baseline wiring audit
 
-## Layer value and request cost
+The web prompt promised `lore_path`, and the tool was implemented and
+registered, but the web active-tool tuple omitted it. The prompt and runtime
+now expose the same six read-only tools. This is a wiring repair, not a new
+retrieval strategy.
 
-Pending ablation table for accuracy, continuity, latency, requests, tokens,
-context size, tool steps, and repair rate. Failures remain in the denominator.
+The audit also found unresolved legacy budget drift:
 
-## Handoff to Plan 030
+- stored history is capped at 200,000 approximate tokens;
+- final synthesis keeps the last three owner and Weaver exchanges;
+- the reading packet always uses the Ascended cap of 360,000 characters,
+  regardless of the selected reading tier;
+- packet assembly expands opened passages by 20 lines on each side and keeps
+  at most 12 passages plus five notebook statements;
+- the sponsored boundary permits a 120 KiB serialized request, four tool
+  rounds, at most eight provider calls, one answer-sized call, and no provider
+  retry;
+- BYOK still carries the older 50, 70, or 90 tool-step limits.
 
-Pending frozen qualification cases, semantic contract version, DeepSeek
-execution profile, measured turn cost, known limitations, and rollback boundary.
+Changing the hard-coded packet tier directly would allow a Transcendent packet
+of 700,000 characters and worsen the conflict with the 120 KiB sponsored
+ceiling. Checkpoint one therefore records the mismatch without changing the
+reading path. Checkpoint two should replace the legacy tier caps with one
+measured evidence-packet budget shared by sponsored and BYOK turns.
+
+## Current retrieval baseline
+
+The current local production index ran over all 40 historical questions. No
+model call, DeepSeek key, or paid token was used.
+
+| Retrieval view | hit@1 | hit@5 | hit@8 | MRR |
+| --- | ---: | ---: | ---: | ---: |
+| Canonical dense, expected chapter | 2.5% | 25.0% | 40.0% | 0.1293 |
+| Canonical dense, expected line overlap | 2.5% | 22.5% | 37.5% | 0.1243 |
+| Notebook, expected chapter | 7.5% | 35.0% | 37.5% | 0.1600 |
+
+Either the canonical or notebook arm found the expected chapter in the top
+eight for 62.5% of cases. That figure is discovery only. It does not prove the
+claim, reach the end of a scene, resolve contradictions, or produce a good
+answer.
+
+Canonical dense retrieval by subset:
+
+| Subset | hit@1 | hit@5 | hit@8 | MRR |
+| --- | ---: | ---: | ---: | ---: |
+| Paraphrased, 30 cases | 3.3% | 26.7% | 43.3% | 0.1398 |
+| Direct, 10 cases | 0.0% | 20.0% | 30.0% | 0.0976 |
+| Chapters 1 to 1000, 20 cases | 0.0% | 15.0% | 35.0% | 0.0805 |
+| Chapters 1001 onward, 20 cases | 5.0% | 35.0% | 45.0% | 0.1780 |
+
+The run took 79.486 seconds. Median query time was 0.605 seconds. The maximum
+was 55.652 seconds because the local embedding model fetched missing files on
+its cold start. A harmless Qdrant destructor error appeared during interpreter
+shutdown after the report was complete. Both anomalies stay recorded rather
+than being removed from the evidence.
+
+The baseline confirms three things:
+
+1. Semantic retrieval is a lead generator, not proof.
+2. Expected-line overlap is lower than chapter discovery, so opening the right
+   chapter still does not guarantee opening the evidence.
+3. Directly worded questions perform worse than paraphrases under dense search.
+   Exact finding must be an explicit reading recipe, not another dense-query
+   variant.
+
+Existing deterministic finder tests still prove phrase, case-insensitive,
+speaker, and co-occurrence mechanics on synthetic fixtures. The earlier
+bounded Weaver-voice trace proves that exact phrase and vocative search can
+find source passages that meaning search misses. Those are capability proofs,
+not a whole-novel accuracy score.
+
+## Proposed reading recipes
+
+These are checkpoint-two hypotheses, not accepted production policy.
+
+| Reading work | Smallest proposed recipe | Stop rule |
+| --- | --- | --- |
+| Exact phrase or chapter lookup | exact phrase or speaker finder, then open the hit | the requested words and speaker or context are directly verified |
+| Factual canon lookup | dense or notebook lead, exact novel vocabulary, then direct chapter read | every answer claim has direct chapter support |
+| Event reconstruction | co-occurrence and semantic leads, chapter neighborhood, then read through the scene resolution | actors, sequence, outcome, and aftermath are supported |
+| Alias or relationship | `who_is` or `lore_path` as a lead, then direct chapter evidence | identity or connection is proven in the novel |
+| Timeline or character version | resolve the requested time point, constrain ranges, gather feats and limits for that version | both versions and the comparison date are explicit |
+| Contradiction or correction | retrieve each competing claim and reread both source scenes | supported and unsupported parts are separated visibly |
+| Interpretation or theory | collect the minimum canon constraints, counterevidence, and gaps | canon is complete enough for a labelled take |
+| Canon-grounded what-if | establish powers, motives, setting, and timeline before invention | every invented event is labelled and respects the canon constraints |
+| Follow-up or pushback | resolve the referent and prior positions before new reading | the current challenge and relevant prior take are both answered |
+
+## Proposed evaluation measures
+
+Checkpoint two should keep the measures separate so a search hit cannot hide a
+reading failure:
+
+- discovery: expected chapter hit at 1, 5, and 8, plus reciprocal rank;
+- proof: expected line overlap and direct source support for each required
+  claim;
+- completion: whether reading reaches the needed scene outcome and aftermath;
+- temporal correctness: requested chapter, version, and spoiler boundary;
+- conflict handling: competing evidence remains visible and unresolved gaps
+  stay explicit;
+- coverage: every part of the reader's question receives support or an honest
+  gap;
+- conversation: referent, prior Weaver position, reader position, correction,
+  and disagreement survive a follow-up and restart;
+- efficiency: provider requests, tool rounds, input and output tokens, packet
+  characters, time to first text, total latency, and sponsored cost;
+- publication: no private prose, tool payload, reasoning, unsupported chapter,
+  unlabeled invention, changed quotation, or exposed machinery.
+
+## Context, conversation, answer, and cost baseline
+
+The current system has a canonical conversation ledger, a 200,000-token
+history assembler, three recent exchanges in final synthesis, an ephemeral
+reading packet, deterministic fake profiles, and safe provider usage metadata.
+It does not yet have a turn brief, claim-to-source evidence board, explicit
+scene-completion check, durable conversation projection, answer blueprint, or
+quote-aware style inspection.
+
+No live answer-quality baseline was run in checkpoint one. Plan 028's live run
+proved provider access and accounting, not fiction intelligence. A meaningful
+live comparison requires the owner to freeze the cases, maximum calls, and
+dollar ceiling first. Until then, quality, end-to-end latency, answer-token
+use, and repair-call value remain unmeasured rather than estimated.
+
+## Owner gate
+
+Checkpoint two remains blocked until the owner accepts or changes:
+
+1. the 31-case development boundary and the contaminated nine-case exclusion;
+2. the missing question categories that need new bounded private cases;
+3. the reading recipes and separated discovery, proof, completion,
+   conversation, and efficiency measures;
+4. the later bounded live development request and dollar ceiling.
+
+## Later checkpoints
+
+Context continuity, answer modes, voice, inspection, multi-turn proof,
+independent review, and the Plan 030 handoff remain pending.
