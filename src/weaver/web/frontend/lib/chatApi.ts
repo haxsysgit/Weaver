@@ -38,6 +38,7 @@ export interface UserPreferences {
 
 export interface AccessStatus {
   consented: boolean;
+  development?: boolean;
   enabled: boolean;
   remaining_questions: number;
   reset_at: string | null;

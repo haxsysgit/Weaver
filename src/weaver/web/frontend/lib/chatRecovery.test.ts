@@ -59,6 +59,11 @@ describe("chat recovery language", () => {
         new ChatApiError("Sending", 428, "consent_required"),
       ).kind,
     ).toBe("consent");
+    expect(
+      recoveryFromError(
+        new ChatApiError("Sending", 429, "network_busy"),
+      ).kind,
+    ).toBe("network-busy");
   });
 
   it("turns browser transport failures into safe connection copy", () => {

@@ -220,10 +220,16 @@ async def test_restart_releases_stale_reservations_and_charges_stale_started(
 
     reopened = await open_access(database, stale_after_seconds=60)
     try:
+        await reopened.recover_stale(at=NOW + timedelta(seconds=10))
+        quick_restart = await reopened.summary(at=NOW + timedelta(seconds=10))
+        assert quick_restart.uncertain_questions == 1
+        assert quick_restart.active_reservations == 1
+
         await reopened.recover_stale(at=NOW + timedelta(minutes=2))
         summary = await reopened.summary(at=NOW + timedelta(minutes=2))
         assert summary.uncertain_questions == 1
         assert summary.settled_microdollars == config().reservation_microdollars
+        assert summary.active_reservations == 0
     finally:
         await reopened.close()
 
@@ -357,7 +363,7 @@ async def test_sponsored_turn_stops_before_a_ninth_provider_call(tmp_path) -> No
     )
     try:
         turn = SponsoredTurn(access, await reserve(access, pass_token))
-        for _ in range(8):
+        for call_number in range(8):
             await turn.before_call(
                 {
                     "model": "deepseek-flash",
@@ -365,7 +371,7 @@ async def test_sponsored_turn_stops_before_a_ninth_provider_call(tmp_path) -> No
                     "max_tokens": 512,
                     "extra_body": {},
                 },
-                has_tools=False,
+                has_tools=call_number < 7,
             )
             await turn.record_usage(usage)
 
@@ -379,6 +385,36 @@ async def test_sponsored_turn_stops_before_a_ninth_provider_call(tmp_path) -> No
                 },
                 has_tools=False,
             )
+        await turn.finish()
+    finally:
+        await access.close()
+
+
+@pytest.mark.asyncio
+async def test_sponsored_turn_allows_only_one_answer_sized_call(tmp_path) -> None:
+    access = await open_access(tmp_path / "sponsored.sqlite3")
+    pass_token = access.issue_pass(at=NOW, reader_id="one-answer-call")
+    usage = ModelUsage(
+        input_tokens=100,
+        output_tokens=20,
+        total_tokens=120,
+        reasoning_tokens=5,
+        cache_hit_tokens=0,
+        cache_miss_tokens=100,
+    )
+    payload = {
+        "model": "deepseek-flash",
+        "messages": [],
+        "max_tokens": 99_999,
+        "extra_body": {},
+    }
+    try:
+        turn = SponsoredTurn(access, await reserve(access, pass_token))
+        await turn.before_call(payload, has_tools=False)
+        await turn.record_usage(usage)
+
+        with pytest.raises(SponsoredUnavailable, match="answer_call_limit"):
+            await turn.before_call(payload.copy(), has_tools=False)
         await turn.finish()
     finally:
         await access.close()

@@ -194,6 +194,7 @@ class SponsoredTurn:
         self._started = False
         self._open_call = False
         self._call_count = 0
+        self._answer_call_used = False
 
     async def before_call(
         self,
@@ -205,6 +206,8 @@ class SponsoredTurn:
             raise SponsoredUnavailable("call_already_open")
         if self._call_count >= self.MAX_CALLS:
             raise SponsoredUnavailable("call_limit")
+        if not has_tools and self._answer_call_used:
+            raise SponsoredUnavailable("answer_call_limit")
 
         payload["model"] = "deepseek-flash"
         output_limit = (
@@ -224,6 +227,8 @@ class SponsoredTurn:
         if len(payload_bytes) > self.MAX_PAYLOAD_BYTES:
             raise SponsoredUnavailable("payload_too_large")
 
+        if not has_tools:
+            self._answer_call_used = True
         if not self._started:
             await self._access.mark_started(self.reservation.reservation_id)
             self._started = True
@@ -749,9 +754,9 @@ class SponsoredAccess:
                 SET state = 'uncertain',
                     actual_microdollars = reserved_microdollars,
                     settled_at = ?, failure_category = 'process_lost'
-                WHERE state = 'started' AND started_at < ?
+                WHERE state = 'started'
                 """,
-                (int(current.timestamp()), cutoff),
+                (int(current.timestamp()),),
             )
 
     def _usage_cost(self, row: aiosqlite.Row) -> int:

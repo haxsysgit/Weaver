@@ -142,7 +142,7 @@ describe("Spell Surface v2 lab", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Privacy and controls" }));
 
     expect(within(dialog).getByText(/local library on this Weaver installation/)).toBeVisible();
-    expect(within(dialog).getByText(/Messages are sent to DeepSeek/)).toBeVisible();
+    expect(within(dialog).getByText(/sent to DeepSeek to generate a reply/)).toBeVisible();
     expect(within(dialog).getByText(/key stays in this browser/)).toBeVisible();
     expect(within(dialog).queryByText("Everything stays on this machine.")).toBeNull();
   });

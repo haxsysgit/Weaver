@@ -678,11 +678,18 @@ async def test_byok_contextvar_picks_per_request_key() -> None:
     from weaver.model_layer.deepseek import current_api_key
 
     seen_keys: list[str] = []
+    closed_keys: list[str] = []
 
     def recording_client(key: str):
         seen_keys.append(key)
         completions = StubCompletions([chunk(content="ok")])
-        return sdk_with(completions)
+        client = sdk_with(completions)
+
+        async def close() -> None:
+            closed_keys.append(key)
+
+        client.close = close
+        return client
 
     provider = DeepSeekProvider(
         "server-env-key",
@@ -709,6 +716,7 @@ async def test_byok_contextvar_picks_per_request_key() -> None:
     await run("sk-browser-b")
     await run(None)  # falls back to the construction-time key
     assert seen_keys == ["sk-browser-a", "sk-browser-b", "server-env-key"], seen_keys
+    assert closed_keys == ["sk-browser-a", "sk-browser-b"]
 
 
 
@@ -761,7 +769,6 @@ def test_request_payload_sends_reasoning_content_back() -> None:
     ]
     assert assistant_off[0]["reasoning_content"] == "the stored thinking"
     assert assistant_off[1]["reasoning_content"] == ""
-
 
 
 

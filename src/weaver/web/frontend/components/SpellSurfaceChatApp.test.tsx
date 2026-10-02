@@ -63,7 +63,7 @@ function createApi(): ChatApi {
       tier: "ascended",
     }),
     getAccess: vi.fn().mockResolvedValue({
-      consented: false,
+      consented: true,
       enabled: true,
       remaining_questions: 3,
       reset_at: "2026-10-01T00:00:00+00:00",
@@ -335,6 +335,49 @@ describe("first Nightmare setup", () => {
       "readonly",
     );
     expect(screen.getByText("What are we reading?")).toBeVisible();
+  });
+
+  it("blocks shared use until the DeepSeek notice is accepted", async () => {
+    localStorage.setItem(FIRST_NIGHTMARE_STORAGE_KEY, "completed");
+    const api = createApi();
+    api.getAccess = vi.fn().mockResolvedValue({
+      consented: false,
+      enabled: true,
+      remaining_questions: 3,
+      reset_at: "2026-10-01T00:00:00+00:00",
+      source: "sponsored",
+    });
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+
+    await waitForLiveApp();
+    expect(
+      await screen.findByText(/shared thread awaits consent/),
+    ).toBeVisible();
+    expect(screen.getByRole("textbox", { name: "Message Weaver" })).toHaveAttribute(
+      "readonly",
+    );
+  });
+
+  it("blocks unavailable shared use while preserving Advanced BYOK", async () => {
+    localStorage.setItem(FIRST_NIGHTMARE_STORAGE_KEY, "completed");
+    const api = createApi();
+    api.getAccess = vi.fn().mockResolvedValue({
+      consented: true,
+      development: false,
+      enabled: false,
+      remaining_questions: 3,
+      reset_at: "2026-10-01T00:00:00+00:00",
+      source: "unavailable",
+    });
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+
+    await waitForLiveApp();
+    expect(
+      await screen.findByText(/shared thread is unavailable/),
+    ).toBeVisible();
+    expect(screen.getByRole("textbox", { name: "Message Weaver" })).toHaveAttribute(
+      "readonly",
+    );
   });
 
   it("restores a saved Soul Sea beneath the live Spellweave", async () => {

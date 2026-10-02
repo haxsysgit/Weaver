@@ -10,6 +10,7 @@ export type RecoveryKind =
   | "limit"
   | "missing-thread"
   | "model"
+  | "network-busy"
   | "rate-limit"
   | "request"
   | "simulated-model"
@@ -78,6 +79,12 @@ const ISSUES: Record<RecoveryKind, RecoveryIssue> = {
     kind: "model",
     message: "DeepSeek could not complete this reply. Check the bound key or account balance, then retry.",
     title: "[The bound voice did not answer.]",
+  },
+  "network-busy": {
+    canRetry: true,
+    kind: "network-busy",
+    message: "Too many shared requests are coming from this network. Wait a moment, then try again or use your own key in Advanced.",
+    title: "[The shared thread is crowded.]",
   },
   "rate-limit": {
     canRetry: true,
@@ -159,7 +166,7 @@ export function recoveryFromError(error: unknown): RecoveryIssue {
       return issue("consent");
     }
     if (error.code === "network_busy") {
-      return issue("rate-limit");
+      return issue("network-busy");
     }
     if (error.status === 404) {
       return issue("missing-thread");

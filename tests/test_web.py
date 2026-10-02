@@ -133,8 +133,8 @@ async def sponsored_client(tmp_path, monkeypatch):
     transport = ASGITransport(app=app)
     async with AsyncClient(
         transport=transport,
-        base_url="http://127.0.0.1",
-        headers=SAME_ORIGIN_HEADERS,
+        base_url="https://127.0.0.1",
+        headers={"Origin": "https://127.0.0.1"},
     ) as client:
         yield client
     await runtime.close()
@@ -145,6 +145,7 @@ async def test_sponsored_access_requires_notice_then_counts_fake_turn(
 ) -> None:
     access = await sponsored_client.get("/api/access")
     assert access.status_code == 200
+    assert "Secure" in access.headers["set-cookie"]
     assert access.json()["enabled"] is True
     assert access.json()["remaining_questions"] == 3
     assert access.json()["consented"] is False

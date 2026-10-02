@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .context import NotebookContext, relative_path
+from .context import NotebookContext
 from .report import CheckResult
 
 

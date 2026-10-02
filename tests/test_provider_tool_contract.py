@@ -612,7 +612,7 @@ async def test_real_sdk_byok_request_uses_reader_authorization() -> None:
         max_retries=0,
     )
     provider = DeepSeekProvider("server-key", sdk_client=reader_client)
-    provider._clients["sk-reader-only"] = reader_client
+    provider._client_for = lambda _key: reader_client  # type: ignore[method-assign]
     model_layer = ModelLayer()
     model_layer.register_provider(provider)
     token = current_api_key.set("sk-reader-only")

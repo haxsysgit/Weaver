@@ -88,7 +88,7 @@ describe("createHttpChatApi authed wrapper", () => {
       reset_at: "2026-10-01T00:00:00+00:00",
       source: "sponsored",
     };
-    const spy = vi.fn(async () => {
+    const spy = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) => {
       return new Response(JSON.stringify(status), {
         headers: { "Content-Type": "application/json" },
         status: 200,
@@ -104,7 +104,7 @@ describe("createHttpChatApi authed wrapper", () => {
   });
 
   it("preserves a safe sponsored refusal code", async () => {
-    const spy = vi.fn(async () =>
+    const spy = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) =>
       new Response(JSON.stringify({ detail: { code: "reader_exhausted" } }), {
         headers: { "Content-Type": "application/json" },
         status: 429,
@@ -112,7 +112,8 @@ describe("createHttpChatApi authed wrapper", () => {
     );
     const api = createHttpChatApi(spy as unknown as typeof fetch);
 
-    await expect(api.streamTurn("thread", "question").next()).rejects.toMatchObject({
+    const stream = api.streamTurn("thread", "question")[Symbol.asyncIterator]();
+    await expect(stream.next()).rejects.toMatchObject({
       code: "reader_exhausted",
       status: 429,
     } satisfies Partial<ChatApiError>);

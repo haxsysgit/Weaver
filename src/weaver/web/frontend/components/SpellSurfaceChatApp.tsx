@@ -347,7 +347,8 @@ function SpellSurfaceChatSurface({
       return;
     }
     try {
-      setAccess(await api.getAccess());
+      const status = await api.getAccess();
+      setAccess(status);
     } catch {
       // A temporary status failure must not hide local conversations.
     }
@@ -533,13 +534,28 @@ function SpellSurfaceChatSurface({
     && access?.enabled === true
     && access.remaining_questions === 0
   );
+  const sharedAwaitingConsent = (
+    !voiceBound
+    && access?.enabled === true
+    && !access.consented
+  );
+  const sharedUnavailable = (
+    !voiceBound
+    && access !== null
+    && !access.enabled
+    && !access.development
+  );
   const accessMessage = voiceBound
     ? undefined
-    : access?.enabled && access.remaining_questions > 0
+    : access?.development
+      ? undefined
+      : sharedAwaitingConsent
+        ? "[The shared thread awaits consent.] Open Settings and replay the First Nightmare before using the shared allowance."
+        : access?.enabled && access.consented && access.remaining_questions > 0
       ? `${access.remaining_questions} shared questions remain. Renews at 00:00 UTC.`
       : sharedExhausted
         ? "[The shared thread rests until 00:00 UTC.] Your conversations are still here. Return after the reset, or bind your own DeepSeek key in Advanced."
-        : access?.source === "unavailable"
+        : sharedUnavailable
           ? "[The shared thread is unavailable.] Bind your own DeepSeek key in Advanced."
           : undefined;
   const threadAlpha = preferences.starIntensity === "quiet"
@@ -679,7 +695,7 @@ function SpellSurfaceChatSurface({
         <footer className="lab-composer-dock">
           <Composer
             cancelling={chat.turnState === "cancelling"}
-            disabled={sharedExhausted}
+            disabled={sharedExhausted || sharedAwaitingConsent || sharedUnavailable}
             draft={chat.draft}
             inputLabel={weaverProduct.inputLabel}
             onCancel={() => void chat.cancelTurn()}

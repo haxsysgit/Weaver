@@ -327,6 +327,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
             httponly=True,
             max_age=365 * 24 * 60 * 60,
             samesite="strict",
+            secure=True,
         )
 
     async def _access_status(
@@ -337,6 +338,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         if runtime.sponsored is None or runtime.sponsored_balance is None:
             return {
                 "enabled": False,
+                "development": not runtime.live,
                 "remaining_questions": 0,
                 "reset_at": None,
                 "consented": False,
@@ -358,12 +360,23 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
             balance is not None
             and balance >= runtime.sponsored.config.reservation_microdollars
         )
+        summary = await runtime.sponsored.summary()
+        enough_capacity = (
+            summary.remaining_microdollars
+            >= runtime.sponsored.config.reservation_microdollars
+        )
+        enabled = status.enabled and enough_balance and enough_capacity
         return {
-            "enabled": status.enabled and enough_balance,
+            "enabled": enabled,
+            "development": False,
             "remaining_questions": status.remaining_questions,
             "reset_at": status.reset_at,
             "consented": status.consented,
-            "source": "reader_byok" if _request_key(request) else "sponsored",
+            "source": (
+                "reader_byok"
+                if _request_key(request)
+                else ("sponsored" if enabled else "unavailable")
+            ),
         }
 
     def _raise_sponsored_error(error: SponsoredUnavailable) -> None:

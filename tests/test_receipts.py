@@ -113,8 +113,8 @@ async def test_fake_smoke_writes_complete_safe_receipt(tmp_path) -> None:
     assert manifest["settings"]["retry_policy"] == "provider-managed"
     assert manifest["settings"]["maximum_model_calls"] == 3
     assert len(manifest["calls"]) == 3
-    assert responses[0]["model_id"] == "deepseek-v4-flash"
-    assert responses[2]["model_id"] == "deepseek-v4-flash"
+    assert responses[0]["model_id"] == "deepseek-flash"
+    assert responses[2]["model_id"] == "deepseek-flash"
     # Cache hit/miss must land in the receipt (Plan 019 slice 6): the
     # live-work plans prove measured hit rate and spend from these
     # fields, so a receipt without them is a broken receipt.
@@ -167,7 +167,7 @@ async def test_provider_contract_receipt_is_private_and_metadata_only(
     assert manifest["settings"]["maximum_model_calls"] == 2
     assert request_receipt["maximum_model_calls_per_model"] == 2
     assert [model["model_id"] for model in manifest["models"]] == [
-        "deepseek-v4-flash",
+        "deepseek-flash",
     ]
     for model in manifest["models"]:
         assert model["outcome"] == "passed"

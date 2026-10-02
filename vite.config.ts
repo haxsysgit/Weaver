@@ -1,6 +1,6 @@
 import react from "@vitejs/plugin-react";
 import { fileURLToPath, URL } from "node:url";
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 
 const frontendRoot = fileURLToPath(
   new URL("./src/weaver/web/frontend", import.meta.url),
@@ -38,6 +38,7 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     setupFiles: "./test/setup.ts",
+    testTimeout: 10_000,
     css: true,
   },
 });

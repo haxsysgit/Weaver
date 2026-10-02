@@ -112,38 +112,33 @@ class DeepSeekProvider:
             max_retries=0,
         )
         # BYOK (plan v1 slice 3): a per-request key may arrive after
-        # construction. It lives in a contextvar (per task, so concurrent
-        # turns keep their own key) and is read at call time. Clients are
-        # cached per key so the common case (one key per browser) builds
-        # a single client; the construction-time key is the fallback.
+        # construction. It lives in a contextvar so concurrent turns keep
+        # their own key. Reader clients are closed after each model call;
+        # only the server credential owns a process-lifetime client.
         self._api_key = api_key
         self._timeout_seconds = timeout_seconds
-        self._clients: dict[str, Any] = {api_key: self._client}
 
     def _client_for(self, key: str) -> Any:
-        """Return the sdk client for a key, building it on first use."""
-        client = self._clients.get(key)
-        if client is None:
-            client = AsyncOpenAI(
-                api_key=key,
-                base_url=DEEPSEEK_BASE_URL,
-                timeout=self._timeout_seconds,
-                max_retries=0,
-            )
-            self._clients[key] = client
-        return client
+        """Reuse the server client; keep a reader key only for its call."""
+        if key == self._api_key:
+            return self._client
+        return AsyncOpenAI(
+            api_key=key,
+            base_url=DEEPSEEK_BASE_URL,
+            timeout=self._timeout_seconds,
+            max_retries=0,
+        )
 
     async def _create_with_retry(
         self,
         payload: dict[str, Any],
         cancel_event: asyncio.Event,
-    ) -> tuple[Any, str | None]:
+    ) -> tuple[Any, str | None, Any | None]:
         """Open the stream, retrying transient failures with backoff.
 
-        Returns (stream, None) on success or (None, category) on a
-        non-retryable failure or when the budget is exhausted. Only the
-        connection opening is retried; a mid-stream drop is never retried
-        because partial output cannot be safely resumed.
+        Returns the stream, safe error category, and any temporary reader
+        client. Only connection opening is retried; a mid-stream drop is
+        never retried because partial output cannot be safely resumed.
         """
         attempt = 0
         sponsored_turn = current_sponsored_turn.get()
@@ -151,8 +146,10 @@ class DeepSeekProvider:
         while True:
             key = current_api_key.get() or self._api_key
             client = self._client_for(key)
+            reader_client = client if key != self._api_key else None
             try:
-                return await client.chat.completions.create(**payload), None
+                stream = await client.chat.completions.create(**payload)
+                return stream, None, reader_client
             except openai.APITimeoutError:
                 category = "timeout"
             except openai.APIConnectionError:
@@ -162,18 +159,21 @@ class DeepSeekProvider:
             except Exception:
                 category = "provider"
 
+            if reader_client is not None:
+                await self._close_client(reader_client)
+
             if (
                 category not in self.RETRYABLE_CATEGORIES
                 or attempt >= max_attempts - 1
             ):
-                return None, category
+                return None, category, None
             attempt += 1
             delay = self.RETRY_BASE_DELAY_SECONDS * (2 ** (attempt - 1))
             try:
                 await asyncio.wait_for(cancel_event.wait(), timeout=delay)
             except asyncio.TimeoutError:
                 continue
-            return None, "cancelled"
+            return None, "cancelled", None
 
     async def stream(
         self,
@@ -203,7 +203,7 @@ class DeepSeekProvider:
                 payload,
                 has_tools=bool(request.tools),
             )
-        stream, error_category = await self._create_with_retry(
+        stream, error_category, reader_client = await self._create_with_retry(
             payload,
             cancel_event,
         )
@@ -286,6 +286,9 @@ class DeepSeekProvider:
                 await sponsored_turn.record_usage(None)
             yield self._error_event(model, "provider")
             return
+        finally:
+            if reader_client is not None:
+                await self._close_client(reader_client)
 
         if sponsored_turn is not None:
             await sponsored_turn.record_usage(usage)
@@ -521,6 +524,13 @@ class DeepSeekProvider:
     async def _close_stream(stream: Any) -> None:
         try:
             await stream.close()
+        except (AttributeError, NotImplementedError):
+            pass
+
+    @staticmethod
+    async def _close_client(client: Any) -> None:
+        try:
+            await client.close()
         except (AttributeError, NotImplementedError):
             pass
 

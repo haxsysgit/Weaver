@@ -2,9 +2,9 @@
 
 ## Status
 
-Admitted 2026-09-30. Slice 1 current-state inspection and slice 2 official
-research are complete. Production code and live calls are paused at the owner
-learning gate.
+Admitted 2026-09-30. All implementation, deterministic proof, the authorized
+bounded live proof, the full verification floor, and both independent reviews
+are complete. Plan 028 is waiting at the owner's final accept or reject gate.
 
 ## Current-state inspection, 2026-09-30
 
@@ -58,10 +58,11 @@ Implemented in commit `8b9edcb`.
   `uncertain`. Pre-provider failures release. Started work with missing usage,
   cancellation, ambiguous failure, or process loss charges the full
   reservation.
-- Sponsored calls are fixed to `deepseek-flash`, eight model calls, four tool
-  rounds, a 120 KiB payload, 4,096 search-output tokens, 12,288 answer-output
-  tokens, and zero provider retries. A first-turn title uses the deterministic
-  fallback and spends no additional call.
+- Sponsored calls are fixed to `deepseek-flash`, at most seven tool-capable
+  search calls and one final answer call, four tool rounds, a 120 KiB payload,
+  4,096 search-output tokens, 12,288 answer-output tokens, and zero provider
+  retries. A first-turn title uses the deterministic fallback and spends no
+  additional call.
 - Cost reconciliation uses integer microdollars and the accepted peak Flash
   cache-hit, cache-miss, and output prices. Deterministic tests cover multiple
   calls and a changed price schedule.
@@ -92,11 +93,50 @@ Focused deterministic evidence on 2026-09-30:
 
 ## Bounded live cost proof
 
-Waiting at the separate slice 6 owner gate. The accepted maximum is three live
-sponsored turns with an immediate combined stop at $0.25. The evidence will
-record only request count, usage totals, timing, outcome, price version, and
-calculated cost. It will not record prompts, answers, chapter text, passes,
-keys, provider bodies, or private reasoning.
+Authorized by the owner and run on 2026-10-02 through Weaver's real web
+harness and sponsored ledger.
+
+The proof process used a stricter envelope than production so the live gate
+was mathematically bounded even if every call returned incomplete usage:
+$0.08 reserved per turn, four calls, 24 KiB serialized payload, 2,048 search
+output tokens, and 4,096 answer output tokens. Three full uncertain charges
+could therefore reach at most $0.24. Production remains on the accepted $0.37
+reservation and eight-call envelope.
+
+- Sponsored turns: **3**.
+- Provider calls: **6**.
+- Outcomes: **3 completed, 0 failed, 0 uncertain**.
+- Duration: **4,916 ms**, **5,102 ms**, and **2,894 ms**.
+- Cache-hit input: **16,000 tokens**.
+- Cache-miss input: **4,478 tokens**.
+- Output: **974 tokens**, including **189 reasoning tokens**.
+- Price version: `deepseek-flash-2026-09-10-peak`.
+- Calculated peak-price cost: **2,610 microdollars = $0.002610**.
+- Approved ceiling: **$0.25**; unused ceiling: **$0.247390**.
+
+No prompt, answer, chapter text, pass, key, provider body, or private reasoning
+was written to this deliverable or emitted by the proof runner.
+
+## Final verification and review
+
+Run on 2026-10-02 after both independent review repairs:
+
+- `uv run ruff check src/weaver tests`: **passed**.
+- Focused sponsored, web, provider, SDK-contract, and receipt floor: **126
+  tests passed**.
+- `npm test`: **21 files, 131 tests passed**.
+- `uv run pytest -q`: **573 tests passed** in 337.92 seconds.
+- `npm run build`: **passed**, with 475 modules transformed; committed
+  `src/weaver/web/dist/` refreshed.
+- `git diff --check`: **passed**.
+
+The reviews found and repaired five material boundaries: process restart now
+charges any provider-started reservation as uncertain immediately; only one
+answer-sized call is permitted; the anonymous pass is Secure; access status
+and failure copy distinguish consent, global availability, network pressure,
+and development fake mode; and browser BYOK clients are closed after each
+model call instead of remaining keyed in process memory. The full finding and
+recheck record is in `review-ledger.md`.
 
 ## Handoff to Plan 029
 
