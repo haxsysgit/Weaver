@@ -2,9 +2,9 @@
 
 ## Status
 
-Admitted 2026-09-30. All implementation, deterministic proof, the authorized
-bounded live proof, the full verification floor, and both independent reviews
-are complete. Plan 028 is waiting at the owner's final accept or reject gate.
+Closed and accepted 2026-10-02. All implementation, deterministic proof, the
+authorized bounded live proof, the full verification floor, and both
+independent reviews are complete.
 
 ## Current-state inspection, 2026-09-30
 
@@ -140,5 +140,6 @@ recheck record is in `review-ledger.md`.
 
 ## Handoff to Plan 029
 
-Pending accepted sponsored and BYOK boundary, exact DeepSeek model, allowance
-contract, cost evidence, safe usage metadata, and known limitations.
+Plan 029 inherits the accepted sponsored and BYOK boundary, exact DeepSeek
+model, allowance contract, cost evidence, safe usage metadata, and known
+limitations.
