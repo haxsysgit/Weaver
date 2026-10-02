@@ -9,6 +9,18 @@ owner baseline and retrieval gate.
 **Checkpoint one baseline complete 2026-10-02.** Production retrieval has not
 changed. Work is stopped for the owner baseline and retrieval decision.
 
+**Checkpoint one accepted 2026-10-02.** The owner approved the 31-case active
+development boundary, private category additions, question-type recipes,
+separate evaluation measures, and deterministic checkpoint two.
+
+**Checkpoint two implemented 2026-10-02.** Seven bounded private cases isolate
+the required reading work. Existing finders located the expected leads; direct
+reading could not deliberately continue to the context before a hit or the
+outcome after it. The existing reader now supports bounded before and after
+continuation and reports chapter boundaries. The corrected private proof is
+7 of 7. Global retrieval ranking remains unchanged because the cases did not
+justify another ranking formula.
+
 ## Checkpoint one observations
 
 - The web prompt and registered tool set had drifted: `lore_path` existed but

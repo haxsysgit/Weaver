@@ -3,8 +3,8 @@
 | File | Purpose | Current state |
 | --- | --- | --- |
 | `plan.md` | Pointer to the canonical implementation plan | Current |
-| `learning.md` | Retrieval, context, voice, and evaluation owner gates | Checkpoint one complete; owner retrieval gate pending |
-| `results.md` | Layer-by-layer quality, cost, and conversation evidence | Baseline frozen; later checkpoints pending |
+| `learning.md` | Retrieval, context, voice, and evaluation owner gates | Checkpoints one and two recorded; checkpoint three next |
+| `results.md` | Layer-by-layer quality, cost, and conversation evidence | Baseline and direct-rereading repair recorded |
 | `review-ledger.md` | Independent findings, repairs, and rechecks | Not started |
 | `decision.md` | Owner's intelligence-system decision | Pending |
 

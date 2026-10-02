@@ -161,6 +161,11 @@ class ChapterIndex:
             self._hash_cache[chapter] = hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
         return self._hash_cache[chapter]
 
+    def line_count(self, chapter: int) -> int:
+        """Number of lines in one chapter, including its title line."""
+        text = self._path(chapter).read_text(encoding="utf-8")
+        return len(text.splitlines())
+
     def open_lines(self, chapter: int, line_start: int, line_end: int) -> Passage:
         """Open a passage by line range. Line 1 is the title heading and
         is never story text; ranges are clamped to the file."""

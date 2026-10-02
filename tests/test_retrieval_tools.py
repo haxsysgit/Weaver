@@ -150,6 +150,77 @@ async def test_read_chapters_rejects_bad_handle(service: LibraryService):
     assert res["ok"] is False
 
 
+@pytest.mark.asyncio
+async def test_read_chapters_can_follow_a_scene_to_the_chapter_end(
+    tmp_path: Path,
+) -> None:
+    novel = tmp_path / "novel" / "0001-0100"
+    novel.mkdir(parents=True)
+    chapter_lines = ["Shadow Slave-Chapter 12 - 12: Resolution"]
+    chapter_lines.extend(f"story line {line}" for line in range(2, 13))
+    (novel / "chapter-0012.txt").write_text("\n".join(chapter_lines))
+    service = LibraryService(tmp_path / "novel", tmp_path / "notebook")
+
+    first = await service.read_chapters(
+        {
+            "handle": make_passage_handle(12, 4, 5),
+            "direction": "after",
+            "lines": 4,
+        },
+        ctx(),
+    )
+
+    assert first["ok"] is True
+    assert first["result"]["line_start"] == 6
+    assert first["result"]["line_end"] == 9
+    assert first["result"]["end_of_chapter"] is False
+    assert first["durable_evidence"]["passage_handle"] == make_passage_handle(
+        12, 6, 9
+    )
+
+    remainder = await service.read_chapters(
+        {
+            "handle": first["durable_evidence"]["passage_handle"],
+            "direction": "after",
+            "lines": 200,
+        },
+        ctx(),
+    )
+
+    assert remainder["ok"] is True
+    assert remainder["result"]["line_start"] == 10
+    assert remainder["result"]["line_end"] == 12
+    assert remainder["result"]["end_of_chapter"] is True
+    assert "story line 12" in remainder["result"]["text"]
+
+
+@pytest.mark.asyncio
+async def test_read_chapters_can_recover_context_before_a_hit(
+    tmp_path: Path,
+) -> None:
+    novel = tmp_path / "novel" / "0001-0100"
+    novel.mkdir(parents=True)
+    chapter_lines = ["Shadow Slave-Chapter 12 - 12: Context"]
+    chapter_lines.extend(f"story line {line}" for line in range(2, 13))
+    (novel / "chapter-0012.txt").write_text("\n".join(chapter_lines))
+    service = LibraryService(tmp_path / "novel", tmp_path / "notebook")
+
+    result = await service.read_chapters(
+        {
+            "handle": make_passage_handle(12, 7, 8),
+            "direction": "before",
+            "lines": 3,
+        },
+        ctx(),
+    )
+
+    assert result["ok"] is True
+    assert result["result"]["line_start"] == 4
+    assert result["result"]["line_end"] == 6
+    assert result["result"]["start_of_chapter"] is False
+    assert "story line 4" in result["result"]["text"]
+
+
 def test_registration(service: LibraryService):
     from weaver.agent.tools import EffectKind, ToolRegistry
 

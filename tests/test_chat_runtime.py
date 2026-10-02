@@ -98,6 +98,9 @@ async def test_web_prompt_makes_library_claim_with_truth_rule(tmp_path) -> None:
         assert "who_is" in prompt
         assert "lore_path" in prompt
         assert "source of truth" in prompt
+        assert "lead, not proof" in prompt
+        assert "scene's outcome" in prompt
+        assert "requested version" in prompt
         assert "<find_text: ...>" in prompt
         assert "angle-bracket stage directions" in prompt
         assert "blockquote" in prompt

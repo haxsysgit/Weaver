@@ -75,12 +75,29 @@ class SearchStoryInput(BaseModel):
 
 class ReadChaptersInput(BaseModel):
     handle: str = Field(min_length=1, max_length=64, description="Passage handle like novel:0098:101-123.")
+    direction: str = Field(
+        default="handle",
+        description=(
+            "Read the handle itself, or continue immediately before or after it."
+        ),
+    )
     lines: int | None = Field(
         default=None,
         ge=1,
         le=MAX_PASSAGE_LINES,
-        description="Optional line count to open (default: the whole handle range).",
+        description=(
+            "Optional line count. Required for before or after; with handle, "
+            "it limits the opened range."
+        ),
     )
+
+    @model_validator(mode="after")
+    def _check_direction(self) -> "ReadChaptersInput":
+        if self.direction not in ("handle", "before", "after"):
+            raise ValueError("direction must be one of: handle, before, after")
+        if self.direction != "handle" and self.lines is None:
+            raise ValueError("before and after need a line count")
+        return self
 
 
 class FindTextInput(BaseModel):
@@ -385,9 +402,22 @@ class LibraryService:
             }
         chapter, start, end = parsed
         try:
-            passage = self.index.open_lines(chapter, start, end)
-            if inp.lines is not None and inp.lines < (passage.line_end - passage.line_start + 1):
-                passage = self.index.open_lines(chapter, start, start + inp.lines - 1)
+            chapter_line_count = self.index.line_count(chapter)
+            if inp.direction == "before":
+                read_end = start - 1
+                read_start = max(2, start - (inp.lines or 0))
+            elif inp.direction == "after":
+                read_start = end + 1
+                read_end = min(chapter_line_count, end + (inp.lines or 0))
+            else:
+                read_start = start
+                read_end = end
+                if inp.lines is not None:
+                    read_end = min(end, start + inp.lines - 1)
+            if read_start > read_end:
+                edge = "start" if inp.direction == "before" else "end"
+                raise ValueError(f"passage is already at the chapter {edge}")
+            passage = self.index.open_lines(chapter, read_start, read_end)
         except ValueError as exc:
             return {"ok": False, "error_category": "validation", "error": str(exc)}
         except Exception:
@@ -401,13 +431,20 @@ class LibraryService:
                 "line_start": passage.line_start,
                 "line_end": passage.line_end,
                 "source_hash": passage.source_hash,
-                "passage_handle": inp.handle,
+                "passage_handle": lib.make_passage_handle(
+                    passage.chapter,
+                    passage.line_start,
+                    passage.line_end,
+                ),
             },
             "result": {
                 "chapter": passage.chapter,
                 "line_start": passage.line_start,
                 "line_end": passage.line_end,
                 "source_hash": passage.source_hash,
+                "start_of_chapter": passage.line_start == 2,
+                "end_of_chapter": passage.line_end == chapter_line_count,
+                "proof_status": "direct_source",
                 "text": passage.text,
             },
         }
@@ -683,7 +720,9 @@ def register_reading_tools(
                 "Read real novel text by passage handle (novel:NNNN:start-end) from "
                 "semantic_search, find_text or browse_chapters hits. Novel only, read-only. "
                 "Use whenever the answer needs the actual prose: verify, quote, or follow "
-                "a scene to its end."
+                "a scene to its end. Use direction 'before' or 'after' with lines to "
+                "continue from a hit. Keep reading until the outcome is supported; "
+                "end_of_chapter tells you when to inspect the next chapter."
             ),
             parameters=ReadChaptersInput.model_json_schema(),
             handler=service.read_chapters,

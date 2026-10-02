@@ -2,9 +2,9 @@
 
 ## Status
 
-Checkpoint one is complete through the baseline and retrieval proposal. The
-production reading path has not changed. Work is stopped at the owner baseline
-and retrieval gate.
+Checkpoint one was accepted by the owner. Checkpoint two's retrieval and
+direct-rereading repair is implemented and locally verified. Checkpoint three
+is next.
 
 ## Development and holdout boundary
 
@@ -105,7 +105,12 @@ not a whole-novel accuracy score.
 
 ## Proposed reading recipes
 
-These are checkpoint-two hypotheses, not accepted production policy.
+The owner accepted these as the checkpoint-two direction. The web reading
+workflow now selects the smallest suitable finder, treats searches and story
+maps as leads, requires direct novel support, follows events through their
+outcome, checks requested character versions, opens both sides of a
+contradiction, and stops only when each answer part is supported or named as a
+gap.
 
 | Reading work | Smallest proposed recipe | Stop rule |
 | --- | --- | --- |
@@ -118,6 +123,44 @@ These are checkpoint-two hypotheses, not accepted production policy.
 | Interpretation or theory | collect the minimum canon constraints, counterevidence, and gaps | canon is complete enough for a labelled take |
 | Canon-grounded what-if | establish powers, motives, setting, and timeline before invention | every invented event is labelled and respects the canon constraints |
 | Follow-up or pushback | resolve the referent and prior positions before new reading | the current challenge and relevant prior take are both answered |
+
+## Checkpoint two: retrieval and direct rereading
+
+Seven private cases were added under ignored owner-only state after reading the
+bounded source chapters to their ends. They cover exact phrase and speaker
+context, alias identity, co-occurrence, event reconstruction, chapter
+neighborhoods, multi-chapter scene resolution, correction, contradiction,
+timeline, character version, and relationships. Their questions and source
+text are absent from public deliverables and tests.
+
+The isolated failure was in direct reading: `read_chapters` could reopen or
+shorten a hit but could not continue before or after it. A 20-line packet halo
+could therefore stop before a scene's outcome, and the tool gave no explicit
+signal that more of the chapter remained.
+
+The smallest repair extends the existing reader rather than adding a new tool:
+
+- `direction: "before"` and `direction: "after"` continue from an existing
+  passage handle, with the existing 200-line ceiling;
+- every returned durable handle names the lines actually opened;
+- `start_of_chapter` and `end_of_chapter` expose whether more chapter text
+  remains;
+- `proof_status: "direct_source"` distinguishes an opened passage from a
+  search lead;
+- the tool description tells the model to continue through the outcome and
+  inspect the next chapter when necessary.
+
+The first private proof run reported 5 of 7 because its expected chapter end
+used `wc -l`. One source file has no trailing newline, so that command reported
+216 while the actual final line is 217. The mismatch was preserved, checked
+against the source, and corrected in the private case record. The second run
+passed all 7 of 7 cases, including both multi-chapter LO49 cases.
+
+No semantic, sparse, notebook, graph-ranking, or global hybrid algorithm was
+changed. The frozen dense baseline therefore remains the comparison point.
+Existing finder mechanics already located the new exact, alias,
+co-occurrence, timeline, and relationship leads; the measured missing
+capability was reading beyond the lead to direct proof and scene resolution.
 
 ## Proposed evaluation measures
 
