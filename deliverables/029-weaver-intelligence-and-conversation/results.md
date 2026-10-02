@@ -3,8 +3,9 @@
 ## Status
 
 Checkpoint one was accepted by the owner. Checkpoint two's retrieval and
-direct-rereading repair is implemented and locally verified. Checkpoint three
-is next.
+direct-rereading repair is implemented and locally verified. Checkpoint three's
+ephemeral evidence packet and conversation projection are implemented and
+stopped at the owner inspection gate.
 
 ## Development and holdout boundary
 
@@ -41,7 +42,7 @@ retrieval strategy.
 The audit also found unresolved legacy budget drift:
 
 - stored history is capped at 200,000 approximate tokens;
-- final synthesis keeps the last three owner and Weaver exchanges;
+- final synthesis kept the last three owner and Weaver exchanges at baseline;
 - the reading packet always uses the Ascended cap of 360,000 characters,
   regardless of the selected reading tier;
 - packet assembly expands opened passages by 20 lines on each side and keeps
@@ -56,6 +57,10 @@ of 700,000 characters and worsen the conflict with the 120 KiB sponsored
 ceiling. Checkpoint one therefore records the mismatch without changing the
 reading path. Checkpoint two should replace the legacy tier caps with one
 measured evidence-packet budget shared by sponsored and BYOK turns.
+
+Checkpoint three resolves that recorded packet mismatch with one 24,000-
+character evidence budget for both access paths and a compact conversation
+projection instead of three full exchanges.
 
 ## Current retrieval baseline
 
@@ -185,12 +190,12 @@ reading failure:
 
 ## Context, conversation, answer, and cost baseline
 
-The current system has a canonical conversation ledger, a 200,000-token
-history assembler, three recent exchanges in final synthesis, an ephemeral
-reading packet, deterministic fake profiles, and safe provider usage metadata.
-It does not yet have a turn brief, claim-to-source evidence board, explicit
-scene-completion check, durable conversation projection, answer blueprint, or
-quote-aware style inspection.
+At checkpoint one, the system had a canonical conversation ledger, a
+200,000-token locate-history assembler, three recent exchanges in final
+synthesis, an unstructured ephemeral reading packet, deterministic fake
+profiles, and safe provider usage metadata. It did not have a turn brief,
+claim-to-source evidence board, explicit gap record, or compact conversation
+projection.
 
 No live answer-quality baseline was run in checkpoint one. Plan 028's live run
 proved provider access and accounting, not fiction intelligence. A meaningful
@@ -198,17 +203,73 @@ live comparison requires the owner to freeze the cases, maximum calls, and
 dollar ceiling first. Until then, quality, end-to-end latency, answer-token
 use, and repair-call value remain unmeasured rather than estimated.
 
+## Checkpoint three: evidence and conversation continuity
+
+The final reading seam now builds two ephemeral projections.
+
+The turn brief is rebuilt from canonical conversation items on every turn. It
+contains the actual ask, linked message ids, the prior reader and Weaver
+positions, whether prior context is required, explicit timeline or version
+signals, whether the reader is challenging the prior answer, and the answer
+obligation. Each position is bounded to 2,000 characters. The final call sends
+the current question, candidate, compact brief, and evidence packet instead of
+three full exchanges. A restart test proves the same prior positions are
+reconstructed after closing and reopening the conversation store.
+
+The evidence board is rebuilt from current tool results and the candidate. It
+records direct chapter and line sources, notebook lead chapters, candidate
+claims, chapter citations per claim, unopened citations, uncited claims, and
+whether each opened passage reached the chapter boundary. It states explicitly
+that a chapter boundary is not proof of scene resolution. The final reader must
+judge the outcome from the prose and keep any remaining gap visible.
+
+One packet budget now serves sponsored and BYOK turns:
+
+- maximum evidence packet: 24,000 characters;
+- direct novel evidence has priority over notebook leads;
+- the board and spoiler framing survive packet trimming;
+- old tool transcripts and full prior exchanges are absent from the final
+  request;
+- packets, boards, briefs, candidates, and private prose remain ephemeral.
+
+A real owner-only packet was inspected against the two-chapter LO49 correction
+case. Public-safe metadata from that inspection:
+
+- packet size: 5,845 of 24,000 characters;
+- direct sources: chapter 900 lines 185 to 217 and chapter 901 lines 3 to 13;
+- candidate claims: one, mapped to direct source;
+- unsupported chapters: none;
+- uncited claims: none;
+- chapter 900 boundary reached; chapter 901 boundary not reached;
+- prior context required and reader challenge detected;
+- message links preserved for the current ask and both prior positions;
+- spoiler verdict: full at the test reader position.
+
+This is a real evidence packet, not an automated correctness verdict. The
+source was read straight through for the bounded case, while the board records
+what machinery can know and leaves literary scene completion to reading
+judgment.
+
+Checkpoint-three verification passed on 2026-10-02:
+
+- 79 retrieval, packet, runtime, and proof tests;
+- 137 turn and conversation tests;
+- 65 web tests;
+- Ruff and `git diff --check`.
+
 ## Owner gate
 
-Checkpoint two remains blocked until the owner accepts or changes:
+Checkpoint four remains blocked until the owner accepts or changes:
 
-1. the 31-case development boundary and the contaminated nine-case exclusion;
-2. the missing question categories that need new bounded private cases;
-3. the reading recipes and separated discovery, proof, completion,
-   conversation, and efficiency measures;
-4. the later bounded live development request and dollar ceiling.
+1. the compact turn-brief fields and 2,000-character position bounds;
+2. citation-level claim mapping, explicit missing-citation and unopened-chapter
+   gaps, and honest chapter-boundary semantics;
+3. the 24,000-character shared evidence-packet ceiling and direct-source
+   priority;
+4. rebuilding the projection from canonical items instead of persisting a
+   second conversation memory store.
 
 ## Later checkpoints
 
-Context continuity, answer modes, voice, inspection, multi-turn proof,
+Answer modes, voice, publication inspection, repeated multi-turn proof,
 independent review, and the Plan 030 handoff remain pending.

@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 import uuid
 from collections.abc import Awaitable
 from dataclasses import dataclass, field, replace
@@ -17,6 +18,7 @@ from weaver.agent.messages import (
     ConversationMessage,
     ToolCallMessage,
     ToolResultMessage,
+    UserMessage,
     project_messages,
 )
 from weaver.agent.tools import (
@@ -94,6 +96,109 @@ PacketBuilder = Callable[[list[ToolResult], str], Awaitable[str | None]]
 ToolEventCallback = Callable[[str, str, str], Awaitable[None]]
 
 
+@dataclass(frozen=True, slots=True)
+class TurnBrief:
+    """Ephemeral projection over canonical conversation messages."""
+
+    actual_ask: str
+    ask_message_id: str
+    prior_reader_position: str
+    prior_reader_message_id: str
+    prior_weaver_position: str
+    prior_weaver_message_id: str
+    needs_prior_context: bool
+    version_signals: tuple[str, ...]
+    reader_challenges_prior_answer: bool
+
+
+VERSION_SIGNAL_RE = re.compile(
+    r"\b(current|prime|before|after|chapter\s+\d+\+?|at that point|back then)\b",
+    re.IGNORECASE,
+)
+FOLLOW_UP_PREFIXES = (
+    "and ",
+    "but ",
+    "how about ",
+    "what about ",
+    "why then ",
+)
+DISAGREEMENT_MARKERS = (
+    "you're wrong",
+    "you are wrong",
+    "i disagree",
+    "that's wrong",
+    "that is wrong",
+    "no,",
+)
+
+
+def _compact_position(content: str, *, limit: int = 2_000) -> str:
+    text = content.strip()
+    if len(text) <= limit:
+        return text
+    half = limit // 2
+    return text[:half].rstrip() + " [...] " + text[-half:].lstrip()
+
+
+def _build_turn_brief(history: list[ConversationMessage]) -> TurnBrief:
+    user_messages = [
+        message
+        for message in history
+        if isinstance(message, UserMessage) and message.content.strip()
+    ]
+    assistant_messages = [
+        message
+        for message in history
+        if isinstance(message, AssistantMessage) and message.content.strip()
+    ]
+    current = user_messages[-1] if user_messages else UserMessage()
+    prior_reader = user_messages[-2] if len(user_messages) > 1 else UserMessage()
+    prior_weaver = assistant_messages[-1] if assistant_messages else AssistantMessage()
+    ask_casefolded = current.content.strip().casefold()
+    reader_challenges = any(
+        marker in ask_casefolded for marker in DISAGREEMENT_MARKERS
+    )
+    version_signals = tuple(
+        dict.fromkeys(
+            match.group(0).casefold()
+            for match in VERSION_SIGNAL_RE.finditer(current.content)
+        )
+    )
+    return TurnBrief(
+        actual_ask=_compact_position(current.content),
+        ask_message_id=current.message_id,
+        prior_reader_position=_compact_position(prior_reader.content),
+        prior_reader_message_id=prior_reader.message_id,
+        prior_weaver_position=_compact_position(prior_weaver.content),
+        prior_weaver_message_id=prior_weaver.message_id,
+        needs_prior_context=(
+            reader_challenges
+            or ask_casefolded.startswith(FOLLOW_UP_PREFIXES)
+            or any(prefix in ask_casefolded for prefix in FOLLOW_UP_PREFIXES)
+        ),
+        version_signals=version_signals,
+        reader_challenges_prior_answer=reader_challenges,
+    )
+
+
+def _format_turn_brief(brief: TurnBrief) -> str:
+    version_signals = "; ".join(brief.version_signals) or "none explicit"
+    prior_reader = brief.prior_reader_position or "none"
+    prior_weaver = brief.prior_weaver_position or "none"
+    return (
+        "--- turn brief ---\n"
+        f"actual ask: {brief.actual_ask}\n"
+        f"prior reader position: {prior_reader}\n"
+        f"prior Weaver position: {prior_weaver}\n"
+        f"needs prior context: {'yes' if brief.needs_prior_context else 'no'}\n"
+        f"version signals: {version_signals}\n"
+        "reader challenges prior answer: "
+        f"{'yes' if brief.reader_challenges_prior_answer else 'no'}\n"
+        "answer obligation: answer the actual ask and address any visible "
+        "challenge without silently changing the earlier position."
+    )
+
+
 async def _complete_buffered_stream(
     model_layer: ModelLayer,
     model: ModelSpec,
@@ -156,13 +261,6 @@ async def _publish_deltas(
 # headroom too; the answer call keeps the bigger budget.
 ANSWER_MAX_OUTPUT_TOKENS = 16384
 TOOL_CALL_MAX_OUTPUT_TOKENS = 8192
-
-# Plan 15 (owner 2026-08-08): the final reading call keeps conversation
-# continuity without letting an old exchange dominate. The window is the
-# last three owner/assistant exchanges (the immediate question plus two
-# previous Q&A pairs); anything older is dropped and only survives in
-# the packet.
-SYNTHESIS_HISTORY_EXCHANGES = 3
 
 # A thinking model sometimes slips out of the structured tool-call
 # protocol and writes its call as prose ('<tool calls>' plus a JSON
@@ -397,43 +495,6 @@ def _tool_calls_are_safe(
     return True
 
 
-def _recent_exchanges(
-    history: list[ConversationMessage],
-    *,
-    max_exchanges: int,
-) -> list[ConversationMessage]:
-    """The last ``max_exchanges`` owner/assistant exchanges, in order.
-
-    Tool-call and tool-result messages are skipped (their evidence lives
-    in the packet; carrying old tool transcripts bloats the context). The
-    returned window always ends at the current question.
-    """
-    # Keep user messages and content-bearing assistant answers only.
-    # Tool-use assistants from earlier turns (tool_calls, empty content)
-    # must never reach the final reading wire: their tool results are skipped
-    # here, so keeping them orphaned the tool_calls and DeepSeek 400'd
-    # (invalid_request) exactly when holding a conversation.
-    messages = [
-        message
-        for message in history
-        if message.kind == "user"
-        or (
-            message.kind == "assistant"
-            and message.content
-            and not message.tool_calls
-        )
-    ]
-    window: list[ConversationMessage] = []
-    user_count = 0
-    for message in reversed(messages):
-        window.append(message)
-        if message.kind == "user":
-            user_count += 1
-            if user_count >= max_exchanges:
-                break
-    return list(reversed(window))
-
-
 def _known_call_ids(
     history: list[ConversationMessage],
 ) -> set[str]:
@@ -571,27 +632,36 @@ async def run_turn(
         )
         if in_final_phase:
             # The packet is ephemeral context for one fail-soft final
-            # reading call. This call must NOT carry the
-            # whole conversation history (an older exchange's answer can
-            # dominate the model and it replies to the wrong question),
-            # but it also must not forget the conversation (follow-ups
-            # like "and what about the 6th daemon?" need the previous
-            # exchange). Curate the recent exchanges, validated candidate,
-            # and packet. Current-turn tool transcripts stay out because
-            # their evidence has already been folded into the packet.
-            recent = _recent_exchanges(
-                history,
-                max_exchanges=SYNTHESIS_HISTORY_EXCHANGES,
+            # reading call. The current question and compact turn brief carry
+            # the conversation state; old exchanges and current tool transcripts
+            # stay out because their positions and evidence are already projected.
+            current_owner = next(
+                (
+                    message
+                    for message in reversed(history)
+                    if isinstance(message, UserMessage)
+                ),
+                None,
             )
+            final_history: list[ConversationMessage] = []
+            if current_owner is not None:
+                final_history.append(current_owner)
+            final_history.append(validated_candidate)
             request_messages = project_messages(
                 system_prompt=system_prompt,
-                history=[*recent, validated_candidate],
+                history=final_history,
             )
             request_messages = [
                 *request_messages,
                 ModelMessage(
                     role="system",
-                    content=final_packet + "\n\n" + FINAL_ANSWER_INSTRUCTION,
+                    content=(
+                        _format_turn_brief(_build_turn_brief(history))
+                        + "\n\n"
+                        + final_packet
+                        + "\n\n"
+                        + FINAL_ANSWER_INSTRUCTION
+                    ),
                 ),
             ]
         if tool_budget is not None and not in_final_phase:

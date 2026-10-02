@@ -12,11 +12,12 @@ module assembles one ephemeral reading packet from the turn's evidence:
   position and knob (never a model argument)
 
 The packet is plain text appended to the final toolless reading call and
-is never persisted. Tier picks the size cap.
+is never persisted. One shared cap bounds every request path.
 """
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from weaver.spoilers.judge import Citation, SpoilerJudge, Verdict
@@ -24,9 +25,10 @@ from weaver.spoilers.judge import Citation, SpoilerJudge, Verdict
 # Lines added above and below each opened passage when re-reading it.
 EXPAND_LINES = 20
 
-# Char caps per tier; rough 3.5 chars/token. Packet assembly trims the
-# oldest passages first when over cap.
-PACKET_CHAR_CAPS = {"awakened": 180_000, "ascended": 360_000, "transcendent": 700_000}
+# One evidence budget for sponsored and BYOK turns. The sponsored request
+# boundary is 120 KiB, so 24K leaves room for the prompt, compact turn brief,
+# candidate answer, tool schema framing, and JSON overhead.
+PACKET_CHAR_CAP = 24_000
 
 MAX_NOTEBOOK_STATEMENTS = 5
 MAX_OPENED_PASSAGES = 12
@@ -54,6 +56,45 @@ VERDICT_FRAMING = {
 class Packet:
     text: str
     verdict: Verdict
+    board: "EvidenceBoard"
+
+
+@dataclass(frozen=True)
+class EvidenceSource:
+    chapter: int
+    line_start: int
+    line_end: int
+    chapter_end_reached: bool | None
+
+
+@dataclass(frozen=True)
+class ClaimEvidence:
+    index: int
+    cited_chapters: tuple[int, ...]
+    unsupported_chapters: tuple[int, ...]
+    support: str
+
+
+@dataclass(frozen=True)
+class EvidenceBoard:
+    """Ephemeral candidate-to-source map for the final reading call."""
+
+    direct_sources: tuple[EvidenceSource, ...]
+    lead_chapters: tuple[int, ...]
+    cited_chapters: tuple[int, ...]
+    unsupported_chapters: tuple[int, ...]
+    uncited_claims: tuple[int, ...]
+    claims: tuple[ClaimEvidence, ...]
+
+
+CITATION_RE = re.compile(
+    r"\bch(?:apter)?\.?\s*(\d{1,5})(?:\s*[-\u2013]\s*(\d{1,5}))?",
+    re.IGNORECASE,
+)
+CLAIM_SPLIT_RE = re.compile(
+    r"(?<!\bch\.)(?<!chapter\.)(?<=[.!?])\s+|\n+",
+    re.IGNORECASE,
+)
 
 
 def _beat_lines(judge: SpoilerJudge | None, chapter: int) -> str:
@@ -96,13 +137,173 @@ def _collect_evidence(tool_results: list) -> tuple[list[tuple[int, int, int]], l
     return handles, notebook_hits
 
 
+def _candidate_chapters(candidate: str) -> tuple[int, ...]:
+    chapters: set[int] = set()
+    for match in CITATION_RE.finditer(candidate):
+        start = int(match.group(1))
+        end_text = match.group(2)
+        if end_text is None:
+            chapters.add(start)
+            continue
+        end = int(end_text)
+        if end < start or end - start > 20:
+            chapters.update((start, end))
+            continue
+        chapters.update(range(start, end + 1))
+    return tuple(sorted(chapters))
+
+
+def _candidate_claims(candidate: str) -> tuple[str, ...]:
+    return tuple(
+        claim.strip()
+        for claim in CLAIM_SPLIT_RE.split(candidate.strip())
+        if claim.strip()
+    )
+
+
+def _build_evidence_board(
+    tool_results: list,
+    candidate: str,
+    notebook_hits: list[dict],
+) -> EvidenceBoard:
+    direct_sources: list[EvidenceSource] = []
+    seen_sources: set[tuple[int, int, int]] = set()
+    for tool_result in tool_results:
+        payload = tool_result.result or {}
+        evidence = payload.get("durable_evidence")
+        if not isinstance(evidence, dict) or not evidence.get("passage_handle"):
+            continue
+        key = (
+            int(evidence["chapter"]),
+            int(evidence["line_start"]),
+            int(evidence["line_end"]),
+        )
+        if key in seen_sources:
+            continue
+        seen_sources.add(key)
+        opened_result = payload.get("result")
+        chapter_end_reached = None
+        if isinstance(opened_result, dict):
+            value = opened_result.get("end_of_chapter")
+            if isinstance(value, bool):
+                chapter_end_reached = value
+        direct_sources.append(
+            EvidenceSource(
+                chapter=key[0],
+                line_start=key[1],
+                line_end=key[2],
+                chapter_end_reached=chapter_end_reached,
+            )
+        )
+
+    opened_chapters = {source.chapter for source in direct_sources}
+    claims: list[ClaimEvidence] = []
+    for index, claim in enumerate(_candidate_claims(candidate), start=1):
+        claim_chapters = _candidate_chapters(claim)
+        unsupported_claim_chapters = tuple(
+            chapter for chapter in claim_chapters if chapter not in opened_chapters
+        )
+        if not claim_chapters:
+            support = "missing_citation"
+        elif unsupported_claim_chapters:
+            support = "unopened_chapter"
+        else:
+            support = "direct_source"
+        claims.append(
+            ClaimEvidence(
+                index=index,
+                cited_chapters=claim_chapters,
+                unsupported_chapters=unsupported_claim_chapters,
+                support=support,
+            )
+        )
+    cited_chapters = tuple(
+        sorted({chapter for claim in claims for chapter in claim.cited_chapters})
+    )
+    unsupported = tuple(
+        sorted(
+            {
+                chapter
+                for claim in claims
+                for chapter in claim.unsupported_chapters
+            }
+        )
+    )
+    uncited_claims = tuple(
+        claim.index for claim in claims if claim.support == "missing_citation"
+    )
+    lead_chapters = tuple(
+        sorted(
+            {
+                int(hit["chapter"])
+                for hit in notebook_hits
+                if hit.get("chapter") is not None
+            }
+        )
+    )
+    return EvidenceBoard(
+        direct_sources=tuple(direct_sources),
+        lead_chapters=lead_chapters,
+        cited_chapters=cited_chapters,
+        unsupported_chapters=unsupported,
+        uncited_claims=uncited_claims,
+        claims=tuple(claims),
+    )
+
+
+def _format_evidence_board(board: EvidenceBoard) -> str:
+    direct = ", ".join(
+        f"chapter {source.chapter} lines {source.line_start}-{source.line_end}"
+        for source in board.direct_sources
+    ) or "none"
+    leads = ", ".join(f"chapter {chapter}" for chapter in board.lead_chapters) or "none"
+    citations = ", ".join(
+        f"chapter {chapter}" for chapter in board.cited_chapters
+    ) or "none"
+    gap_parts = [
+        f"claim {index} has no chapter citation" for index in board.uncited_claims
+    ]
+    if board.unsupported_chapters:
+        gap_parts.extend(
+            f"chapter {chapter} was not opened"
+            for chapter in board.unsupported_chapters
+        )
+    gaps = ", ".join(gap_parts) or "none"
+    claim_map = ", ".join(
+        f"claim {claim.index}: {claim.support}"
+        for claim in board.claims
+    ) or "none"
+    boundaries = ", ".join(
+        f"chapter {source.chapter}: "
+        + (
+            "chapter end reached"
+            if source.chapter_end_reached is True
+            else "more chapter text remains"
+            if source.chapter_end_reached is False
+            else "chapter boundary unknown"
+        )
+        for source in board.direct_sources
+    ) or "none"
+    return (
+        "--- evidence board ---\n"
+        f"direct sources: {direct}\n"
+        f"notebook leads: {leads}\n"
+        f"candidate citations: {citations}\n"
+        f"claim support: {claim_map}\n"
+        f"citation gaps: {gaps}\n"
+        f"scene boundaries: {boundaries}\n"
+        "scene resolution: requires reading judgment; a chapter boundary is not proof\n"
+        "Use direct sources for canon. Leads only locate. Keep gaps visible."
+    )
+
+
 def build_packet(
     service,
     tool_results: list,
     *,
+    candidate: str = "",
     user_chapter: int | None = None,
     spoiler_mode: str = "protect",
-    tier: str = "ascended",
     judge: SpoilerJudge | None = None,
     cap_override: int | None = None,
 ) -> Packet | None:
@@ -115,7 +316,9 @@ def build_packet(
     if not handles and not notebook_hits:
         return None
 
-    cap = cap_override or PACKET_CHAR_CAPS.get(tier, PACKET_CHAR_CAPS["ascended"])
+    board = _build_evidence_board(tool_results, candidate, notebook_hits)
+
+    cap = cap_override or PACKET_CHAR_CAP
     parts: list[str] = []
     citations: list[Citation] = []
 
@@ -134,8 +337,6 @@ def build_packet(
             f"{_beat_lines(judge, chapter)}{passage.text}"
         )
         citations.append(Citation(chapter=chapter))
-    parts.extend(opened)
-
     # 2. Top notebook statements surfaced by the searches.
     statements = []
     for h in notebook_hits[:MAX_NOTEBOOK_STATEMENTS]:
@@ -151,7 +352,7 @@ def build_packet(
         citations.append(
             Citation(chapter=int(h["chapter"]), statement_id=h.get("statement_id"))
         )
-    parts.extend(statements)
+    board_text = _format_evidence_board(board)
 
     # 3. Judge verdict + framing.
     if judge is None:
@@ -162,17 +363,25 @@ def build_packet(
         no_spoilers=spoiler_mode == "none",
     )
     framing = VERDICT_FRAMING[verdict.mode].format(chapter=user_chapter)
-    parts.append(f"--- spoiler framing ---\n{framing}")
+    framing_text = f"--- spoiler framing ---\n{framing}"
 
-    # 4. Size cap: keep the framing and statements, trim old passages.
+    # 4. Size cap: direct novel evidence outranks notebook leads. The evidence
+    # board and spoiler framing always remain so a trimmed packet stays honest.
+    fixed = [board_text, framing_text]
+    kept_opened: list[str] = []
+    for passage in reversed(opened):
+        candidate_parts = [passage, *kept_opened, *fixed]
+        if len("\n\n".join(candidate_parts)) > cap:
+            continue
+        kept_opened.insert(0, passage)
+
+    kept_statements: list[str] = []
+    for statement in statements:
+        candidate_parts = [*kept_opened, *kept_statements, statement, *fixed]
+        if len("\n\n".join(candidate_parts)) > cap:
+            continue
+        kept_statements.append(statement)
+
+    parts = [*kept_opened, *kept_statements, *fixed]
     text = "\n\n".join(parts)
-    if len(text) > cap:
-        kept = [parts[-1]]  # framing
-        kept.extend(statements)
-        for p in reversed(opened):
-            if len("\n\n".join(kept)) + len(p) + 2 > cap:
-                break
-            kept.append(p)
-        kept.reverse()
-        text = "\n\n".join(kept)
-    return Packet(text=text, verdict=verdict)
+    return Packet(text=text, verdict=verdict, board=board)

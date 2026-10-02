@@ -21,6 +21,16 @@ continuation and reports chapter boundaries. The corrected private proof is
 7 of 7. Global retrieval ranking remains unchanged because the cases did not
 justify another ranking formula.
 
+**Checkpoint three implemented 2026-10-02.** The final-reading seam now derives
+a bounded turn brief from canonical conversation items and a citation-level
+evidence board from current tool results. It sends only the current question,
+candidate, brief, and a direct-source-first packet capped at 24,000 characters.
+The projection survives a conversation-store restart because it is rebuilt
+from linked canonical items. Nothing new is persisted. A real private packet
+used 5,845 characters, mapped its cited claim to two opened chapters, exposed
+the chapter-boundary state, and kept scene resolution as reading judgment.
+Work is stopped for the owner inspection gate before answer and voice changes.
+
 ## Checkpoint one observations
 
 - The web prompt and registered tool set had drifted: `lore_path` existed but
@@ -102,9 +112,10 @@ packet size, latency, and cost separately.
 
 ## Owner gates after admission
 
-1. Inspect the frozen baseline, development boundary, question types, and
-   retrieval measures before production retrieval changes.
-2. Inspect real evidence packets and conversation traces before answer work.
+1. **Accepted 2026-10-02.** Inspect the frozen baseline, development boundary,
+   question types, and retrieval measures before production retrieval changes.
+2. **Pending.** Inspect real evidence packets and conversation traces before
+   answer work.
 3. Confirm response modes, poetic restraint, and the measured quality,
    latency, and request-cost tradeoff before keeping extra stages.
 4. Freeze the Plan 030 model-qualification contract before Plan 029 closes.

@@ -1168,12 +1168,10 @@ class TestFinalReadingPhase:
         for call in provider.calls:
             assert call.request.reasoning.enabled is True
 
-    async def test_final_reading_keeps_recent_exchanges_drops_old_ones(self) -> None:
-        # The "7 daemons" bug: the WHOLE conversation history dominated
-        # the final reading call, so the model answered the previous question
-        # instead of the one just asked. The window keeps the last few
-        # exchanges (continuity: follow-ups must know the previous Q&A)
-        # and drops everything older than that.
+    async def test_final_reading_projects_current_positions_drops_old_ones(self) -> None:
+        # The "7 daemons" bug: full conversation history dominated the final
+        # reading call. The compact brief keeps the current positions and drops
+        # older exchanges.
         layer, model, provider = scripted_layer(
             tool_response(tool_call("c1", "echo", '{"message": "a"}')),
             stop_response("Draft: located daemon statements."),
@@ -1218,11 +1216,59 @@ class TestFinalReadingPhase:
         joined = " ".join((m.content or "") for m in final_request.messages)
         assert "PACKET: daemon statements" in joined
         assert "list the 7 daemons" in joined
-        # continuity: the previous exchange stays in the window
+        # continuity: the previous Weaver position stays in the brief
         assert "Anvil gets cooked" in joined
-        # the exchange before that is beyond the window and must not leak
+        # the older exchange is outside the brief and must not leak
         assert "dark sea swallowed Nephis" not in joined
         assert final_request.tools == ()
+
+    async def test_final_reading_builds_a_compact_turn_brief_from_history(
+        self,
+    ) -> None:
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response("Draft: the comparison needs both versions."),
+            stop_response("Final: the later version wins."),
+        )
+        history = [
+            UserMessage(
+                message_id="reader-old",
+                turn_id="turn-old",
+                content="I think the earlier version wins.",
+            ),
+            AssistantMessage(
+                message_id="weaver-old",
+                turn_id="turn-old",
+                content="My take is that the earlier version lacks the later counter.",
+            ),
+            UserMessage(
+                message_id="reader-current",
+                turn_id="turn-current",
+                content="No, you're wrong. What about current Sunny after chapter 3120?",
+            ),
+        ]
+
+        async def packet_builder(results, draft):
+            return "PACKET: version evidence"
+
+        await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            history=history,
+            packet_builder=packet_builder,
+        )
+
+        final_request = provider.calls[-1].request
+        joined = "\n".join(message.content or "" for message in final_request.messages)
+        assert "--- turn brief ---" in joined
+        assert "actual ask: No, you're wrong" in joined
+        assert "prior reader position: I think the earlier version wins." in joined
+        assert "prior Weaver position: My take is that the earlier version" in joined
+        assert "version signals: current; after; chapter 3120" in joined
+        assert "needs prior context: yes" in joined
+        assert "reader challenges prior answer: yes" in joined
 
     async def test_final_reading_request_carries_the_answer_token_cap(self) -> None:
         # The daemons answer was cut mid-sentence at finish_reason=

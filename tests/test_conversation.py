@@ -657,6 +657,53 @@ async def test_send_restart_projection():
 
 
 @pytest.mark.asyncio
+async def test_final_turn_brief_rebuilds_prior_positions_after_restart():
+    """The brief is a projection over persisted items, not separate state."""
+    with tempfile.TemporaryDirectory() as tmp:
+        layer, model, provider = _fake_layer(
+            _tool_use_response("prior-call"),
+            _stop_response("My position is that the earlier version lacks the counter."),
+        )
+        sw = _open_woven(Path(tmp), layer, model, _echo_registry())
+        await sw.open()
+        try:
+            conv_id = await sw.start_conversation("I think the earlier version wins.")
+            first = await sw.send(conv_id, "Compare the two versions.")
+            assert first.exit_reason == "completed"
+        finally:
+            await sw.close()
+
+        layer2, model2, provider2 = _fake_layer(
+            _tool_use_response("followup-call"),
+            _stop_response("Draft: the later evidence changes the comparison."),
+            _stop_response("Final: the later version wins."),
+        )
+        reopened = _open_woven(Path(tmp), layer2, model2, _echo_registry())
+        await reopened.open()
+        try:
+            async def packet_builder(results, draft):
+                return "PACKET: version evidence"
+
+            result = await reopened.send(
+                conv_id,
+                "No, you're wrong. What about current Sunny after chapter 3120?",
+                packet_builder=packet_builder,
+            )
+            assert result.exit_reason == "completed"
+
+            final_request = provider2.calls[-1].request
+            joined = "\n".join(
+                message.content or "" for message in final_request.messages
+            )
+            assert "--- turn brief ---" in joined
+            assert "prior reader position: Compare the two versions." in joined
+            assert "prior Weaver position: My position is that the earlier version" in joined
+            assert "reader challenges prior answer: yes" in joined
+        finally:
+            await reopened.close()
+
+
+@pytest.mark.asyncio
 async def test_send_interrupted_run_no_auto_continue():
     """send() refuses to auto-continue an interrupted run."""
     with tempfile.TemporaryDirectory() as tmp:

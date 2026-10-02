@@ -657,16 +657,16 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         # opened passages with expanded windows plus the notebook
         # statements and spoiler framing. One toolless call may improve
         # the answer; the candidate and packet stay ephemeral.
-        async def on_packet(tool_results, _candidate: str):
+        async def on_packet(tool_results, candidate: str):
             if runtime.library is None:
                 return None
             prefs = await runtime.prefs.get() if runtime.prefs is not None else None
             packet = build_packet(
                 runtime.library,
                 tool_results,
+                candidate=candidate,
                 user_chapter=prefs.reader_chapter if prefs is not None else None,
                 spoiler_mode=prefs.spoiler_mode if prefs is not None else "protect",
-                tier="ascended",
                 judge=spoiler_judge,
             )
             return packet.text if packet is not None else None
