@@ -3,7 +3,7 @@
 | File | Purpose | Current state |
 | --- | --- | --- |
 | `plan.md` | Pointer to the canonical implementation plan | Current |
-| `learning.md` | Retrieval, context, voice, and evaluation owner gates | Drafted |
+| `learning.md` | Retrieval, context, voice, and evaluation owner gates | Admitted 2026-10-02; baseline gate pending |
 | `results.md` | Layer-by-layer quality, cost, and conversation evidence | Not started |
 | `review-ledger.md` | Independent findings, repairs, and rechecks | Not started |
 | `decision.md` | Owner's intelligence-system decision | Pending |

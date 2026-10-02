@@ -10,8 +10,8 @@
 - **Tooling:** `uv`, pytest, Ruff, existing library and retrieval experiments,
   deterministic fixtures, fake DeepSeek profiles from Plan 028, and explicit
   bounded live development runs through Plan 028's accepted access boundary.
-- **State:** drafted 2026-08-24 and amended 2026-09-23. Awaiting Plan 028
-  closure.
+- **State:** admitted 2026-10-02 by owner direction. Amended from ten slices
+  to five measured checkpoints before admission.
 - **Depends on:** Plan 028 closed with sponsored access, BYOK, usage,
   reservation, and budget contracts accepted. Plans 009, 012,
   014, 015, 017, and 018.5 remain the context, direct-reading, retrieval,
@@ -75,6 +75,16 @@
 13. (2026-08-24) The three Foundational Reader Trials remain the finished
     product bar. Development evidence may prepare for them, but only the owner
     can accept them in fresh conversations during Plan 030.
+14. (2026-10-02) Plan 029 runs as five owner-visible checkpoints: baseline,
+    retrieval and rereading, evidence and conversation, answer and voice, then
+    multi-turn proof and review.
+15. (2026-10-02) The default turn remains one bounded reading loop plus one
+    final answer call. An additional planning, inspection, or repair call stays
+    only when measured cases prove enough quality gain to justify its request,
+    token, latency, and sponsored-cost increase.
+16. (2026-10-02) Reuse the current `run_turn`, reading tools, packet-builder
+    seam, `ContextAssembler`, and conversation ledger. Add the smallest missing
+    record at each measured failure; do not build every proposed layer upfront.
 
 ## Scope
 
@@ -82,6 +92,9 @@
   reading loop, reading tools, retrieval index, exact finders, notebook,
   spoiler judge, reading packet, conversation storage, preferences, model
   capability input, and visible response publication.
+- Reuse the accepted turn loop, context assembler, reading tools, packet seam,
+  and canonical conversation records. New records begin ephemeral and become
+  durable only when restart-safe conversation evidence requires it.
 - Build a versioned development set covering factual recall, exact quote and
   chapter finding, event reconstruction, aliases, chronology, character
   versions, power comparisons, contradictions, interpretation, theories,
@@ -185,6 +198,10 @@
   answers in the system prompt, or tuning only against those three questions.
 - Unlimited planner, critic, judge, or rewrite calls. Every model call has a
   named job, fixed ceiling, and measured benefit.
+- Separate model calls for the turn brief, reading plan, evidence board,
+  answer blueprint, claim inspection, and style inspection unless the
+  checkpoint evidence proves that a specific call improves the agreed cases
+  enough to earn its cost.
 - Rewriting direct novel quotations to fit Weaver's style.
 - UI redesign, provider setup UI, deployment topology, native mobile apps, or
   unrelated story-notebook expansion.
@@ -250,6 +267,9 @@
   the failure and reduce or restructure the packet. Bigger is not a pass.
 - If a new model call does not improve the agreed cases enough to justify its
   request and token cost, remove it or ask the owner before keeping it.
+- If a checkpoint starts building an unproven layer before the preceding
+  baseline identifies the failure it fixes, stop and return to the measured
+  case.
 - If style cleanup changes a direct quote, citation, factual meaning, canon
   label, or uncertainty, STOP and restore the pre-style validated answer.
 - If an automated judge tries to settle literary interpretation or accept a
@@ -268,70 +288,62 @@
 
 ## Slices
 
-1. **Plan admission and baseline freeze**
-   - Review scope, budget, evaluation boundary, private-source limits, and
-     owner gates after Plan 028 closes. Record admission before experiments.
-   - Freeze the current turn, retrieval, context, conversation, packet, answer,
-     and request-cost baselines on the development set.
+1. **Checkpoint one: admit and freeze the honest baseline**
+   - Record admission, recheck the private-source boundary, and reuse the
+     existing whole-novel development set plus bounded multi-turn cases. Keep
+     the three Foundational Reader Trials and Plan 030 holdouts separate.
+   - Freeze current retrieval, direct reading, context, packet, conversation,
+     answer, latency, request, token, and cost evidence. Reconcile prompt and
+     active-tool drift before judging quality.
+   - Group failures by the reading work they require and propose the smallest
+     question-type recipes and evaluation measures. STOP for the owner baseline
+     and retrieval gate before changing the production reading path.
 
-2. **Learn the fiction retrieval problem**
-   - Group development questions by the reading work they require and inspect
-     exact failures in the current finders, index, notebook, graph, reranking,
-     windows, timeline handling, and stopping behavior.
-   - Read bounded private packets straight through for each admitted case and
-     record public-safe locations and failure categories.
-   - Propose the reading-plan recipes and evaluation measures. STOP for the
-     owner retrieval gate before changing the production reading path.
+2. **Checkpoint two: repair retrieval and direct rereading**
+   - Add failing cases for exact phrases, aliases, co-occurrence, versions,
+     timelines, relationships, contradictions, neighborhoods, and scene
+     resolutions using bounded private packets read straight through.
+   - Improve the existing exact, semantic, notebook, graph, browse, and reader
+     tools only where isolated cases prove a gain. Add explicit gaps, conflicts,
+     stopping rules, and rereading through the needed resolution.
+   - Compare each change against the frozen baseline. Remove additions that do
+     not improve direct chapter discovery and proof within the agreed budget.
 
-3. **Build the turn brief and reading plans**
-   - Add failing tests for intent, dialogue acts, referents, versions,
-     timelines, spoiler boundaries, prior positions, and answer obligations.
-   - Build the versioned turn brief and deterministic question-type reading
-     recipes, with explicit uncertainty and no provider names.
+3. **Checkpoint three: build evidence packets and conversation continuity**
+   - Add the minimum structured turn brief required by measured failures:
+     actual ask, referents, versions, timeline, spoiler boundary, prior
+     position, disagreement, and answer obligations, with uncertainty explicit.
+   - Build an ephemeral claim-to-source evidence board from real tool results,
+     then derive the smallest useful packet with contradictions, canon and
+     interpretation labels, source locations, and scene completeness.
+   - Preserve only proven follow-up state from canonical item links. Prove
+     restart-safe positions, versions, citations, and unresolved disagreement
+     without persisting packets, raw prose, rejected drafts, or reasoning.
+   - STOP for owner inspection of real context packets and conversation traces.
 
-4. **Build measured retrieval and direct rereading**
-   - Improve exact, semantic, hybrid, alias, co-occurrence, timeline,
-     neighborhood, notebook, and story-map selection only where isolated cases
-     prove the benefit.
-   - Add reranking, direct rereading through scene resolution, and explicit gap
-     and contradiction detection. Keep failures in the report.
+4. **Checkpoint four: build answer modes, Weaver voice, and measured checks**
+   - Owner-review public-safe examples for direct recall, reconstruction,
+     discussion, theory and what-if, and correction before production prompt
+     changes.
+   - Extend the existing final-reading call with the evidence packet, response
+     mode, required claims, citations, canon and invention labels, uncertainty,
+     poetic restraint, and the prior point that needs an answer.
+   - Add quote-safe publication checks for missing obligations, unsupported
+     chapters, spoilers, exposed machinery, textual tool calls, em dashes, and
+     generic AI prose. Keep at most one specific repair call, and only if its
+     measured gain earns the added request.
+   - Compare current, retrieval-only, evidence-packet, conversation, and final
+     inspection paths one layer at a time. STOP for the owner quality, latency,
+     and request-cost gate.
 
-5. **Build the evidence board and context engine**
-   - Add claim, citation, kind, version, conflict, and missing-proof records for
-     the current turn, then derive the smallest useful reading packet.
-   - Build the living conversation brief from canonical item links and prove
-     restart-safe follow-up continuity without carrying private transient state.
-   - STOP for owner inspection of real context packets before synthesis work.
-
-6. **Build answer blueprints and Weaver voice**
-   - Define and owner-review the direct recall, reconstruction, discussion,
-     theory/what-if, and correction modes using public-safe synthetic examples.
-   - Build answer blueprints from evidence and conversation obligations, then
-     write the response contract for citations, canon/take/invention labels,
-     rhythm, poetic restraint, and natural pushback.
-
-7. **Build publication inspection and bounded repair**
-   - Add content, citation, spoiler, quote, machinery, em-dash, and style checks
-     before publication. Keep mechanical cleanup limited to Weaver prose.
-   - Add one specific bounded repair path and preserve the last validated
-     answer when a rewrite fails or cancellation wins.
-
-8. **Build the measured DeepSeek execution profile**
-   - Compare strict and combined task sizes through the same DeepSeek boundary.
-   - Measure accuracy, continuity, latency, requests, tokens, packet size, and
-     repair rate. Remove stages that do not earn their cost.
-
-9. **Use and inspect multi-turn Weaver**
-   - Run repeated development conversations for canon reconstruction,
-     time-aware comparison, interpretation, reader pushback, correction,
-     theory, and what-if changes through fake and owner-approved live DeepSeek.
-   - Keep the Foundational Reader Trials unaccepted and reserve final blind
-     DeepSeek qualification for Plan 030.
-
-10. **Review, owner decision, and handoff**
-    - Run the verification floor and staged-file private-text audit.
-    - Complete both independent reviews, repair findings with focused tests,
-      and recheck the complete affected slices.
-    - Present retrieval gains, conversation evidence, voice examples, request
-      cost, failed hypotheses, and the frozen Plan 030 qualification contract.
-      Stop for the owner's dated decision, then close Plan 029.
+5. **Checkpoint five: use, review, decide, and hand off**
+   - Run repeated fake and owner-approved bounded live conversations for canon
+     reconstruction, time-aware comparison, interpretation, pushback,
+     correction, theory, what-if changes, and multi-turn follow-ups.
+   - Run the verification floor and staged private-text audit. Complete both
+     independent reviews, repair findings with focused checks, and rerun the
+     affected floor.
+   - Present quality gains, conversation evidence, voice examples, request
+     cost, failed hypotheses, and the frozen Plan 030 qualification contract.
+     Keep the Foundational Reader Trials unaccepted, then stop for the owner's
+     dated Plan 029 decision.
