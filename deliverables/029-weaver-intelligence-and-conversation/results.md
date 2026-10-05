@@ -2,10 +2,10 @@
 
 ## Status
 
-Checkpoint one was accepted by the owner. Checkpoint two's retrieval and
-direct-rereading repair is implemented and locally verified. Checkpoint three's
-ephemeral evidence packet and conversation projection are implemented and
-stopped at the owner inspection gate.
+Checkpoints one and three were accepted by the owner. Checkpoint two's
+retrieval and direct-rereading repair is implemented and locally verified.
+Checkpoint four is authorized, with detailed method and test interpretation
+required at every later report.
 
 ## Development and holdout boundary
 
@@ -259,7 +259,7 @@ Checkpoint-three verification passed on 2026-10-02:
 
 ## Owner gate
 
-Checkpoint four remains blocked until the owner accepts or changes:
+Accepted by the owner on 2026-10-05:
 
 1. the compact turn-brief fields and 2,000-character position bounds;
 2. citation-level claim mapping, explicit missing-citation and unopened-chapter

@@ -114,8 +114,9 @@ packet size, latency, and cost separately.
 
 1. **Accepted 2026-10-02.** Inspect the frozen baseline, development boundary,
    question types, and retrieval measures before production retrieval changes.
-2. **Pending.** Inspect real evidence packets and conversation traces before
-   answer work.
+2. **Accepted 2026-10-05.** Inspect real evidence packets and conversation
+   traces before answer work. The owner also required every later checkpoint
+   report to explain the problem, method, test meaning, and remaining unknowns.
 3. Confirm response modes, poetic restraint, and the measured quality,
    latency, and request-cost tradeoff before keeping extra stages.
 4. Freeze the Plan 030 model-qualification contract before Plan 029 closes.
