@@ -219,9 +219,11 @@ reconstructed after closing and reopening the conversation store.
 The evidence board is rebuilt from current tool results and the candidate. It
 records direct chapter and line sources, notebook lead chapters, candidate
 claims, chapter citations per claim, unopened citations, uncited claims, and
-whether each opened passage reached the chapter boundary. It states explicitly
-that a chapter boundary is not proof of scene resolution. The final reader must
-judge the outcome from the prose and keep any remaining gap visible.
+whether each opened passage reached the chapter boundary. Its deterministic
+check proves citation coverage only: an opened chapter may still contain the
+wrong passage for a claim. Exact claim support remains reading judgment for the
+final reader and checkpoint-four inspection. A chapter boundary also cannot
+prove scene resolution.
 
 One packet budget now serves sponsored and BYOK turns:
 
@@ -237,7 +239,7 @@ case. Public-safe metadata from that inspection:
 
 - packet size: 5,845 of 24,000 characters;
 - direct sources: chapter 900 lines 185 to 217 and chapter 901 lines 3 to 13;
-- candidate claims: one, mapped to direct source;
+- candidate claims: one, with its cited chapters opened;
 - unsupported chapters: none;
 - uncited claims: none;
 - chapter 900 boundary reached; chapter 901 boundary not reached;

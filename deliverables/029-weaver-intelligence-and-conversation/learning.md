@@ -22,13 +22,14 @@ continuation and reports chapter boundaries. The corrected private proof is
 justify another ranking formula.
 
 **Checkpoint three implemented 2026-10-02.** The final-reading seam now derives
-a bounded turn brief from canonical conversation items and a citation-level
-evidence board from current tool results. It sends only the current question,
+a bounded turn brief from canonical conversation items and a citation-coverage
+board from current tool results. It sends only the current question,
 candidate, brief, and a direct-source-first packet capped at 24,000 characters.
 The projection survives a conversation-store restart because it is rebuilt
 from linked canonical items. Nothing new is persisted. A real private packet
-used 5,845 characters, mapped its cited claim to two opened chapters, exposed
-the chapter-boundary state, and kept scene resolution as reading judgment.
+used 5,845 characters, confirmed that both cited chapters were opened, exposed
+the chapter-boundary state, and kept claim support and scene resolution as
+reading judgment.
 Work is stopped for the owner inspection gate before answer and voice changes.
 
 ## Checkpoint one observations

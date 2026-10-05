@@ -114,7 +114,7 @@ async def test_packet_includes_notebook_statements(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_packet_maps_candidate_citations_to_direct_source(
+async def test_packet_marks_citations_covered_by_an_opened_chapter(
     tmp_path: Path,
 ) -> None:
     svc = _service(tmp_path)
@@ -128,6 +128,7 @@ async def test_packet_maps_candidate_citations_to_direct_source(
     assert packet is not None
     assert packet.board.cited_chapters == (104,)
     assert packet.board.unsupported_chapters == ()
+    assert packet.board.claims[0].citation_coverage == "citation_covered"
     assert packet.board.direct_sources[0].chapter == 104
     assert packet.board.direct_sources[0].chapter_end_reached is True
     assert "chapter boundary is not proof" in packet.text
@@ -164,7 +165,7 @@ async def test_packet_marks_an_uncited_candidate_as_a_gap(tmp_path: Path) -> Non
 
     assert packet is not None
     assert packet.board.uncited_claims == (1,)
-    assert packet.board.claims[0].support == "missing_citation"
+    assert packet.board.claims[0].citation_coverage == "missing_citation"
     assert "citation gaps: claim 1 has no chapter citation" in packet.text
 
 
@@ -179,8 +180,8 @@ async def test_packet_maps_each_candidate_claim_separately(tmp_path: Path) -> No
     )
 
     assert packet is not None
-    assert [claim.support for claim in packet.board.claims] == [
-        "direct_source",
+    assert [claim.citation_coverage for claim in packet.board.claims] == [
+        "citation_covered",
         "unopened_chapter",
     ]
     assert packet.board.claims[0].cited_chapters == (98,)

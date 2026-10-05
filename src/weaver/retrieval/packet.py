@@ -72,7 +72,7 @@ class ClaimEvidence:
     index: int
     cited_chapters: tuple[int, ...]
     unsupported_chapters: tuple[int, ...]
-    support: str
+    citation_coverage: str
 
 
 @dataclass(frozen=True)
@@ -204,17 +204,17 @@ def _build_evidence_board(
             chapter for chapter in claim_chapters if chapter not in opened_chapters
         )
         if not claim_chapters:
-            support = "missing_citation"
+            citation_coverage = "missing_citation"
         elif unsupported_claim_chapters:
-            support = "unopened_chapter"
+            citation_coverage = "unopened_chapter"
         else:
-            support = "direct_source"
+            citation_coverage = "citation_covered"
         claims.append(
             ClaimEvidence(
                 index=index,
                 cited_chapters=claim_chapters,
                 unsupported_chapters=unsupported_claim_chapters,
-                support=support,
+                citation_coverage=citation_coverage,
             )
         )
     cited_chapters = tuple(
@@ -230,7 +230,9 @@ def _build_evidence_board(
         )
     )
     uncited_claims = tuple(
-        claim.index for claim in claims if claim.support == "missing_citation"
+        claim.index
+        for claim in claims
+        if claim.citation_coverage == "missing_citation"
     )
     lead_chapters = tuple(
         sorted(
@@ -270,7 +272,7 @@ def _format_evidence_board(board: EvidenceBoard) -> str:
         )
     gaps = ", ".join(gap_parts) or "none"
     claim_map = ", ".join(
-        f"claim {claim.index}: {claim.support}"
+        f"claim {claim.index}: {claim.citation_coverage}"
         for claim in board.claims
     ) or "none"
     boundaries = ", ".join(
@@ -289,9 +291,10 @@ def _format_evidence_board(board: EvidenceBoard) -> str:
         f"direct sources: {direct}\n"
         f"notebook leads: {leads}\n"
         f"candidate citations: {citations}\n"
-        f"claim support: {claim_map}\n"
+        f"citation coverage: {claim_map}\n"
         f"citation gaps: {gaps}\n"
         f"scene boundaries: {boundaries}\n"
+        "citation coverage: does not prove that the opened lines support a claim\n"
         "scene resolution: requires reading judgment; a chapter boundary is not proof\n"
         "Use direct sources for canon. Leads only locate. Keep gaps visible."
     )
