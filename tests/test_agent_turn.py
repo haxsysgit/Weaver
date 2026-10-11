@@ -1138,6 +1138,114 @@ class TestFinalReadingPhase:
             for message in final_request.messages
         )
 
+    async def test_final_reading_call_includes_the_answer_blueprint(self) -> None:
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response("Draft: LO49 vanished (ch. 900)."),
+            stop_response("No. LO49 vanished after Sunny left (chs. 900-901)."),
+        )
+        history = [
+            UserMessage(
+                message_id="reader-current",
+                turn_id="turn-current",
+                content="LO49 evacuated after Sunny left, right?",
+            )
+        ]
+
+        async def packet_builder(results, draft):
+            return (
+                "--- chapter 900 lines 185-217 ---\nSource prose.\n\n"
+                "--- evidence board ---\n"
+                "direct sources: chapter 900 lines 185-217, "
+                "chapter 901 lines 3-13"
+            )
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            history=history,
+            packet_builder=packet_builder,
+        )
+
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        final_request = provider.calls[-1].request
+        joined = "\n".join(message.content or "" for message in final_request.messages)
+        assert "--- answer blueprint ---" in joined
+        assert "response mode: correction" in joined
+        assert "allowed source chapters: 900, 901" in joined
+        assert "preserve the part of the reader's memory" in joined
+
+    async def test_final_reading_repairs_one_failed_publication(self) -> None:
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response("Draft: LO49 vanished (ch. 900)."),
+            stop_response("Great question! LO49 vanished — completely (ch. 900)."),
+            stop_response("LO49 vanished completely (ch. 900)."),
+        )
+        persisted = []
+
+        async def packet_builder(results, draft):
+            return (
+                "--- chapter 900 lines 185-217 ---\nSource prose.\n\n"
+                "--- evidence board ---\n"
+                "direct sources: chapter 900 lines 185-217"
+            )
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            persist_message=_async_append(persisted),
+            packet_builder=packet_builder,
+        )
+
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert result.final_text == "LO49 vanished completely (ch. 900)."
+        assert len(provider.calls) == 4
+        repair_request = provider.calls[-1].request
+        repair_prompt = "\n".join(
+            message.content or "" for message in repair_request.messages
+        )
+        assert "Make one rewrite" in repair_prompt
+        assert "ai_opening" in repair_prompt
+        assert "em_dash" in repair_prompt
+        assert [message.content for message in persisted if message.kind == "assistant"] == [
+            "",
+            "LO49 vanished completely (ch. 900).",
+        ]
+
+    async def test_failed_publication_repair_falls_back_to_clean_candidate(
+        self,
+    ) -> None:
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response("LO49 vanished after Sunny left (ch. 900)."),
+            stop_response("Great question! LO49 vanished — completely (ch. 900)."),
+            stop_response("In summary, LO49 vanished — completely (ch. 900)."),
+        )
+
+        async def packet_builder(results, draft):
+            return (
+                "--- chapter 900 lines 185-217 ---\nSource prose.\n\n"
+                "--- evidence board ---\n"
+                "direct sources: chapter 900 lines 185-217"
+            )
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            packet_builder=packet_builder,
+        )
+
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert result.final_text == "LO49 vanished after Sunny left (ch. 900)."
+        assert len(provider.calls) == 4
+
     async def test_final_reading_call_keeps_the_tier_effort(self) -> None:
         # The tier effort (high / max) belongs to the heavy final reading
         # answer call; locate steps drop to low (thinking still on).

@@ -4,8 +4,10 @@
 
 Checkpoints one and three were accepted by the owner. Checkpoint two's
 retrieval and direct-rereading repair is implemented and locally verified.
-Checkpoint four is authorized, with detailed method and test interpretation
-required at every later report.
+The checkpoint-four response examples were accepted, and the answer blueprint,
+publication inspection, and bounded repair path are implemented. Owner review
+of that implementation remains open. Detailed method and test interpretation
+is required at every later report.
 
 ## Development and holdout boundary
 
@@ -273,5 +275,85 @@ Accepted by the owner on 2026-10-05:
 
 ## Later checkpoints
 
-Answer modes, voice, publication inspection, repeated multi-turn proof,
-independent review, and the Plan 030 handoff remain pending.
+Repeated multi-turn proof, independent review, and the Plan 030 handoff remain
+pending.
+
+## Checkpoint four: answer shape and publication inspection
+
+### Problem
+
+The final reading pass received the evidence packet and a generic instruction
+to write the answer, but it did not receive an explicit response shape. A
+direct chapter lookup, a disputed memory, a theory, and a canon-grounded
+what-if therefore depended on the model inferring different obligations from
+the same broad prompt. There was also no final deterministic boundary against
+unopened chapter citations, changed direct quotations, unlabelled invention,
+spoiler citations, exposed reading machinery, em dashes, or selected generic
+AI language.
+
+### Method
+
+The owner first reviewed five response examples against a bounded two-chapter
+case. Those examples fixed the behavior before code was written. The runtime
+then gained a small deterministic answer layer:
+
+1. It classifies the reader's question as direct recall, reconstruction,
+   discussion, theory or what-if, or correction.
+2. It builds a blueprint from the current ask, prior Weaver position, challenge
+   state, spoiler framing, and the packet's declared direct-source chapters.
+3. It sends the blueprint with the turn brief and evidence packet to the
+   existing final reading call. Mode names are instructions, not visible
+   headings.
+4. It inspects the proposed answer without judging literary canon. The check
+   covers citation boundaries, later-chapter spoiler citations, exact
+   blockquotes, labelled invention, private machinery leaks, em dashes,
+   selected generic AI phrases, and excessive headings.
+5. A failed proposal receives one repair request containing only the observed
+   findings. The rejected proposal and findings are not persisted or streamed.
+6. If the repair fails, the turn uses the previously validated candidate only
+   when it passes the same publication inspection. If neither answer is safe,
+   the turn fails with the existing model-protocol boundary instead of
+   publishing a known-bad answer.
+
+The ordinary path still uses three provider calls in the existing scripted
+turn shape. A publication failure raises that turn to four calls. No separate
+planner, critic, or always-on style call was added.
+
+### Deterministic evidence
+
+The focused answer and turn suites pass 105 tests. The answer-layer tests prove
+all five question shapes, preservation of the prior position during a
+challenge, direct-source chapter extraction, clean grounded publication,
+missing and unopened citation findings, exact-blockquote protection,
+guarded-spoiler citation rejection, what-if labelling, selected AI-style
+findings, and a repair instruction containing only observed failures.
+
+The turn tests prove that the blueprint reaches the final request, a failed
+proposal triggers exactly one repair, the failed draft is not persisted, and a
+failed repair falls back to a clean validated candidate. The complete turn
+suite also protects the existing three-call clean path and exposed one
+compatibility defect during implementation: older packet fixtures did not
+declare direct-source chapters. Citation membership is now enforced only when
+the packet provides that boundary, rather than treating all legacy citations
+as unsupported.
+
+These tests prove deterministic control flow and publication boundaries. They
+do not prove literary quality, semantic support for an uncited claim, semantic
+spoiler detection, or DeepSeek's compliance with the blueprint. The response
+classifier is intentionally a small keyword rule and can misclassify an
+ambiguous question. Direct chapter support and scene resolution remain reading
+judgment, not a regex verdict.
+
+No live call was made. Quality gain, added latency, token use, and dollar cost
+for the repair path remain unmeasured until the owner freezes a maximum live
+request count and dollar ceiling.
+
+The checkpoint-four affected floor passed on 2026-10-12:
+
+- 152 answer, turn, and conversation tests;
+- 74 chat-runtime and web integration tests;
+- 226 focused tests in total;
+- Ruff on the four changed Python files and `git diff --check`.
+
+The final all-repository pytest and Ruff floor remains checkpoint-five work, as
+agreed with the owner.

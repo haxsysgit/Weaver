@@ -13,6 +13,14 @@ from enum import Enum
 from typing import Callable
 
 from weaver.agent.errors import CANCELLED, safe_error, safe_tool_error
+from weaver.agent.answer import (
+    AnswerBlueprint,
+    PublicationFinding,
+    build_answer_blueprint,
+    build_repair_instruction,
+    format_answer_blueprint,
+    inspect_publication,
+)
 from weaver.agent.messages import (
     AssistantMessage,
     ConversationMessage,
@@ -579,6 +587,10 @@ async def run_turn(
     final_packet: str | None = None
     validated_candidate: AssistantMessage | None = None
     validated_candidate_deltas: tuple[str, ...] = ()
+    answer_blueprint: AnswerBlueprint | None = None
+    publication_draft: AssistantMessage | None = None
+    publication_findings: tuple[PublicationFinding, ...] = ()
+    publication_repair_attempted = False
     candidate_rejections = 0
     candidate_note: str | None = None
     zero_evidence_reprompted = False
@@ -643,25 +655,42 @@ async def run_turn(
                 ),
                 None,
             )
+            turn_brief = _build_turn_brief(history)
+            if answer_blueprint is None:
+                answer_blueprint = build_answer_blueprint(
+                    question=turn_brief.actual_ask,
+                    prior_weaver_position=turn_brief.prior_weaver_position,
+                    reader_challenges_prior_answer=(
+                        turn_brief.reader_challenges_prior_answer
+                    ),
+                    evidence_packet=final_packet,
+                )
             final_history: list[ConversationMessage] = []
             if current_owner is not None:
                 final_history.append(current_owner)
-            final_history.append(validated_candidate)
+            final_history.append(publication_draft or validated_candidate)
             request_messages = project_messages(
                 system_prompt=system_prompt,
                 history=final_history,
             )
+            final_instructions = (
+                _format_turn_brief(turn_brief)
+                + "\n\n"
+                + final_packet
+                + "\n\n"
+                + format_answer_blueprint(answer_blueprint)
+                + "\n\n"
+                + FINAL_ANSWER_INSTRUCTION
+            )
+            if publication_findings:
+                final_instructions += (
+                    "\n\n" + build_repair_instruction(publication_findings)
+                )
             request_messages = [
                 *request_messages,
                 ModelMessage(
                     role="system",
-                    content=(
-                        _format_turn_brief(_build_turn_brief(history))
-                        + "\n\n"
-                        + final_packet
-                        + "\n\n"
-                        + FINAL_ANSWER_INSTRUCTION
-                    ),
+                    content=final_instructions,
                 ),
             ]
         if tool_budget is not None and not in_final_phase:
@@ -758,6 +787,25 @@ async def run_turn(
             # The final reading pass only enhances an answer that already
             # passed validation. A provider failure cannot erase it.
             assert validated_candidate is not None
+            assert answer_blueprint is not None
+            fallback_findings = inspect_publication(
+                validated_candidate.content,
+                answer_blueprint,
+                final_packet,
+            )
+            if (
+                fallback_findings
+                and not publication_repair_attempted
+                and model_steps < max_steps
+            ):
+                publication_draft = validated_candidate
+                publication_findings = fallback_findings
+                publication_repair_attempted = True
+                continue
+            if fallback_findings:
+                exit_reason = TurnExitReason.MODEL_FAILED
+                safe_failure = safe_error("model_protocol")
+                break
             persisted, published = await persist_answer(
                 validated_candidate,
                 validated_candidate_deltas,
@@ -787,8 +835,9 @@ async def run_turn(
                 break
 
             assert validated_candidate is not None
-            answer = validated_candidate
-            answer_deltas = validated_candidate_deltas
+            assert answer_blueprint is not None
+            proposed_answer = validated_candidate
+            proposed_deltas = validated_candidate_deltas
             if _response_matches_model(response, model):
                 response_message = response.assistant_message
                 rejection_note = _candidate_rejection_note(
@@ -802,11 +851,41 @@ async def run_turn(
                     and not _is_final_phase_refusal(response_message.content or "")
                 )
                 if valid_final:
-                    answer = _assistant_message(
+                    proposed_answer = _assistant_message(
                         turn_id=turn_id,
                         response_message=response_message,
                     )
-                    answer_deltas = response_deltas
+                    proposed_deltas = response_deltas
+
+            findings = inspect_publication(
+                proposed_answer.content,
+                answer_blueprint,
+                final_packet,
+            )
+            if (
+                findings
+                and not publication_repair_attempted
+                and model_steps < max_steps
+            ):
+                publication_draft = proposed_answer
+                publication_findings = findings
+                publication_repair_attempted = True
+                continue
+
+            answer = proposed_answer
+            answer_deltas = proposed_deltas
+            if findings:
+                fallback_findings = inspect_publication(
+                    validated_candidate.content,
+                    answer_blueprint,
+                    final_packet,
+                )
+                if fallback_findings:
+                    exit_reason = TurnExitReason.MODEL_FAILED
+                    safe_failure = safe_error("model_protocol")
+                    break
+                answer = validated_candidate
+                answer_deltas = validated_candidate_deltas
             persisted, published = await persist_answer(answer, answer_deltas)
             if not persisted:
                 exit_reason = TurnExitReason.PERSISTENCE_FAILED

@@ -32,6 +32,35 @@ the chapter-boundary state, and kept claim support and scene resolution as
 reading judgment.
 Work is stopped for the owner inspection gate before answer and voice changes.
 
+**Checkpoint three accepted 2026-10-05.** The owner accepted the compact turn
+brief, citation-coverage semantics, shared packet ceiling, and rebuild-from-
+ledger approach. Every later checkpoint report must explain the problem, the
+method, what each test proves, and what remains unknown.
+
+**Checkpoint four examples accepted 2026-10-12.** The owner reviewed and
+accepted the five response shapes against a bounded two-chapter case: direct
+recall, reconstruction, discussion, theory or what-if, and correction. The
+locked direction is answer-first prose whose length follows the question,
+claim-adjacent chapter citations, explicit separation of canon from opinion,
+corrections that preserve the reader's accurate memory, and canon constraints
+before invented what-if events. The mode names guide the model and never
+appear as chat headings.
+
+**Checkpoint four implemented 2026-10-12.** The final reading request now
+includes a deterministic answer blueprint built from the current question,
+turn brief, spoiler framing, prior Weaver position, and chapters actually
+listed as direct sources. A deterministic publication inspection checks
+chapter citations, spoiler-boundary citations, exact blockquotes, labelled
+invention, exposed machinery, em dashes, selected generic AI phrases, and
+excessive headings. A failed draft receives its exact findings once. If that
+single repair still fails, the turn publishes the already validated candidate
+only when that candidate also passes the same publication checks. Drafts and
+findings remain ephemeral.
+
+Work is stopped for the owner checkpoint-four implementation decision. No live
+DeepSeek quality comparison has run because the required request and dollar
+ceiling has not been frozen.
+
 ## Checkpoint one observations
 
 - The web prompt and registered tool set had drifted: `lore_path` existed but
@@ -118,6 +147,7 @@ packet size, latency, and cost separately.
 2. **Accepted 2026-10-05.** Inspect real evidence packets and conversation
    traces before answer work. The owner also required every later checkpoint
    report to explain the problem, method, test meaning, and remaining unknowns.
-3. Confirm response modes, poetic restraint, and the measured quality,
+3. **Response examples accepted 2026-10-12; implementation decision pending.**
+   Confirm response modes, poetic restraint, and the measured quality,
    latency, and request-cost tradeoff before keeping extra stages.
 4. Freeze the Plan 030 model-qualification contract before Plan 029 closes.
