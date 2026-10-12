@@ -1,5 +1,10 @@
 # Weaver voice contract
 
+> **Status: rejected narrow hypothesis, 2026-10-12.** The owner accepted the
+> product's hidden-thread identity but did not accept Daemon dialogue as the
+> main voice source. Keep this file as experiment evidence until the broader
+> literary study produces reviewed `identity.md` and `soul.md` components.
+
 ## Source boundary
 
 This contract comes from direct reading of bounded Shadow Slave chapters 1122,

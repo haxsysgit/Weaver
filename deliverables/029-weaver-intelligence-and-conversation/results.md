@@ -5,10 +5,12 @@
 Checkpoints one and three were accepted by the owner. Checkpoint two's
 retrieval and direct-rereading repair is implemented and locally verified.
 The checkpoint-four response examples were accepted, and the answer blueprint,
-publication inspection, bounded repair path, source-derived voice, and live
-semantic-evaluation evidence are implemented. Owner review of checkpoint four
-remains open. Detailed method and test interpretation is required at every
-later report.
+publication inspection, bounded repair path, and live semantic-evaluation
+evidence are implemented. The owner rejected checkpoint four for revision on
+2026-10-12 because the composer could become read-only, the response-side line
+was unwanted, and the personality study targeted the Daemon's dialogue instead
+of the novel's broader literary voice. Detailed method and test interpretation
+is required at every later report.
 
 ## Development and holdout boundary
 
@@ -357,6 +359,11 @@ agreed with the owner.
 
 ### Source-derived voice extension
 
+**Owner verdict: rejected as the main identity.** This section remains the
+record of a completed experiment. The next iteration studies the author's
+broader narrative behavior across the agreed story divisions and replaces the
+narrow contract only after owner review.
+
 The owner kept checkpoint four open for literary proof. Six primary dialogue
 chapters and four supporting chapters were read completely under the admitted
 bounded packet. The recurring voice behavior, rather than surface fantasy
@@ -445,3 +452,36 @@ contracts on the bounded cases, that the hard spend ceiling works after the
 meter repair, and that a semantic auditor can reveal unsupported or spoiler-
 sensitive claims. They do not prove all future answers are literary, correct,
 or spoiler-safe. They do not accept any Foundational Reader Trial.
+
+### Owner-requested UI repair
+
+The composer failure came from a conflated prop. Shared access state passed one
+`disabled` value into `Composer`; that value blocked submission, made the
+textarea read-only, and disabled the reading-tier control. When sponsored
+access was unavailable, exhausted, or waiting for consent, the reader could
+not even type and retain a question.
+
+The component now accepts `sendDisabled`. Access state disables submission
+only. The textarea stays editable, the draft remains in conversation state,
+and the composer receives focus when startup settles. Active turns still make
+the textarea read-only until the reply completes, preserving the existing
+single-turn contract.
+
+The long line beneath the Weaver mark was the
+`.weaver-response-spine::after` pseudo-element. Its rule, streaming extension
+animation, last-message override, and reduced-motion override were removed.
+The mark and response layout remain unchanged.
+
+Focused proof on 2026-10-12:
+
+- 44 Composer and live Spell-surface tests passed;
+- the production TypeScript and Vite build passed;
+- a real fake-mode browser turn accepted typed input, cleared the submitted
+  draft, and returned focus with `readOnly: false` after the reply;
+- the response-mark pseudo-element reported `content: none`, `width: auto`, and
+  no background image in the built application; and
+- `git diff --check` passed.
+
+The browser proof used fake mode and spent no model tokens. It proves the
+shipped frontend interaction and CSS correction, not the pending literary
+identity.

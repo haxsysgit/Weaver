@@ -8,7 +8,6 @@ const TIERS: ReadingTier[] = ["awakened", "ascended", "transcendent"];
 
 interface ComposerProps {
   cancelling: boolean;
-  disabled?: boolean;
   draft: string;
   inputLabel?: string;
   onCancel: () => void;
@@ -16,6 +15,7 @@ interface ComposerProps {
   onSubmit: (value: string) => void;
   onTierChange: (tier: ReadingTier) => void;
   placeholder?: string;
+  sendDisabled?: boolean;
   sendLabel?: string;
   stopLabel?: string;
   stoppingLabel?: string;
@@ -28,7 +28,6 @@ interface ComposerProps {
 
 export function Composer({
   cancelling,
-  disabled = false,
   draft,
   inputLabel = "Message assistant",
   onCancel,
@@ -36,6 +35,7 @@ export function Composer({
   onSubmit,
   onTierChange,
   placeholder = "Write a message...",
+  sendDisabled = false,
   sendLabel = "Send message",
   stopLabel = "Stop assistant",
   stoppingLabel = "Stopping assistant",
@@ -84,7 +84,7 @@ export function Composer({
 
   function submitDraft() {
     const message = draft.trim();
-    if (!message || turnActive || disabled) {
+    if (!message || turnActive || sendDisabled) {
       return;
     }
     onSubmit(message);
@@ -113,7 +113,7 @@ export function Composer({
           onChange={(event) => onDraftChange(event.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          readOnly={turnActive || disabled}
+          readOnly={turnActive}
           ref={resolvedRef}
           rows={1}
           value={draft}
@@ -124,7 +124,7 @@ export function Composer({
             aria-haspopup="listbox"
             aria-label={`Reading tier: ${tier}`}
             className="tier-pill"
-            disabled={turnActive || disabled}
+            disabled={turnActive}
             onClick={() => setTierOpen((open) => !open)}
             type="button"
           >
@@ -168,7 +168,7 @@ export function Composer({
           <button
             aria-label={sendLabel}
             className="composer-action composer-send"
-            disabled={disabled || !draft.trim()}
+            disabled={sendDisabled || !draft.trim()}
             onClick={submitDraft}
             type="button"
           >

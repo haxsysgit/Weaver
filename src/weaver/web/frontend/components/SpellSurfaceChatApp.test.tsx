@@ -331,7 +331,7 @@ describe("first Nightmare setup", () => {
     expect(
       await screen.findByText(/The shared thread rests until 00:00 UTC/),
     ).toBeVisible();
-    expect(screen.getByRole("textbox", { name: "Message Weaver" })).toHaveAttribute(
+    expect(screen.getByRole("textbox", { name: "Message Weaver" })).not.toHaveAttribute(
       "readonly",
     );
     expect(screen.getByText("What are we reading?")).toBeVisible();
@@ -353,7 +353,7 @@ describe("first Nightmare setup", () => {
     expect(
       await screen.findByText(/shared thread awaits consent/),
     ).toBeVisible();
-    expect(screen.getByRole("textbox", { name: "Message Weaver" })).toHaveAttribute(
+    expect(screen.getByRole("textbox", { name: "Message Weaver" })).not.toHaveAttribute(
       "readonly",
     );
   });
@@ -375,9 +375,14 @@ describe("first Nightmare setup", () => {
     expect(
       await screen.findByText(/shared thread is unavailable/),
     ).toBeVisible();
-    expect(screen.getByRole("textbox", { name: "Message Weaver" })).toHaveAttribute(
+    const composer = screen.getByRole("textbox", { name: "Message Weaver" });
+    expect(composer).not.toHaveAttribute(
       "readonly",
     );
+    fireEvent.change(composer, { target: { value: "Keep my question" } });
+    expect(composer).toHaveValue("Keep my question");
+    expect(screen.getByRole("button", { name: "Send message" })).toBeDisabled();
+    expect(composer).toHaveFocus();
   });
 
   it("restores a saved Soul Sea beneath the live Spellweave", async () => {

@@ -79,6 +79,33 @@ describe("Composer", () => {
     expect(onSubmit).toHaveBeenCalledWith("Cassie had a plan");
   });
 
+  it("keeps drafting available when access blocks submission", () => {
+    const onDraftChange = vi.fn();
+    const onSubmit = vi.fn();
+    render(
+      <Composer
+        cancelling={false}
+        draft="A question can wait"
+        onCancel={vi.fn()}
+        onDraftChange={onDraftChange}
+        onSubmit={onSubmit}
+        onTierChange={vi.fn()}
+        sendDisabled
+        tier="ascended"
+        turnActive={false}
+      />,
+    );
+
+    const textbox = screen.getByRole("textbox", { name: "Message assistant" });
+    expect(textbox).not.toHaveAttribute("readonly");
+    fireEvent.change(textbox, { target: { value: "Keep this draft" } });
+    fireEvent.keyDown(textbox, { key: "Enter" });
+
+    expect(onDraftChange).toHaveBeenCalledWith("Keep this draft");
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Send message" })).toBeDisabled();
+  });
+
   it("shows the honest unbound inscription only when the voice is unavailable", () => {
     const { rerender } = render(
       <Composer

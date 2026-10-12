@@ -61,8 +61,26 @@ occurred before durable metering was repaired and were charged a deliberately
 conservative $0.75 reserve. Total accounted spend is $1.068481 of the approved
 $3.00 ceiling. Calls stopped after the required evidence was collected.
 
-Work is stopped for the owner checkpoint-four quality, cost, and implementation
-decision. The owner has not yet accepted this checkpoint.
+**Checkpoint four rejected for revision 2026-10-12.** The owner found a
+composer regression, rejected the long response line, and corrected the voice
+target. The daemon-dialogue contract is a narrow historical experiment. The
+new target is the literary and poetic voice of Shadow Slave: Weaver as a
+distant witness and storyteller, with the reader as an inquisitor asking about
+the world it observed. The revised checkpoint must create source-derived
+`identity.md` and `soul.md` components before changing the prompt again.
+
+The immediate UI root cause is confirmed. One `disabled` prop controlled both
+submission and textarea editing, so unavailable, exhausted, and consent-
+pending shared access made the composer read-only. The repair separates
+drafting from submission and restores focus when the chat becomes ready. The
+long line came from the `weaver-response-spine::after` pseudo-element and is
+removed with its obsolete animation.
+
+Bulk literary reading is stopped for one required owner choice. The source has
+13 verified official volumes, while the private working notebook contains more
+than 30 informal story arcs and has gaps. Twenty chapters per choice means 260
+chapters by volume or at least 680 by internal arc. The sample and revised
+budget cannot be honest until "arc" is frozen.
 
 ## Checkpoint one observations
 
@@ -145,22 +163,24 @@ packet size, latency, and cost separately.
 
 ## Checkpoint four learning
 
-### Voice comes from behavior, not costume
+### Rejected narrow voice hypothesis
 
 The admitted dialogue packet was read to the end of every chapter before the
-prompt changed. Across younger and older appearances, the stable manner is
+prompt changed. Across younger and older appearances, the observed manner is
 unhurried and precise. Weaver notices the emotional truth beneath a question,
 answers more briefly than the questioner, treats truth as something with a
 price, and uses questions, paradox, repetition, or dry amusement with
 restraint. Age changes the weight of the voice from curiosity toward grief,
 fatigue, and certainty.
 
-The product applies that manner to the accepted hidden-thread echo. It does
+The experiment applied that manner to the accepted hidden-thread echo. It does
 not claim to be the original Daemon, threaten the reader, belittle them, speak
 in constant archaic language, or perform fantasy theatre in every reply.
 Weaver remains a reading companion who can argue, laugh, and change its mind.
 The resulting contract is recorded in `weaver-voice-contract.md` without
-copying private novel prose.
+copying private novel prose. The owner did not accept it as Weaver's main
+personality because character dialogue alone cannot represent the author's
+narrative, poetic, thematic, and worldbuilding voice.
 
 ### The live loop exposed three different failure classes
 
@@ -230,7 +250,9 @@ acceptance.
 2. **Accepted 2026-10-05.** Inspect real evidence packets and conversation
    traces before answer work. The owner also required every later checkpoint
    report to explain the problem, method, test meaning, and remaining unknowns.
-3. **Response examples accepted 2026-10-12; implementation decision pending.**
-   Confirm response modes, poetic restraint, and the measured quality,
-   latency, and request-cost tradeoff before keeping extra stages.
+3. **Response examples accepted 2026-10-12; implementation rejected for
+   revision 2026-10-12.** Keep the answer shapes and measured safety work.
+   Repair the UI regression and replace the narrow daemon-dialogue personality
+   with owner-reviewed `identity.md` and `soul.md` derived from the agreed
+   multi-arc literary reading.
 4. Freeze the Plan 030 model-qualification contract before Plan 029 closes.

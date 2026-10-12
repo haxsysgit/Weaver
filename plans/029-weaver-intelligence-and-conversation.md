@@ -28,7 +28,10 @@
   runs use the owner-approved DeepSeek development allowance or owner BYOK
   through Plan 028. The checkpoint-four live evaluation has no request-count
   ceiling and a hard $3.00 total-spend ceiling, approved 2026-10-12. Production
-  traffic remains Plan 030 work.
+  traffic remains Plan 030 work. The owner-requested literary study adds 20
+  complete chapters per agreed story division. Its added token and cost budget
+  must be frozen after the owner chooses official volumes or internal story
+  arcs; no bulk reading starts before that choice.
 
 ## Owner direction (locked decisions)
 
@@ -104,6 +107,28 @@
     the evaluation needs, but total measured DeepSeek spend must remain at or
     below $3.00. Stop before a call whose reserved maximum could cross the
     ceiling.
+21. (2026-10-12) The owner did not accept checkpoint four. The daemon-dialogue
+    voice experiment was too narrow and conflicts with the product identity
+    when treated as the main personality. Keep it as historical evidence, not
+    the accepted voice target.
+22. (2026-10-12) Weaver's intended identity is a literary storyteller and
+    distant witness to the Shadow Slave world. The reader is an inquisitor who
+    asks about that witnessed world. Weaver should carry the novel's narrative,
+    poetic, thematic, and worldbuilding tone while remaining able to answer
+    direct questions clearly.
+23. (2026-10-12) Before another personality prompt change, read 20 complete
+    chapters from every owner-confirmed story division, sampled across its
+    opening, development, quiet character work, conflict, climax, and aftermath.
+    Record observed prose behavior separately from product rules. Create
+    `identity.md` for who Weaver is and `soul.md` for how Weaver perceives and
+    speaks, then stop for owner review.
+24. (2026-10-12) The accepted identity and soul become stable prompt components
+    combined with the existing retrieval, truth, spoiler, conversation, and
+    publication context. They do not replace factual grounding or permit style
+    to alter canon.
+25. (2026-10-12) Repair the observed composer regression and remove the long
+    response line before further literary evaluation. Drafting and focus remain
+    available when access is unavailable; access state blocks submission only.
 
 ## Scope
 
@@ -187,10 +212,13 @@
   answer against the evidence board. Mechanical failures get precise repairs.
   Ambiguous literary judgment remains visible as interpretation rather than
   being forced into a false pass or fail.
-- Derive a public-safe Weaver voice contract from bounded direct reading of the
-  daemon's dialogue. Keep the product's accepted echo identity while carrying
-  the daemon's cadence, restraint, precision, dry amusement, truth-games, and
-  earned severity into the companion voice.
+- Preserve the daemon-dialogue study as a rejected narrow hypothesis. Replace
+  it only after a source-first literary study across the owner-confirmed story
+  divisions produces reviewed `identity.md` and `soul.md` prompt components.
+- Keep Weaver's product position explicit: a distant witness and storyteller
+  who answers an inquisitive reader about the world it has observed. Literary
+  atmosphere may shape narration, rhythm, imagery, and interpretation; it
+  never overrides source support, spoiler safety, or direct-answer clarity.
 - Require sentence-level support for factual claims. Use a bounded semantic
   inspection against the exact opened passages to identify partial,
   unsupported, or contradicted claims, multi-chapter claims missing part of
@@ -231,8 +259,9 @@
   checkpoint evidence proves that a specific call improves the agreed cases
   enough to earn its cost.
 - Rewriting direct novel quotations to fit Weaver's style.
-- UI redesign, provider setup UI, deployment topology, native mobile apps, or
-  unrelated story-notebook expansion.
+- Broad UI redesign, provider setup UI, deployment topology, native mobile
+  apps, or unrelated story-notebook expansion. The owner-approved composer
+  regression and response-line repairs are included as checkpoint-four fixes.
 
 ## Deterministic proof / verification floor
 
@@ -283,6 +312,14 @@
 15. Two independent reviews pass: retrieval/evidence/temporal correctness,
    then conversation/voice/style/privacy/evaluation validity. The owner
    records the final Plan 029 decision.
+16. Frontend regression tests prove unavailable, exhausted, and
+    consent-pending access states still accept and retain a draft while the send
+    action remains blocked. The composer receives focus when the chat becomes
+    ready and after a reply completes.
+17. A source-first literary ledger records every sampled chapter to its end,
+    its story division, scene function, narrative distance, sentence rhythm,
+    imagery, dialogue behavior, humor, horror, action, exposition, and ending
+    movement. `identity.md` and `soul.md` may contain public-safe synthesis only.
 
 ## STOP conditions
 
@@ -317,6 +354,11 @@
 - If the admitted DeepSeek model cannot meet the agreed development cases
   within the request and cost ceiling, record that result for Plan 030 rather
   than hiding it.
+- If "arc" has not been frozen as either the 13 source-verified official
+  volumes or a complete owner-approved internal arc map, STOP before bulk
+  reading. The current internal map is incomplete and cannot define the sample.
+- If a literary rule is inferred from notebook summaries, isolated dialogue,
+  or model memory instead of complete sampled chapters, reject the rule.
 
 ## Slices
 
@@ -377,6 +419,12 @@
    - Compare current, retrieval-only, evidence-packet, conversation, and final
      inspection paths one layer at a time. STOP for the owner quality, latency,
      and request-cost gate.
+   - **Owner review failed 2026-10-12.** Repair composer drafting/focus and
+     remove the response line. Freeze the story-division definition and revised
+     reading budget before the literary study.
+   - Read the approved 20-chapter sample per division to chapter endings.
+     Produce the public-safe literary analysis, `identity.md`, and `soul.md`,
+     then STOP for owner review before constructing the system prompt.
 
 5. **Checkpoint five: use, review, decide, and hand off**
    - Run repeated fake and owner-approved bounded live conversations for canon

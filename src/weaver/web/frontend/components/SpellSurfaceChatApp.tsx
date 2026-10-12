@@ -267,6 +267,13 @@ function SpellSurfaceChatSurface({
   }, [railOpen]);
 
   useEffect(() => {
+    if (chat.booting || railOpen || settingsOpen || setupOpen) {
+      return;
+    }
+    window.setTimeout(focusComposerIfAvailable, 0);
+  }, [chat.booting]);
+
+  useEffect(() => {
     const transcript = transcriptRef.current;
     if (transcript) {
       transcript.scrollTop = transcript.scrollHeight;
@@ -695,7 +702,6 @@ function SpellSurfaceChatSurface({
         <footer className="lab-composer-dock">
           <Composer
             cancelling={chat.turnState === "cancelling"}
-            disabled={sharedExhausted || sharedAwaitingConsent || sharedUnavailable}
             draft={chat.draft}
             inputLabel={weaverProduct.inputLabel}
             onCancel={() => void chat.cancelTurn()}
@@ -707,6 +713,7 @@ function SpellSurfaceChatSurface({
               void api.savePreferences(toApiPreferences(nextPreferences));
             }}
             placeholder={weaverProduct.composerPlaceholder}
+            sendDisabled={sharedExhausted || sharedAwaitingConsent || sharedUnavailable}
             sendLabel={weaverProduct.sendLabel}
             stopLabel={weaverProduct.stopLabel}
             stoppingLabel={weaverProduct.stoppingLabel}
