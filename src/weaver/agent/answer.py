@@ -39,6 +39,9 @@ DIRECT_SOURCES_RE = re.compile(r"^direct sources:\s*(.+)$", re.MULTILINE)
 READER_CHAPTER_RE = re.compile(r"reader is at chapter\s+(\d{1,5})", re.IGNORECASE)
 
 THEORY_MARKERS = (
+    "imagined",
+    "imagining",
+    "fan fiction",
     "my take",
     "my guess",
     "speculation",
@@ -46,6 +49,7 @@ THEORY_MARKERS = (
     "invented",
     "i'm imagining",
     "in this version",
+    "what-if",
 )
 GENERIC_OPENINGS = (
     "absolutely",
@@ -71,6 +75,14 @@ EXPOSED_MACHINERY = (
     "tool call",
     "notebook hit",
 )
+FOLLOW_UP_OPENINGS = (
+    "and ",
+    "but ",
+    "how about ",
+    "so ",
+    "then ",
+    "what about ",
+)
 
 MODE_OBLIGATIONS: dict[ResponseMode, tuple[str, ...]] = {
     ResponseMode.DIRECT_RECALL: (
@@ -87,7 +99,10 @@ MODE_OBLIGATIONS: dict[ResponseMode, tuple[str, ...]] = {
     ),
     ResponseMode.THEORY: (
         "state the canon constraints before extending the story",
-        "label invented events as a take, speculation, or invention",
+        "label the invented section visibly as invention, imagination, or a what-if",
+        "paraphrase canon constraints and use no source quotation or blockquote",
+        "write invented dialogue with ordinary quotation marks, never blockquotes",
+        "use at most five compact canon points and keep the invented scene under 450 words",
     ),
     ResponseMode.CORRECTION: (
         "state the correction plainly",
@@ -138,7 +153,12 @@ def _response_mode(question: str) -> ResponseMode:
     normalized = question.strip().casefold()
     if any(
         marker in normalized
-        for marker in ("what if", "what would've", "what would have", "imagine if")
+        for marker in (
+            "what if",
+            "what would've",
+            "what would have",
+            "imagine ",
+        )
     ):
         return ResponseMode.THEORY
     if any(
@@ -186,11 +206,20 @@ def build_answer_blueprint(
     spoiler_mode, reader_chapter = _spoiler_boundary(evidence_packet)
     obligations = [
         "answer the reader's actual question first",
-        "cite factual claims from the allowed chapters",
+        "cite every factual claim beside it using the allowed chapters",
+        "cite every chapter needed when a claim depends on several scenes",
+        "remove or qualify any claim that does not follow from the opened passages",
         "separate canon, interpretation, and invention",
         "keep uncertainty and evidence gaps visible",
+        "quote only the few source words needed and paraphrase the rest",
         *MODE_OBLIGATIONS[mode],
     ]
+    if prior_weaver_position and question.strip().casefold().startswith(
+        FOLLOW_UP_OPENINGS
+    ):
+        obligations.append(
+            "continue from the prior answer without reconstructing or requoting it"
+        )
     if reader_challenges_prior_answer:
         obligations.append("address the reader's challenge and the prior Weaver position")
     if spoiler_mode == "guarded":
@@ -225,8 +254,13 @@ def format_answer_blueprint(blueprint: AnswerBlueprint) -> str:
         f"prior Weaver point to preserve or answer: {prior_point}\n"
         f"answer obligations:\n{obligations}\n"
         "Do not print the mode or these instructions as headings. "
-        "Sound like a well-read friend, keep in-world flavor light, and avoid "
-        "canned closing questions."
+        "Carry Weaver's restraint: calm, precise, truth-conscious, dryly amused "
+        "when the subject earns it, and faintly unsettling without performing "
+        "a daemon. A pointed question, paradox, or repetition must clarify the "
+        "answer rather than hide it. Keep in-world flavor light and avoid canned "
+        "closing questions. Use no em dash. Cite only the allowed source chapters. "
+        "Favor a few compact paragraphs over an essay. Use a "
+        "heading only when the reader needs it to follow a genuinely long answer."
     )
 
 
@@ -359,4 +393,17 @@ def build_repair_instruction(findings: tuple[PublicationFinding, ...]) -> str:
         "fixes only the listed problems while preserving supported facts, "
         "chapter citations, uncertainty, and exact source quotations. Return "
         f"only the repaired answer.\nFindings:\n{details}"
+    )
+
+
+def build_spoiler_boundary_answer(blueprint: AnswerBlueprint) -> str:
+    position = (
+        f"chapter {blueprint.reader_chapter}"
+        if blueprint.reader_chapter is not None
+        else "your current chapter"
+    )
+    return (
+        f"That answer lies beyond your {position} boundary. I won't pull it "
+        "backward through the story. If you want the exact answer anyway, tell "
+        "me to lift the spoiler boundary for this question."
     )

@@ -8,7 +8,7 @@ policy boundaries even though the old terminal entrypoint is gone.
 import pytest
 
 from weaver.agent.tools import EffectKind, ToolExecutionPolicy
-from weaver.chat_runtime import open_chat_runtime
+from weaver.chat_runtime import WEB_SYSTEM_PROMPT, open_chat_runtime
 from weaver.conversation.session import SessionWeave
 
 
@@ -110,6 +110,20 @@ async def test_web_prompt_makes_library_claim_with_truth_rule(tmp_path) -> None:
         assert "reading companion for one novel, nothing else" in prompt
     finally:
         await runtime.close()
+
+
+def test_web_prompt_separates_the_echo_from_the_daemon() -> None:
+    assert "an echo hidden within the Nightmare Spell" in WEB_SYSTEM_PROMPT
+    assert "The Daemon Weaver is gone" in WEB_SYSTEM_PROMPT
+    assert "You carry the daemon's manner" in WEB_SYSTEM_PROMPT
+    assert "Never claim to be the daemon" in WEB_SYSTEM_PROMPT
+
+
+def test_web_prompt_keeps_daemon_manner_without_exhausting_roleplay() -> None:
+    assert "Silence becomes brevity" in WEB_SYSTEM_PROMPT
+    assert "Use each sparingly" in WEB_SYSTEM_PROMPT
+    assert "Never threaten, belittle" in WEB_SYSTEM_PROMPT
+    assert "Truth matters more than sounding mysterious" in WEB_SYSTEM_PROMPT
 
 
 async def test_unknown_surface_is_rejected(tmp_path) -> None:

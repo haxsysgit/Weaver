@@ -5,9 +5,10 @@
 Checkpoints one and three were accepted by the owner. Checkpoint two's
 retrieval and direct-rereading repair is implemented and locally verified.
 The checkpoint-four response examples were accepted, and the answer blueprint,
-publication inspection, and bounded repair path are implemented. Owner review
-of that implementation remains open. Detailed method and test interpretation
-is required at every later report.
+publication inspection, bounded repair path, source-derived voice, and live
+semantic-evaluation evidence are implemented. Owner review of checkpoint four
+remains open. Detailed method and test interpretation is required at every
+later report.
 
 ## Development and holdout boundary
 
@@ -344,11 +345,7 @@ classifier is intentionally a small keyword rule and can misclassify an
 ambiguous question. Direct chapter support and scene resolution remain reading
 judgment, not a regex verdict.
 
-No live call was made. Quality gain, added latency, token use, and dollar cost
-for the repair path remain unmeasured until the owner freezes a maximum live
-request count and dollar ceiling.
-
-The checkpoint-four affected floor passed on 2026-10-12:
+The initial checkpoint-four affected floor passed on 2026-10-12:
 
 - 152 answer, turn, and conversation tests;
 - 74 chat-runtime and web integration tests;
@@ -357,3 +354,94 @@ The checkpoint-four affected floor passed on 2026-10-12:
 
 The final all-repository pytest and Ruff floor remains checkpoint-five work, as
 agreed with the owner.
+
+### Source-derived voice extension
+
+The owner kept checkpoint four open for literary proof. Six primary dialogue
+chapters and four supporting chapters were read completely under the admitted
+bounded packet. The recurring voice behavior, rather than surface fantasy
+vocabulary, became the prompt contract: precise and unhurried answers, dry
+amusement, attention to the truth hidden beneath a question, restrained use of
+paradox and repetition, and heavier grief or menace only when the subject earns
+it.
+
+The system prompt now identifies Weaver as the hidden-thread echo accepted in
+Plan 022. It borrows the Daemon's manner without claiming to be the original
+Daemon. Constant threats, reader-directed cruelty, belittling, archaic
+roleplay, and ornamental riddles are explicitly rejected.
+
+The answer blueprint also answers the pressure point first, keeps a challenged
+follow-up shorter than the original reconstruction, requires claim-adjacent
+support, and gives theories a visible separation between canon,
+interpretation, and invention.
+
+### Claim-by-claim semantic evaluation
+
+An ephemeral evaluation inspector now:
+
+1. splits the proposed answer into claims while retaining the active section
+   label;
+2. compares batches of no more than 12 claims with the opened source passages;
+3. classifies each claim as canon, interpretation, invention, or conversation;
+4. records complete, partial, unsupported, or contradicted support;
+5. reports supporting and missing chapters; and
+6. reports semantic spoilers, including factual claims with no explicit
+   citation.
+
+The inspector uses JSON-only, non-reasoning calls and verifies provider stop
+reasons. It remains outside production turns. Plan 028 permits one answer-
+sized sponsored call, and the live evidence shows that this inspector can
+produce false positives. Adding its cost and judgment to every reader turn is
+not justified by checkpoint-four evidence.
+
+Deterministic publication protection remains in production. If a spoiler-
+guarded answer and its one repair both fail, Weaver now publishes a safe fixed
+boundary message instead of leaking the answer or returning a protocol error.
+
+### Live DeepSeek evaluation
+
+The owner authorized unlimited request count under a hard $3.00 cumulative
+ceiling. Seven journalled runs used 127 provider calls and measured $0.318481
+of token spend. An earlier ten-call run occurred before durable per-call
+metering was repaired. Rather than infer a favorable number after the fact,
+the run was assigned a conservative $0.75 reserve. Total accounted spend is
+$1.068481 of $3.00.
+
+The meter used the official DeepSeek Flash peak rates checked on 2026-10-12:
+$0.006 per million cache-hit input tokens, $0.30 per million cache-miss input
+tokens, and $1.20 per million output tokens. Every later call was journalled,
+and the harness reserved its possible maximum before sending it. Raw answers,
+receipts, prompts, and source passages remain in ignored private evaluation
+state.
+
+The run sequence exposed and repaired real failures:
+
+- the standalone harness originally missed application startup configuration;
+- the first audit reached its output limit because reasoning consumed its
+  allowance;
+- the first follow-up repeated too much of the initial reconstruction;
+- a guarded spoiler answer could not safely publish;
+- invented dialogue used source-style blockquotes; and
+- section headings were initially discarded, causing labelled invention to be
+  audited as canon.
+
+After repair, the live spoiler probe published only the safe boundary. The
+final what-if answer used 11 calls, separated canon from invention and
+interpretation, and produced 47 inspectable claims. The semantic inspector
+reported one partial-support finding. Direct reading of both cited chapters
+showed that each chapter supplied one of the claim's two clauses, so the
+finding was a false positive. This is direct evidence for the rule that the
+inspector may find questions but cannot settle canon.
+
+Human literary review found the final responses concise at their pressure
+points, capable of dry humor and disagreement, and free of original-Daemon
+identity claims. A challenged follow-up fell from 4,066 characters and 51
+claims to 2,821 characters and 35 claims while retaining its position. The
+final theory visibly separated five canon constraints from labelled invented
+events and a closing interpretation.
+
+These runs prove that DeepSeek can follow the new voice and representation
+contracts on the bounded cases, that the hard spend ceiling works after the
+meter repair, and that a semantic auditor can reveal unsupported or spoiler-
+sensitive claims. They do not prove all future answers are literary, correct,
+or spoiler-safe. They do not accept any Foundational Reader Trial.

@@ -5,6 +5,7 @@
 | `plan.md` | Pointer to the canonical implementation plan | Current |
 | `learning.md` | Retrieval, context, voice, and evaluation owner gates | Checkpoint-four implementation decision pending |
 | `results.md` | Layer-by-layer quality, cost, and conversation evidence | Retrieval, evidence, continuity, and answer inspection recorded |
+| `weaver-voice-contract.md` | Canon observations and the product personality derived from them | Bounded source reading and live proof complete; owner decision pending |
 | `review-ledger.md` | Independent findings, repairs, and rechecks | Not started |
 | `decision.md` | Owner's intelligence-system decision | Pending |
 

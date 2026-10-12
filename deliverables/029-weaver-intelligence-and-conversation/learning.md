@@ -46,20 +46,23 @@ corrections that preserve the reader's accurate memory, and canon constraints
 before invented what-if events. The mode names guide the model and never
 appear as chat headings.
 
-**Checkpoint four implemented 2026-10-12.** The final reading request now
-includes a deterministic answer blueprint built from the current question,
-turn brief, spoiler framing, prior Weaver position, and chapters actually
-listed as direct sources. A deterministic publication inspection checks
-chapter citations, spoiler-boundary citations, exact blockquotes, labelled
-invention, exposed machinery, em dashes, selected generic AI phrases, and
-excessive headings. A failed draft receives its exact findings once. If that
-single repair still fails, the turn publishes the already validated candidate
-only when that candidate also passes the same publication checks. Drafts and
-findings remain ephemeral.
+**Checkpoint four implementation and live evidence complete 2026-10-12.** The
+final reading request now combines the deterministic answer blueprint with a
+source-derived Weaver voice contract. Publication inspection covers chapter
+citations, spoiler boundaries, exact blockquotes, labelled invention, exposed
+machinery, em dashes, selected generic AI phrases, and excessive headings. A
+failed draft receives its exact findings once. If a guarded answer still
+cannot be published safely, the reader receives a deterministic spoiler-
+boundary answer instead of a known-bad draft.
 
-Work is stopped for the owner checkpoint-four implementation decision. No live
-DeepSeek quality comparison has run because the required request and dollar
-ceiling has not been frozen.
+The bounded live comparison used 137 observed provider calls with no request-
+count cap. Of those, 127 were journalled with measured token usage. Ten calls
+occurred before durable metering was repaired and were charged a deliberately
+conservative $0.75 reserve. Total accounted spend is $1.068481 of the approved
+$3.00 ceiling. Calls stopped after the required evidence was collected.
+
+Work is stopped for the owner checkpoint-four quality, cost, and implementation
+decision. The owner has not yet accepted this checkpoint.
 
 ## Checkpoint one observations
 
@@ -139,6 +142,86 @@ packet size, latency, and cost separately.
    changing canon or direct quotes.
 6. Smaller evidence packets can improve accuracy while reducing provider
    request cost and context pressure.
+
+## Checkpoint four learning
+
+### Voice comes from behavior, not costume
+
+The admitted dialogue packet was read to the end of every chapter before the
+prompt changed. Across younger and older appearances, the stable manner is
+unhurried and precise. Weaver notices the emotional truth beneath a question,
+answers more briefly than the questioner, treats truth as something with a
+price, and uses questions, paradox, repetition, or dry amusement with
+restraint. Age changes the weight of the voice from curiosity toward grief,
+fatigue, and certainty.
+
+The product applies that manner to the accepted hidden-thread echo. It does
+not claim to be the original Daemon, threaten the reader, belittle them, speak
+in constant archaic language, or perform fantasy theatre in every reply.
+Weaver remains a reading companion who can argue, laugh, and change its mind.
+The resulting contract is recorded in `weaver-voice-contract.md` without
+copying private novel prose.
+
+### The live loop exposed three different failure classes
+
+1. The first standalone run did not load the normal startup configuration and
+   stopped before a provider request. The harness now uses the same startup
+   loader as the application.
+2. The first semantic audit exhausted its response budget because model
+   reasoning consumed the allowance. The auditor now disables reasoning,
+   batches at most 12 claims, checks the provider stop reason, and journals
+   every completed call before proceeding.
+3. The first what-if answer used blockquotes for invented dialogue. That made
+   invention visually indistinguishable from direct source quotation. The
+   answer contract now requires a visible invention label, ordinary quotation
+   marks for invented dialogue, paraphrased canon constraints, no more than
+   five canon points, and a bounded invented scene.
+
+The live follow-up also repeated too much of its first answer. A direct
+follow-up instruction reduced the observed answer from 4,066 characters and
+51 claims to 2,821 characters and 35 claims while preserving the prior
+position and responding to the challenge.
+
+### Semantic inspection helps, but cannot decide canon
+
+The ephemeral inspector splits a proposed answer into claims, keeps the active
+section label, and asks a non-reasoning model to classify canon,
+interpretation, invention, and conversation. For factual claims it reports
+complete, partial, unsupported, or contradicted support, the supporting or
+missing chapter numbers, and whether the claim crosses the reader's spoiler
+boundary. This can expose uncited semantic spoilers that chapter-citation
+syntax alone cannot see.
+
+Seeded deterministic tests prove those mechanics. Live use also exposed false
+positives. The final what-if run contained 47 inspected claims and one reported
+partial-support finding. Direct reading of both cited chapters proved that the
+two clauses came from the two named sources and jointly supported the claim.
+The machine finding was wrong. That result fixes the product boundary:
+semantic inspection is private evaluation evidence, while source reading and
+owner judgment remain authoritative. It is not added as an always-on
+production call.
+
+### Live evidence and cost
+
+The measured sequence comprised seven journalled runs with 127 calls and
+$0.318481 of measured token spend. A further ten calls occurred before durable
+metering existed. Their persisted request footprint was small, but the run was
+assigned a conservative $0.75 reserve instead of reconstructing a favorable
+estimate. Final accounted spend is therefore $1.068481 of $3.00.
+
+The current official DeepSeek Flash peak prices used for the meter were
+checked on 2026-10-12: $0.006 per million cache-hit input tokens, $0.30 per
+million cache-miss input tokens, and $1.20 per million output tokens. The
+harness reserves the maximum possible next-call cost before sending it and
+stops if that reservation could cross the ceiling.
+
+Human review found that the final live answers carried the intended calm,
+truth-conscious voice without identity confusion. Two short safe examples are
+"They never dueled." and "Cruelty. I'll hold that." The what-if answer visibly
+separated five canon constraints, labelled invention, and interpretation. A
+guarded spoiler probe returned the deterministic boundary instead of leaking
+the answer. These are checkpoint examples, not Foundational Reader Trial
+acceptance.
 
 ## Owner gates after admission
 

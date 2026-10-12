@@ -18,6 +18,7 @@ from weaver.agent.answer import (
     PublicationFinding,
     build_answer_blueprint,
     build_repair_instruction,
+    build_spoiler_boundary_answer,
     format_answer_blueprint,
     inspect_publication,
 )
@@ -294,8 +295,12 @@ ZERO_EVIDENCE_CORRECTION = (
 )
 FINAL_ANSWER_INSTRUCTION = (
     "This is the final answer phase. The evidence packet above is complete and "
-    "no tools are available. Answer the user directly, citing chapters. Do not "
-    "name or describe searches, tool calls, or work you plan to do."
+    "no tools are available. Answer the user directly. Before returning the "
+    "answer, silently inspect each factual claim: it must follow from the opened "
+    "passages and carry its supporting chapter citation beside it. A synthesis "
+    "that needs several chapters must cite all of them. Remove or qualify claims "
+    "with incomplete support. Keep interpretations and invented branches labelled. "
+    "Do not name or describe searches, tool calls, or work you plan to do."
 )
 WORKING_NOTE_MARKERS = (
     "one moment",
@@ -623,6 +628,18 @@ async def run_turn(
         published = await _publish_deltas(deltas, on_delta, cancel_event)
         return True, published
 
+    async def persist_spoiler_boundary(
+        candidate: AssistantMessage,
+        blueprint: AnswerBlueprint,
+    ) -> tuple[bool, bool]:
+        boundary = replace(
+            candidate,
+            content=build_spoiler_boundary_answer(blueprint),
+            tool_calls=(),
+            reasoning_content="",
+        )
+        return await persist_answer(boundary, ())
+
     while model_steps < max_steps:
         if cancel_event.is_set():
             exit_reason = TurnExitReason.INTERRUPTED
@@ -803,6 +820,26 @@ async def run_turn(
                 publication_repair_attempted = True
                 continue
             if fallback_findings:
+                if answer_blueprint.spoiler_mode in {"guarded", "ask_first"}:
+                    persisted, published = await persist_spoiler_boundary(
+                        validated_candidate,
+                        answer_blueprint,
+                    )
+                    if not persisted:
+                        exit_reason = TurnExitReason.PERSISTENCE_FAILED
+                        safe_failure = safe_error("assistant_persistence")
+                        break
+                    if not published:
+                        exit_reason = TurnExitReason.INTERRUPTED
+                        safe_failure = safe_error("interrupted")
+                        break
+                    final_text = build_spoiler_boundary_answer(answer_blueprint)
+                    completed_response = True
+                    break
+                logger.warning(
+                    "publication repair failed: %s",
+                    ", ".join(finding.code for finding in fallback_findings),
+                )
                 exit_reason = TurnExitReason.MODEL_FAILED
                 safe_failure = safe_error("model_protocol")
                 break
@@ -881,6 +918,28 @@ async def run_turn(
                     final_packet,
                 )
                 if fallback_findings:
+                    if answer_blueprint.spoiler_mode in {"guarded", "ask_first"}:
+                        persisted, published = await persist_spoiler_boundary(
+                            validated_candidate,
+                            answer_blueprint,
+                        )
+                        if not persisted:
+                            exit_reason = TurnExitReason.PERSISTENCE_FAILED
+                            safe_failure = safe_error("assistant_persistence")
+                            break
+                        if not published:
+                            exit_reason = TurnExitReason.INTERRUPTED
+                            safe_failure = safe_error("interrupted")
+                            break
+                        final_text = build_spoiler_boundary_answer(answer_blueprint)
+                        completed_response = True
+                        break
+                    logger.warning(
+                        "publication repair failed: %s",
+                        ", ".join(
+                            finding.code for finding in fallback_findings
+                        ),
+                    )
                     exit_reason = TurnExitReason.MODEL_FAILED
                     safe_failure = safe_error("model_protocol")
                     break

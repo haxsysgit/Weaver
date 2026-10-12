@@ -1246,6 +1246,38 @@ class TestFinalReadingPhase:
         assert result.final_text == "LO49 vanished after Sunny left (ch. 900)."
         assert len(provider.calls) == 4
 
+    async def test_failed_spoiler_repair_returns_a_safe_boundary(self) -> None:
+        later_answer = "LO49 vanished after Sunny left (ch. 900)."
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response(later_answer),
+            stop_response(later_answer),
+            stop_response(later_answer),
+        )
+
+        async def packet_builder(results, draft):
+            return (
+                "--- chapter 900 lines 185-217 ---\nSource prose.\n\n"
+                "--- evidence board ---\n"
+                "direct sources: chapter 900 lines 185-217\n\n"
+                "The reader is at chapter 850. Answer the question but protect "
+                "the story beats."
+            )
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            packet_builder=packet_builder,
+        )
+
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert "chapter 850 boundary" in result.final_text
+        assert "LO49" not in result.final_text
+        assert "ch. 900" not in result.final_text
+        assert len(provider.calls) == 4
+
     async def test_final_reading_call_keeps_the_tier_effort(self) -> None:
         # The tier effort (high / max) belongs to the heavy final reading
         # answer call; locate steps drop to low (thinking still on).

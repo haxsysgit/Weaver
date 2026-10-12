@@ -4,6 +4,7 @@ from weaver.agent.answer import (
     ResponseMode,
     build_answer_blueprint,
     build_repair_instruction,
+    build_spoiler_boundary_answer,
     inspect_publication,
 )
 
@@ -26,6 +27,7 @@ direct sources: chapter 900 lines 185-217, chapter 901 lines 3-13
         ("Can you remind me how LO49 fell?", ResponseMode.RECONSTRUCTION),
         ("Do you think Sunny abandoned them?", ResponseMode.DISCUSSION),
         ("What if Verne ordered an evacuation?", ResponseMode.THEORY),
+        ("Then imagine Verne ordering an evacuation.", ResponseMode.THEORY),
         ("LO49 evacuated after Sunny left, right?", ResponseMode.CORRECTION),
     ],
 )
@@ -56,6 +58,51 @@ def test_blueprint_carries_the_prior_point_for_a_challenge() -> None:
         "address the reader's challenge" in obligation
         for obligation in blueprint.obligations
     )
+
+
+def test_blueprint_requires_claim_level_and_multi_chapter_support() -> None:
+    blueprint = build_answer_blueprint(
+        question="What happened to LO49?",
+        prior_weaver_position="",
+        reader_challenges_prior_answer=False,
+        evidence_packet=PACKET,
+    )
+
+    assert any("every factual claim" in item for item in blueprint.obligations)
+    assert any("several scenes" in item for item in blueprint.obligations)
+    assert any("does not follow" in item for item in blueprint.obligations)
+
+
+def test_blueprint_keeps_a_follow_up_out_of_reconstruction_mode() -> None:
+    blueprint = build_answer_blueprint(
+        question="So was that compassion or cruelty?",
+        prior_weaver_position="Weaver exposed Ariel's self-deception.",
+        reader_challenges_prior_answer=False,
+        evidence_packet=PACKET,
+    )
+
+    assert any(
+        "without reconstructing or requoting" in item
+        for item in blueprint.obligations
+    )
+    assert any("few source words" in item for item in blueprint.obligations)
+
+
+def test_theory_blueprint_separates_invention_without_fake_source_quotes() -> None:
+    blueprint = build_answer_blueprint(
+        question="Imagine Verne ordered an evacuation.",
+        prior_weaver_position="",
+        reader_challenges_prior_answer=False,
+        evidence_packet=PACKET,
+    )
+
+    assert blueprint.mode == ResponseMode.THEORY
+    assert any(
+        "no source quotation or blockquote" in item
+        for item in blueprint.obligations
+    )
+    assert any("ordinary quotation marks" in item for item in blueprint.obligations)
+    assert any("under 450 words" in item for item in blueprint.obligations)
 
 
 def test_inspection_accepts_a_grounded_direct_answer() -> None:
@@ -167,3 +214,22 @@ def test_repair_instruction_names_only_the_observed_failures() -> None:
     assert "missing_citation" in instruction
     assert "changed_quote" not in instruction
     assert "one rewrite" in instruction
+
+
+def test_spoiler_boundary_answer_names_the_reader_position_without_story_fact() -> None:
+    guarded_packet = (
+        PACKET
+        + "\nThe reader is at chapter 850. Answer but protect the story beats."
+    )
+    blueprint = build_answer_blueprint(
+        question="What happened to LO49?",
+        prior_weaver_position="",
+        reader_challenges_prior_answer=False,
+        evidence_packet=guarded_packet,
+    )
+
+    answer = build_spoiler_boundary_answer(blueprint)
+
+    assert "chapter 850 boundary" in answer
+    assert "lift the spoiler boundary" in answer
+    assert "LO49" not in answer

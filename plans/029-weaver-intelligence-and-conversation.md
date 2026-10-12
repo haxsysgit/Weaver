@@ -26,7 +26,8 @@
   evaluation work, and two independent reviews, estimated $3.60 to $15.60.
   Deterministic retrieval and fake-profile proof comes first. Live development
   runs use the owner-approved DeepSeek development allowance or owner BYOK
-  through Plan 028, within a frozen request and dollar ceiling. Production
+  through Plan 028. The checkpoint-four live evaluation has no request-count
+  ceiling and a hard $3.00 total-spend ceiling, approved 2026-10-12. Production
   traffic remains Plan 030 work.
 
 ## Owner direction (locked decisions)
@@ -85,6 +86,24 @@
 16. (2026-10-02) Reuse the current `run_turn`, reading tools, packet-builder
     seam, `ContextAssembler`, and conversation ledger. Add the smallest missing
     record at each measured failure; do not build every proposed layer upfront.
+17. (2026-10-12) Checkpoint four remains open until live evidence covers
+    literary quality and a canon-derived personality based on the Daemon
+    Weaver's actual dialogue. The product remains the hidden-thread echo and
+    reading companion accepted in Plan 022; it carries the daemon's manner
+    without claiming to be the original daemon.
+18. (2026-10-12) The voice target is drawn from bounded direct reading before
+    prompt changes: unhurried, precise, truth-conscious, dryly amused, willing
+    to answer through a question or paradox, and heavier with grief or menace
+    only when the subject earns it. Constant threats, titles, archaic speech,
+    and theatrical roleplay are rejected.
+19. (2026-10-12) Citation presence alone is insufficient. Checkpoint four must
+    inspect each factual claim against the opened passages, preserve
+    multi-chapter support, and block uncited semantic spoilers. Automated
+    semantic inspection remains evidence, never the final canon authority.
+20. (2026-10-12) Live checkpoint-four development may use as many requests as
+    the evaluation needs, but total measured DeepSeek spend must remain at or
+    below $3.00. Stop before a call whose reserved maximum could cross the
+    ceiling.
 
 ## Scope
 
@@ -168,6 +187,15 @@
   answer against the evidence board. Mechanical failures get precise repairs.
   Ambiguous literary judgment remains visible as interpretation rather than
   being forced into a false pass or fail.
+- Derive a public-safe Weaver voice contract from bounded direct reading of the
+  daemon's dialogue. Keep the product's accepted echo identity while carrying
+  the daemon's cadence, restraint, precision, dry amusement, truth-games, and
+  earned severity into the companion voice.
+- Require sentence-level support for factual claims. Use a bounded semantic
+  inspection against the exact opened passages to identify partial,
+  unsupported, or contradicted claims, multi-chapter claims missing part of
+  their proof, and uncited later-story facts. The inspection cannot use model
+  memory as evidence and cannot settle literary interpretation.
 - Keep correction candidates, evidence boards, reading packets, rejected
   drafts, style findings, and raw reasoning ephemeral. Persist the final answer
   and safe versioned conversation projection only after validation succeeds.
@@ -230,27 +258,31 @@
 7. Style tests prove Weaver-authored prose contains no em dash, direct
    blockquotes remain byte-identical, generic AI and support-bot patterns
    produce targeted findings, and cleanup never rewrites novel prose.
-8. Repair tests prove each retry receives exact findings, has a fixed ceiling,
+8. Claim-inspection tests cover supported, partially supported, contradicted,
+   and unsupported claims; multi-chapter synthesis; uncited later-story facts;
+   malformed inspections; and interpretation that remains labelled instead of
+   being promoted to canon.
+9. Repair tests prove each retry receives exact findings, has a fixed ceiling,
    stays ephemeral, and falls back only to a previously validated answer.
-9. Conversation tests prove established facts, positions, versions, and
+10. Conversation tests prove established facts, positions, versions, and
    unresolved disagreements survive restart while stale tool transcripts,
    packets, rejected drafts, and raw reasoning do not.
-10. Execution-profile tests run the same semantic contract through strict and
-    combined fake profiles. Provider identity never appears in reading,
-    context, answer, or style policy.
-11. Ablation reports show the quality and request-cost change when retrieval,
-    structured context, evidence checking, answer planning, and style repair
-    are added one at a time. An added stage with no agreed improvement is
-    removed or returned to the owner.
-12. Development runs include repeated multi-turn cases and failures. They may
-    show readiness for Plan 030 but cannot accept a Foundational Reader Trial
-    or qualify a production model.
-13. Focused suites pass, followed by `uv run pytest -q` and
-    `uv run ruff check src/weaver tests`. Root `npm test` and `npm run build`
-    pass if visible response handling changes.
-14. Two independent reviews pass: retrieval/evidence/temporal correctness,
-    then conversation/voice/style/privacy/evaluation validity. The owner
-    records the final Plan 029 decision.
+11. Execution-profile tests run the same semantic contract through strict and
+   combined fake profiles. Provider identity never appears in reading,
+   context, answer, or style policy.
+12. Ablation reports show the quality and request-cost change when retrieval,
+   structured context, evidence checking, answer planning, and style repair
+   are added one at a time. An added stage with no agreed improvement is
+   removed or returned to the owner.
+13. Development runs include repeated multi-turn cases and failures. They may
+   show readiness for Plan 030 but cannot accept a Foundational Reader Trial
+   or qualify a production model.
+14. Focused suites pass, followed by `uv run pytest -q` and
+   `uv run ruff check src/weaver tests`. Root `npm test` and `npm run build`
+   pass if visible response handling changes.
+15. Two independent reviews pass: retrieval/evidence/temporal correctness,
+   then conversation/voice/style/privacy/evaluation validity. The owner
+   records the final Plan 029 decision.
 
 ## STOP conditions
 
@@ -332,6 +364,16 @@
      chapters, spoilers, exposed machinery, textual tool calls, em dashes, and
      generic AI prose. Keep at most one specific repair call, and only if its
      measured gain earns the added request.
+   - Read the admitted bounded daemon-dialogue packet to its chapter endings,
+     record canon observations separately from product voice rules, and test
+     the resulting voice through live answers before accepting it.
+   - Add claim-by-claim semantic inspection against opened passages. Require
+     complete support for multi-chapter synthesis and reject uncited factual
+     spoilers without pretending an automated inspector settles canon or
+     interpretation.
+   - Run the approved live DeepSeek comparison with no request-count cap and a
+     hard $3.00 spend ceiling. Preserve private answers and receipts outside
+     public deliverables; report only safe measures and short approved samples.
    - Compare current, retrieval-only, evidence-packet, conversation, and final
      inspection paths one layer at a time. STOP for the owner quality, latency,
      and request-cost gate.
