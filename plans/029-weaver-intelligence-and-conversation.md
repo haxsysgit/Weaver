@@ -22,16 +22,19 @@
 - **Risk:** High. Fiction retrieval is time-aware and multi-step; oversized
   context can lower quality; style repair can damage quotes; extra model calls
   consume scarce free capacity; and tuning against known trials can overfit.
-- **Budget:** about 320k to 520k agent-context tokens for one executor, focused
-  evaluation work, and two independent reviews, estimated $3.60 to $15.60.
+- **Budget:** about 970k to 1.42m agent-context tokens for the implementation,
+  focused evaluation work, the 260-chapter literary study, and two independent
+  reviews, estimated $6.00 to $30.00 depending on cache use and executor mix.
   Deterministic retrieval and fake-profile proof comes first. Live development
   runs use the owner-approved DeepSeek development allowance or owner BYOK
   through Plan 028. The checkpoint-four live evaluation has no request-count
   ceiling and a hard $3.00 total-spend ceiling, approved 2026-10-12. Production
   traffic remains Plan 030 work. The owner-requested literary study adds 20
-  complete chapters per agreed story division. Its added token and cost budget
-  must be frozen after the owner chooses official volumes or internal story
-  arcs; no bulk reading starts before that choice.
+  complete chapters from each of the 13 official volumes: 260 chapters,
+  29,778 source lines, and 1,888,884 source characters. The study adds an
+  estimated 650k to 900k agent-context tokens. It uses private source reading
+  and deterministic analysis, not product DeepSeek calls, so it does not spend
+  from the checkpoint-four $3.00 live-provider ceiling.
 
 ## Owner direction (locked decisions)
 
@@ -129,6 +132,16 @@
 25. (2026-10-12) Repair the observed composer regression and remove the long
     response line before further literary evaluation. Drafting and focus remain
     available when access is unavailable; access state blocks submission only.
+26. (2026-10-12) "Story division" means the 13 source-verified official
+    volumes. Read exactly 20 complete chapters from each volume: the first and
+    last chapter plus 18 chapters distributed at equal intervals across the
+    inclusive volume range. The frozen sample contains 260 chapters. Informal
+    notebook arcs do not define this study.
+27. (2026-10-16) The owner permits targeted reading and latest-volume analysis
+    beyond the equal-count method. Retain the completed 260-chapter sample as
+    the baseline; document additional chapters or rereads, their purpose, and
+    which voice decisions they inform. The desired result is an engaging,
+    poetic storyteller voice. A chapter count alone cannot establish that.
 
 ## Scope
 
@@ -354,9 +367,9 @@
 - If the admitted DeepSeek model cannot meet the agreed development cases
   within the request and cost ceiling, record that result for Plan 030 rather
   than hiding it.
-- If "arc" has not been frozen as either the 13 source-verified official
-  volumes or a complete owner-approved internal arc map, STOP before bulk
-  reading. The current internal map is incomplete and cannot define the sample.
+- If any chapter in the frozen 260-chapter official-volume sample is missing,
+  cannot be opened, or cannot be read to its end, STOP and record the affected
+  volume and chapter. Do not replace it silently with a nearby chapter.
 - If a literary rule is inferred from notebook summaries, isolated dialogue,
   or model memory instead of complete sampled chapters, reject the rule.
 
@@ -420,9 +433,13 @@
      inspection paths one layer at a time. STOP for the owner quality, latency,
      and request-cost gate.
    - **Owner review failed 2026-10-12.** Repair composer drafting/focus and
-     remove the response line. Freeze the story-division definition and revised
-     reading budget before the literary study.
-   - Read the approved 20-chapter sample per division to chapter endings.
+     remove the response line. The owner subsequently froze the 13 official
+     volumes as the story divisions. The executor recorded a revised budget
+     estimate; this is not a measured bill or a separately approved spend cap.
+   - Read the approved 20-chapter sample per official volume to chapter
+     endings: first, last, and 18 equal-interval chapters per volume.
+     Follow the 2026-10-16 amendment with targeted rereads where they resolve
+     voice questions; keep the original sample and extra work distinguishable.
      Produce the public-safe literary analysis, `identity.md`, and `soul.md`,
      then STOP for owner review before constructing the system prompt.
 

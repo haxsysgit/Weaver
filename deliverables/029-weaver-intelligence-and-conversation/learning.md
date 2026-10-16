@@ -76,11 +76,73 @@ drafting from submission and restores focus when the chat becomes ready. The
 long line came from the `weaver-response-spine::after` pseudo-element and is
 removed with its obsolete animation.
 
-Bulk literary reading is stopped for one required owner choice. The source has
-13 verified official volumes, while the private working notebook contains more
-than 30 informal story arcs and has gaps. Twenty chapters per choice means 260
-chapters by volume or at least 680 by internal arc. The sample and revised
-budget cannot be honest until "arc" is frozen.
+**Literary divisions accepted 2026-10-12.** The owner chose the 13 official
+volumes, not the incomplete informal notebook arc map. The frozen sample uses
+the first and last chapter plus 18 equal-interval chapters from every official
+volume: 260 complete chapters, 29,778 source lines, and 1,888,884 source
+characters. All 260 zero-padded source paths exist. The added study budget is
+estimated at 650k to 900k agent-context tokens and does not use product
+DeepSeek calls.
+
+Two setup failures remain part of the record. The first sampler invocation
+used `python`, which is unavailable in this environment; the successful retry
+used `uv run python`. The first file-existence check also constructed
+unpadded chapter filenames and falsely reported 96 missing files. Rechecking
+the same frozen chapter numbers with the repository's zero-padded naming
+scheme produced zero missing files. Neither failure changed the sample.
+The first deterministic-metrics run then assumed a flat chapter directory;
+the private library actually stores zero-padded chapter files in 100-chapter
+shards. The analyzer now resolves the shard from the frozen chapter number.
+This was another path-construction failure, not a missing chapter or a sample
+change.
+
+**Literary reading complete 2026-10-12.** Three private ignored ledgers cover
+volumes 1 to 4, 5 to 8, and 9 to 13. They contain one structured entry for
+every assigned chapter and chapter-backed syntheses for every volume. Sequence
+and field-count audits passed at 80, 80, and 100 chapters. Late source files
+contain a repeated scraper footer after the story ending; both the readers and
+the structural analyzer excluded it from literary evidence.
+
+The primary executor independently reread chapters 1, 350, 742, 1060, 1231,
+1840, and 3160 to their endings. These checks confirmed the shared findings:
+close practical perspective anchors the mythic scale; worldbuilding changes a
+current choice; action remains causal and constrained; humour protects
+character identity; emotion is often carried through restraint; and strong
+endings change meaning or direction instead of recapping.
+
+The cleaned structural sample contains 326,805 story words, 24,095 sentences,
+and 14,726 paragraphs. Its average sentence has 14.1 words, 17.4 percent of
+sentences have five words or fewer, and 20.2 percent of paragraphs begin as
+dialogue. These figures support rhythm discussion but do not grade literary
+meaning.
+
+The public-safe study and owner-review drafts of `identity.md` and `soul.md`
+are complete. They preserve the accepted Hidden Thread identity while deriving
+the voice from broad narrative behavior rather than Daemon dialogue. Neither
+component is connected to runtime. The next action is the required owner review.
+
+**Flexible study direction, 2026-10-16.** The owner explicitly permits source
+selection beyond the equal-count method, including the latest volume, and asks
+for documented choices that produce an engaging poetic voice. The completed
+260-chapter sample remains the baseline. The executor reread chapters 3152,
+3155, and 3158 in full to study changes between magical scale, domestic warmth,
+humour, and farewell. These are rereads, so the unique count remains 260.
+Volume 13 is the latest in the checked local library, not a claim about current
+online publication.
+
+The first draft was too prescriptive in places. Its four-beat answer pattern,
+mandatory pre-answer checklist, and dry-only humour could flatten the requested
+voice. The revision permits changing narrative distance, optional interpretive
+lenses, playful or affectionate wit, and a scene opening when the reader asks
+for narration. The distant witness remains a chosen product persona informed
+by the study, not a claim that the novel has that narrator.
+
+Original review examples now demonstrate the intended range using a clearly
+invented setting. They remain outside runtime and are not live model outputs.
+The independent literary draft review is recorded in `review-ledger.md`.
+The earlier $6 to $30 agent-context estimate is unmetered; no actual session
+bill is available here. This continuation made zero product provider requests
+and leaves the existing $1.068481 accounted live spend unchanged.
 
 ## Checkpoint one observations
 
@@ -253,6 +315,7 @@ acceptance.
 3. **Response examples accepted 2026-10-12; implementation rejected for
    revision 2026-10-12.** Keep the answer shapes and measured safety work.
    Repair the UI regression and replace the narrow daemon-dialogue personality
-   with owner-reviewed `identity.md` and `soul.md` derived from the agreed
-   multi-arc literary reading.
+   with owner-reviewed `identity.md` and `soul.md` derived from the official-
+   volume literary reading. The 260-chapter study and both review drafts are
+   complete; runtime construction is stopped at the owner gate.
 4. Freeze the Plan 030 model-qualification contract before Plan 029 closes.

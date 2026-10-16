@@ -485,3 +485,85 @@ Focused proof on 2026-10-12:
 The browser proof used fake mode and spent no model tokens. It proves the
 shipped frontend interaction and CSS correction, not the pending literary
 identity.
+
+### Official-volume literary sample
+
+The owner selected the 13 official volumes as the study divisions on
+2026-10-12. The reproducible sample takes each volume's first and last chapter
+and rounds 18 equal intervals across the inclusive range. This yields 20
+complete chapters per volume and 260 chapters overall. The resolved private
+source files contain 29,778 lines and 1,888,884 characters.
+
+The study records qualitative reading observations in private ignored ledgers
+and computes aggregate structural measures without emitting novel prose.
+Public deliverables will contain only the method and source-safe synthesis.
+No product DeepSeek call is used for the literary reading.
+
+The setup produced two corrected failures. The environment has no `python`
+command, so the sampler moved to `uv run python`. The first existence check
+used unpadded names and incorrectly reported 96 missing chapters; the corrected
+zero-padded check found all 260 files. Both failures are recorded because they
+distinguish tooling mistakes from missing source material.
+
+The first structural-metrics run also assumed a flat source directory and
+stopped on chapter 1. The private library is divided into 100-chapter shards;
+the analyzer now derives the shard from each frozen chapter number. The failed
+run made no source changes and produced no partial report.
+
+All three private reading ledgers are now complete and audited: 80 chapters for
+volumes 1 to 4, 80 for volumes 5 to 8, and 100 for volumes 9 to 13. Each chapter
+was read to its ending. The primary executor separately reread chapters 1, 350,
+742, 1060, 1231, 1840, and 3160 to verify the cross-volume claims against the
+source rather than accepting delegated synthesis uncritically.
+
+After chapter headers and late scraper footers were removed from measurement,
+the structural sample contained 326,805 words, 24,095 sentences, and 14,726
+paragraphs. The source-wide synthesis found seven durable behaviors:
+
+1. close practical perspective anchors mythic scale;
+2. grandeur uses exact material contrast rather than ornamental language;
+3. exposition is attached to discovery, work, danger, or choice;
+4. action is explained through position, constraint, cost, and adaptation;
+5. suspense and endings change the meaning or direction of the scene;
+6. emotion is often carried through restraint and practical care; and
+7. humour is dry, relational, and sensitive to pressure.
+
+`literary-style-study.md` records the public-safe evidence. `identity.md`
+defines the hidden-thread companion and its truth obligations. `soul.md`
+translates the literary findings into response behavior without imitating the
+author or importing Sunny's personality. Both prompt components are drafts and
+remain disconnected from runtime pending owner review.
+
+### Literary revision, 2026-10-16
+
+The owner authorized flexible and latest-volume reading. Three complete
+rereads, 3152, 3155, and 3158, tested whether the proposed restraint rules were
+suppressing warmth and emotional release. They add no unique chapters to the
+260-chapter baseline. The local library ends at chapter 3160; no claim was made
+about current online releases.
+
+The revised drafts replace a mandatory answer shape with response priorities,
+allow narrative distance to move between broad context and individual
+experience, and broaden humour to include playfulness, affection, and
+self-mockery. They explicitly preserve supported facts during narration.
+`voice-examples.md` supplies original illustrations in an invented setting for
+owner review. They are excluded from the production prompt and evaluation
+claims.
+
+The draft review found four issues with rigidity, humour range, fixed distance,
+and unlabelled illustrative images. They were repaired and recorded in the
+review ledger. Documentation checks passed: no whitespace errors, no em dashes
+in the four new literary documents, and no normalized 14-word sequence matching
+the 260 sampled private chapters. This overlap scan is a limited copying check,
+not proof of literary quality, originality in general, or factual accuracy.
+
+The structural analysis is also qualified more precisely: its headline figures
+are averages across chapters, the sentence splitter is approximate, and a
+paragraph starting with quotation marks can be thought or speech. The sample
+covers unequal fractions of different-length volumes. None of these numbers
+is an acceptance score.
+
+This continuation changes documentation only. No application tests or builds
+were rerun, and no product provider calls were made. Live performance of the
+revised voice remains untested. Agent-context cost is not measured; the existing
+budget is an estimate, not a bill.
