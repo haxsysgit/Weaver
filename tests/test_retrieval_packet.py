@@ -264,6 +264,29 @@ async def test_packet_size_cap_keeps_board_and_framing(tmp_path: Path) -> None:
     assert "spoiler framing" in packet.text
 
 
+@pytest.mark.asyncio
+async def test_packet_board_lists_only_passages_that_survive_trimming(
+    tmp_path: Path,
+) -> None:
+    svc = _service(tmp_path)
+    packet = build_packet(
+        svc,
+        [_read_result(98, 5, 8), _read_result(104, 10, 12)],
+        candidate="The answer spans ch. 98 and ch. 104.",
+        user_chapter=104,
+        cap_override=900,
+    )
+
+    assert packet is not None
+    packet_chapters = {
+        source.chapter for source in packet.board.direct_sources
+    }
+    for chapter in packet_chapters:
+        assert f"--- chapter {chapter}, lines" in packet.text
+    assert "direct sources: chapter 98" not in packet.text
+    assert packet.board.unsupported_chapters == (98,)
+
+
 def test_packet_uses_one_shared_request_safe_cap() -> None:
     assert PACKET_CHAR_CAP == 24_000
 

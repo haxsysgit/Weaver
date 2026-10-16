@@ -1032,21 +1032,39 @@ async def run_turn(
                 continue
 
             if forced_answer:
-                persisted, published = await persist_answer(
-                    assistant,
-                    response_deltas,
-                )
-                if not persisted:
-                    exit_reason = TurnExitReason.PERSISTENCE_FAILED
-                    safe_failure = safe_error("assistant_persistence")
+                if packet_builder is None:
+                    persisted, published = await persist_answer(
+                        assistant,
+                        response_deltas,
+                    )
+                    if not persisted:
+                        exit_reason = TurnExitReason.PERSISTENCE_FAILED
+                        safe_failure = safe_error("assistant_persistence")
+                        break
+                    if not published:
+                        exit_reason = TurnExitReason.INTERRUPTED
+                        safe_failure = safe_error("interrupted")
+                        break
+                    final_text = assistant.content
+                    completed_response = True
                     break
-                if not published:
-                    exit_reason = TurnExitReason.INTERRUPTED
-                    safe_failure = safe_error("interrupted")
+
+                try:
+                    packet = await packet_builder(
+                        turn_tool_results,
+                        assistant.content,
+                    )
+                except Exception:
+                    logger.warning("reading packet build failed", exc_info=True)
+                    packet = None
+                if not packet:
+                    exit_reason = TurnExitReason.MODEL_FAILED
+                    safe_failure = safe_error("model_protocol")
                     break
-                final_text = assistant.content
-                completed_response = True
-                break
+                validated_candidate = assistant
+                validated_candidate_deltas = response_deltas
+                final_packet = packet
+                continue
 
             if tool_steps_used == 0 and not zero_evidence_reprompted:
                 zero_evidence_reprompted = True
@@ -1054,6 +1072,7 @@ async def run_turn(
                 continue
 
             packet: str | None = None
+            packet_build_failed = False
             if packet_builder is not None:
                 try:
                     packet = await packet_builder(
@@ -1062,12 +1081,20 @@ async def run_turn(
                     )
                 except Exception:
                     logger.warning("reading packet build failed", exc_info=True)
+                    packet_build_failed = True
 
             if packet and model_steps < max_steps:
                 validated_candidate = assistant
                 validated_candidate_deltas = response_deltas
                 final_packet = packet
                 continue
+
+            if packet_builder is not None and (
+                packet_build_failed or tool_steps_used > 0
+            ):
+                exit_reason = TurnExitReason.MODEL_FAILED
+                safe_failure = safe_error("model_protocol")
+                break
 
             persisted, published = await persist_answer(assistant, response_deltas)
             if not persisted:

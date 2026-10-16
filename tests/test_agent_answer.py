@@ -5,6 +5,7 @@ from weaver.agent.answer import (
     build_answer_blueprint,
     build_repair_instruction,
     build_spoiler_boundary_answer,
+    format_answer_blueprint,
     inspect_publication,
 )
 
@@ -20,6 +21,24 @@ direct sources: chapter 900 lines 185-217, chapter 901 lines 3-13
 """
 
 
+def test_narration_uses_reviewed_voice_without_forcing_the_ending_first() -> None:
+    blueprint = build_answer_blueprint(
+        question="Narrate the scene for me.",
+        prior_weaver_position="",
+        reader_challenges_prior_answer=False,
+        evidence_packet=PACKET,
+    )
+    instruction = format_answer_blueprint(blueprint)
+
+    assert blueprint.mode == ResponseMode.RECONSTRUCTION
+    assert "open inside a supported moment" in instruction
+    assert "system identity and soul" in instruction
+    assert "outcome before" not in instruction
+    assert "faintly unsettling" not in instruction
+    assert "every factual claim" in instruction
+    assert "several scenes" in instruction
+
+
 @pytest.mark.parametrize(
     ("question", "expected"),
     [
@@ -27,6 +46,7 @@ direct sources: chapter 900 lines 185-217, chapter 901 lines 3-13
         ("Can you remind me how LO49 fell?", ResponseMode.RECONSTRUCTION),
         ("Do you think Sunny abandoned them?", ResponseMode.DISCUSSION),
         ("What if Verne ordered an evacuation?", ResponseMode.THEORY),
+        ("Make a short what-if about Verne.", ResponseMode.THEORY),
         ("Then imagine Verne ordering an evacuation.", ResponseMode.THEORY),
         ("LO49 evacuated after Sunny left, right?", ResponseMode.CORRECTION),
     ],
@@ -115,6 +135,181 @@ def test_inspection_accepts_a_grounded_direct_answer() -> None:
     answer = "LO49 disappeared after Sunny left (chs. 900-901)."
 
     assert inspect_publication(answer, blueprint, PACKET) == ()
+
+
+def test_inspection_accepts_parenthetical_chapter_citations() -> None:
+    blueprint = build_answer_blueprint(
+        question="What happened to LO49?",
+        prior_weaver_position="",
+        reader_challenges_prior_answer=False,
+        evidence_packet=PACKET,
+    )
+
+    grounded = inspect_publication(
+        "LO49 disappeared after Sunny left (chs. 900-901).",
+        blueprint,
+        PACKET,
+    )
+    unopened = inspect_publication(
+        "LO49 disappeared after Sunny left (ch. 999).",
+        blueprint,
+        PACKET,
+    )
+
+    assert grounded == ()
+    assert {finding.code for finding in unopened} == {"unsupported_chapter"}
+
+
+def test_inspection_ignores_bare_parenthetical_numbers() -> None:
+    blueprint = build_answer_blueprint(
+        question="What happened to LO49?",
+        prior_weaver_position="",
+        reader_challenges_prior_answer=False,
+        evidence_packet=PACKET,
+    )
+
+    findings = inspect_publication(
+        "There were one hundred witnesses (100). The setup began in ch. 900.",
+        blueprint,
+        PACKET,
+    )
+
+    assert findings == ()
+
+
+def test_inspection_rejects_overly_broad_chapter_ranges() -> None:
+    blueprint = build_answer_blueprint(
+        question="What happened to LO49?",
+        prior_weaver_position="",
+        reader_challenges_prior_answer=False,
+        evidence_packet=PACKET,
+    )
+
+    findings = inspect_publication(
+        "The event spans chapters 800-900.",
+        blueprint,
+        PACKET,
+    )
+
+    assert {finding.code for finding in findings} == {
+        "malformed_chapter_range",
+        "unsupported_chapter",
+    }
+
+
+def test_inspection_does_not_accept_notebook_text_as_a_direct_quote() -> None:
+    blueprint = build_answer_blueprint(
+        question="What happened to LO49?",
+        prior_weaver_position="",
+        reader_challenges_prior_answer=False,
+        evidence_packet=PACKET,
+    )
+    packet = (
+        PACKET
+        + "\n\n--- notebook statement synthetic [fact] ch 900 ---\n"
+        + "A generated notebook summary."
+    )
+
+    findings = inspect_publication(
+        "The scene is clear (ch. 900).\n\n> A generated notebook summary.",
+        blueprint,
+        packet,
+    )
+
+    assert {finding.code for finding in findings} == {"changed_quote"}
+
+
+def test_inspection_rejects_notebook_only_evidence() -> None:
+    packet = (
+        "--- notebook statement synthetic [fact] ch 900 ---\n"
+        "A generated notebook summary.\n\n"
+        "--- evidence board ---\n"
+        "direct sources: none\n"
+    )
+    blueprint = build_answer_blueprint(
+        question="What happened?",
+        prior_weaver_position="",
+        reader_challenges_prior_answer=False,
+        evidence_packet=packet,
+    )
+
+    findings = inspect_publication(
+        "A generated notebook summary.",
+        blueprint,
+        packet,
+    )
+
+    assert {finding.code for finding in findings} == {
+        "missing_direct_evidence"
+    }
+
+
+def test_inspection_rejects_long_direct_quotes() -> None:
+    long_quote = " ".join(["synthetic"] * 26)
+    packet = PACKET.replace("Synthetic source line one.", long_quote)
+    blueprint = build_answer_blueprint(
+        question="What happened?",
+        prior_weaver_position="",
+        reader_challenges_prior_answer=False,
+        evidence_packet=packet,
+    )
+
+    findings = inspect_publication(
+        f"The passage answers it (ch. 900).\n\n> {long_quote}",
+        blueprint,
+        packet,
+    )
+
+    assert {finding.code for finding in findings} == {"long_quote"}
+
+
+def test_inspection_counts_multiline_blockquote_as_one_quote() -> None:
+    first_line = " ".join(["synthetic"] * 13)
+    second_line = " ".join(["source"] * 13)
+    packet = PACKET.replace(
+        "Synthetic source line one.",
+        f"{first_line}\n{second_line}",
+    )
+    blueprint = build_answer_blueprint(
+        question="What happened?",
+        prior_weaver_position="",
+        reader_challenges_prior_answer=False,
+        evidence_packet=packet,
+    )
+
+    findings = inspect_publication(
+        f"The passage answers it (ch. 900).\n\n> {first_line}\n> {second_line}",
+        blueprint,
+        packet,
+    )
+
+    assert {finding.code for finding in findings} == {"long_quote"}
+
+
+def test_inspection_counts_repeated_short_quotes_together() -> None:
+    first_quote = " ".join(["synthetic"] * 13)
+    second_quote = " ".join(["source"] * 13)
+    packet = PACKET.replace(
+        "Synthetic source line one.",
+        f"{first_quote}\nA separator.\n{second_quote}",
+    )
+    blueprint = build_answer_blueprint(
+        question="What happened?",
+        prior_weaver_position="",
+        reader_challenges_prior_answer=False,
+        evidence_packet=packet,
+    )
+
+    findings = inspect_publication(
+        (
+            "The passage answers it (ch. 900).\n\n"
+            f"> {first_quote}\n\nContext.\n\n> {second_quote}"
+        ),
+        blueprint,
+        packet,
+    )
+
+    assert {finding.code for finding in findings} == {"long_quote"}
 
 
 def test_inspection_flags_style_leaks_without_rewriting_quotes() -> None:

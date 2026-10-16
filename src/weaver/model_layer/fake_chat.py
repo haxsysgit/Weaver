@@ -45,9 +45,10 @@ current_fake_retry: ContextVar[bool] = ContextVar(
 
 MARKDOWN_ANSWER = """## The simulated answer
 
-> This quotation is synthetic. It exists to test Weaver's blockquote treatment.
+> Synthetic passage for development only.
 
-The fixture supports **one direct reading** and *one competing interpretation*.
+The fixture supports **one direct reading** and *one competing interpretation*
+(ch. 184).
 
 1. The first clue appears in Chapter 184.
 2. The later scene changes how that clue reads.
@@ -121,9 +122,10 @@ def _normal_answer(current_prompt: str, previous_prompt: str | None) -> str:
     return (
         f"{continuity}The simulated reading points to a choice with two plausible "
         "interpretations.\n\n"
-        "> The first fixture passage makes the character's intent look certain.\n\n"
+        "> Synthetic passage for development only.\n\n"
         "The later fixture complicates that certainty. My read is that the action "
-        "was deliberate, while the result went further than the character expected.\n\n"
+        "was deliberate, while the result went further than the character expected "
+        "(ch. 184).\n\n"
         f"For your question, *{_safe_excerpt(current_prompt)}*, I would keep the "
         "distinction between intent and outcome at the centre of the discussion. "
         "That gives us something real to argue about instead of flattening the scene "
@@ -142,11 +144,11 @@ def _long_answer(current_prompt: str) -> str:
     ]
     for index in range(1, 9):
         sections.append(
-            f"### Thread {index}\n\n"
+            f"**Thread {index}**\n\n"
             "The synthetic passage establishes a motive, then a later scene adds a "
             "cost the character did not anticipate. The answer keeps both facts in "
             "view so the conclusion remains readable across several paragraphs.\n\n"
-            f"> Synthetic quotation {index}: the thread bends, but it does not break."
+            "Synthetic fixture detail (ch. 184)."
         )
     sections.append("*Development fixture. This is not novel canon.*")
     return "\n\n".join(sections)

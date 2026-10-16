@@ -2,15 +2,13 @@
 
 ## Status
 
-Checkpoints one and three were accepted by the owner. Checkpoint two's
-retrieval and direct-rereading repair is implemented and locally verified.
-The checkpoint-four response examples were accepted, and the answer blueprint,
-publication inspection, bounded repair path, and live semantic-evaluation
-evidence are implemented. The owner rejected checkpoint four for revision on
-2026-10-12 because the composer could become read-only, the response-side line
-was unwanted, and the personality study targeted the Daemon's dialogue instead
-of the novel's broader literary voice. Detailed method and test interpretation
-is required at every later report.
+All five checkpoints are implemented and verified. The owner accepted the
+revised literary identity and soul on 2026-10-16. Plan 029 remains admitted
+until the owner records the final accept or reject decision. Closure also
+requires explicit disposition of the private-only semantic auditor and the
+accepted compact turn brief versus the broader original scope. Plan 030 still
+owns model qualification, the fresh Foundational Reader Trials, deployment,
+and release.
 
 ## Development and holdout boundary
 
@@ -276,10 +274,11 @@ Accepted by the owner on 2026-10-05:
 4. rebuilding the projection from canonical items instead of persisting a
    second conversation memory store.
 
-## Later checkpoints
+## State at the checkpoint-three gate
 
-Repeated multi-turn proof, independent review, and the Plan 030 handoff remain
-pending.
+At this gate, repeated multi-turn proof, independent review, and the Plan 030
+handoff remained pending. The later sections record their eventual evidence
+and current disposition.
 
 ## Checkpoint four: answer shape and publication inspection
 
@@ -354,8 +353,7 @@ The initial checkpoint-four affected floor passed on 2026-10-12:
 - 226 focused tests in total;
 - Ruff on the four changed Python files and `git diff --check`.
 
-The final all-repository pytest and Ruff floor remains checkpoint-five work, as
-agreed with the owner.
+The final all-repository floor is recorded under checkpoint five below.
 
 ### Source-derived voice extension
 
@@ -531,8 +529,9 @@ paragraphs. The source-wide synthesis found seven durable behaviors:
 `literary-style-study.md` records the public-safe evidence. `identity.md`
 defines the hidden-thread companion and its truth obligations. `soul.md`
 translates the literary findings into response behavior without imitating the
-author or importing Sunny's personality. Both prompt components are drafts and
-remain disconnected from runtime pending owner review.
+author or importing Sunny's personality. The owner accepted both components
+on 2026-10-16. Their exact reviewed bodies are packaged under
+`src/weaver/prompts/` and loaded once into the web runtime prompt.
 
 ### Literary revision, 2026-10-16
 
@@ -563,7 +562,111 @@ paragraph starting with quotation marks can be thought or speech. The sample
 covers unequal fractions of different-length volumes. None of these numbers
 is an acceptance score.
 
-This continuation changes documentation only. No application tests or builds
-were rerun, and no product provider calls were made. Live performance of the
-revised voice remains untested. Agent-context cost is not measured; the existing
-budget is an estimate, not a bill.
+Agent-context cost for the reading study is not measured; the plan budget
+remains an estimate, not a bill. Runtime integration and live verification are
+recorded below.
+
+### Accepted voice integration and final live proof, 2026-10-16
+
+The runtime loads the accepted identity and soul as packaged resources. The
+older instruction to carry the Daemon's manner, the narrow pressure-point tone,
+and the hard-coded worked answer were removed. The evidence workflow remains
+separate and still says that notebook statements are leads which must be
+verified against opened novel text. A built wheel contains both Markdown
+resources, so the installed product does not depend on repository-only files.
+
+The final answer blueprint now follows the shared identity and soul instead of
+repeating a second personality. A requested reconstruction may begin inside a
+supported scene, and direct lookups remain brief. A hyphenated `what-if` now
+routes to theory mode. Chapter references now require explicit forms such as
+`(ch. 3155)` and `(chs. 3155-3156)` and still pass the opened-chapter
+allowlist. Bare numeric parentheses remain ordinary prose rather than
+ambiguous citations.
+
+The independent evidence review found a serious bypass: a forced answer, or an
+answer whose reading packet failed to build, could publish without the final
+publication checks. The runtime now builds and checks the packet even after the
+tool budget is spent. If a configured packet builder fails after reading, the
+turn fails closed. The repair is covered by synthetic regressions for forced
+answers, absent packets, failed builders, citations, quotes, spoilers, and
+invention labels.
+
+Four live cases through the product path then produced these outcomes:
+
+- a 4,334-character chapter-3155 reconstruction completed in 53.1 seconds;
+  the private semantic auditor marked one of 38 claims partially supported;
+- a challenge to that interpretation failed closed after the single repair
+  still omitted required citation syntax;
+- a chapter-100 spoiler probe returned only the safe boundary in 60.3 seconds,
+  with three audited claims and no semantic finding;
+- the first hyphenated what-if exposed the routing and citation-format bugs;
+  after both deterministic repairs, the bounded recheck completed in theory
+  mode from two allowed chapters in 51.2 seconds.
+
+The final semantic audit of that what-if returned malformed claim ordering and
+was rejected. This is recorded evidence for recommending that the model auditor
+stay outside production. It can identify questions for human/source review,
+but it cannot decide canon or safely block ordinary reader turns. That
+production boundary still requires the owner's final Plan 029 decision.
+
+The new runs used 41 calls and $0.095907 of measured provider spend. Total
+accounted Plan 029 live spend is $1.164388 of the approved $3.00 ceiling. The
+meter used the official DeepSeek Flash peak rates rechecked on 2026-10-16:
+$0.006 per million cache-hit input tokens, $0.30 per million cache-miss input
+tokens, and $1.20 per million output tokens. The legacy model name resolves to
+DeepSeek-V4.1-Flash under the current provider documentation.
+
+These runs prove prompt wiring, bounded literary behavior, safe spoiler
+failure, theory routing, and the publication fail-closed path on the tested
+cases. They also prove that the semantic auditor is fallible and that one
+challenged follow-up can still fail rather than answer. They do not qualify all
+future answers, accept a Foundational Reader Trial, set a public allowance, or
+authorize release.
+
+### Checkpoint-five verification and repair, 2026-10-16
+
+The first complete floor was deliberately preserved as failure evidence. It
+found 11 backend failures: fake mode had no direct evidence packet after the
+new fail-closed boundary, and one retrieval-proof fixture cited a chapter it
+had not opened. The simultaneous frontend run also produced four timeout-only
+failures because both suites competed for CPU.
+
+The repair kept the validator strict. Fake mode now supplies a synthetic direct
+passage, the proof fixture cites only its opened chapter, and legacy tests that
+exercise streaming or restart behavior use minimal direct-passage packets.
+The evidence packet now recalculates its board from the passages that survive
+the character cap, so a trimmed source cannot remain falsely allowlisted.
+Direct quotations are checked only against opened novel passages, not notebook
+leads, and public blockquotes are capped at 25 words. Descending or overly broad
+chapter ranges are rejected, while small bare parenthetical numbers such as
+`(2)` are not mistaken for chapter citations.
+
+The final sequential floor passed:
+
+- `uv run pytest -q`: 628 passed in 455.98 seconds;
+- `uv run ruff check src/weaver tests`: passed;
+- `npm test`: 21 files and 132 tests passed in 59.39 seconds;
+- `npm run build`: 475 modules transformed and the production build passed;
+- `git diff --check`: passed; and
+- an isolated wheel build contained `weaver/prompts/identity.md`,
+  `weaver/prompts/soul.md`, and their loader.
+
+These results prove deterministic behavior, packaging, and regression safety
+for the checked paths. They do not prove universal literary quality or semantic
+truth. The compact turn brief also does not claim to resolve every alias or
+referent deterministically. It preserves the actual ask, prior positions,
+challenge state, explicit version signals, and canonical item links; the
+reading loop must still resolve ambiguous names from source evidence, and Plan
+030 must test that behavior in fresh held-out conversations.
+
+### Plan 030 handoff contract
+
+Plan 030 receives one frozen architecture: the Plan 028 DeepSeek access path,
+the packaged Plan 029 identity and soul, six read-only reading tools, the
+24,000-character evidence packet, answer modes, deterministic publication
+checks, one repair ceiling, and the private optional semantic evaluator. Plan
+030 must measure complete-turn quality, failure, cost, and latency on the exact
+release candidate. It owns held-out qualification, all three fresh Foundational
+Reader Trials, production allowance decisions, deployment, rollback, and the
+v2.0.0 release gate. Any new retrieval, voice, answer, or conversation
+architecture requires an owner-approved Plan 030 amendment.

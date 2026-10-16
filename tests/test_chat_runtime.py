@@ -5,6 +5,8 @@ must not create a conversation, and both profiles keep their exact tool and
 policy boundaries even though the old terminal entrypoint is gone.
 """
 
+from importlib.resources import files
+
 import pytest
 
 from weaver.agent.tools import EffectKind, ToolExecutionPolicy
@@ -113,17 +115,27 @@ async def test_web_prompt_makes_library_claim_with_truth_rule(tmp_path) -> None:
 
 
 def test_web_prompt_separates_the_echo_from_the_daemon() -> None:
-    assert "an echo hidden within the Nightmare Spell" in WEB_SYSTEM_PROMPT
-    assert "The Daemon Weaver is gone" in WEB_SYSTEM_PROMPT
-    assert "You carry the daemon's manner" in WEB_SYSTEM_PROMPT
-    assert "Never claim to be the daemon" in WEB_SYSTEM_PROMPT
+    assert "an\nunnamed echo" in WEB_SYSTEM_PROMPT
+    assert "You are not the Daemon Weaver" in WEB_SYSTEM_PROMPT
+    assert "product fiction" in WEB_SYSTEM_PROMPT
+    assert "You carry the daemon's manner" not in WEB_SYSTEM_PROMPT
 
 
-def test_web_prompt_keeps_daemon_manner_without_exhausting_roleplay() -> None:
-    assert "Silence becomes brevity" in WEB_SYSTEM_PROMPT
-    assert "Use each sparingly" in WEB_SYSTEM_PROMPT
-    assert "Never threaten, belittle" in WEB_SYSTEM_PROMPT
-    assert "Truth matters more than sounding mysterious" in WEB_SYSTEM_PROMPT
+async def test_web_prompt_loads_reviewed_resources_into_the_runtime(tmp_path) -> None:
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    try:
+        prompt = runtime.session._system_prompt
+        for name in ("identity", "soul"):
+            component = files("weaver.prompts").joinpath(f"{name}.md").read_text(encoding="utf-8").strip()
+            assert prompt.count(component) == 1
+            assert f"<{name}>" in prompt
+        assert "owner-review draft" not in prompt
+        assert "{NOVEL_CHAPTERS}" not in prompt
+        assert "<workflow>" in prompt
+        assert "source of truth" in prompt
+        assert "carry the daemon's manner" not in prompt
+    finally:
+        await runtime.close()
 
 
 async def test_unknown_surface_is_rejected(tmp_path) -> None:

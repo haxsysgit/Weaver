@@ -659,7 +659,18 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         # the answer; the candidate and packet stay ephemeral.
         async def on_packet(tool_results, candidate: str):
             if runtime.library is None:
-                return None
+                return (
+                    "--- chapter 184, lines 1-12 ---\n"
+                    "Synthetic passage for development only. The character makes "
+                    "a choice, then learns that its consequence reaches further "
+                    "than intended.\n\n"
+                    "--- evidence board ---\n"
+                    "direct sources: chapter 184 lines 1-12\n"
+                    "notebook leads: none\n"
+                    "citation gaps: none\n\n"
+                    "--- spoiler framing ---\n"
+                    "The synthetic development fixture may be answered completely."
+                )
             prefs = await runtime.prefs.get() if runtime.prefs is not None else None
             packet = build_packet(
                 runtime.library,

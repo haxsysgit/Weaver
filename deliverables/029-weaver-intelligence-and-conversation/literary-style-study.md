@@ -3,8 +3,9 @@
 ## Status
 
 Source-first study complete. This is a public-safe synthesis for the Plan 029
-owner gate. It contains no copied novel prose. The proposed prompt components
-remain unconnected until the owner reviews them.
+owner gate. It contains no copied novel prose. The owner accepted the identity
+and soul on 2026-10-16, and their reviewed bodies are now packaged and loaded
+by the runtime.
 
 ## Method
 
@@ -75,8 +76,9 @@ a cliffhanger or philosophical closing line to satisfy a template.
 The equal sample is an exploratory study, not a statistical representation of
 all prose: twenty chapters cover much more of the short volume 13 than of the
 longer volumes. The latest-volume reread informs tone choices and leaves the
-baseline metrics untouched. Independent live model performance remains to be
-tested after the owner reviews the concrete drafts and examples.
+baseline metrics untouched. The owner later accepted the drafts, and bounded
+live performance evidence is recorded in `results.md`; it does not qualify all
+future answers.
 
 ## Stable literary behavior
 

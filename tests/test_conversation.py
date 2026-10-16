@@ -682,7 +682,10 @@ async def test_final_turn_brief_rebuilds_prior_positions_after_restart():
         await reopened.open()
         try:
             async def packet_builder(results, draft):
-                return "PACKET: version evidence"
+                return (
+                    "--- chapter 104, lines 1-2 ---\n"
+                    "PACKET: version evidence"
+                )
 
             result = await reopened.send(
                 conv_id,

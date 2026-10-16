@@ -116,10 +116,11 @@ sentences have five words or fewer, and 20.2 percent of paragraphs begin as
 dialogue. These figures support rhythm discussion but do not grade literary
 meaning.
 
-The public-safe study and owner-review drafts of `identity.md` and `soul.md`
-are complete. They preserve the accepted Hidden Thread identity while deriving
-the voice from broad narrative behavior rather than Daemon dialogue. Neither
-component is connected to runtime. The next action is the required owner review.
+The public-safe study and drafts of `identity.md` and `soul.md` are complete.
+They preserve the accepted Hidden Thread identity while deriving the voice from
+broad narrative behavior rather than Daemon dialogue. The owner accepted the
+components on 2026-10-16, and their reviewed bodies are packaged as runtime
+resources shared by the reading loop and final answer call.
 
 **Flexible study direction, 2026-10-16.** The owner explicitly permits source
 selection beyond the equal-count method, including the latest volume, and asks
@@ -141,8 +142,9 @@ Original review examples now demonstrate the intended range using a clearly
 invented setting. They remain outside runtime and are not live model outputs.
 The independent literary draft review is recorded in `review-ledger.md`.
 The earlier $6 to $30 agent-context estimate is unmetered; no actual session
-bill is available here. This continuation made zero product provider requests
-and leaves the existing $1.068481 accounted live spend unchanged.
+bill is available here. The literary reading itself made zero product provider
+requests. The later runtime verification raised accounted live spend from
+$1.068481 to $1.164388, still within the owner-approved $3.00 ceiling.
 
 ## Checkpoint one observations
 
@@ -278,10 +280,11 @@ Seeded deterministic tests prove those mechanics. Live use also exposed false
 positives. The final what-if run contained 47 inspected claims and one reported
 partial-support finding. Direct reading of both cited chapters proved that the
 two clauses came from the two named sources and jointly supported the claim.
-The machine finding was wrong. That result fixes the product boundary:
-semantic inspection is private evaluation evidence, while source reading and
-owner judgment remain authoritative. It is not added as an always-on
-production call.
+The machine finding was wrong. That result supports a proposed product
+boundary: semantic inspection remains private evaluation evidence, while
+source reading and owner judgment remain authoritative. It is not added as an
+always-on production call unless the owner explicitly accepts the added cost,
+latency, and false-block risk.
 
 ### Live evidence and cost
 
@@ -312,10 +315,15 @@ acceptance.
 2. **Accepted 2026-10-05.** Inspect real evidence packets and conversation
    traces before answer work. The owner also required every later checkpoint
    report to explain the problem, method, test meaning, and remaining unknowns.
-3. **Response examples accepted 2026-10-12; implementation rejected for
-   revision 2026-10-12.** Keep the answer shapes and measured safety work.
-   Repair the UI regression and replace the narrow daemon-dialogue personality
-   with owner-reviewed `identity.md` and `soul.md` derived from the official-
-   volume literary reading. The 260-chapter study and both review drafts are
-   complete; runtime construction is stopped at the owner gate.
-4. Freeze the Plan 030 model-qualification contract before Plan 029 closes.
+3. **Revision accepted 2026-10-16.** Keep the answer shapes and measured safety
+   work. The composer and response-line regressions are repaired. The accepted
+   `identity.md` and `soul.md` replace the narrow Daemon-dialogue personality
+   and are connected to runtime as packaged resources.
+4. **Proposed final handoff 2026-10-16.** Plan 030 qualifies the exact accepted
+   access, reading, evidence, conversation, answer, voice, and publication
+   architecture. It owns held-out qualification, the three fresh Foundational
+   Reader Trials, production allowance, deployment, rollback, and release.
+   The final sequential floor passed 628 backend tests, 132 frontend tests,
+   Ruff, the production build, whitespace checks, and wheel-resource proof.
+   Plan 029 remains admitted until the owner records the final decision and the
+   semantic-auditor boundary is explicitly accepted or changed.

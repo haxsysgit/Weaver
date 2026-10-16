@@ -18,7 +18,7 @@ is never persisted. One shared cap bounds every request path.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from weaver.spoilers.judge import Citation, SpoilerJudge, Verdict
 
@@ -300,6 +300,49 @@ def _format_evidence_board(board: EvidenceBoard) -> str:
     )
 
 
+def _board_with_kept_sources(
+    board: EvidenceBoard,
+    sources: tuple[EvidenceSource, ...],
+) -> EvidenceBoard:
+    opened_chapters = {source.chapter for source in sources}
+    claims = tuple(
+        replace(
+            claim,
+            unsupported_chapters=tuple(
+                chapter
+                for chapter in claim.cited_chapters
+                if chapter not in opened_chapters
+            ),
+            citation_coverage=(
+                "missing_citation"
+                if not claim.cited_chapters
+                else "unopened_chapter"
+                if any(
+                    chapter not in opened_chapters
+                    for chapter in claim.cited_chapters
+                )
+                else "citation_covered"
+            ),
+        )
+        for claim in board.claims
+    )
+    unsupported = tuple(
+        sorted(
+            {
+                chapter
+                for claim in claims
+                for chapter in claim.unsupported_chapters
+            }
+        )
+    )
+    return replace(
+        board,
+        direct_sources=sources,
+        unsupported_chapters=unsupported,
+        claims=claims,
+    )
+
+
 def build_packet(
     service,
     tool_results: list,
@@ -328,16 +371,29 @@ def build_packet(
     # 1. Opened passages, expanded windows, oldest first so trimming
     # drops the earliest reads. Beat lines give the final reading call the
     # semantic shape of the story around the passage.
-    opened = []
+    source_by_handle = {
+        (source.chapter, source.line_start, source.line_end): source
+        for source in board.direct_sources
+    }
+    opened: list[tuple[EvidenceSource, str]] = []
     for chapter, start, end in handles[:MAX_OPENED_PASSAGES]:
         passage = service.index.open_lines(
             chapter,
             max(2, start - EXPAND_LINES),
             end + EXPAND_LINES,
         )
+        original_source = source_by_handle[(chapter, start, end)]
+        expanded_source = replace(
+            original_source,
+            line_start=passage.line_start,
+            line_end=passage.line_end,
+        )
         opened.append(
-            f"--- chapter {chapter}, lines {passage.line_start}-{passage.line_end} ---\n"
-            f"{_beat_lines(judge, chapter)}{passage.text}"
+            (
+                expanded_source,
+                f"--- chapter {chapter}, lines {passage.line_start}-{passage.line_end} ---\n"
+                f"{_beat_lines(judge, chapter)}{passage.text}",
+            )
         )
         citations.append(Citation(chapter=chapter))
     # 2. Top notebook statements surfaced by the searches.
@@ -355,8 +411,6 @@ def build_packet(
         citations.append(
             Citation(chapter=int(h["chapter"]), statement_id=h.get("statement_id"))
         )
-    board_text = _format_evidence_board(board)
-
     # 3. Judge verdict + framing.
     if judge is None:
         judge = SpoilerJudge()
@@ -370,21 +424,37 @@ def build_packet(
 
     # 4. Size cap: direct novel evidence outranks notebook leads. The evidence
     # board and spoiler framing always remain so a trimmed packet stays honest.
-    fixed = [board_text, framing_text]
-    kept_opened: list[str] = []
-    for passage in reversed(opened):
-        candidate_parts = [passage, *kept_opened, *fixed]
+    kept_opened: list[tuple[EvidenceSource, str]] = []
+    for source, passage in reversed(opened):
+        candidate_opened = [(source, passage), *kept_opened]
+        candidate_board = _board_with_kept_sources(
+            board,
+            tuple(item_source for item_source, _ in candidate_opened),
+        )
+        candidate_parts = [
+            *(text for _, text in candidate_opened),
+            _format_evidence_board(candidate_board),
+            framing_text,
+        ]
         if len("\n\n".join(candidate_parts)) > cap:
             continue
-        kept_opened.insert(0, passage)
+        kept_opened = candidate_opened
+
+    board = _board_with_kept_sources(
+        board,
+        tuple(source for source, _ in kept_opened),
+    )
+    board_text = _format_evidence_board(board)
+    kept_opened_text = [text for _, text in kept_opened]
+    fixed = [board_text, framing_text]
 
     kept_statements: list[str] = []
     for statement in statements:
-        candidate_parts = [*kept_opened, *kept_statements, statement, *fixed]
+        candidate_parts = [*kept_opened_text, *kept_statements, statement, *fixed]
         if len("\n\n".join(candidate_parts)) > cap:
             continue
         kept_statements.append(statement)
 
-    parts = [*kept_opened, *kept_statements, *fixed]
+    parts = [*kept_opened_text, *kept_statements, *fixed]
     text = "\n\n".join(parts)
     return Packet(text=text, verdict=verdict, board=board)

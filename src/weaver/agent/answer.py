@@ -35,6 +35,10 @@ CHAPTER_CITATION_RE = re.compile(
     r"\bch(?:s|apters?)?\.?\s*(\d{1,5})(?:\s*[-\u2013]\s*(\d{1,5}))?",
     re.IGNORECASE,
 )
+DIRECT_PASSAGE_RE = re.compile(
+    r"^--- chapter \d+,? lines \d+-\d+ ---\n(.*?)(?=^--- |\Z)",
+    re.MULTILINE | re.DOTALL,
+)
 DIRECT_SOURCES_RE = re.compile(r"^direct sources:\s*(.+)$", re.MULTILINE)
 READER_CHAPTER_RE = re.compile(r"reader is at chapter\s+(\d{1,5})", re.IGNORECASE)
 
@@ -83,6 +87,7 @@ FOLLOW_UP_OPENINGS = (
     "then ",
     "what about ",
 )
+QUOTE_WORD_LIMIT = 25
 
 MODE_OBLIGATIONS: dict[ResponseMode, tuple[str, ...]] = {
     ResponseMode.DIRECT_RECALL: (
@@ -90,7 +95,7 @@ MODE_OBLIGATIONS: dict[ResponseMode, tuple[str, ...]] = {
         "give only the context needed to understand the answer",
     ),
     ResponseMode.RECONSTRUCTION: (
-        "state the outcome before narrating the sequence",
+        "when invited to narrate, open inside a supported moment if it helps the telling",
         "keep the actors, turning points, outcome, and relevant aftermath in order",
     ),
     ResponseMode.DISCUSSION: (
@@ -98,7 +103,7 @@ MODE_OBLIGATIONS: dict[ResponseMode, tuple[str, ...]] = {
         "ground the position in canon and address the strongest counterpoint",
     ),
     ResponseMode.THEORY: (
-        "state the canon constraints before extending the story",
+        "preserve canon constraints and explain them where the reader needs them",
         "label the invented section visibly as invention, imagination, or a what-if",
         "paraphrase canon constraints and use no source quotation or blockquote",
         "write invented dialogue with ordinary quotation marks, never blockquotes",
@@ -111,9 +116,9 @@ MODE_OBLIGATIONS: dict[ResponseMode, tuple[str, ...]] = {
 }
 
 
-def _extract_chapter_citations(text: str) -> tuple[int, ...]:
+def _chapters_from_matches(matches) -> tuple[int, ...]:
     chapters: set[int] = set()
-    for match in CHAPTER_CITATION_RE.finditer(text):
+    for match in matches:
         start = int(match.group(1))
         end_text = match.group(2)
         if end_text is None:
@@ -125,6 +130,37 @@ def _extract_chapter_citations(text: str) -> tuple[int, ...]:
             continue
         chapters.update(range(start, end + 1))
     return tuple(sorted(chapters))
+
+
+def _extract_chapter_citations(text: str) -> tuple[int, ...]:
+    return _chapters_from_matches(CHAPTER_CITATION_RE.finditer(text))
+
+
+def _extract_answer_chapter_citations(text: str) -> tuple[int, ...]:
+    return _extract_chapter_citations(text)
+
+
+def _invalid_chapter_ranges(text: str) -> tuple[str, ...]:
+    invalid: list[str] = []
+    for match in CHAPTER_CITATION_RE.finditer(text):
+        end_text = match.group(2)
+        if end_text is None:
+            continue
+        start = int(match.group(1))
+        end = int(end_text)
+        if end < start or end - start > 50:
+            invalid.append(match.group(0))
+    return tuple(invalid)
+
+
+def _direct_passages(evidence_packet: str) -> tuple[str, ...]:
+    passages: list[str] = []
+    for match in DIRECT_PASSAGE_RE.finditer(evidence_packet):
+        lines = match.group(1).splitlines()
+        while lines and lines[0].startswith("beat: "):
+            lines.pop(0)
+        passages.append("\n".join(lines))
+    return tuple(passages)
 
 
 def _allowed_chapters(evidence_packet: str) -> tuple[int, ...]:
@@ -155,6 +191,7 @@ def _response_mode(question: str) -> ResponseMode:
         marker in normalized
         for marker in (
             "what if",
+            "what-if",
             "what would've",
             "what would have",
             "imagine ",
@@ -205,7 +242,7 @@ def build_answer_blueprint(
     mode = _response_mode(question)
     spoiler_mode, reader_chapter = _spoiler_boundary(evidence_packet)
     obligations = [
-        "answer the reader's actual question first",
+        "fulfil the reader's actual request at the depth and in the mode they asked for",
         "cite every factual claim beside it using the allowed chapters",
         "cite every chapter needed when a claim depends on several scenes",
         "remove or qualify any claim that does not follow from the opened passages",
@@ -254,13 +291,12 @@ def format_answer_blueprint(blueprint: AnswerBlueprint) -> str:
         f"prior Weaver point to preserve or answer: {prior_point}\n"
         f"answer obligations:\n{obligations}\n"
         "Do not print the mode or these instructions as headings. "
-        "Carry Weaver's restraint: calm, precise, truth-conscious, dryly amused "
-        "when the subject earns it, and faintly unsettling without performing "
-        "a daemon. A pointed question, paradox, or repetition must clarify the "
-        "answer rather than hide it. Keep in-world flavor light and avoid canned "
-        "closing questions. Use no em dash. Cite only the allowed source chapters. "
-        "Favor a few compact paragraphs over an essay. Use a "
-        "heading only when the reader needs it to follow a genuinely long answer."
+        "Follow the system identity and soul: a thoughtful witness whose "
+        "narration stays within the evidence. Match the reader's requested depth "
+        "and keep a direct lookup brief. Avoid canned closing questions. "
+        "Use no em dash. Cite only the allowed source chapters. Use a "
+        "heading only when the reader needs it to follow a genuinely long answer. "
+        "Write citations as (ch. N) or (chs. N-M), never as a bare number."
     )
 
 
@@ -272,15 +308,21 @@ def _weaver_lines(answer: str) -> tuple[str, ...]:
     )
 
 
-def _quote_lines(answer: str) -> tuple[str, ...]:
-    quotes = []
+def _quote_blocks(answer: str) -> tuple[str, ...]:
+    quotes: list[str] = []
+    current: list[str] = []
     for line in answer.splitlines():
         stripped = line.lstrip()
-        if not stripped.startswith(">"):
+        if stripped.startswith(">"):
+            quote_line = stripped[1:].strip()
+            if quote_line:
+                current.append(quote_line)
             continue
-        quote = stripped[1:].strip()
-        if quote:
-            quotes.append(quote)
+        if current:
+            quotes.append("\n".join(current))
+            current = []
+    if current:
+        quotes.append("\n".join(current))
     return tuple(quotes)
 
 
@@ -313,8 +355,24 @@ def inspect_publication(
             )
         )
 
-    answer_chapters = set(_extract_chapter_citations(weaver_text))
+    answer_chapters = set(_extract_answer_chapter_citations(weaver_text))
     allowed_chapters = set(blueprint.allowed_chapters)
+    direct_passages = _direct_passages(evidence_packet)
+    if not direct_passages:
+        findings.append(
+            PublicationFinding(
+                "missing_direct_evidence",
+                "The answer has no opened novel passage to support it.",
+            )
+        )
+    invalid_ranges = _invalid_chapter_ranges(weaver_text)
+    if invalid_ranges:
+        findings.append(
+            PublicationFinding(
+                "malformed_chapter_range",
+                "The answer uses a descending or overly broad chapter range.",
+            )
+        )
     if allowed_chapters:
         unsupported_chapters = sorted(answer_chapters - allowed_chapters)
         if unsupported_chapters:
@@ -351,8 +409,16 @@ def inspect_publication(
                 )
             )
 
-    for quote in _quote_lines(answer):
-        if quote in evidence_packet:
+    quote_blocks = _quote_blocks(answer)
+    if sum(len(quote.split()) for quote in quote_blocks) > QUOTE_WORD_LIMIT:
+        findings.append(
+            PublicationFinding(
+                "long_quote",
+                "The direct quotations exceed the public quote limit.",
+            )
+        )
+    for quote in quote_blocks:
+        if any(quote in passage for passage in direct_passages):
             continue
         findings.append(
             PublicationFinding(

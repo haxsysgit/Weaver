@@ -2,24 +2,61 @@
 
 ## Status
 
-Literary draft review completed on 2026-10-16. The final implementation reviews
-below remain pending.
+Literary draft review and both final implementation reviews completed on
+2026-10-16. Runtime defects were repaired and rechecked. Two original plan
+scope questions remain for the owner's final decision: production semantic
+inspection and the accepted compact brief versus the broader drafted brief.
 
 ## Review one: retrieval, evidence, and timeline correctness
 
-Pending. Check direct chapter support, aliases, versions, chronology, scene
-endings, contradictions, source hierarchy, stopping rules, and overfitting.
+The reviewer confirmed that packet trimming now rebuilds the evidence board
+from retained passages, notebook text cannot satisfy direct quotation proof,
+notebook-only packets fail closed, malformed chapter ranges are rejected, and
+forced answers cannot bypass the packet and publication boundary.
+
+The reviewer identified two scope questions rather than new regressions:
+
+1. The semantic claim inspector is private evaluation machinery, not an
+   always-on production call. Deterministic production checks cannot discover
+   every uncited later-story fact from meaning alone.
+2. The compact turn brief preserves the actual ask, prior positions, explicit
+   version words, challenge state, and canonical item links. It does not claim
+   deterministic resolution of every referent, alias, character version,
+   timeline point, or uncertainty described in the broad original scope.
+
+Both require owner disposition before closure. The first would add paid model
+latency and has produced false findings live. The second was accepted at the
+checkpoint-three gate as the smallest measured record, while source-based
+resolution remains the reading loop's work.
 
 ## Review two: conversation, voice, style, and privacy
 
-Pending. Check follow-up state, reader and Weaver positions, answer obligations,
-response modes, quote fidelity, style findings, repairs, ephemeral state, and
-DeepSeek execution boundary.
+The reviewer confirmed that fake mode supplies synthetic direct evidence,
+notebook-only evidence is rejected, direct quotation provenance uses retained
+novel passages, and identity and soul are packaged into runtime.
+
+The reviewer found two publication defects. A long quotation split across
+several Markdown lines could evade the 25-word limit, and ordinary numbers in
+parentheses could be mistaken for chapter citations. The repair groups
+contiguous blockquote lines, counts all quoted words in one answer, and accepts
+only explicit chapter forms such as `(ch. 900)` or `(chs. 900-901)`. Bare
+numeric parentheses remain ordinary prose.
 
 ## Repair and recheck ledger
 
-Pending. Each finding records severity, evidence, owner disposition, repair,
-verification command, and reviewer recheck.
+| Finding | Severity | Repair or disposition | Recheck |
+| --- | --- | --- | --- |
+| Trimmed passages remained in the source allowlist. | High | Rebuild the board for each retained candidate set and again for the final packet. | Focused packet tests pass; review one confirmed the repair. |
+| Notebook text could satisfy direct quotation matching. | High | Parse direct chapter passages separately; notebook-only packets fail. | Focused answer tests pass; both reviewers confirmed the repair. |
+| Forced answers and packet failures could bypass publication inspection. | High | Route forced answers through packet construction and fail closed after reading when the packet is absent or errors. | Turn regressions pass; review one confirmed web send, retry, and regenerate configure the builder. |
+| Split or repeated quotations could exceed 25 words. | Medium | Aggregate contiguous blocks and count all quoted words in the answer. | Multiline and repeated-quote regressions pass; review two reproduced the former bypass and confirmed it closed. |
+| Bare parenthetical numbers looked like citations. | Medium | Require explicit `ch.` or `chs.` citation markers. | A three-digit ordinary-number regression passes. |
+| Semantic auditor is private only. | Plan contract | Owner decision required. Recommended disposition: retain it as qualification evidence because live false findings make production blocking unsafe. | Not accepted automatically. |
+| Turn brief is smaller than the broad drafted schema. | Plan contract | Owner decision required. Recommended disposition: retain the checkpoint-three accepted compact brief and prove source resolution in Plan 030 trials. | Not accepted automatically. |
+
+The final affected code recheck passed 182 tests plus Ruff and whitespace
+checks. The complete final floor then passed 628 backend tests and is recorded
+in `results.md`.
 
 ### Literary draft review, 2026-10-16
 

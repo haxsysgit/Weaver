@@ -182,6 +182,11 @@ def _async_append(target: list):
     return append
 
 
+def _direct_packet(label: str) -> str:
+    """Minimal direct-reading packet for tests unrelated to source validation."""
+    return f"--- chapter 104, lines 1-2 ---\n{label}"
+
+
 async def execute_turn(
     layer: ModelLayer,
     model: ModelSpec,
@@ -1108,7 +1113,7 @@ class TestFinalReadingPhase:
 
         async def packet_builder(results, draft):
             calls.append((len(results), draft))
-            return "PACKET: chapter 104 prose"
+            return _direct_packet("PACKET: chapter 104 prose")
 
         result = await execute_turn(
             layer,
@@ -1288,7 +1293,7 @@ class TestFinalReadingPhase:
         )
 
         async def packet_builder(results, draft):
-            return "PACKET: prose"
+            return _direct_packet("PACKET: prose")
 
         result = await execute_turn(
             layer,
@@ -1342,7 +1347,7 @@ class TestFinalReadingPhase:
         ]
 
         async def packet_builder(results, draft):
-            return "PACKET: daemon statements"
+            return _direct_packet("PACKET: daemon statements")
 
         await execute_turn(
             layer,
@@ -1389,7 +1394,7 @@ class TestFinalReadingPhase:
         ]
 
         async def packet_builder(results, draft):
-            return "PACKET: version evidence"
+            return _direct_packet("PACKET: version evidence")
 
         await execute_turn(
             layer,
@@ -1423,7 +1428,7 @@ class TestFinalReadingPhase:
         )
 
         async def packet_builder(results, draft):
-            return "PACKET: daemon statements"
+            return _direct_packet("PACKET: daemon statements")
 
         await execute_turn(
             layer,
@@ -1445,7 +1450,7 @@ class TestFinalReadingPhase:
             == ANSWER_MAX_OUTPUT_TOKENS
         )
 
-    async def test_builder_none_keeps_the_candidate(self) -> None:
+    async def test_builder_none_after_reading_rejects_the_candidate(self) -> None:
         layer, model, provider = scripted_layer(
             tool_response(tool_call("c1", "echo", '{"message": "a"}')),
             stop_response("Draft answer."),
@@ -1463,9 +1468,14 @@ class TestFinalReadingPhase:
             persist_message=_async_append(persisted),
             packet_builder=packet_builder,
         )
-        assert result.final_text == "Draft answer."
+        assert result.exit_reason == TurnExitReason.MODEL_FAILED
+        assert result.final_text == ""
         assert len(provider.calls) == 2
-        assert [m.kind for m in persisted][-1] == "assistant"
+        assert [m.kind for m in persisted] == [
+            "assistant",
+            "tool_call",
+            "tool_result",
+        ]
 
     async def test_zero_evidence_candidate_gets_one_reprompt_then_publishes(
         self,
@@ -1496,16 +1506,21 @@ class TestFinalReadingPhase:
             for message in provider.calls[1].request.messages
         )
 
-    async def test_no_final_reading_after_forced_answer(self) -> None:
+    async def test_forced_answer_still_gets_a_safe_final_reading(self) -> None:
         layer, model, provider = scripted_layer(
             tool_response(tool_call("c1", "echo", '{"message": "a"}')),
-            stop_response("Forced answer."),
+            stop_response("Forced draft (ch. 900)."),
+            stop_response("Checked final (ch. 900)."),
         )
         called = []
 
         async def packet_builder(results, draft):
             called.append(draft)
-            return "PACKET"
+            return (
+                "--- chapter 900 lines 1-4 ---\nSource prose.\n\n"
+                "--- evidence board ---\n"
+                "direct sources: chapter 900 lines 1-4"
+            )
 
         result = await execute_turn(
             layer,
@@ -1515,9 +1530,10 @@ class TestFinalReadingPhase:
             tool_budget=1,
             packet_builder=packet_builder,
         )
-        assert result.final_text == "Forced answer."
-        assert called == []
-        assert len(provider.calls) == 2
+        assert result.final_text == "Checked final (ch. 900)."
+        assert called == ["Forced draft (ch. 900)."]
+        assert len(provider.calls) == 3
+        assert provider.calls[-1].request.tools == ()
 
     async def test_tool_use_in_final_phase_falls_back_to_candidate(self) -> None:
         layer, model, provider = scripted_layer(
@@ -1527,7 +1543,7 @@ class TestFinalReadingPhase:
         )
 
         async def packet_builder(results, draft):
-            return "PACKET"
+            return _direct_packet("PACKET")
 
         result = await execute_turn(
             layer,
@@ -1556,7 +1572,7 @@ class TestFinalReadingPhase:
         )
 
         async def packet_builder(results, draft):
-            return "PACKET: prose"
+            return _direct_packet("PACKET: prose")
 
         result = await execute_turn(
             layer,
@@ -1605,7 +1621,7 @@ class TestFinalReadingPhase:
         ]
 
         async def packet_builder(results, draft):
-            return "PACKET: ch2729"
+            return _direct_packet("PACKET: ch2729")
 
         await execute_turn(
             layer,
@@ -1649,7 +1665,7 @@ class TestFinalReadingPhase:
         persisted: list = []
 
         async def packet_builder(results, draft):
-            return "PACKET: chapter 104"
+            return _direct_packet("PACKET: chapter 104")
 
         result = await execute_turn(
             layer,
@@ -1665,7 +1681,7 @@ class TestFinalReadingPhase:
         assert persisted[-1].content == "Candidate grounded in chapter 104."
         assert len(provider.calls) == 3
 
-    async def test_packet_builder_failure_publishes_validated_candidate(
+    async def test_packet_builder_failure_rejects_unchecked_candidate(
         self,
     ) -> None:
         layer, model, provider = scripted_layer(
@@ -1684,8 +1700,8 @@ class TestFinalReadingPhase:
             packet_builder=packet_builder,
         )
 
-        assert result.exit_reason == TurnExitReason.COMPLETED
-        assert result.final_text == "Candidate grounded in chapter 104."
+        assert result.exit_reason == TurnExitReason.MODEL_FAILED
+        assert result.final_text == ""
         assert len(provider.calls) == 2
 
     async def test_final_phase_provider_exception_publishes_candidate(
@@ -1707,7 +1723,7 @@ class TestFinalReadingPhase:
         monkeypatch.setattr(provider, "stream", fail_final_call)
 
         async def packet_builder(results, draft):
-            return "PACKET: chapter 104"
+            return _direct_packet("PACKET: chapter 104")
 
         result = await execute_turn(
             layer,
@@ -1742,7 +1758,7 @@ class TestFinalReadingPhase:
         persisted: list = []
 
         async def packet_builder(results, draft):
-            return "PACKET: chapter 104"
+            return _direct_packet("PACKET: chapter 104")
 
         result = await execute_turn(
             layer,
@@ -2014,7 +2030,7 @@ class TestTextToolCallSlips:
         persisted: list = []
 
         async def packet_builder(results, draft):
-            return "PACKET: prose"
+            return _direct_packet("PACKET: prose")
 
         result = await execute_turn(
             layer,
@@ -2053,7 +2069,7 @@ class TestTextToolCallSlips:
         persisted: list = []
 
         async def packet_builder(results, draft):
-            return "PACKET: evidence only"
+            return _direct_packet("PACKET: evidence only")
 
         result = await execute_turn(
             layer,
