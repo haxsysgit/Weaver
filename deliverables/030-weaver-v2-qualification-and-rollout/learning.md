@@ -36,6 +36,16 @@ path are pending owner decisions at the checkpoint 1 gate.
   tag, and release happen only inside this admitted plan and its owner gates.
 - (2026-10-17) The release branch carries Plan 030 work. No push to `main`
   before the launch gate.
+- (2026-10-17) Execution uses 7 owner checkpoints, one per major slice, with
+  Cloudflare launch, observation, and closure as CP7.
+- (2026-10-17) Local access uses the honest rite plus BYOK. Fake mode skips
+  sponsored consent. Local live without a sponsored ledger routes the reader
+  to BYOK. No loopback server-key voice and no local sponsored ledger.
+- (2026-10-17) The EC2 and Tailscale Funnel deployment is retired. The public
+  v1.2.1 site is taken down. The v2 public surface moves to a Cloudflare
+  domain after the Plan 030 qualification and trials.
+- (2026-10-17) The Cloudflare launch is a joint owner session. Its boundary,
+  inside Plan 030 as CP7 or as a successor plan, is pending.
 
 ## Hypotheses, not decisions
 

@@ -16,7 +16,9 @@
 - **State:** drafted 2026-08-24, rewritten 2026-09-23 for the DeepSeek-only
   sponsored direction, amended 2026-10-17 after Plans 028 and 029 closed.
   **Admitted 2026-10-17.** Plan 029.5 is not admitted and does not block.
-  Checkpoint cadence is pending the owner's choice of 7 or 5 checkpoints.
+  **Checkpoint cadence: 7 (owner decision 2026-10-17).** The EC2 and Tailscale
+  Funnel deploy path is retired; the public v1.2.1 site is being taken down.
+  The Cloudflare launch boundary is pending the owner's decision.
 - **Depends on:** Plan 028 closed 2026-10-02 with sponsored access and financial
   safety accepted; Plan 029 closed 2026-10-17 with the intelligence and
   conversation system accepted. Plan 029.5 is not admitted.
@@ -88,6 +90,17 @@
     sponsored deployment and the first deployment of the Plan 029 reading
     system. The release candidate must record that baseline and the exact
     rollback target.
+18. (2026-10-17) Local access uses the honest rite plus BYOK. Fake mode skips
+    sponsored consent. Local live without a sponsored ledger explains that no
+    shared allowance is configured and routes the reader to BYOK. This plan
+    does not add a loopback server-key voice or a local sponsored ledger.
+19. (2026-10-17) The EC2 and Tailscale Funnel deployment is retired. The public
+    v1.2.1 site is taken down completely. The v2.0.0 public surface moves to a
+    Cloudflare domain after the owner is satisfied with the Plan 030
+    qualification and trials.
+20. (2026-10-17) The Cloudflare launch is a joint owner session. Its plan
+    boundary, inside Plan 030 as the final checkpoint or as a successor plan,
+    is pending the owner's decision.
 
 ## Adopted amendments (2026-10-17)
 
@@ -101,13 +114,11 @@ execution and come from the read-only audit in
    fresh price version and valid-until beyond the release date, a pass secret
    of at least 32 bytes, a funded provider balance, and one real sponsored turn
    on the release candidate before any public deploy.
-3. **First-run and local access.** Decide how the fake-mode and local-live
-   First Nightmare completes without a sponsored ledger. The primary path
-   currently returns 503. In local live it leaves the reader with a disabled
-   send button; in fake mode it leaves the rite stuck on step 3. Either make
-   the rite honest and send the reader to BYOK, add a loopback-only developer
-   voice, or configure local sponsored access. The chosen path gets a real
-   integration regression.
+3. **First-run and local access.** Adopted path: honest rite plus BYOK. Fake
+   mode skips sponsored consent. Local live without a sponsored ledger
+   explains that no shared allowance is configured and routes the reader to
+   BYOK. The path gets a real integration regression. No loopback server-key
+   voice and no local sponsored ledger in this plan.
 4. **Held-out resolution proof.** Add a fresh held-out conversation set for
    ambiguous referents, aliases, character versions, and timeline points. No
    expected-string matching.
@@ -324,6 +335,11 @@ execution and come from the read-only audit in
    - Record the live baseline: v1.2.1 is deployed, `/api/access` is absent, and
      Plans 028 and 029 are local commits ahead of `origin/main`.
    - Create the release branch. Do not push `main` before the launch gate.
+   - Take down the public v1.2.1 site and retire the EC2 and Tailscale Funnel
+     deploy path. Preserve the `/srv/weaver` data volume. This needs the
+     owner's AWS or box access.
+   - Record the 7-checkpoint cadence, the honest-rite-plus-BYOK local access
+     decision, and the Cloudflare plan boundary once the owner decides it.
    - Freeze the rollback target, image digest, deploy command, and the box's
      novel, index, notebook, and model versions.
    - Start the sponsored production preflight and the release-candidate
@@ -374,3 +390,24 @@ execution and come from the read-only audit in
    - Confirm the old v1.2.1 open-provider surface is gone or contained.
    - Stop for the owner's dated final accept or reject decision, then record
      closure and the measured plan budget.
+
+## Checkpoints (7)
+
+Owner-selected cadence on 2026-10-17. Every checkpoint ends with a short owner
+report and an explicit gate. No checkpoint auto-advances.
+
+1. **CP1: Admission, live baseline, release-candidate freeze.** Slice 1.
+   Gate: baseline, branch, local access path, live takedown, and budget.
+2. **CP2: Requalification, local access fix, held-out resolution.** Slice 2.
+   Gate: evidence and diff review.
+3. **CP3: Cost, capacity, allowance, sponsored preflight.** Slice 3.
+   Gate: allowance numbers and live cap.
+4. **CP4: Reader and operations journeys, privacy and docs.** Slice 4.
+   Gate: copy and docs approval.
+5. **CP5: Foundational Reader Trials.** Slice 5.
+   Gate: three separate owner pass or fail decisions.
+6. **CP6: Independent review and release gate.** Slice 6.
+   Gate: release-candidate approval and launch authorization.
+7. **CP7: Cloudflare launch, observe, close.** Slices 7 and 8. The boundary,
+   inside Plan 030 or as a successor plan, is pending the owner's decision.
+   Gate: final accept or reject and the measured budget.

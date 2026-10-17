@@ -32,13 +32,15 @@ not replace this results file.
 | Box state bundle | unknown, must be recorded before deploy |
 | Live provider spend | none in this checkpoint |
 
-Owner decisions pending at the checkpoint 1 gate:
+Owner decisions at the checkpoint 1 gate:
 
-1. Checkpoint cadence: 7 or 5.
-2. Local access path: loopback developer voice, honest rite to BYOK, or local
-   sponsored ledger.
-3. Live v1.2.1 exposure: leave public, restrict, or take down before the v2
-   deploy.
+1. Resolved 2026-10-17: 7 checkpoints.
+2. Resolved 2026-10-17: honest rite plus BYOK. Fake mode skips sponsored
+   consent; local live without a sponsored ledger routes the reader to BYOK.
+3. Resolved 2026-10-17: take the public v1.2.1 site down completely and retire
+   the EC2 and Tailscale Funnel path. The action is pending AWS or box access.
+4. Pending: the Cloudflare launch boundary, inside Plan 030 as CP7 or as a
+   successor plan.
 
 ## DeepSeek qualification
 
