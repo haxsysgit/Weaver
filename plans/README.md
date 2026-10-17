@@ -39,7 +39,7 @@ evidence, review, and human decision gates must also be complete.
 | [027.5 - v1.2.1 mobile thread hotfix](027.5-v1-2-1-mobile-thread-hotfix.md) | Closed 2026-09-08 | Plan 027 closed and Weaver 1.2.0 released | Repaired startup ordering, New Weave, mobile thread recall, installed-app behavior, and conversation-first Spellweave loading |
 | [028 - Sponsored DeepSeek access](028-sponsored-deepseek-access.md) | Closed 2026-10-02, accepted | Plan 027.5 closed; Plans 003, 005, and 015 foundations | Owner-funded daily allowance, preserved DeepSeek BYOK, atomic cost limits, anonymous access, and privacy controls |
 | [029 - Weaver intelligence and conversation](029-weaver-intelligence-and-conversation.md) | Closed 2026-10-17; owner accepted | Plan 028 closed and owner-accepted | Fiction retrieval, direct rereading, context and evidence, conversation continuity, answer planning, voice, and bounded inspection |
-| [030 - Weaver v2.0.0 qualification and rollout](030-weaver-v2-qualification-and-rollout.md) | Drafted 2026-09-23 | Plans 028 and 029 closed and owner-accepted; Plan 029.5 too if admitted | DeepSeek qualification, sponsored allowance tuning, release candidate, Foundational Reader Trials, and public v2.0.0 launch |
+| [030 - Weaver v2.0.0 qualification and rollout](030-weaver-v2-qualification-and-rollout.md) | Admitted 2026-10-17; checkpoint cadence pending | Plans 028 and 029 closed and owner-accepted; Plan 029.5 not admitted | DeepSeek qualification, sponsored preflight, release candidate, Foundational Reader Trials, gated deployment, and public v2.0.0 launch |
 | Later - Durable reader memory | Not yet drafted | Plan 030 closed | Reader opinions, favorites, theories, and unresolved disagreements kept separately from canon |
 
 ## Execution order
