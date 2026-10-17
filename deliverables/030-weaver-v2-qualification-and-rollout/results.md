@@ -35,6 +35,7 @@ not replace this results file.
 | Conversation schema | version 3 |
 | Frontend assets | `weaver--NzoW5Us.js`, `weaver-BOySgbSR.css` |
 | CP2 frontend assets | `weaver-BSzUiTtF.js`, `weaver-BOySgbSR.css` |
+| CP4 frontend assets | `weaver-DB3Z825A.js`, `weaver-BiTfvfXz.css` |
 | Retired live deployment | v1.2.1, `weaver-D01JqGeM.js`, `weaver-BfjopLb8.css`, `/api/access` 404, stopped 2026-10-17 |
 | Current host bundle | on the stopped `weaver-v1` volume, export pending |
 | Public surface | Cloudflare launch in CP7 |
@@ -212,6 +213,47 @@ gate.
   `$0.37` reservation is conservative.
 - The production price default is still stale. A fresh price version and
   valid-until remain a CP7 preflight item.
+
+## Checkpoint 4: reader, operations, privacy, docs
+
+### Verification floor
+
+- 631 backend tests passed.
+- 141 frontend tests passed.
+- Ruff, `tsc --noEmit`, and the production build passed.
+- Final CP4 assets: `weaver-DB3Z825A.js`, `weaver-BiTfvfXz.css`.
+
+### Reader and operations
+
+- Mobile 390x844: first run, touch send, no horizontal overflow, and a 24px
+  privacy link target.
+- Offline send: the recovery panel reported "The answering thread lost
+  contact."
+- The service worker registered and the manifest is present. Installed-PWA
+  and real HTTPS checks wait for CP7.
+- Focus, labels, and recovery are covered by the frontend suite. Screen
+  reader and real-device checks wait for CP7.
+- Monitoring, restart, emergency shutdown, and the Cloudflare host checks are
+  CP7.
+
+### Privacy and docs
+
+- `/privacy` and `/robots.txt` are served; the footer links to `/privacy`.
+- The live footer names the passage transfer to DeepSeek; fake mode stays
+  local.
+- `README.md`, `CONTRIBUTING.md`, `docs/architecture.md`, `docs/vision.md`,
+  `TODO_future.md`, `docs/WEAVER_WEB_PRODUCT_DIRECTION.md`, `.env.example`, and
+  `docker-compose.yml` were updated.
+- The privacy page and README copy are owner-review pending.
+
+### Quality
+
+- The latest held-out run completed 8 of 10 turns for `$0.247081`.
+  `version-02` and `timeline-01` failed closed; `boundary-01` returned the safe
+  boundary.
+- Cumulative CP3 and CP4 quality live spend: `$0.990386` of `$5.00`.
+- The failures move between runs. Further tuning against the held-out
+  diagnostic risks overfitting; the Reader Trials remain the real gate.
 
 ## DeepSeek qualification
 
