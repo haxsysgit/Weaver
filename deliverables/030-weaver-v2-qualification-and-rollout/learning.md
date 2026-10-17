@@ -6,9 +6,9 @@
 2026-10-17) are owner-accepted. Side UI Plan 029.5 is not admitted and does
 not block. The 2026-10-17 read-only audit is complete in
 [`draft-audit.md`](draft-audit.md). It is audit evidence, not an independent
-review and not an acceptance decision. CP1 is complete. CP2 evidence is
-complete and the owner gate is pending. Live held-out execution and the
-sponsored preflight stay in CP3.
+review and not an acceptance decision. CP1 and CP2 are complete. CP3 found a
+sponsored repair blocker and is stopped for the owner decision. Live held-out
+execution waits for that decision.
 
 ## Checkpoint observations
 
@@ -21,6 +21,17 @@ sponsored preflight stay in CP3.
   ignored state. They are not in prompts, fixtures, or product copy.
 - CP2: no paid model call. Live held-out execution waits for the CP3 cost and
   sponsored preflight gate.
+- CP3: provider balance is `$9.32`, enough for the `$5` cap and the `$0.37`
+  reservation.
+- CP3: one real sponsored turn failed closed after `$0.008077`. The first
+  answer failed publication checks, and the one repair call was blocked by
+  `answer_call_limit` because the sponsored turn allows one answer call.
+- CP3: this is an integration defect between the accepted Plan 028 sponsored
+  limit and the accepted Plan 029 one-repair ceiling. The owner decision is
+  whether to allow one repair answer call under sponsored access. Total calls
+  stay capped at 8 and the one-repair ceiling stays.
+- CP3: the local test used an explicit future price date. The production price
+  default is still stale and remains a CP7 preflight item.
 
 ## Owner-confirmed direction
 

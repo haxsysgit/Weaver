@@ -40,6 +40,16 @@ Checkpoint 2 then closed the first-run findings:
 - The new regressions cover the fake, unconfigured, exhausted, bound-key, and
   status-failure paths. No paid model call was made.
 
+Checkpoint 3 found one integration defect:
+
+- One real sponsored turn failed closed after `$0.008077`. The first answer
+  failed publication checks, and the single repair call was refused with
+  `answer_call_limit`. The sponsored turn allows one answer call, so the
+  accepted Plan 029 one-repair ceiling cannot run.
+- The owner decision is whether to allow one repair answer call under sponsored
+  access. Total model calls stay capped at 8 and the one-repair ceiling stays.
+- The live held-out set is deferred until that decision.
+
 ## Verification actually run
 
 - `.venv/bin/python -m pytest -q`: 628 passed in 381.29 seconds.

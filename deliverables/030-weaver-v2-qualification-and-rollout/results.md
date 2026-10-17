@@ -108,16 +108,44 @@ version, timeline boundary, ambiguous referent, and correction.
 
 ## Sponsored preflight (CP3)
 
-Not started. Every item stays open until proven on the release candidate.
+Status: attempted on a local sponsored server; blocked by the sponsored
+answer-call limit. No completed sponsored turn yet.
 
-- [ ] `WEAVER_SPONSORED_ENABLED=1`.
-- [ ] Fresh price version and valid-until beyond the release date.
-- [ ] Pass secret of at least 32 bytes.
-- [ ] Funded provider balance covering the reservation.
-- [ ] One real sponsored turn through the product path.
-- [ ] Three-question allowance under the $1 ceiling and the $0.37 reservation.
+- [x] `WEAVER_SPONSORED_ENABLED=1`.
+- [x] Pass secret of 64 hex characters.
+- [x] Explicit price valid-until `2026-11-30` for the local test. The production
+  default remains stale and is still a CP7 preflight item.
+- [x] Provider balance `$9.32` on 2026-10-17, enough for the `$5` cap and the
+  `$0.37` reservation.
+- [ ] One real sponsored turn completed through the product path.
+- [ ] Three-question allowance under the `$1` ceiling and the `$0.37` reservation.
 - [ ] Exhaustion, UTC reset, and disabled-sponsored paths.
-- [ ] No secret or provider body in logs or evidence.
+- [x] No secret or provider body in this record.
+
+### One real sponsored turn
+
+The local server accepted the consent, reserved the turn, and ran one real
+question through the reading and publication path.
+
+- Terminal: `failed` after 58.1 seconds and 10 tool events.
+- The first answer failed the deterministic publication checks with
+  `unsupported_chapter`, `long_quote`, and `changed_quote`.
+- The single repair call was refused with `answer_call_limit`. The sponsored
+  turn allows one answer call, so the accepted Plan 029 one-repair ceiling
+  cannot run under sponsored access.
+- Ledger: `$0.008077` settled, `$0.991923` remaining on the global daily
+  ceiling, reader at 2 remaining questions.
+- The answer text was withheld. No private answer, prompt excerpt, or passage
+  is recorded here.
+
+This is a P1 integration defect between the accepted Plan 028 sponsored limit
+and the accepted Plan 029 repair ceiling. The owner decision is whether to
+allow one repair answer call under sponsored access. The total call cap stays
+at 8, the one-repair ceiling stays, and the `$0.37` reservation covers the
+second answer's `12,288`-token output limit.
+
+The live held-out set is deferred until this decision because the sponsored
+path is the production path. CP3 spend so far: `$0.008077`.
 
 ## DeepSeek qualification
 

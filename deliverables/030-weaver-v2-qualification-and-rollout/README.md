@@ -3,9 +3,9 @@
 | File | Purpose | Current state |
 | --- | --- | --- |
 | `plan.md` | Pointer to the canonical implementation plan | Current |
-| `learning.md` | Qualification, capacity, release, and owner gates | Admitted 2026-10-17; CP1 complete; CP2 gate pending |
+| `learning.md` | Qualification, capacity, release, and owner gates | CP1 and CP2 complete; CP3 stopped for owner decision |
 | `draft-audit.md` | Read-only product, plan, and deploy findings for admission | Complete 2026-10-17; not a review or an acceptance |
-| `results.md` | DeepSeek qualification, cost, allowance, launch, and rollback evidence | CP1 complete; CP2 evidence complete; gate pending |
+| `results.md` | DeepSeek qualification, cost, allowance, launch, and rollback evidence | CP1/CP2 complete; CP3 preflight blocked |
 | `review-ledger.md` | Independent findings, repairs, and rechecks | Not started |
 | `decision.md` | Owner's v2.0.0 qualification and rollout decision | Admission recorded; final decision pending |
 
