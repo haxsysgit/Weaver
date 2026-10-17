@@ -49,10 +49,17 @@ Checkpoint 3 found and fixed one integration defect:
 - After the fix, a sponsored turn completed with `2,390` characters, `9`
   citations, and `$0.014149`. A clean allowance run completed three questions
   and refused the fourth with `429 reader_exhausted`.
-- The held-out live run completed seven of nine turns for `$0.199925`.
+- The first held-out run completed seven of nine turns for `$0.199925`.
   `version-01` failed closed; `timeline-02` and `correction-01` returned the
-  safe spoiler boundary. The owner quality disposition is pending.
-- Total CP3 live spend: `$0.277881` of `$5.00`.
+  safe spoiler boundary.
+- The owner selected the boundary redesign. The rerun completed eight of ten
+  turns for `$0.225874`. `version-01` and `correction-01` failed closed with
+  unsupported chapters and long or changed quotations; `version-02` returned
+  the boundary unexpectedly; `boundary-01` returned it as expected.
+- The version-comparison and correction quality defect is carried to CP4 for a
+  sharper repair instruction and a held-out rerun.
+- The owner confirmed the three-question, `$1` global, `$10` wallet allowance.
+- Total CP3 live spend: `$0.503755` of `$5.00`.
 
 ## Verification actually run
 

@@ -7,8 +7,9 @@
 not block. The 2026-10-17 read-only audit is complete in
 [`draft-audit.md`](draft-audit.md). It is audit evidence, not an independent
 review and not an acceptance decision. CP1 and CP2 are complete. CP3 evidence
-is complete: the sponsored answer-path fix is committed, and the owner
-allowance and held-out quality decisions are pending.
+is complete: the sponsored answer-path fix is committed, the allowance is
+confirmed, and the version-comparison and correction quality defect is carried
+to CP4.
 
 ## Checkpoint observations
 
@@ -31,14 +32,22 @@ allowance and held-out quality decisions are pending.
   characters, `9` citations, and `$0.014149`.
 - CP3: a clean allowance run completed three questions, then refused the
   fourth with `429 reader_exhausted`. The three-turn cost was `$0.026748`.
-- CP3: the held-out live run completed seven of nine turns for `$0.199925`.
+- CP3: the first held-out run completed seven of nine turns for `$0.199925`.
   `version-01` failed closed; `timeline-02` and `correction-01` returned the
-  safe spoiler boundary. The owner quality disposition is pending.
-- CP3: total live spend is `$0.277881` of `$5.00`.
-- CP3: the measured complete sponsored turn is `$0.009` to `$0.014`. The
-  proposed allowance is three questions per reader, a `$1` global daily
-  ceiling, and the `$10` wallet. If the launch expects more than about 23
-  daily readers at the high end, raise the global ceiling to `$3`.
+  safe spoiler boundary.
+- CP3: the owner selected the boundary redesign. `timeline-02` and
+  `correction-01` moved to reader chapter 3160; `boundary-01` was added at
+  chapter 900 to expect the safe boundary.
+- CP3: the held-out rerun ran nine cases and ten turns for `$0.225874`.
+  Eight turns completed. `version-01` and `correction-01` failed closed with
+  unsupported chapters and long or changed quotations. `version-02` returned
+  the safe boundary unexpectedly; `boundary-01` returned it as expected.
+- CP3: total live spend is `$0.503755` of `$5.00`.
+- CP3: the measured complete sponsored turn is `$0.009` to `$0.014`. The owner
+  confirmed three questions per reader, a `$1` global daily ceiling, and the
+  `$10` wallet.
+- CP3: the version-comparison and correction quality defect is carried to CP4
+  for a sharper repair instruction and a held-out rerun.
 - CP3: the local test used an explicit future price date. The production price
   default is still stale and remains a CP7 preflight item.
 
@@ -50,7 +59,8 @@ allowance and held-out quality decisions are pending.
   DeepSeek BYOK remains under Advanced.
 - The Plan 028 starting limits are three sponsored questions per reader per
   UTC day, one active turn, a $1 global daily ceiling, and a manually funded
-  $10 wallet.
+  $10 wallet. Confirmed 2026-10-17 from CP3: a complete turn costs $0.009 to
+  $0.014, and the $1 ceiling supports about 23 to 37 readers per day.
 - Production limits may change only after complete-turn measurement and owner
   approval.
 - Accounts, subscriptions, reader payments, donations, ads, automatic top-up,

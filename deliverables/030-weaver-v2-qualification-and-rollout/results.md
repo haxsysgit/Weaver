@@ -108,8 +108,9 @@ version, timeline boundary, ambiguous referent, and correction.
 
 ## Sponsored preflight and allowance (CP3)
 
-Status: preflight passed after a bounded answer-path fix. The owner allowance
-decision and the held-out quality disposition are open.
+Status: preflight passed after a bounded answer-path fix. The owner confirmed
+the allowance on 2026-10-17. The held-out boundary cases were redesigned and
+the rerun is recorded below.
 
 ### Answer-path fix
 
@@ -151,41 +152,62 @@ one bounded repair, so the sponsored turn must allow three tool-less calls.
 - Private answers: `.weaver/evaluation/plan030/cp3/heldout/answers.json`.
   They are not in this record.
 
-The `version-01` safe failure is a quality risk for the Reader Trials. The two
-boundary answers are correct spoiler behavior but do not answer the case. The
-owner should review the private answers before CP5.
+The original run's `version-01` safe failure is a quality risk for the Reader
+Trials. The two boundary answers are correct spoiler behavior but do not
+answer the case.
+
+### Held-out rerun (redesigned boundary cases)
+
+- The owner selected the redesign option on 2026-10-17.
+- `timeline-02` and `correction-01` moved to reader chapter 3160.
+- A new `boundary-01` case at reader chapter 900 expects the safe boundary as
+  the correct result.
+- Nine cases, ten turns, `$0.225874`, 98 provider calls.
+- Eight turns completed. `version-01` and `correction-01` failed closed with
+  `unsupported_chapter`, `long_quote`, and `changed_quote`.
+- `version-02` returned the safe boundary although its question was inside the
+  reader boundary. `boundary-01` returned the safe boundary as expected.
+- `timeline-02` completed with `4,928` characters and `18` citations.
+- `referent-01` turn 1 was `2,836` characters after a `2,470` character first
+  turn.
+- Private answers: `.weaver/evaluation/plan030/cp3/heldout2/answers.json`.
+
+The rerun confirms a bounded answer-quality defect on version-comparison and
+correction answers: unsupported chapters and long or changed quotations
+survive the single repair. This is not an allowance or sponsored-path defect.
+The proposed CP4 repair is a sharper repair instruction per finding code, with
+a held-out rerun before CP5.
 
 ### Cost and allowance
 
-- CP3 live spend: `$0.277881` of `$5.00`.
+- Owner decision 2026-10-17: keep three questions per reader per UTC day, the
+  `$1` global daily ceiling, and the `$10` wallet.
+- CP3 live spend: `$0.503755` of `$5.00`.
   - sponsored: `$0.008077` + `$0.011451` + `$0.014149` + `$0.017531` +
     `$0.026748` = `$0.077956`;
-  - held-out: `$0.199925`.
+  - held-out: `$0.199925` + `$0.225874` = `$0.425799`.
 - Complete sponsored turn: `$0.009` to `$0.014`; the clean-turn average is
   `$0.008916`.
 - The three-question reader limit is the binding constraint. The `$1` global
   ceiling supports about 23 to 37 readers per day at the measured cost. The
   `$0.37` reservation is conservative.
-- Proposed allowance: keep three questions per reader per UTC day, the `$1`
-  global daily ceiling, and the `$10` wallet. If the launch expects more than
-  about 23 daily readers at the high end, raise the global ceiling to `$3` and
-  the wallet beyond `$10`.
 - The production price default is still stale. A fresh price version and
   valid-until remain a CP7 preflight item.
 
 ## DeepSeek qualification
 
-The held-out run is complete. Seven of nine turns completed, one failed
-closed, and two returned the safe spoiler boundary. The owner quality
-disposition is pending; full versioned qualification and the production
-execution profile remain CP6.
+The held-out rerun is complete. Eight of ten turns completed. `version-01`
+and `correction-01` failed closed; `version-02` and `boundary-01` returned the
+safe spoiler boundary. The version-comparison and correction quality defect is
+carried to CP4. Full versioned qualification and the production execution
+profile remain CP6.
 
 ## Capacity and allowance
 
 Measured complete sponsored turn: `$0.009` to `$0.014`. The three-question
 reader limit is the binding constraint; the `$1` global ceiling supports about
-23 to 37 readers per day at the high end. The owner allowance decision is
-pending.
+23 to 37 readers per day at the high end. The owner confirmed the three
+questions, `$1` global ceiling, and `$10` wallet on 2026-10-17.
 
 ## Release candidate
 
