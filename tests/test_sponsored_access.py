@@ -391,9 +391,9 @@ async def test_sponsored_turn_stops_before_a_ninth_provider_call(tmp_path) -> No
 
 
 @pytest.mark.asyncio
-async def test_sponsored_turn_allows_only_one_answer_sized_call(tmp_path) -> None:
+async def test_sponsored_turn_allows_two_phase_answer_and_repair(tmp_path) -> None:
     access = await open_access(tmp_path / "sponsored.sqlite3")
-    pass_token = access.issue_pass(at=NOW, reader_id="one-answer-call")
+    pass_token = access.issue_pass(at=NOW, reader_id="repair-answer-call")
     usage = ModelUsage(
         input_tokens=100,
         output_tokens=20,
@@ -410,11 +410,49 @@ async def test_sponsored_turn_allows_only_one_answer_sized_call(tmp_path) -> Non
     }
     try:
         turn = SponsoredTurn(access, await reserve(access, pass_token))
-        await turn.before_call(payload, has_tools=False)
-        await turn.record_usage(usage)
+        for _ in range(3):
+            answer = payload.copy()
+            answer["max_tokens"] = 99_999
+            await turn.before_call(answer, has_tools=False)
+            assert answer["max_tokens"] == 12_288
+            await turn.record_usage(usage)
 
         with pytest.raises(SponsoredUnavailable, match="answer_call_limit"):
             await turn.before_call(payload.copy(), has_tools=False)
+        await turn.finish()
+    finally:
+        await access.close()
+
+
+@pytest.mark.asyncio
+async def test_sponsored_turn_caps_three_answers_and_eight_calls(tmp_path) -> None:
+    access = await open_access(tmp_path / "sponsored.sqlite3")
+    pass_token = access.issue_pass(at=NOW, reader_id="three-answer-eight-call")
+    usage = ModelUsage(
+        input_tokens=100,
+        output_tokens=20,
+        total_tokens=120,
+        reasoning_tokens=5,
+        cache_hit_tokens=0,
+        cache_miss_tokens=100,
+    )
+    payload = {
+        "model": "deepseek-flash",
+        "messages": [],
+        "max_tokens": 512,
+        "extra_body": {},
+    }
+    try:
+        turn = SponsoredTurn(access, await reserve(access, pass_token))
+        for _ in range(5):
+            await turn.before_call(payload.copy(), has_tools=True)
+            await turn.record_usage(usage)
+        for _ in range(3):
+            await turn.before_call(payload.copy(), has_tools=False)
+            await turn.record_usage(usage)
+
+        with pytest.raises(SponsoredUnavailable, match="call_limit"):
+            await turn.before_call(payload.copy(), has_tools=True)
         await turn.finish()
     finally:
         await access.close()

@@ -180,6 +180,9 @@ class SponsoredTurn:
     """One reserved turn's provider-call limits and usage accounting."""
 
     MAX_CALLS = 8
+    # The accepted two-phase answer uses a draft and a final reading
+    # pass; one bounded publication repair may follow.
+    MAX_ANSWER_CALLS = 3
     MAX_PAYLOAD_BYTES = 120 * 1024
     SEARCH_OUTPUT_TOKENS = 4_096
     ANSWER_OUTPUT_TOKENS = 12_288
@@ -194,7 +197,7 @@ class SponsoredTurn:
         self._started = False
         self._open_call = False
         self._call_count = 0
-        self._answer_call_used = False
+        self._answer_calls = 0
 
     async def before_call(
         self,
@@ -206,7 +209,7 @@ class SponsoredTurn:
             raise SponsoredUnavailable("call_already_open")
         if self._call_count >= self.MAX_CALLS:
             raise SponsoredUnavailable("call_limit")
-        if not has_tools and self._answer_call_used:
+        if not has_tools and self._answer_calls >= self.MAX_ANSWER_CALLS:
             raise SponsoredUnavailable("answer_call_limit")
 
         payload["model"] = "deepseek-flash"
@@ -228,7 +231,7 @@ class SponsoredTurn:
             raise SponsoredUnavailable("payload_too_large")
 
         if not has_tools:
-            self._answer_call_used = True
+            self._answer_calls += 1
         if not self._started:
             await self._access.mark_started(self.reservation.reservation_id)
             self._started = True
