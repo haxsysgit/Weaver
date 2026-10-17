@@ -3,9 +3,9 @@
 ## Status
 
 Literary draft review and both final implementation reviews completed on
-2026-10-16. Runtime defects were repaired and rechecked. Two original plan
-scope questions remain for the owner's final decision: production semantic
-inspection and the accepted compact brief versus the broader drafted brief.
+2026-10-16. Runtime defects were repaired and rechecked. On 2026-10-17, the
+owner accepted both remaining plan-scope dispositions: private-only semantic
+inspection and the checkpoint-three compact brief.
 
 ## Review one: retrieval, evidence, and timeline correctness
 
@@ -24,10 +24,10 @@ The reviewer identified two scope questions rather than new regressions:
    deterministic resolution of every referent, alias, character version,
    timeline point, or uncertainty described in the broad original scope.
 
-Both require owner disposition before closure. The first would add paid model
-latency and has produced false findings live. The second was accepted at the
-checkpoint-three gate as the smallest measured record, while source-based
-resolution remains the reading loop's work.
+The owner accepted both dispositions on 2026-10-17. The first avoids added paid
+latency after live false findings. The second keeps the smallest measured
+record accepted at checkpoint three, while source-based resolution remains the
+reading loop's work and Plan 030 must prove it in fresh trials.
 
 ## Review two: conversation, voice, style, and privacy
 
@@ -51,8 +51,8 @@ numeric parentheses remain ordinary prose.
 | Forced answers and packet failures could bypass publication inspection. | High | Route forced answers through packet construction and fail closed after reading when the packet is absent or errors. | Turn regressions pass; review one confirmed web send, retry, and regenerate configure the builder. |
 | Split or repeated quotations could exceed 25 words. | Medium | Aggregate contiguous blocks and count all quoted words in the answer. | Multiline and repeated-quote regressions pass; review two reproduced the former bypass and confirmed it closed. |
 | Bare parenthetical numbers looked like citations. | Medium | Require explicit `ch.` or `chs.` citation markers. | A three-digit ordinary-number regression passes. |
-| Semantic auditor is private only. | Plan contract | Owner decision required. Recommended disposition: retain it as qualification evidence because live false findings make production blocking unsafe. | Not accepted automatically. |
-| Turn brief is smaller than the broad drafted schema. | Plan contract | Owner decision required. Recommended disposition: retain the checkpoint-three accepted compact brief and prove source resolution in Plan 030 trials. | Not accepted automatically. |
+| Semantic auditor is private only. | Plan contract | Owner accepted it as qualification evidence because live false findings make production blocking unsafe. | Accepted 2026-10-17. |
+| Turn brief is smaller than the broad drafted schema. | Plan contract | Owner retained the checkpoint-three compact brief and moved held-out source-resolution proof to Plan 030. | Accepted 2026-10-17. |
 
 The final affected code recheck passed 182 tests plus Ruff and whitespace
 checks. The complete final floor then passed 628 backend tests and is recorded
@@ -73,9 +73,9 @@ owner acceptance decision.
 | Invented illustrative images inside the prompt could look like source observations. | Removed them from identity and soul; the examples document explicitly labels its separate invented setting. | Executor inspected the prose and its factual boundary. |
 | The product persona could be presented as an observed narrator personality. | Study explicitly identifies the witness persona as a product choice informed by literary techniques. | Checked the study's method and targeted-reading section. |
 
-The owner has authorized continued development and flexible source selection.
-The exact drafts and examples await the checkpoint's literary review. No
-runtime quality or Reader Trial verdict follows from this editorial review.
+The owner authorized flexible source selection, reviewed the resulting drafts,
+and accepted the packaged identity and soul on 2026-10-16. This editorial
+review and the later live evidence still do not accept a Reader Trial.
 
 Reviewer recheck: the prompt findings were resolved. One stale study bullet
 still prescribed dry, sparse humour. The executor replaced it with the same

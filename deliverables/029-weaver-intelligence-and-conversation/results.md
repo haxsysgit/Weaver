@@ -3,12 +3,11 @@
 ## Status
 
 All five checkpoints are implemented and verified. The owner accepted the
-revised literary identity and soul on 2026-10-16. Plan 029 remains admitted
-until the owner records the final accept or reject decision. Closure also
-requires explicit disposition of the private-only semantic auditor and the
-accepted compact turn brief versus the broader original scope. Plan 030 still
-owns model qualification, the fresh Foundational Reader Trials, deployment,
-and release.
+revised literary identity and soul on 2026-10-16, accepted both final contract
+dispositions, and closed Plan 029 on 2026-10-17. The semantic inspector stays
+private, and the compact turn brief remains the production design. Plan 030
+still owns model qualification, the fresh Foundational Reader Trials,
+deployment, and release.
 
 ## Development and holdout boundary
 
@@ -481,8 +480,8 @@ Focused proof on 2026-10-12:
 - `git diff --check` passed.
 
 The browser proof used fake mode and spent no model tokens. It proves the
-shipped frontend interaction and CSS correction, not the pending literary
-identity.
+shipped frontend interaction and CSS correction. Literary identity was tested
+and accepted separately later in the plan.
 
 ### Official-volume literary sample
 

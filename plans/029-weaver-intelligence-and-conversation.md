@@ -10,8 +10,8 @@
 - **Tooling:** `uv`, pytest, Ruff, existing library and retrieval experiments,
   deterministic fixtures, fake DeepSeek profiles from Plan 028, and explicit
   bounded live development runs through Plan 028's accepted access boundary.
-- **State:** admitted 2026-10-02 by owner direction. Amended from ten slices
-  to five measured checkpoints before admission.
+- **State:** closed and owner-accepted 2026-10-17. Admitted 2026-10-02 and
+  amended from ten slices to five measured checkpoints before admission.
 - **Depends on:** Plan 028 closed with sponsored access, BYOK, usage,
   reservation, and budget contracts accepted. Plans 009, 012,
   014, 015, 017, and 018.5 remain the context, direct-reading, retrieval,
@@ -142,6 +142,23 @@
     the baseline; document additional chapters or rereads, their purpose, and
     which voice decisions they inform. The desired result is an engaging,
     poetic storyteller voice. A chapter count alone cannot establish that.
+28. (2026-10-17) The semantic claim inspector remains private qualification
+    evidence. It does not become an always-on production model call because
+    bounded live runs produced false and malformed findings, while the extra
+    call would add reader latency and sponsored cost. Deterministic production
+    checks remain fail-closed for the errors they can prove. Plan 030 tests the
+    resulting boundary on held-out conversations.
+29. (2026-10-17) The compact turn brief accepted at checkpoint three is the
+    final Plan 029 design. It preserves the actual ask, prior positions,
+    explicit version signals, challenge state, and canonical item links.
+    Referents, aliases, character versions, and timeline details are resolved
+    through direct reading rather than copied into a larger speculative brief.
+    Plan 030 must prove that behavior in fresh Reader Trials.
+30. (2026-10-17) The owner accepted the complete Plan 029 result and closed the
+    plan. This acceptance covers the reading and conversation architecture,
+    identity and soul, deterministic publication boundary, measured live
+    evidence, and the two amendments above. It does not qualify the production
+    model, accept a Foundational Reader Trial, deploy, or release v2.0.0.
 
 ## Scope
 

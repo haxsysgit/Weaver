@@ -319,11 +319,11 @@ acceptance.
    work. The composer and response-line regressions are repaired. The accepted
    `identity.md` and `soul.md` replace the narrow Daemon-dialogue personality
    and are connected to runtime as packaged resources.
-4. **Proposed final handoff 2026-10-16.** Plan 030 qualifies the exact accepted
+4. **Accepted final handoff 2026-10-17.** Plan 030 qualifies the exact accepted
    access, reading, evidence, conversation, answer, voice, and publication
    architecture. It owns held-out qualification, the three fresh Foundational
    Reader Trials, production allowance, deployment, rollback, and release.
    The final sequential floor passed 628 backend tests, 132 frontend tests,
    Ruff, the production build, whitespace checks, and wheel-resource proof.
-   Plan 029 remains admitted until the owner records the final decision and the
-   semantic-auditor boundary is explicitly accepted or changed.
+   The owner accepted the private-only semantic auditor and the checkpoint-three
+   compact turn brief as the final Plan 029 boundaries. Plan 029 is closed.
