@@ -40,15 +40,19 @@ Checkpoint 2 then closed the first-run findings:
 - The new regressions cover the fake, unconfigured, exhausted, bound-key, and
   status-failure paths. No paid model call was made.
 
-Checkpoint 3 found one integration defect:
+Checkpoint 3 found and fixed one integration defect:
 
-- One real sponsored turn failed closed after `$0.008077`. The first answer
-  failed publication checks, and the single repair call was refused with
-  `answer_call_limit`. The sponsored turn allows one answer call, so the
-  accepted Plan 029 one-repair ceiling cannot run.
-- The owner decision is whether to allow one repair answer call under sponsored
-  access. Total model calls stay capped at 8 and the one-repair ceiling stays.
-- The live held-out set is deferred until that decision.
+- The sponsored turn allowed one answer call. The accepted Plan 029 answer
+  path uses a draft, a final reading pass, and one repair, so it needs three
+  tool-less calls. `MAX_ANSWER_CALLS` is now 3; total calls stay at 8. Commit
+  `9860c96`.
+- After the fix, a sponsored turn completed with `2,390` characters, `9`
+  citations, and `$0.014149`. A clean allowance run completed three questions
+  and refused the fourth with `429 reader_exhausted`.
+- The held-out live run completed seven of nine turns for `$0.199925`.
+  `version-01` failed closed; `timeline-02` and `correction-01` returned the
+  safe spoiler boundary. The owner quality disposition is pending.
+- Total CP3 live spend: `$0.277881` of `$5.00`.
 
 ## Verification actually run
 

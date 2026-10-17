@@ -6,9 +6,9 @@
 2026-10-17) are owner-accepted. Side UI Plan 029.5 is not admitted and does
 not block. The 2026-10-17 read-only audit is complete in
 [`draft-audit.md`](draft-audit.md). It is audit evidence, not an independent
-review and not an acceptance decision. CP1 and CP2 are complete. CP3 found a
-sponsored repair blocker and is stopped for the owner decision. Live held-out
-execution waits for that decision.
+review and not an acceptance decision. CP1 and CP2 are complete. CP3 evidence
+is complete: the sponsored answer-path fix is committed, and the owner
+allowance and held-out quality decisions are pending.
 
 ## Checkpoint observations
 
@@ -23,13 +23,22 @@ execution waits for that decision.
   sponsored preflight gate.
 - CP3: provider balance is `$9.32`, enough for the `$5` cap and the `$0.37`
   reservation.
-- CP3: one real sponsored turn failed closed after `$0.008077`. The first
-  answer failed publication checks, and the one repair call was blocked by
-  `answer_call_limit` because the sponsored turn allows one answer call.
-- CP3: this is an integration defect between the accepted Plan 028 sponsored
-  limit and the accepted Plan 029 one-repair ceiling. The owner decision is
-  whether to allow one repair answer call under sponsored access. Total calls
-  stay capped at 8 and the one-repair ceiling stays.
+- CP3: the first sponsored turn failed closed because the sponsored turn
+  allowed one answer call. The accepted Plan 029 answer path uses a draft, a
+  final reading pass, and one repair. The turn needed three tool-less calls.
+- CP3: `SponsoredTurn.MAX_ANSWER_CALLS` is now 3; total calls stay at 8;
+  commit `9860c96`. A clean sponsored turn then completed with `2,390`
+  characters, `9` citations, and `$0.014149`.
+- CP3: a clean allowance run completed three questions, then refused the
+  fourth with `429 reader_exhausted`. The three-turn cost was `$0.026748`.
+- CP3: the held-out live run completed seven of nine turns for `$0.199925`.
+  `version-01` failed closed; `timeline-02` and `correction-01` returned the
+  safe spoiler boundary. The owner quality disposition is pending.
+- CP3: total live spend is `$0.277881` of `$5.00`.
+- CP3: the measured complete sponsored turn is `$0.009` to `$0.014`. The
+  proposed allowance is three questions per reader, a `$1` global daily
+  ceiling, and the `$10` wallet. If the launch expects more than about 23
+  daily readers at the high end, raise the global ceiling to `$3`.
 - CP3: the local test used an explicit future price date. The production price
   default is still stale and remains a CP7 preflight item.
 

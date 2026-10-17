@@ -106,56 +106,86 @@ version, timeline boundary, ambiguous referent, and correction.
 - Live execution is queued for CP3 under the $5 provider cap. The cases are
   not copied into prompts, retrieval rules, fixtures, or product copy.
 
-## Sponsored preflight (CP3)
+## Sponsored preflight and allowance (CP3)
 
-Status: attempted on a local sponsored server; blocked by the sponsored
-answer-call limit. No completed sponsored turn yet.
+Status: preflight passed after a bounded answer-path fix. The owner allowance
+decision and the held-out quality disposition are open.
 
-- [x] `WEAVER_SPONSORED_ENABLED=1`.
-- [x] Pass secret of 64 hex characters.
-- [x] Explicit price valid-until `2026-11-30` for the local test. The production
-  default remains stale and is still a CP7 preflight item.
-- [x] Provider balance `$9.32` on 2026-10-17, enough for the `$5` cap and the
-  `$0.37` reservation.
-- [ ] One real sponsored turn completed through the product path.
-- [ ] Three-question allowance under the `$1` ceiling and the `$0.37` reservation.
-- [ ] Exhaustion, UTC reset, and disabled-sponsored paths.
-- [x] No secret or provider body in this record.
+### Answer-path fix
 
-### One real sponsored turn
+The first real sponsored turn failed closed with `answer_call_limit`. The
+accepted Plan 029 answer path uses a draft answer, a final reading pass, and
+one bounded repair, so the sponsored turn must allow three tool-less calls.
 
-The local server accepted the consent, reserved the turn, and ran one real
-question through the reading and publication path.
+- `SponsoredTurn.MAX_ANSWER_CALLS = 3`; total `MAX_CALLS = 8` is unchanged.
+- Tests: three answer calls allowed, a fourth refused, the eight-call total
+  still enforced. Commit `9860c96`.
+- The `$0.37` reservation covers three `12,288`-token answer calls.
 
-- Terminal: `failed` after 58.1 seconds and 10 tool events.
-- The first answer failed the deterministic publication checks with
-  `unsupported_chapter`, `long_quote`, and `changed_quote`.
-- The single repair call was refused with `answer_call_limit`. The sponsored
-  turn allows one answer call, so the accepted Plan 029 one-repair ceiling
-  cannot run under sponsored access.
-- Ledger: `$0.008077` settled, `$0.991923` remaining on the global daily
-  ceiling, reader at 2 remaining questions.
-- The answer text was withheld. No private answer, prompt excerpt, or passage
-  is recorded here.
+### Preflight
 
-This is a P1 integration defect between the accepted Plan 028 sponsored limit
-and the accepted Plan 029 repair ceiling. The owner decision is whether to
-allow one repair answer call under sponsored access. The total call cap stays
-at 8, the one-repair ceiling stays, and the `$0.37` reservation covers the
-second answer's `12,288`-token output limit.
+- Provider balance: `$9.32` on 2026-10-17.
+- Local sponsored server: enabled, consent accepted, 64-hex pass secret,
+  explicit future price valid-until for the test.
+- First attempt, one answer call: failed closed, `$0.008077`.
+- Second attempt, two answer calls: failed closed, `$0.011451`.
+- Third attempt, three answer calls: completed, `2,390` characters, `9`
+  citations, `41.0` seconds, `$0.014149`.
+- Clean allowance run: three questions completed (`986`, `2,737`, `2,159`
+  characters; `36.4`s, `27.4`s, `24.1`s), remaining `2`, `1`, `0`, fourth
+  POST `429 reader_exhausted`, cost `$0.026748`.
+- No private answer, prompt excerpt, or passage is recorded here.
 
-The live held-out set is deferred until this decision because the sponsored
-path is the production path. CP3 spend so far: `$0.008077`.
+### Held-out live run
+
+- Eight private cases, nine turns through the server-key metered path.
+- Cost `$0.199925`; 90 provider calls.
+- Seven turns completed. `version-01` failed closed after `94.3` seconds with
+  `model_failed` and "The model returned an unsafe response."
+- `timeline-02` (reader chapter 900) and `correction-01` (reader chapter 700)
+  completed as the fixed safe spoiler boundary message.
+- `referent-01` turn 1 completed in `3,017` characters after a `2,383`
+  character first turn.
+- Durations: median about `67.7` seconds, p95 about `94.3` seconds, maximum
+  `94.3` seconds.
+- Private answers: `.weaver/evaluation/plan030/cp3/heldout/answers.json`.
+  They are not in this record.
+
+The `version-01` safe failure is a quality risk for the Reader Trials. The two
+boundary answers are correct spoiler behavior but do not answer the case. The
+owner should review the private answers before CP5.
+
+### Cost and allowance
+
+- CP3 live spend: `$0.277881` of `$5.00`.
+  - sponsored: `$0.008077` + `$0.011451` + `$0.014149` + `$0.017531` +
+    `$0.026748` = `$0.077956`;
+  - held-out: `$0.199925`.
+- Complete sponsored turn: `$0.009` to `$0.014`; the clean-turn average is
+  `$0.008916`.
+- The three-question reader limit is the binding constraint. The `$1` global
+  ceiling supports about 23 to 37 readers per day at the measured cost. The
+  `$0.37` reservation is conservative.
+- Proposed allowance: keep three questions per reader per UTC day, the `$1`
+  global daily ceiling, and the `$10` wallet. If the launch expects more than
+  about 23 daily readers at the high end, raise the global ceiling to `$3` and
+  the wallet beyond `$10`.
+- The production price default is still stale. A fresh price version and
+  valid-until remain a CP7 preflight item.
 
 ## DeepSeek qualification
 
-Pending versioned quality and operations evidence, full failure denominator,
-owner qualification, and the exact production execution profile.
+The held-out run is complete. Seven of nine turns completed, one failed
+closed, and two returned the safe spoiler boundary. The owner quality
+disposition is pending; full versioned qualification and the production
+execution profile remain CP6.
 
 ## Capacity and allowance
 
-Pending complete-turn request, token, and dollar cost, concurrency, hard-budget
-evidence, allowance options, and owner decision.
+Measured complete sponsored turn: `$0.009` to `$0.014`. The three-question
+reader limit is the binding constraint; the `$1` global ceiling supports about
+23 to 37 readers per day at the high end. The owner allowance decision is
+pending.
 
 ## Release candidate
 
