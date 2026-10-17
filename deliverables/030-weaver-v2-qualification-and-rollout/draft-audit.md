@@ -29,6 +29,17 @@ The P0 findings about the old public site and the old deploy trigger are
 closed. Their Cloudflare equivalents remain in Plan 030. This audit stays as
 the pre-admission snapshot.
 
+Checkpoint 2 then closed the first-run findings:
+
+- P1-1 and P1-2 are resolved. Fake mode completes without sponsored consent.
+  Local live without a sponsored ledger explains the missing allowance and
+  routes the reader to BYOK. A bound key continues without a Settings detour.
+- P3-3 is resolved for the no-key case. An access-status error is treated as
+  unavailable and the composer fails closed; an API without `getAccess` keeps
+  the legacy send path.
+- The new regressions cover the fake, unconfigured, exhausted, bound-key, and
+  status-failure paths. No paid model call was made.
+
 ## Verification actually run
 
 - `.venv/bin/python -m pytest -q`: 628 passed in 381.29 seconds.

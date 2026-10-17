@@ -34,6 +34,7 @@ not replace this results file.
 | Local retrieval index | chapters 1 to 3127 (Plan 018.5 scope cut) |
 | Conversation schema | version 3 |
 | Frontend assets | `weaver--NzoW5Us.js`, `weaver-BOySgbSR.css` |
+| CP2 frontend assets | `weaver-BSzUiTtF.js`, `weaver-BOySgbSR.css` |
 | Retired live deployment | v1.2.1, `weaver-D01JqGeM.js`, `weaver-BfjopLb8.css`, `/api/access` 404, stopped 2026-10-17 |
 | Current host bundle | on the stopped `weaver-v1` volume, export pending |
 | Public surface | Cloudflare launch in CP7 |
@@ -49,6 +50,61 @@ Owner decisions at the checkpoint 1 gate:
    preserved, deploy workflow disabled.
 4. Resolved 2026-10-17: the Cloudflare launch is CP7 inside Plan 030. The
    service shape is decided and proven in CP7 with the owner.
+
+## Checkpoint 2: first-run access and held-out set
+
+Status: evidence complete; owner gate pending.
+
+### Implementation
+
+The adopted honest-rite-plus-BYOK path is implemented.
+
+- `FirstNightmareSetup` now receives `sharedStatus` and `voiceBound`.
+- Fake mode shows "Continue in fake mode", skips sponsored consent, and goes
+  to the appraisal.
+- Local live without a sponsored ledger shows "No shared allowance is
+  configured on this server", offers no shared-allowance button, and routes
+  the reader to BYOK or Enter later.
+- An exhausted reader or a closed shared allowance is explained honestly and
+  routes to BYOK.
+- A reader with a bound key can continue with that key without being sent to
+  Settings.
+- An access-status failure with no bound key is treated as unavailable, so the
+  composer cannot submit into a 503. An API without `getAccess` keeps the
+  legacy send path instead of being blocked.
+- The typed draft is preserved and only submission is disabled.
+
+### Browser proof
+
+Headless Chrome against the built frontend, 2026-10-17. No live model call.
+
+| Path | Result |
+| --- | --- |
+| Fake mode | "Fake mode is active", no shared button, appraisal reached, rite completed, send enabled, fake turn returned 2 messages, 0 consent calls |
+| Local live without a sponsored ledger | "No shared allowance is configured", no shared button, "Use my own key" opened Settings Advanced, 0 consent calls |
+| Local live with a bound key | "Continue with your own key", appraisal reached, 0 consent calls |
+
+### Verification
+
+- `628` backend tests passed.
+- `141` frontend tests passed, including 9 new first-run and access regressions.
+- Ruff passed.
+- `tsc --noEmit` passed.
+- The production build passed and is committed in `src/weaver/web/dist/`.
+- Final build assets: `weaver-BSzUiTtF.js`, `weaver-BOySgbSR.css`.
+
+### Held-out set
+
+Eight private cases across five capabilities: alias resolution, character
+version, timeline boundary, ambiguous referent, and correction.
+
+- Stored at `.weaver/evaluation/plan030/heldout.json` and not committed.
+- The manifest stores questions and required behaviors only. It contains no
+  expected answers, no novel prose, and no model reasoning.
+- Shape validated on 2026-10-17: 8 unique IDs, 5 capabilities, no answer
+  fields, no null turn lists.
+- Live execution is queued for CP3 under the $5 provider cap. The cases are
+  not copied into prompts, retrieval rules, fixtures, or product copy.
 
 ## Sponsored preflight (CP3)
 

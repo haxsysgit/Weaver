@@ -2,13 +2,20 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FIRST_NIGHTMARE_STORAGE_KEY } from "../lib/firstNightmare";
-import { FirstNightmareSetup } from "./FirstNightmareSetup";
+import {
+  FirstNightmareSetup,
+  type SharedAccessStatus,
+} from "./FirstNightmareSetup";
 
-function renderRite(accepts = true) {
+function renderRite(
+  accepts = true,
+  options: { sharedStatus?: SharedAccessStatus; voiceBound?: boolean } = {},
+) {
   const onAcceptSponsored = vi.fn(async () => accepts);
   const onComplete = vi.fn();
   const onDefer = vi.fn();
   const onRevealStart = vi.fn();
+  const onUseOwnKey = vi.fn();
 
   render(
     <div className="spell-surface-lab">
@@ -18,11 +25,14 @@ function renderRite(accepts = true) {
         onComplete={onComplete}
         onDefer={onDefer}
         onRevealStart={onRevealStart}
+        onUseOwnKey={onUseOwnKey}
+        sharedStatus={options.sharedStatus}
+        voiceBound={options.voiceBound}
       />
     </div>,
   );
 
-  return { onAcceptSponsored, onComplete, onDefer, onRevealStart };
+  return { onAcceptSponsored, onComplete, onDefer, onRevealStart, onUseOwnKey };
 }
 
 function reachNotice(dialog: HTMLElement) {
@@ -185,6 +195,103 @@ describe("Hidden Thread initiation rite", () => {
 
     expect(onUseOwnKey).toHaveBeenCalledOnce();
     expect(localStorage.getItem(FIRST_NIGHTMARE_STORAGE_KEY)).toBe("deferred");
+  });
+
+  it("continues in fake mode without recording shared consent", () => {
+    const { onAcceptSponsored } = renderRite(true, { sharedStatus: "development" });
+    const dialog = screen.getByRole("dialog", { name: "First Nightmare setup" });
+
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Enter the First Nightmare" }),
+    );
+
+    expect(within(dialog).getByText(/Fake mode is active/i)).toBeVisible();
+    expect(
+      within(dialog).queryByRole("button", {
+        name: "Continue with the shared allowance",
+      }),
+    ).toBeNull();
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Continue in fake mode" }),
+    );
+
+    expect(dialog).toHaveAttribute("data-rite-act", "appraisal");
+    expect(onAcceptSponsored).not.toHaveBeenCalled();
+    expect(localStorage.getItem(FIRST_NIGHTMARE_STORAGE_KEY)).toBe("completed");
+  });
+
+  it("routes local live without a shared allowance to BYOK", () => {
+    const { onUseOwnKey } = renderRite(true, { sharedStatus: "unconfigured" });
+    const dialog = screen.getByRole("dialog", { name: "First Nightmare setup" });
+
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Enter the First Nightmare" }),
+    );
+
+    expect(
+      within(dialog).getByText(/No shared allowance is configured/i),
+    ).toBeVisible();
+    expect(
+      within(dialog).queryByRole("button", {
+        name: "Continue with the shared allowance",
+      }),
+    ).toBeNull();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Use my own key" }));
+
+    expect(onUseOwnKey).toHaveBeenCalledOnce();
+    expect(localStorage.getItem(FIRST_NIGHTMARE_STORAGE_KEY)).toBe("deferred");
+  });
+
+  it("continues with a bound key when shared access is unconfigured", () => {
+    const { onAcceptSponsored, onUseOwnKey } = renderRite(true, {
+      sharedStatus: "unconfigured",
+      voiceBound: true,
+    });
+    const dialog = screen.getByRole("dialog", { name: "First Nightmare setup" });
+
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Enter the First Nightmare" }),
+    );
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Continue with your own key" }),
+    );
+
+    expect(dialog).toHaveAttribute("data-rite-act", "appraisal");
+    expect(onUseOwnKey).not.toHaveBeenCalled();
+    expect(onAcceptSponsored).not.toHaveBeenCalled();
+    expect(localStorage.getItem(FIRST_NIGHTMARE_STORAGE_KEY)).toBe("completed");
+  });
+
+  it("explains an exhausted shared allowance and keeps BYOK available", () => {
+    renderRite(true, { sharedStatus: "exhausted" });
+    const dialog = screen.getByRole("dialog", { name: "First Nightmare setup" });
+
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Enter the First Nightmare" }),
+    );
+
+    expect(within(dialog).getByText(/resting until 00:00 UTC/i)).toBeVisible();
+    expect(
+      within(dialog).getByRole("button", { name: "Use my own key" }),
+    ).toBeVisible();
+  });
+
+  it("does not offer the shared allowance while status is loading", () => {
+    renderRite(true, { sharedStatus: "loading" });
+    const dialog = screen.getByRole("dialog", { name: "First Nightmare setup" });
+
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Enter the First Nightmare" }),
+    );
+
+    expect(
+      within(dialog).getByRole("button", {
+        name: "Checking the shared allowance...",
+      }),
+    ).toBeDisabled();
+    expect(
+      within(dialog).getByRole("button", { name: "Enter later" }),
+    ).toBeVisible();
   });
 
   it("finishes appraisal and reveal immediately with reduced motion", async () => {

@@ -19,7 +19,7 @@ import {
 } from "../lib/firstNightmare";
 import { getApiKey, isApiKeyDisabled } from "../lib/identity";
 import { Composer, type ReadingTier } from "./Composer";
-import { FirstNightmareSetup } from "./FirstNightmareSetup";
+import { FirstNightmareSetup, type SharedAccessStatus } from "./FirstNightmareSetup";
 import { RailOpenIcon, SettingsIcon } from "./Icons";
 import { Message } from "./Message";
 import { RecoveryPanel } from "./RecoveryPanel";
@@ -84,6 +84,28 @@ function savedSoulSeaMode(value: unknown): SoulSeaMode {
     return legacyModes[value];
   }
   return savedChoice(value, ["sunny", "awakened", "nephis"], "sunny");
+}
+
+function sharedStatusFor(
+  access: AccessStatus | null,
+  accessFailed: boolean,
+): SharedAccessStatus {
+  if (accessFailed) {
+    return "unavailable";
+  }
+  if (!access) {
+    return "loading";
+  }
+  if (access.development) {
+    return "development";
+  }
+  if (access.enabled && access.remaining_questions > 0) {
+    return "available";
+  }
+  if (access.reset_at === null) {
+    return "unconfigured";
+  }
+  return access.remaining_questions === 0 ? "exhausted" : "unavailable";
 }
 
 function loadInitialPreferences(): LabPreferences {
@@ -198,6 +220,7 @@ function SpellSurfaceChatSurface({
     return getApiKey() !== "" && !isApiKeyDisabled();
   });
   const [access, setAccess] = useState<AccessStatus | null>(null);
+  const [accessFailed, setAccessFailed] = useState(false);
   const [railOpen, setRailOpen] = useState(false);
   const [desktopRailCollapsed, setDesktopRailCollapsed] = useState(false);
   const [archivedOpen, setArchivedOpen] = useState(false);
@@ -356,8 +379,10 @@ function SpellSurfaceChatSurface({
     try {
       const status = await api.getAccess();
       setAccess(status);
+      setAccessFailed(false);
     } catch {
       // A temporary status failure must not hide local conversations.
+      setAccessFailed(true);
     }
   }
 
@@ -536,6 +561,7 @@ function SpellSurfaceChatSurface({
   }
 
   const readerStatus = `Vol ${preferences.volume} · ch ${preferences.chapter} · ${preferences.tier}`;
+  const sharedStatus = sharedStatusFor(access, accessFailed);
   const sharedExhausted = (
     !voiceBound
     && access?.enabled === true
@@ -548,9 +574,7 @@ function SpellSurfaceChatSurface({
   );
   const sharedUnavailable = (
     !voiceBound
-    && access !== null
-    && !access.enabled
-    && !access.development
+    && (accessFailed || (access !== null && !access.enabled && !access.development))
   );
   const accessMessage = voiceBound
     ? undefined
@@ -757,6 +781,8 @@ function SpellSurfaceChatSurface({
           onRevealStart={() => setSetupRevealing(true)}
           onUseOwnKey={openAdvancedFromSetup}
           preserveFirstRunState={replayingFirstNightmare}
+          sharedStatus={sharedStatus}
+          voiceBound={voiceBound}
         />
       )}
 

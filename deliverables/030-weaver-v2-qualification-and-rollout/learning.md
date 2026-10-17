@@ -6,8 +6,21 @@
 2026-10-17) are owner-accepted. Side UI Plan 029.5 is not admitted and does
 not block. The 2026-10-17 read-only audit is complete in
 [`draft-audit.md`](draft-audit.md). It is audit evidence, not an independent
-review and not an acceptance decision. Checkpoint cadence and the local access
-path are pending owner decisions at the checkpoint 1 gate.
+review and not an acceptance decision. CP1 is complete. CP2 evidence is
+complete and the owner gate is pending. Live held-out execution and the
+sponsored preflight stay in CP3.
+
+## Checkpoint observations
+
+- CP2: the adopted honest-rite-plus-BYOK path is implemented. Fake mode skips
+  consented shared use. Local live without a sponsored ledger routes to BYOK.
+  The composer fails closed on an access-status error when no key is bound.
+- CP2: 628 backend and 141 frontend tests pass; the production build is
+  committed. Nine new frontend regressions cover the first-run paths.
+- CP2: eight private held-out cases across five capabilities are stored in
+  ignored state. They are not in prompts, fixtures, or product copy.
+- CP2: no paid model call. Live held-out execution waits for the CP3 cost and
+  sponsored preflight gate.
 
 ## Owner-confirmed direction
 

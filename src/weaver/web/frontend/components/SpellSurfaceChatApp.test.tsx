@@ -176,7 +176,10 @@ async function waitForLiveApp() {
 }
 
 describe("first Nightmare setup", () => {
-  beforeEach(setDesktopMedia);
+  beforeEach(() => {
+    setDesktopMedia();
+    localStorage.clear();
+  });
 
   it("opens on first run and records Enter later", async () => {
     render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
@@ -248,6 +251,118 @@ describe("first Nightmare setup", () => {
         name: "Open Soul Sea settings",
       }),
     ).toBeVisible();
+  }, 10_000);
+
+  it("completes a fake-mode first run without shared consent", async () => {
+    const api = createApi();
+    api.getAccess = vi.fn().mockResolvedValue({
+      consented: false,
+      development: true,
+      enabled: false,
+      remaining_questions: 0,
+      reset_at: null,
+      source: "unavailable",
+    });
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+
+    const dialog = await screen.findByRole("dialog", {
+      name: "First Nightmare setup",
+    });
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Enter the First Nightmare" }),
+    );
+    expect(within(dialog).getByText(/Fake mode is active/i)).toBeVisible();
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Continue in fake mode" }),
+    );
+
+    expect(dialog).toHaveAttribute("data-rite-act", "appraisal");
+    expect(api.acceptSponsoredNotice).not.toHaveBeenCalled();
+    expect(localStorage.getItem(FIRST_NIGHTMARE_STORAGE_KEY)).toBe("completed");
+  }, 10_000);
+
+  it("does not offer shared access when the reader has no questions left", async () => {
+    const api = createApi();
+    api.getAccess = vi.fn().mockResolvedValue({
+      consented: true,
+      enabled: true,
+      remaining_questions: 0,
+      reset_at: "2026-10-01T00:00:00+00:00",
+      source: "sponsored",
+    });
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+
+    const dialog = await screen.findByRole("dialog", {
+      name: "First Nightmare setup",
+    });
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Enter the First Nightmare" }),
+    );
+
+    expect(within(dialog).getByText(/resting until 00:00 UTC/i)).toBeVisible();
+    expect(
+      within(dialog).queryByRole("button", {
+        name: "Continue with the shared allowance",
+      }),
+    ).toBeNull();
+  }, 10_000);
+
+  it("routes an unconfigured local live server to BYOK", async () => {
+    const api = createApi();
+    api.getAccess = vi.fn().mockResolvedValue({
+      consented: false,
+      development: false,
+      enabled: false,
+      remaining_questions: 0,
+      reset_at: null,
+      source: "unavailable",
+    });
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+
+    const dialog = await screen.findByRole("dialog", {
+      name: "First Nightmare setup",
+    });
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Enter the First Nightmare" }),
+    );
+    expect(
+      within(dialog).getByText(/No shared allowance is configured/i),
+    ).toBeVisible();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Use my own key" }));
+
+    const settings = await screen.findByRole("dialog", {
+      name: "Reader Appraisal settings",
+    });
+    expect(within(settings).getByText("Direct DeepSeek key")).toBeVisible();
+    expect(api.acceptSponsoredNotice).not.toHaveBeenCalled();
+  }, 10_000);
+
+  it("continues with a bound key when shared access is unconfigured", async () => {
+    localStorage.setItem("weaver_api_key", "sk-test-bound");
+    const api = createApi();
+    api.getAccess = vi.fn().mockResolvedValue({
+      consented: false,
+      development: false,
+      enabled: false,
+      remaining_questions: 0,
+      reset_at: null,
+      source: "unavailable",
+    });
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+
+    const dialog = await screen.findByRole("dialog", {
+      name: "First Nightmare setup",
+    });
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Enter the First Nightmare" }),
+    );
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Continue with your own key" }),
+    );
+
+    expect(dialog).toHaveAttribute("data-rite-act", "appraisal");
+    expect(api.acceptSponsoredNotice).not.toHaveBeenCalled();
+    expect(localStorage.getItem(FIRST_NIGHTMARE_STORAGE_KEY)).toBe("completed");
   }, 10_000);
 
   it("shows the shared allowance after the rite is deferred", async () => {
@@ -382,7 +497,7 @@ describe("first Nightmare setup", () => {
     fireEvent.change(composer, { target: { value: "Keep my question" } });
     expect(composer).toHaveValue("Keep my question");
     expect(screen.getByRole("button", { name: "Send message" })).toBeDisabled();
-    expect(composer).toHaveFocus();
+    await waitFor(() => expect(composer).toHaveFocus());
   });
 
   it("restores a saved Soul Sea beneath the live Spellweave", async () => {

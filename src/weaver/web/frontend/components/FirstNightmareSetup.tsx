@@ -14,6 +14,14 @@ import "../styles/hidden-thread-initiation.css";
 
 export type FirstNightmareStep = 1 | 2 | 3 | 4;
 
+export type SharedAccessStatus =
+  | "loading"
+  | "development"
+  | "available"
+  | "exhausted"
+  | "unconfigured"
+  | "unavailable";
+
 interface FirstNightmareSetupProps {
   initialStep?: FirstNightmareStep;
   onAcceptSponsored?: () => Promise<boolean>;
@@ -22,6 +30,8 @@ interface FirstNightmareSetupProps {
   onRevealStart?: () => void;
   onUseOwnKey?: () => void;
   preserveFirstRunState?: boolean;
+  sharedStatus?: SharedAccessStatus;
+  voiceBound?: boolean;
 }
 
 const APPRAISAL_TIERS = ["Good", "Exceptional", "Remarkable", "Glorious"] as const;
@@ -50,6 +60,8 @@ export function FirstNightmareSetup({
   onRevealStart,
   onUseOwnKey,
   preserveFirstRunState = false,
+  sharedStatus = "available",
+  voiceBound = false,
 }: FirstNightmareSetupProps) {
   const [step, setStep] = useState<FirstNightmareStep>(initialStep);
   const [accepting, setAccepting] = useState(false);
@@ -83,6 +95,11 @@ export function FirstNightmareSetup({
     onDefer();
   }
 
+  function beginAppraisal() {
+    setAppraisalIndex(prefersReducedMotion() ? APPRAISAL_TIERS.length - 1 : 0);
+    setStep(4);
+  }
+
   async function acceptSharedAllowance() {
     setAccepting(true);
     setAccessError(false);
@@ -93,8 +110,7 @@ export function FirstNightmareSetup({
         return;
       }
       setFirstNightmareState("completed");
-      setAppraisalIndex(prefersReducedMotion() ? APPRAISAL_TIERS.length - 1 : 0);
-      setStep(4);
+      beginAppraisal();
     } catch {
       setAccessError(true);
     } finally {
@@ -107,6 +123,20 @@ export function FirstNightmareSetup({
       setFirstNightmareState("deferred");
     }
     onUseOwnKey?.();
+  }
+
+  function continueWithOwnKey() {
+    if (!voiceBound) {
+      useOwnKey();
+      return;
+    }
+    setFirstNightmareState("completed");
+    beginAppraisal();
+  }
+
+  function continueInDevelopment() {
+    setFirstNightmareState("completed");
+    beginAppraisal();
   }
 
   function beginReveal() {
@@ -208,22 +238,88 @@ export function FirstNightmareSetup({
           {step === 2 && (
             <>
               <h1>The hidden thread can answer</h1>
-              <p>
-                Weaver gives each reader three shared questions every day. The
-                allowance renews at 00:00 UTC and your conversations remain
-                here when it rests.
-              </p>
-              <aside className="hidden-thread-privacy">
-                The voice is paid for by the keeper of this Spell. You do not
-                need an API key to begin.
-              </aside>
+              {sharedStatus === "available" && (
+                <>
+                  <p>
+                    Weaver gives each reader three shared questions every day.
+                    The allowance renews at 00:00 UTC and your conversations
+                    remain here when it rests.
+                  </p>
+                  <aside className="hidden-thread-privacy">
+                    The voice is paid for by the keeper of this Spell. You do
+                    not need an API key to begin.
+                  </aside>
+                </>
+              )}
+              {sharedStatus === "loading" && (
+                <p>
+                  Checking the shared allowance. You can wait, use your own key,
+                  or enter later.
+                </p>
+              )}
+              {sharedStatus === "development" && (
+                <p>
+                  Fake mode is active. No shared allowance is used and no model
+                  request is sent.
+                </p>
+              )}
+              {sharedStatus === "exhausted" && (
+                <p>
+                  The shared allowance is resting until 00:00 UTC. Your
+                  conversations remain here. Use your own key, or enter later.
+                </p>
+              )}
+              {sharedStatus === "unconfigured" && (
+                <p>
+                  No shared allowance is configured on this server. Use your own
+                  DeepSeek key to read, or enter later.
+                </p>
+              )}
+              {sharedStatus === "unavailable" && (
+                <p>
+                  The shared allowance is unavailable right now. Use your own
+                  key, or enter later.
+                </p>
+              )}
               <div className="hidden-thread-actions">
-                <button data-autofocus onClick={() => setStep(3)} type="button">
-                  <span>Continue with the shared allowance</span>
-                </button>
+                {sharedStatus === "available" && (
+                  <button data-autofocus onClick={() => setStep(3)} type="button">
+                    <span>Continue with the shared allowance</span>
+                  </button>
+                )}
+                {sharedStatus === "loading" && (
+                  <button disabled type="button">
+                    <span>Checking the shared allowance...</span>
+                  </button>
+                )}
+                {sharedStatus === "development" && (
+                  <button data-autofocus onClick={continueInDevelopment} type="button">
+                    <span>Continue in fake mode</span>
+                  </button>
+                )}
+                {(sharedStatus === "exhausted"
+                  || sharedStatus === "unconfigured"
+                  || sharedStatus === "unavailable") && (
+                  <button data-autofocus onClick={continueWithOwnKey} type="button">
+                    <span>
+                      {voiceBound ? "Continue with your own key" : "Use my own key"}
+                    </span>
+                  </button>
+                )}
                 <div className="hidden-thread-quiet-actions">
                   <button onClick={() => setStep(1)} type="button">Back</button>
-                  <button onClick={useOwnKey} type="button">Use my own key</button>
+                  {(sharedStatus === "available" || sharedStatus === "loading") && (
+                    <button
+                      {...(sharedStatus === "loading" ? { "data-autofocus": true } : {})}
+                      onClick={useOwnKey}
+                      type="button"
+                    >
+                      Use my own key
+                    </button>
+                  )}
+                  {sharedStatus !== "available" && (
+                    <button onClick={deferSetup} type="button">Enter later</button>
+                  )}
                 </div>
               </div>
             </>
@@ -248,7 +344,7 @@ export function FirstNightmareSetup({
               {accessError && (
                 <p className="hidden-thread-error" role="alert">
                   The shared thread could not be bound. You can try again or
-                  use your own key in Advanced.
+                  continue with your own key.
                 </p>
               )}
               <div className="hidden-thread-actions">
@@ -262,7 +358,7 @@ export function FirstNightmareSetup({
                 </button>
                 <div className="hidden-thread-quiet-actions">
                   <button onClick={() => setStep(2)} type="button">Back</button>
-                  <button onClick={useOwnKey} type="button">Use my own key</button>
+                  <button onClick={continueWithOwnKey} type="button">Use my own key</button>
                 </div>
               </div>
             </>
@@ -290,8 +386,7 @@ export function FirstNightmareSetup({
                 <>
                   <h1>The hidden thread listens</h1>
                   <p>
-                    Weaver can now read, reread, and answer through the shared
-                    daily allowance.
+                    Weaver can now read, reread, and answer with you.
                   </p>
                   <div className="hidden-thread-actions">
                     <button data-autofocus onClick={beginReveal} type="button">
