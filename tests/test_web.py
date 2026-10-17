@@ -50,11 +50,26 @@ def test_production_frontend_assets_exist() -> None:
         "weaver-mark.svg",
         "weaver-mask-mark.webp",
         "sw.js",
+        "privacy.html",
+        "robots.txt",
     )
     for relative_path in expected_assets:
         assert (FRONTEND_DIST / relative_path).is_file(), relative_path
     assert list((FRONTEND_DIST / "assets").glob("weaver-*.js"))
     assert list((FRONTEND_DIST / "assets").glob("weaver-*.css"))
+
+
+@pytest.mark.asyncio
+async def test_privacy_page_and_robots_are_public(client) -> None:
+    privacy = await client.get("/privacy")
+    assert privacy.status_code == 200
+    assert "text/html" in privacy.headers["content-type"]
+    assert "DeepSeek" in privacy.text
+    assert "frame-ancestors 'none'" in privacy.headers["content-security-policy"]
+
+    robots = await client.get("/robots.txt")
+    assert robots.status_code == 200
+    assert "Disallow: /api/" in robots.text
 
 
 def test_production_icon_set_uses_the_first_nightmare_mask_at_real_sizes() -> None:
@@ -1296,7 +1311,7 @@ async def test_page_privacy_copy_matches_runtime_mode(tmp_path) -> None:
             headers=SAME_ORIGIN_HEADERS,
         ) as client:
             live_page = await client.get("/")
-            assert "Messages are sent to DeepSeek" in live_page.text
+            assert "passages it opens are sent to DeepSeek" in live_page.text
             assert "Nothing leaves this machine" not in live_page.text
     finally:
         await runtime.close()

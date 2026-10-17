@@ -111,10 +111,10 @@ Open questions for the owner when this plan is admitted:
 
 ## Product backlog (owner gates that stay open)
 
-- DeepSeek access direction: OWNER-CONFIRMED 2026-09-23 and split across
-  drafted Plans 028-030. Weaver stays DeepSeek-only. Normal readers receive an
-  owner-funded shared daily allowance; optional browser-local DeepSeek BYOK
-  remains under Advanced.
+- DeepSeek access direction: OWNER-CONFIRMED 2026-09-23. Plans 028 and 029
+  closed; Plan 030 was admitted 2026-10-17. Weaver stays DeepSeek-only. Normal
+  readers receive an owner-funded shared daily allowance; optional
+  browser-local DeepSeek BYOK remains under Advanced.
 - Plan 028 starting limits: three sponsored questions per reader per UTC day,
   one active sponsored turn, a $1 global daily ceiling, and a manually funded
   $10 wallet. Automatic top-up and silent fallback are forbidden.
@@ -158,9 +158,9 @@ Open questions for the owner when this plan is admitted:
   - Scaffold the full plan only after Plan 027.5 closes. If Plan 029.5 is later
     admitted, amend Plan 030 to depend on its owner-accepted closure before v2
     qualification begins.
-- Weaver v2.0.0 under Plan 030: final DeepSeek qualification through the
+- Plan 030 admitted 2026-10-17: final DeepSeek qualification through the
   finished system, measured sponsored allowance, release candidate,
-  Foundational Reader Trials, rollback proof, and public launch.
+  Foundational Reader Trials, Cloudflare launch, and public v2.0.0 release.
 - After Plan 030 closes, run the standing 021-030 checkpoint before drafting or
   admitting Plan 031.
 - Privacy-light analytics (umami-style) if the public launch is real enough

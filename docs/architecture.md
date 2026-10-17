@@ -1,6 +1,6 @@
 # Weaver Architecture
 
-Status: current as of 2026-08-14 (plan 018). This document describes what
+Status: current as of 2026-10-17 (Plan 030 CP4). This document describes what
 the code actually does. When it and a plan disagree, the code is the truth
 until an admitted plan changes it.
 
@@ -8,7 +8,7 @@ until an admitted plan changes it.
 
 Weaver is a synthetic lifelong reader: an agent that has read a novel
 whole, remembers it, and discusses it in natural conversation. It is a
-companion, not a reader — users never read the novel inside the product
+companion, not a reader. Users never read the novel inside the product
 (see `docs/WEAVER_WEB_PRODUCT_DIRECTION.md`).
 
 The one rule: the novel is the source of truth. Every factual claim traces
@@ -21,7 +21,7 @@ is only for guessing where to look.
  browser (React + SSE)
       │  POST /turns, GET /stream
       ▼
- web/app.py            FastAPI, SSE stream, origin checks
+ web/app.py            FastAPI, SSE stream, origin checks, sponsored gate
       │
       ▼
  chat_runtime.py       system prompt, workflow, answer validation
@@ -30,12 +30,14 @@ is only for guessing where to look.
  agent/turn.py         the two-phase turn: locate, then read and answer
       │                (semantic_search / find_text / browse_chapters /
       │                 who_is / lore_path / read_chapters)
+      │                evidence packet, publication checks, one repair
       ▼
  conversation/         durable ledger: items, coordinator, session,
-                       repository (sqlite)
+                      repository (sqlite)
       │
       ▼
  model_layer/          provider protocol: DeepSeek, fake, streaming layer
+                      sponsored reservation and usage accounting
 ```
 
 ## Packages
@@ -43,8 +45,10 @@ is only for guessing where to look.
 | Package | Responsibility | Key modules |
 | --- | --- | --- |
 | `src/weaver/web/` | FastAPI app, SSE endpoints, React 19 + Vite + TypeScript frontend | `app.py` (31K), `frontend/` |
-| `src/weaver/agent/` | Agent loop: tool dispatch, message handling, the turn | `turn.py` (34K), `tools.py` |
-| `src/weaver/chat_runtime.py` | The developer system prompt, answer candidate validation, fake responses | — |
+| `src/weaver/agent/` | Agent loop: tool dispatch, the turn, evidence packet, publication checks, one repair | `turn.py`, `tools.py`, `answer.py`, `claim_inspection.py` |
+| `src/weaver/chat_runtime.py` | The system prompt, answer candidate validation, fake responses | n/a |
+| `src/weaver/prompts/` | Packaged identity and soul resources (Plan 029) | `identity.md`, `soul.md` |
+| `src/weaver/sponsored.py` | Shared allowance, signed pass, reservations, usage, cost | `SponsoredTurn`, `SponsoredAccess`, `DeepSeekBalance` |
 | `src/weaver/conversation/` | Durable conversation ledger (sqlite via aiosqlite), replay, restart safety | `coordinator.py`, `session.py`, `repository.py`, `items.py` |
 | `src/weaver/model_layer/` | Provider-neutral model interface | `deepseek.py`, `fake.py`, `layer.py`, `types.py` |
 | `src/weaver/corpus/` | The private library: fetch, validate, update, export (plan 002) | `service.py`, `storage.py`, `tools.py`, `text.py`, `source.py`, `spec.py` |
@@ -68,7 +72,7 @@ is only for guessing where to look.
 ## Retrieval stack
 
 - Index: embedded Qdrant via `QdrantClient(path=...)` (library.py:683,
-  tools.py:211) — local files, no server process.
+  tools.py:211), local files, no server process.
 - Embeddings: fastembed (onnx) dense + BM42 sparse, hybrid combination.
 - Reading tools: `semantic_search` (meaning), `find_text` (exact phrase +
   speaker + co-occurrence), `browse_chapters` (range skim),
@@ -76,6 +80,14 @@ is only for guessing where to look.
   `read_chapters` (open prose).
 - The agent decides how to retrieve; the assembler and the LLM decide
   ranking (see `docs/reading-finders.md`, locked 2026-08-07).
+- Direct source packet (Plan 029): the turn opens the chapters the tools
+  found, builds a 24,000-character evidence packet with an evidence board and
+  chapter/line locations, then reads the packet before the answer. Notebook
+  statements are leads; they cannot satisfy direct quotation proof.
+- Publication checks are deterministic: evidence, citations, spoilers,
+  quotes, invention labels, private machinery, em dashes, generic AI
+  language, and excessive headings. One bounded repair is allowed; a failed
+  repair fails closed.
 
 ## Web surface
 
@@ -83,10 +95,15 @@ is only for guessing where to look.
   `src/weaver/web/dist/` (hatchling packages it into the wheel).
 - Endpoints: `/api/conversations` (list, create, delete), `/api/turns`
   (start, retry, regenerate, stream, cancel), `/api/preferences`,
-  `/api/passages` (local-only passage endpoint), static assets.
+  `/api/access`, `/api/access/consent`, `/privacy`, `/robots.txt`, static
+  assets.
+- Access: the shared sponsored allowance is the default for normal readers;
+  optional browser-local DeepSeek BYOK stays under Advanced. The sponsored
+  turn reserves a hard cost ceiling before the provider call and settles the
+  measured usage after it.
 - Frontend: React 19, plain CSS tokens, markdown parsed locally (model
   text never becomes raw HTML), SSE streaming, PWA manifest + service
-  worker.
+  worker, the First Nightmare first-run rite.
 - The browser is Weaver's only chat surface. The old TUI was retired by
   plan 013.
 
@@ -104,7 +121,8 @@ is only for guessing where to look.
    fallback (`.env` without key exits before any call).
 3. No private content (novels, `.weaver/`, receipts, reasoning traces)
    in commits or API responses.
-4. The public surface is chat, memory, and links. Never chapter text.
+4. The public surface is chat, memory, and chapter references. Never chapter
+   text.
 5. One numbered plan at a time (see `AGENTS.md` and the `arinze-plans`
    skill).
 
@@ -115,6 +133,15 @@ is only for guessing where to look.
 - Plans 011-014: web chat, notebook build, React PWA surface, reading
   tools + retrieval experiment.
 - Plans 015-017: agentic product (spoiler judge, two-phase turn, spell
-  surface, preferences), safe refresh, reading continuation to 3148.
-- Plan 018: pre-v1 cleanup and standard docs. Next: v1 (deployment,
-  CI/CD).
+  surface, preferences), safe refresh, reading continuation to 3160.
+- Plan 018: pre-v1 cleanup and standard docs.
+- Plan v1: Docker, EC2, GitHub Actions, Funnel, BYOK, and the first release.
+- Plans 019-020: notebook structure, entity sweep, overview pages.
+- Plans 021-027.5: First Nightmare rite, Spellweave visual foundation,
+  Conversation Chamber, Thread Archive, mobile thread repairs, v1.2.1.
+- Plan 028: sponsored DeepSeek allowance, signed pass, reservations, BYOK.
+- Plan 029: fiction reading, direct source packet, conversation continuity,
+  answer modes, identity/soul, deterministic publication checks.
+- Plan 030: v2.0.0 qualification, sponsored preflight, allowance, Reader
+  Trials, Cloudflare launch (admitted 2026-10-17). The EC2/Funnel path is
+  retired.

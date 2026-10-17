@@ -604,6 +604,7 @@
 .lab-tier-pill { align-self: center; padding: 4px 8px; color: var(--lab-gold); border: 1px solid rgba(224, 189, 120, 0.19); border-radius: 999px; font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase; }
 .lab-composer-dock > p { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 7px 0 0; color: rgba(166, 168, 181, 0.48); font-size: 8px; letter-spacing: 0.08em; }
 .lab-composer-dock > p span { width: 4px; height: 4px; border-radius: 50%; background: #739e80; box-shadow: 0 0 6px rgba(115, 158, 128, 0.6); }
+.lab-composer-dock > p a { display: inline-flex; align-items: center; min-height: 24px; padding: 0 2px; color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 
 /* Rune materialisation */
 .lab-rune-event { position: absolute; z-index: 7; left: 50%; bottom: 102px; width: min(430px, 76vw); min-height: 52px; pointer-events: none; transform: translateX(-50%); }

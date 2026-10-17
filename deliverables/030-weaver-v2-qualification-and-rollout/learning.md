@@ -6,10 +6,9 @@
 2026-10-17) are owner-accepted. Side UI Plan 029.5 is not admitted and does
 not block. The 2026-10-17 read-only audit is complete in
 [`draft-audit.md`](draft-audit.md). It is audit evidence, not an independent
-review and not an acceptance decision. CP1 and CP2 are complete. CP3 evidence
-is complete: the sponsored answer-path fix is committed, the allowance is
-confirmed, and the version-comparison and correction quality defect is carried
-to CP4.
+review and not an acceptance decision. CP1, CP2, and CP3 are complete. The
+CP4 quality diagnostic is complete; reader/ops, privacy, and docs are in
+progress. The Reader Trials remain the real acceptance gate.
 
 ## Checkpoint observations
 
@@ -48,6 +47,16 @@ to CP4.
   `$10` wallet.
 - CP3: the version-comparison and correction quality defect is carried to CP4
   for a sharper repair instruction and a held-out rerun.
+- CP4: the sharper repair fixed `version-01`. The rerun completed seven of ten
+  turns for `$0.239550`; the failures moved to `alias-01`, `timeline-02`, and
+  `correction-01`.
+- CP4: the no-quote repair fixed `alias-01` and `correction-01`. The latest run
+  completed eight of ten turns for `$0.247081`. `version-02` and `timeline-01`
+  failed closed; `boundary-01` returned the safe boundary as expected.
+- CP4: total live spend is `$0.990386` of `$5.00`.
+- CP4: the remaining failures move between runs. Further tuning against the
+  held-out diagnostic risks overfitting it. The Reader Trials remain the real
+  acceptance gate.
 - CP3: the local test used an explicit future price date. The production price
   default is still stale and remains a CP7 preflight item.
 

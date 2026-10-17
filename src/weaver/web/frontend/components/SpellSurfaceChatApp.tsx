@@ -747,7 +747,7 @@ function SpellSurfaceChatSurface({
             turnActive={chat.turnActive}
             voiceBound={voiceBound}
           />
-          <p><span /> {privacyLabel}</p>
+          <p><span /> {privacyLabel} <a href="/privacy">Privacy</a></p>
         </footer>
       </main>
 

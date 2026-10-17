@@ -1111,7 +1111,8 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         html = html.replace("{{MODE_LABEL}}", runtime.mode_label)
         if runtime.live:
             privacy_label = (
-                "Weaver runs locally. Messages are sent to DeepSeek for replies."
+                "Weaver runs on a private server. Your question and the "
+                "passages it opens are sent to DeepSeek for a reply."
             )
         else:
             privacy_label = "Fake mode stays on this machine. No model request is sent."
@@ -1126,6 +1127,25 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                     "connect-src 'self'; manifest-src 'self'; worker-src 'self'"
                 ),
             },
+        )
+
+    @app.get("/privacy")
+    async def privacy() -> FileResponse:
+        return FileResponse(
+            FRONTEND_DIST / "privacy.html",
+            media_type="text/html",
+            headers={
+                "Content-Security-Policy": (
+                    "default-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+                ),
+            },
+        )
+
+    @app.get("/robots.txt")
+    async def robots() -> FileResponse:
+        return FileResponse(
+            FRONTEND_DIST / "robots.txt",
+            media_type="text/plain",
         )
 
     app.mount(

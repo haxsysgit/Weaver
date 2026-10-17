@@ -178,14 +178,33 @@ survive the single repair. This is not an allowance or sponsored-path defect.
 The proposed CP4 repair is a sharper repair instruction per finding code, with
 a held-out rerun before CP5.
 
+### Held-out no-quote repair rerun
+
+- The owner approved a sharper repair instruction, then a no-quote repair on
+  quote findings. The repaired answer paraphrases instead of quoting.
+- Nine cases, ten turns, `$0.247081`, 101 provider calls.
+- Eight turns completed. `correction-01` and `alias-01` now completed.
+- `version-02` (time-aware comparison) and `timeline-01` (timeline boundary)
+  failed closed with unsupported chapters and long or changed quotations.
+- `boundary-01` returned the safe boundary as expected.
+- `referent-01` turn 1 was `2,869` characters after a `3,809` character first
+  turn, so the follow-up is shorter than the first answer.
+- Private answers: `.weaver/evaluation/plan030/cp3/heldout4/answers.json`.
+
+The remaining failures move between runs, which points to stochastic model
+compliance rather than one deterministic defect. Further tuning against this
+diagnostic risks overfitting it. The Reader Trials remain the real acceptance
+gate.
+
 ### Cost and allowance
 
 - Owner decision 2026-10-17: keep three questions per reader per UTC day, the
   `$1` global daily ceiling, and the `$10` wallet.
-- CP3 live spend: `$0.503755` of `$5.00`.
+- CP3 and CP4 quality live spend: `$0.990386` of `$5.00`.
   - sponsored: `$0.008077` + `$0.011451` + `$0.014149` + `$0.017531` +
     `$0.026748` = `$0.077956`;
-  - held-out: `$0.199925` + `$0.225874` = `$0.425799`.
+  - held-out: `$0.199925` + `$0.225874` + `$0.239550` + `$0.247081` =
+    `$0.912430`.
 - Complete sponsored turn: `$0.009` to `$0.014`; the clean-turn average is
   `$0.008916`.
 - The three-question reader limit is the binding constraint. The `$1` global
@@ -196,11 +215,13 @@ a held-out rerun before CP5.
 
 ## DeepSeek qualification
 
-The held-out rerun is complete. Eight of ten turns completed. `version-01`
-and `correction-01` failed closed; `version-02` and `boundary-01` returned the
-safe spoiler boundary. The version-comparison and correction quality defect is
-carried to CP4. Full versioned qualification and the production execution
-profile remain CP6.
+The held-out diagnostic is complete through two repair iterations. The latest
+run completed eight of ten turns. `version-02` and `timeline-01` failed closed;
+`boundary-01` returned the safe boundary; `correction-01` and `alias-01` were
+fixed. The remaining failures move between runs, so the diagnostic now shows
+stochastic model compliance rather than one deterministic defect. The Reader
+Trials remain the real acceptance gate. Full versioned qualification and the
+production execution profile remain CP6.
 
 ## Capacity and allowance
 

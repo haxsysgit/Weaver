@@ -59,7 +59,12 @@ Checkpoint 3 found and fixed one integration defect:
 - The version-comparison and correction quality defect is carried to CP4 for a
   sharper repair instruction and a held-out rerun.
 - The owner confirmed the three-question, `$1` global, `$10` wallet allowance.
-- Total CP3 live spend: `$0.503755` of `$5.00`.
+- CP4 quality iterations: a sharper repair fixed `version-01`; a no-quote repair
+  fixed `alias-01` and `correction-01`. The latest held-out run completed eight
+  of ten turns for `$0.247081`. `version-02` and `timeline-01` failed closed,
+  and the failures move between runs. Further tuning against the diagnostic
+  risks overfitting it; the Reader Trials remain the real gate.
+- Total CP3 and CP4 quality live spend: `$0.990386` of `$5.00`.
 
 ## Verification actually run
 

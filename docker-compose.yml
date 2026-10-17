@@ -1,6 +1,6 @@
-# weaver v1 on the box: code from GHCR image, state from the /srv/weaver volume.
-# The bundle (novels/, .weaver/) is scp'd to /srv/weaver once; deploys only
-# replace the image, never the state.
+# Weaver container on a private host. The EC2 and Tailscale Funnel v1 deploy
+# path is retired; the public surface moves to Cloudflare in Plan 030 CP7.
+# The bundle (novels/, .weaver/) lives on the host volume, not in the image.
 services:
   weaver:
     image: ghcr.io/haxsysgit/weaver:latest
@@ -9,12 +9,12 @@ services:
       - "8000:8000"
     environment:
       WEAVER_PROJECT_ROOT: /srv/weaver
-      WEAVER_ALLOWED_HOSTS: weaver.platy-halfmoon.ts.net
+      WEAVER_ALLOWED_HOSTS: ${WEAVER_ALLOWED_HOSTS:?set the public hostname}
       WEAVER_DENSE_ONNX: /srv/weaver/.weaver/models/int8/model_quantized.onnx
       DEEPSEEK_KEY: ${DEEPSEEK_KEY:?set DEEPSEEK_KEY in .env on the box}
       WEAVER_SPONSORED_ENABLED: ${WEAVER_SPONSORED_ENABLED:-0}
       WEAVER_SPONSORED_PASS_SECRET: ${WEAVER_SPONSORED_PASS_SECRET:-}
-      WEAVER_SPONSORED_PRICE_VALID_UNTIL: ${WEAVER_SPONSORED_PRICE_VALID_UNTIL:-2026-10-10T00:00:00+00:00}
+      WEAVER_SPONSORED_PRICE_VALID_UNTIL: ${WEAVER_SPONSORED_PRICE_VALID_UNTIL:-2026-12-31T00:00:00+00:00}
       WEAVER_TRUSTED_PROXY_ADDRESSES: ${WEAVER_TRUSTED_PROXY_ADDRESSES:-}
       WEAVER_ORIGINAL_ADDRESS_HEADER: ${WEAVER_ORIGINAL_ADDRESS_HEADER:-}
     volumes:
