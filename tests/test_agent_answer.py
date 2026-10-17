@@ -1,6 +1,7 @@
 import pytest
 
 from weaver.agent.answer import (
+    PublicationFinding,
     ResponseMode,
     build_answer_blueprint,
     build_repair_instruction,
@@ -408,6 +409,31 @@ def test_repair_instruction_names_only_the_observed_failures() -> None:
     assert "ai_opening" in instruction
     assert "missing_citation" in instruction
     assert "changed_quote" not in instruction
+    assert "one rewrite" in instruction
+
+
+def test_repair_instruction_targets_quote_and_chapter_findings() -> None:
+    findings = (
+        PublicationFinding(
+            "long_quote",
+            "A direct quotation exceeds 25 words.",
+        ),
+        PublicationFinding(
+            "changed_quote",
+            "The quotation wording differs from the source.",
+        ),
+        PublicationFinding(
+            "unsupported_chapter",
+            "Chapter 1200 is not in the direct sources.",
+        ),
+    )
+
+    instruction = build_repair_instruction(findings)
+
+    assert "25 words or fewer" in instruction
+    assert "exact source wording" in instruction
+    assert "opened direct sources" in instruction
+    assert "changed_quote" in instruction
     assert "one rewrite" in instruction
 
 

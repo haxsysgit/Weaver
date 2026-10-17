@@ -450,15 +450,55 @@ def inspect_publication(
     return tuple(findings)
 
 
+REPAIR_RULES = {
+    "ai_opening": "Remove the generic assistant opening and begin with the answer.",
+    "ai_phrase": "Remove generic AI phrasing and support language.",
+    "changed_quote": (
+        "Use the exact source wording inside quotation marks, or remove the "
+        "quotation."
+    ),
+    "em_dash": "Replace every em dash with a comma, period, colon, or parentheses.",
+    "excessive_headings": "Keep at most three headings.",
+    "exposed_machinery": (
+        "Remove reading-packet, tool, prompt, and hidden-instruction language."
+    ),
+    "long_quote": "Shorten every direct quotation to 25 words or fewer.",
+    "malformed_chapter_range": (
+        "Use an explicit citation form such as (ch. 900) or (chs. 900-901)."
+    ),
+    "missing_citation": "Add an explicit chapter citation to each factual claim.",
+    "missing_direct_evidence": (
+        "Use at least one opened direct source chapter before making a factual "
+        "claim."
+    ),
+    "spoiler_citation": "Remove citations beyond the reader's chapter boundary.",
+    "unlabelled_invention": (
+        "Label invented or hypothetical material visibly as invention, "
+        "imagination, or what-if."
+    ),
+    "unsupported_chapter": "Cite only chapters listed as opened direct sources.",
+}
+
+
 def build_repair_instruction(findings: tuple[PublicationFinding, ...]) -> str:
     details = "\n".join(
         f"- {finding.code}: {finding.detail}" for finding in findings
     )
+    rules: list[str] = []
+    for finding in findings:
+        rule = REPAIR_RULES.get(finding.code)
+        if rule is not None and rule not in rules:
+            rules.append(rule)
+    rule_block = ""
+    if rules:
+        rule_block = "\nRewrite rules:\n" + "\n".join(
+            f"- {rule}" for rule in rules
+        )
     return (
         "The proposed answer failed publication checks. Make one rewrite that "
         "fixes only the listed problems while preserving supported facts, "
         "chapter citations, uncertainty, and exact source quotations. Return "
-        f"only the repaired answer.\nFindings:\n{details}"
+        f"only the repaired answer.{rule_block}\nFindings:\n{details}"
     )
 
 
