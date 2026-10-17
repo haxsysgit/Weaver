@@ -450,6 +450,11 @@ def inspect_publication(
     return tuple(findings)
 
 
+NO_QUOTE_RULE = (
+    "Do not include any direct quotation in the repaired answer; paraphrase "
+    "the source instead."
+)
+QUOTE_CODES = {"long_quote", "changed_quote"}
 REPAIR_RULES = {
     "ai_opening": "Remove the generic assistant opening and begin with the answer.",
     "ai_phrase": "Remove generic AI phrasing and support language.",
@@ -485,6 +490,8 @@ def build_repair_instruction(findings: tuple[PublicationFinding, ...]) -> str:
         f"- {finding.code}: {finding.detail}" for finding in findings
     )
     rules: list[str] = []
+    if any(finding.code in QUOTE_CODES for finding in findings):
+        rules.append(NO_QUOTE_RULE)
     for finding in findings:
         rule = REPAIR_RULES.get(finding.code)
         if rule is not None and rule not in rules:

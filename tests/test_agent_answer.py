@@ -430,6 +430,8 @@ def test_repair_instruction_targets_quote_and_chapter_findings() -> None:
 
     instruction = build_repair_instruction(findings)
 
+    assert "Do not include any direct quotation" in instruction
+    assert "paraphrase" in instruction
     assert "25 words or fewer" in instruction
     assert "exact source wording" in instruction
     assert "opened direct sources" in instruction
