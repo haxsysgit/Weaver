@@ -9,16 +9,19 @@
 
 - **Tooling:** Plan 028 sponsored-access inspection, Plan 029 evaluation tools,
   fake mode, pytest, Ruff, root Vitest and Vite commands, browser and installed
-  PWA trials, bounded live DeepSeek runs, the existing GitHub Actions deployment,
-  Docker Compose, EC2, rollback proof, Chrome DevTools browser probes, and the
-  2026-10-17 read-only draft audit in
+  PWA trials, bounded live DeepSeek runs, Docker and the retired EC2 image
+  history, the disabled GitHub Actions deploy workflow, Cloudflare launch
+  tooling selected in CP7, rollback proof, Chrome DevTools browser probes, and
+  the 2026-10-17 read-only draft audit in
   [`draft-audit.md`](../deliverables/030-weaver-v2-qualification-and-rollout/draft-audit.md).
 - **State:** drafted 2026-08-24, rewritten 2026-09-23 for the DeepSeek-only
   sponsored direction, amended 2026-10-17 after Plans 028 and 029 closed.
   **Admitted 2026-10-17.** Plan 029.5 is not admitted and does not block.
   **Checkpoint cadence: 7 (owner decision 2026-10-17).** The EC2 and Tailscale
-  Funnel deploy path is retired; the public v1.2.1 site is being taken down.
-  The Cloudflare launch boundary is pending the owner's decision.
+  Funnel path is retired. The public v1.2.1 site is down: instance `weaver-v1`
+  stopped 2026-10-17, the `/srv/weaver` data volume preserved, and the old
+  deploy workflow disabled. The Cloudflare launch is CP7 inside Plan 030,
+  designed and set up with the owner.
 - **Depends on:** Plan 028 closed 2026-10-02 with sponsored access and financial
   safety accepted; Plan 029 closed 2026-10-17 with the intelligence and
   conversation system accepted. Plan 029.5 is not admitted.
@@ -26,8 +29,8 @@
   release gate.
 - **Effort:** L to XL.
 - **Risk:** High. This plan combines real model cost, anonymous public traffic,
-  private-source retrieval, deployment, rollback, an unqualified live v1.2.1
-  baseline, and owner-only Reader Trial decisions.
+  private-source retrieval, a retired v1.2.1 baseline, a new Cloudflare launch
+  target, rollback, and owner-only Reader Trial decisions.
 - **Budget:** about 220k to 360k agent-context tokens for qualification, browser
   proof, release work, and two independent reviews. Live provider spend is
   capped at $5 unless the owner explicitly changes it; agent-context spend is
@@ -66,11 +69,12 @@
     network identifiers, credentials, cookies, or model reasoning.
 11. (2026-09-23) One switch must disable sponsored DeepSeek access immediately
     without disabling BYOK reading or corrupting conversations.
-12. (2026-08-24, amended 2026-10-17) Release uses the existing GitHub Actions,
-    container, EC2, and rollback path. The audit proves that path needs a CI
-    test job, a versioned image and digest, a retained previous image, a health
-    check, a pre-deploy backup, and a release-branch deploy gate. These are
-    bounded Plan 030 repairs, not a separate infrastructure plan.
+12. (2026-08-24, amended 2026-10-17) Release uses the existing GitHub Actions
+    and container build, with the public deploy target moved to Cloudflare in
+    CP7. The EC2 and Tailscale Funnel path is retired, and the old deploy
+    workflow is disabled. The Cloudflare path needs a CI test job, a versioned
+    artifact and rollback target, a health check, a pre-deploy backup, and a
+    release-branch deploy gate.
 13. (2026-10-17) The semantic claim inspector remains a private qualification
     tool. It is not an always-on paid production call and cannot automatically
     decide canon. Source reading and the owner decide truth.
@@ -80,27 +84,27 @@
     ambiguous referents, aliases, character versions, and timeline details
     from direct source evidence. Plan 030 owns the held-out proof of that
     resolution.
-15. (2026-10-17) Plan 030 remains drafted until the owner admits it. No
-    implementation, paid qualification, deploy, tag, or release before
-    admission and its required owner gates.
-16. (2026-10-17) No push to `main` before the owner's launch approval. The
-    current `main` workflow deploys every push. Plan 030 work runs on a release
-    branch or a gated workflow, and the launch merge is a separate owner gate.
-17. (2026-10-17) The live public surface is v1.2.1. The v2 deploy is the first
-    sponsored deployment and the first deployment of the Plan 029 reading
-    system. The release candidate must record that baseline and the exact
+15. (2026-10-17) Plan 030 is admitted. Implementation, paid qualification,
+    deploy, tag, and release happen only inside this plan and its owner gates.
+16. (2026-10-17) No push to `main` before the owner's launch approval. The old
+    `main` deploy workflow is disabled and the EC2 and Tailscale Funnel path is
+    retired. Plan 030 work runs on a release branch or a gated workflow, and
+    the launch merge is a separate owner gate.
+17. (2026-10-17) The old live surface was v1.2.1 and is now down. The v2 public
+    surface is the Cloudflare launch in CP7, and it is the first sponsored
+    deployment and the first deployment of the Plan 029 reading system. The
+    release candidate must record the retired baseline and the Cloudflare
     rollback target.
 18. (2026-10-17) Local access uses the honest rite plus BYOK. Fake mode skips
     sponsored consent. Local live without a sponsored ledger explains that no
     shared allowance is configured and routes the reader to BYOK. This plan
     does not add a loopback server-key voice or a local sponsored ledger.
 19. (2026-10-17) The EC2 and Tailscale Funnel deployment is retired. The public
-    v1.2.1 site is taken down completely. The v2.0.0 public surface moves to a
-    Cloudflare domain after the owner is satisfied with the Plan 030
-    qualification and trials.
-20. (2026-10-17) The Cloudflare launch is a joint owner session. Its plan
-    boundary, inside Plan 030 as the final checkpoint or as a successor plan,
-    is pending the owner's decision.
+    v1.2.1 site is down. The v2.0.0 public surface moves to a Cloudflare domain
+    in CP7, after the qualification, trials, and review are accepted.
+20. (2026-10-17) The Cloudflare launch is CP7 inside Plan 030. The exact service
+    shape (Cloudflare Tunnel to a container host, Cloudflare Containers, or
+    another supported target) is decided and proven in CP7 with the owner.
 
 ## Adopted amendments (2026-10-17)
 
@@ -122,20 +126,22 @@ execution and come from the read-only audit in
 4. **Held-out resolution proof.** Add a fresh held-out conversation set for
    ambiguous referents, aliases, character versions, and timeline points. No
    expected-string matching.
-5. **Deploy pipeline.** Add a CI test job, a versioned image tag and digest, a
-   retained previous image, a health check, a pre-deploy backup, and a deploy
-   gate that does not run on unreviewed `main` pushes. Prove rollback with the
-   retained image.
-6. **State bundle.** Record the box's novel, index, notebook, and model
-   versions. Refresh `scripts/build_prod_bundle.py` output when they differ
-   from the candidate, and prove the deployed reading tools see the expected
-   shelf.
-7. **Rollback and backup.** Back up `/srv/weaver` before the deploy. Prove
-   restore and conversation, schema, and sponsored-ledger integrity on a copy.
-   Prove v1.2.1 compatibility with the migrated database or define the supported
-   rollback point.
-8. **Release metadata.** Bump `src/weaver/__init__.py` to 2.0.0, tag the image
-   by version and digest, and prove the built wheel reports 2.0.0.
+5. **Deploy pipeline.** Add a CI test job, a versioned deploy artifact and
+   digest, a retained previous deployment, a health check, a pre-deploy
+   backup, and a deploy gate that does not run on unreviewed `main` pushes.
+   Prove rollback with the retained deployment.
+6. **State bundle.** Record the current host's novel, index, notebook, and
+   model versions. Export the private bundle from the stopped instance's
+   volume through a snapshot or helper instance, never by exposing the old
+   site. Refresh `scripts/build_prod_bundle.py` output when it differs from the
+   candidate, and prove the deployed reading tools see the expected shelf.
+7. **Rollback and backup.** Back up the private state bundle before the
+   Cloudflare deploy. Prove restore and conversation, schema, and
+   sponsored-ledger integrity on a copy. Prove the retired v1.2.1 database
+   compatibility or define the supported rollback point.
+8. **Release metadata.** Bump `src/weaver/__init__.py` to 2.0.0, tag the
+   deploy artifact by version and digest, and prove the built wheel reports
+   2.0.0.
 9. **Public privacy copy.** Replace the absolute "novels never leave the
    machine" claim with the real data flow. Add a public privacy page and a
    robots policy. Make the deployed footer accurate.
@@ -143,10 +149,10 @@ execution and come from the read-only audit in
     correction turn. Record the exact question, follow-ups, environment reset,
     and the owner's separate pass or fail decision. The rubric uses the
     capabilities in `AGENTS.md`, without expected prose.
-11. **CI tests and docs.** Add a test job before the image build. Update
-    `README.md`, `CONTRIBUTING.md`, `docs/architecture.md`, `docs/vision.md`,
-    `TODO_future.md`, and the deploy comments for the v2 access and reading
-    model.
+11. **CI tests and docs.** Add a test job before the deploy artifact build.
+    Update `README.md`, `CONTRIBUTING.md`, `docs/architecture.md`,
+    `docs/vision.md`, `TODO_future.md`, and the deploy comments for the v2
+    access and reading model.
 12. **Budget re-base.** Separate agent-context tokens from provider spend.
     Re-base the provider estimate from Plan 029's measured $1.164388. Add a
     per-trial reserve and prove the three-question allowance under the $1
@@ -158,25 +164,27 @@ execution and come from the read-only audit in
   into one release candidate. Record exact model ID, model version when
   available, price version, prompt version, library/index versions, schema,
   assets, and source commit.
-- Record the live baseline: v1.2.1 is deployed, `/api/access` is absent, and
-  Plans 028 and 029 are local commits ahead of `origin/main`. Create the release
-  branch and freeze the rollback target and image digest.
+- Record the retired baseline: v1.2.1 was deployed and is now down,
+  `/api/access` is absent, and Plans 028 and 029 are local commits ahead of
+  `origin/main`. Create the release branch and freeze the deploy artifact
+  digest.
 - Run the sponsored production preflight and one real sponsored turn on the
-  release candidate before any public deploy.
-- Inspect the real Funnel request headers and prove the client address and
+  release candidate before the Cloudflare launch.
+- Inspect the Cloudflare proxy request headers and prove the client address and
   network limit behave for two distinct readers.
-- Refresh the private state bundle when the box's novel, index, notebook, or
-  model versions differ from the candidate, and record both sets of versions.
+- Export and refresh the private state bundle when the current host's novel,
+  index, notebook, or model versions differ from the candidate, and record
+  both sets of versions.
 - Repair the first-run and local-live access path inside the accepted
   architecture, or record an owner-approved amendment before changing the
   access gate.
 - Add the held-out conversation set for ambiguous referents, aliases, character
   versions, and timeline points.
-- Add the CI test job, versioned image and digest, retained previous image,
-  health check, pre-deploy backup, and release-branch deploy gate.
+- Add the CI test job, versioned deploy artifact and digest, retained previous
+  deployment, health check, pre-deploy backup, and release-branch deploy gate.
 - Update the public privacy copy, privacy page, robots policy, and the stale
   product documentation.
-- Bump the package to 2.0.0 and prove the wheel and image metadata.
+- Bump the package to 2.0.0 and prove the wheel and deploy artifact metadata.
 - Re-run Plan 028's real-SDK DeepSeek contract and all allowance, reservation,
   reconciliation, credential, privacy, error, and emergency-shutdown tests.
 - Re-run Plan 029's retrieval, evidence, chronology, conversation, answer,
@@ -204,8 +212,8 @@ execution and come from the read-only audit in
   sponsored questions, active reservations, p95 cost, failures, DeepSeek 401,
   402, 429, 500 and 503 responses, and stale price configuration.
 - Prove database migration, deployment, restart recovery, service-worker update,
-  previous-image rollback, configuration rollback, and sponsored shutdown on a
-  release-candidate environment.
+  previous-deployment rollback, configuration rollback, and sponsored shutdown
+  on a release-candidate environment.
 - Repair bounded release-candidate defects inside Plan 030 when they preserve
   the accepted Plan 028 and Plan 029 architecture. If evidence requires a new
   allowance, credential, retrieval, conversation, or answer architecture, stop
@@ -216,8 +224,8 @@ execution and come from the read-only audit in
 - Record the owner's pass or fail separately for each trial. A failed trial
   blocks v2.0.0 and triggers the Plan 030 amendment-or-successor path.
 - After all gates pass, tag v2.0.0, publish release notes, deploy through the
-  gated workflow, verify live assets and health, and preserve the previous
-  image for rollback.
+  Cloudflare launch gate, verify live assets and health, and preserve the
+  previous deployment for rollback.
 
 ## Out of scope
 
@@ -248,9 +256,9 @@ execution and come from the read-only audit in
 6. Privacy inspection finds no credential, prompt, answer, chapter text, raw IP
    address, cookie, raw provider body, raw tool payload, or reasoning in logs,
    metrics, receipts, browser storage, or public evidence.
-7. Rollback proof restores the previous image and compatible database state,
-   then returns to the release candidate without losing conversations or budget
-   truth.
+7. Rollback proof restores the previous deployment and compatible database
+   state, then returns to the release candidate without losing conversations
+   or budget truth.
 8. `uv run pytest -q`, `uv run ruff check src/weaver tests`, `npm test`, and
    `npm run build` pass on the tagged source. Committed `src/weaver/web/dist/`
    matches the build. If the default `uv` cache is not writable in the release
@@ -259,15 +267,16 @@ execution and come from the read-only audit in
    then cost/concurrency/operations/rollback.
 10. The owner records a separate decision for each Foundational Reader Trial,
     the production allowance, and the final v2.0.0 launch.
-11. The deployed image comes from the approved release branch or tag. `main` was
-    not pushed before the owner's launch approval, and the live digest matches
-    the approved candidate.
+11. The deployed artifact comes from the approved release branch or tag. `main`
+    was not pushed before the owner's launch approval, and the live digest
+    matches the approved candidate.
 12. The sponsored preflight passes: enabled, fresh price version and valid-until,
     a pass secret of at least 32 bytes, a funded provider balance, one real
     sponsored turn, and the three-question allowance under the $1 ceiling and
     the $0.37 reservation.
-13. The Funnel client-address proof passes: two distinct readers do not share a
-    network bucket, and the six-per-hour behavior matches the accepted design.
+13. The Cloudflare proxy client-address proof passes: two distinct readers do
+    not share a network bucket, and the six-per-hour behavior matches the
+    accepted design.
 14. First-run proof passes in fake mode, the chosen local-live access path, and
     production. The shared-allowance path either completes or routes to BYOK
     without a stuck rite or a silently disabled send button.
@@ -279,12 +288,12 @@ execution and come from the read-only audit in
     trial.
 17. The deployed state bundle versions match the candidate. The reading tools
     see the expected shelf end, index version, notebook version, and model.
-18. The CI test job is green on the tagged source. The image is tagged by
-    version and digest, the previous image is retained, the health check passes,
-    and a pre-deploy backup restores without losing conversations or budget
-    truth.
-19. The wheel, image, manifest, and release notes report 2.0.0. No deployed
-    metadata still says 1.2.1.
+18. The CI test job is green on the tagged source. The deploy artifact is
+    tagged by version and digest, the previous deployment is retained, the
+    health check passes, and a pre-deploy backup restores without losing
+    conversations or budget truth.
+19. The wheel, deploy artifact, manifest, and release notes report 2.0.0. No
+    deployed metadata still says 1.2.1.
 20. The public privacy page, robots policy, deployed footer, `README.md`,
     `CONTRIBUTING.md`, `docs/architecture.md`, `docs/vision.md`, `TODO_future.md`,
     and deploy comments match the shipped behavior.
@@ -300,18 +309,22 @@ execution and come from the read-only audit in
 - If the sponsored preflight is incomplete, if the pass secret is short, if the
   price date is past, or if the provider balance cannot cover the reservation,
   stop before the deploy.
-- If the previous image is not retained, or rollback cannot restore a working
-  service without corrupting conversation or budget state, stop before the
-  deploy.
-- If the box state bundle version is unknown or differs from the candidate and
-  cannot be refreshed safely, stop.
-- If the Funnel client-address and network-limit proof fails or remains
-  unverified, stop before public traffic.
+- If the previous deployment is not retained, or rollback cannot restore a
+  working service without corrupting conversation or budget state, stop before
+  the deploy.
+- If the current host's state bundle version is unknown or differs from the
+  candidate and cannot be exported safely, stop.
+- If the Cloudflare proxy client-address and network-limit proof fails or
+  remains unverified, stop before public traffic.
+- If the Cloudflare service shape cannot preserve the private state bundle,
+  the fail-closed access gate, and the rollback target, stop before the launch.
+- If the stopped instance's data volume cannot be exported without exposing the
+  old site, stop.
 - If the first-run shared-allowance path fails in the candidate and no owner
   decision covers the replacement path, stop.
 - If the public privacy copy still claims the novels never leave the machine,
   stop before launch.
-- If the CI test job is absent or red, stop before the image build.
+- If the CI test job is absent or red, stop before the deploy artifact build.
 - If the version metadata is not 2.0.0, stop before the tag.
 - If the exact DeepSeek model, price version, prompt, code, library, or index
   changes during qualification, invalidate affected evidence and restart the
@@ -332,16 +345,16 @@ execution and come from the read-only audit in
 1. **Admission, live baseline, and release-candidate freeze**
    - Admit only after Plans 028 and 029 close, plus Plan 029.5 if it was
      admitted. Freeze versions, budgets, private boundaries, and evidence sets.
-   - Record the live baseline: v1.2.1 is deployed, `/api/access` is absent, and
-     Plans 028 and 029 are local commits ahead of `origin/main`.
+   - Record the retired baseline: v1.2.1 was deployed and is now down,
+     `/api/access` is absent, and Plans 028 and 029 are local commits ahead of
+     `origin/main`.
    - Create the release branch. Do not push `main` before the launch gate.
-   - Take down the public v1.2.1 site and retire the EC2 and Tailscale Funnel
-     deploy path. Preserve the `/srv/weaver` data volume. This needs the
-     owner's AWS or box access.
+   - Record the completed takedown: `weaver-v1` stopped 2026-10-17, the
+     `/srv/weaver` data volume preserved, and the old deploy workflow disabled.
    - Record the 7-checkpoint cadence, the honest-rite-plus-BYOK local access
-     decision, and the Cloudflare plan boundary once the owner decides it.
-   - Freeze the rollback target, image digest, deploy command, and the box's
-     novel, index, notebook, and model versions.
+     decision, and the Cloudflare CP7 decision.
+   - Freeze the deploy artifact digest, the Cloudflare rollback target, and the
+     current host's novel, index, notebook, and model versions.
    - Start the sponsored production preflight and the release-candidate
      version bump.
 2. **DeepSeek and intelligence requalification**
@@ -364,8 +377,8 @@ execution and come from the read-only audit in
      exhaustion, BYOK, monitoring, restart, and emergency-shutdown journeys.
    - Run the first-run journey in fake mode, the chosen local-live path, and
      production.
-   - Prove the Funnel client address and network limit for two distinct
-     readers.
+   - Prove the Cloudflare proxy client address and network limit for two
+     distinct readers.
    - Verify the public privacy page, robots policy, footer, and AI-output
      disclosure.
 5. **Foundational Reader Trials**
@@ -375,19 +388,21 @@ execution and come from the read-only audit in
 6. **Independent review and release gate**
    - Complete both reviews, repair findings, run the full floor, prove rollback,
      and present the exact release evidence.
-   - Prove the CI test job, versioned image and digest, retained previous image,
-     health check, pre-deploy backup, restore, and migration rollback.
+   - Prove the CI test job, versioned deploy artifact and digest, retained
+     previous deployment, health check, pre-deploy backup, restore, and
+     migration rollback.
    - Confirm the version is 2.0.0 and the public documentation matches the
      shipped behavior.
    - Stop for owner launch approval.
 7. **Publish and verify**
    - After approval, merge the approved release branch, tag v2.0.0, publish
-     release notes, deploy through the gated workflow, verify live health and
-     assets, and retain the previous image for rollback.
+     release notes, deploy through the Cloudflare launch gate, verify live
+     health and assets, and retain the previous deployment for rollback.
 8. **Observe and close**
    - Observe the accepted live window, reconcile sponsored cost and failures,
      verify rollback readiness, and present the deployed evidence.
-   - Confirm the old v1.2.1 open-provider surface is gone or contained.
+   - Confirm the old v1.2.1 surface remains down and the data volume is
+     preserved for migration.
    - Stop for the owner's dated final accept or reject decision, then record
      closure and the measured plan budget.
 
@@ -408,6 +423,7 @@ report and an explicit gate. No checkpoint auto-advances.
    Gate: three separate owner pass or fail decisions.
 6. **CP6: Independent review and release gate.** Slice 6.
    Gate: release-candidate approval and launch authorization.
-7. **CP7: Cloudflare launch, observe, close.** Slices 7 and 8. The boundary,
-   inside Plan 030 or as a successor plan, is pending the owner's decision.
-   Gate: final accept or reject and the measured budget.
+7. **CP7: Cloudflare launch, observe, close.** Slices 7 and 8. CP7 is inside
+   Plan 030; the exact Cloudflare service shape is decided and proven in this
+   checkpoint with the owner. Gate: final accept or reject and the measured
+   budget.

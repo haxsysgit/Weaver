@@ -15,10 +15,16 @@ not replace this results file.
 - Deterministic floor on the frozen source: 628 backend tests, 132 frontend
   tests, Ruff, `tsc --noEmit`, and `weaver doctor` all pass.
 - Read-only audit: [`draft-audit.md`](draft-audit.md).
+- Takedown 2026-10-17: instance `weaver-v1` stopped, its 20 GB data volume
+  preserved, the Tailscale Funnel URL no longer answers, and the old GitHub
+  Actions deploy workflow disabled. The instance was not terminated.
+- Public surface: retired v1.2.1. The Cloudflare launch is CP7 inside Plan
+  030, set up with the owner.
 
 | Item | Frozen value |
 | --- | --- |
-| Source commit | `1d32797` |
+| Source commit | `1d32797` (frozen baseline) |
+| Package version | `2.0.0` (bumped 2026-10-17) |
 | Branch | `plan-030` |
 | Model | `deepseek-flash` (DeepSeek V4.1 Flash alias) |
 | Price version | `deepseek-flash-2026-09-10-peak` |
@@ -28,8 +34,9 @@ not replace this results file.
 | Local retrieval index | chapters 1 to 3127 (Plan 018.5 scope cut) |
 | Conversation schema | version 3 |
 | Frontend assets | `weaver--NzoW5Us.js`, `weaver-BOySgbSR.css` |
-| Live deployment | v1.2.1, `weaver-D01JqGeM.js`, `weaver-BfjopLb8.css`, `/api/access` 404 |
-| Box state bundle | unknown, must be recorded before deploy |
+| Retired live deployment | v1.2.1, `weaver-D01JqGeM.js`, `weaver-BfjopLb8.css`, `/api/access` 404, stopped 2026-10-17 |
+| Current host bundle | on the stopped `weaver-v1` volume, export pending |
+| Public surface | Cloudflare launch in CP7 |
 | Live provider spend | none in this checkpoint |
 
 Owner decisions at the checkpoint 1 gate:
@@ -38,9 +45,23 @@ Owner decisions at the checkpoint 1 gate:
 2. Resolved 2026-10-17: honest rite plus BYOK. Fake mode skips sponsored
    consent; local live without a sponsored ledger routes the reader to BYOK.
 3. Resolved 2026-10-17: take the public v1.2.1 site down completely and retire
-   the EC2 and Tailscale Funnel path. The action is pending AWS or box access.
-4. Pending: the Cloudflare launch boundary, inside Plan 030 as CP7 or as a
-   successor plan.
+   the EC2 and Tailscale Funnel path. Done: instance stopped, data volume
+   preserved, deploy workflow disabled.
+4. Resolved 2026-10-17: the Cloudflare launch is CP7 inside Plan 030. The
+   service shape is decided and proven in CP7 with the owner.
+
+## Sponsored preflight (CP3)
+
+Not started. Every item stays open until proven on the release candidate.
+
+- [ ] `WEAVER_SPONSORED_ENABLED=1`.
+- [ ] Fresh price version and valid-until beyond the release date.
+- [ ] Pass secret of at least 32 bytes.
+- [ ] Funded provider balance covering the reservation.
+- [ ] One real sponsored turn through the product path.
+- [ ] Three-question allowance under the $1 ceiling and the $0.37 reservation.
+- [ ] Exhaustion, UTC reset, and disabled-sponsored paths.
+- [ ] No secret or provider body in logs or evidence.
 
 ## DeepSeek qualification
 

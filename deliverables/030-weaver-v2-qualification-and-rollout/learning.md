@@ -44,8 +44,8 @@ path are pending owner decisions at the checkpoint 1 gate.
 - (2026-10-17) The EC2 and Tailscale Funnel deployment is retired. The public
   v1.2.1 site is taken down. The v2 public surface moves to a Cloudflare
   domain after the Plan 030 qualification and trials.
-- (2026-10-17) The Cloudflare launch is a joint owner session. Its boundary,
-  inside Plan 030 as CP7 or as a successor plan, is pending.
+- (2026-10-17) The Cloudflare launch is CP7 inside Plan 030. The exact service
+  shape is decided and proven in CP7 with the owner.
 
 ## Hypotheses, not decisions
 

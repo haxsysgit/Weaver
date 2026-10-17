@@ -14,6 +14,21 @@ and the product to be deployed. The audit found that the first two are real
 product issues and that the third is currently unsafe. This file records the
 evidence so Plan 030 can be amended before admission.
 
+## Resolution on 2026-10-17
+
+The owner admitted Plan 030 and decided the immediate exposure.
+
+- The public v1.2.1 site is down. Instance `weaver-v1` was stopped, its 20 GB
+  data volume was preserved, and the Tailscale Funnel URL no longer answers.
+- The old GitHub Actions deploy workflow is disabled.
+- The EC2 and Tailscale Funnel deployment is retired.
+- The v2 public surface moves to Cloudflare as CP7 inside Plan 030, set up with
+  the owner.
+
+The P0 findings about the old public site and the old deploy trigger are
+closed. Their Cloudflare equivalents remain in Plan 030. This audit stays as
+the pre-admission snapshot.
+
 ## Verification actually run
 
 - `.venv/bin/python -m pytest -q`: 628 passed in 381.29 seconds.
