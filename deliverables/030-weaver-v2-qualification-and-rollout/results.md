@@ -244,7 +244,7 @@ gate.
 - `README.md`, `CONTRIBUTING.md`, `docs/architecture.md`, `docs/vision.md`,
   `TODO_future.md`, `docs/WEAVER_WEB_PRODUCT_DIRECTION.md`, `.env.example`, and
   `docker-compose.yml` were updated.
-- The privacy page and README copy are owner-review pending.
+- The privacy page and README copy were approved by the owner on 2026-10-17.
 
 ### Quality
 

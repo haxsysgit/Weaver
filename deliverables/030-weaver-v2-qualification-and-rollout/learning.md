@@ -6,9 +6,9 @@
 2026-10-17) are owner-accepted. Side UI Plan 029.5 is not admitted and does
 not block. The 2026-10-17 read-only audit is complete in
 [`draft-audit.md`](draft-audit.md). It is audit evidence, not an independent
-review and not an acceptance decision. CP1, CP2, and CP3 are complete. The
-CP4 quality diagnostic is complete; reader/ops, privacy, and docs are in
-progress. The Reader Trials remain the real acceptance gate.
+review and not an acceptance decision. CP1 through CP4 are complete. The
+public privacy copy was approved on 2026-10-17. The CP5 Founder Reader Trials
+are in progress; only the owner can accept them.
 
 ## Checkpoint observations
 
@@ -77,6 +77,8 @@ progress. The Reader Trials remain the real acceptance gate.
 - The current EC2, Compose, GitHub Actions SSH, and Funnel path remains the
   default release path, with the bounded pipeline repairs listed in the plan.
 - The owner alone accepts the allowance, Reader Trials, launch, and closure.
+- (2026-10-17) The public privacy page, README privacy section, and live/fake
+  footer copy are approved as drafted.
 - (2026-10-17) The semantic claim inspector is a private qualification tool.
   It is not an always-on production call and cannot decide canon.
 - (2026-10-17) The compact turn brief remains the production design. The

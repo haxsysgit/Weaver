@@ -21,9 +21,9 @@
   Funnel path is retired. The public v1.2.1 site is down: instance `weaver-v1`
   stopped 2026-10-17, the `/srv/weaver` data volume preserved, and the old
   deploy workflow disabled. The Cloudflare launch is CP7 inside Plan 030,
-  designed and set up with the owner. **CP1 through CP3 complete. The CP4
-  quality diagnostic is complete; reader/ops, privacy, and docs are in
-  progress. The Reader Trials remain the real acceptance gate.**
+  designed and set up with the owner. **CP1 through CP4 are complete. The
+  public privacy copy was approved 2026-10-17. The CP5 Founder Reader Trials
+  are in progress; only the owner can accept them.**
 - **Depends on:** Plan 028 closed 2026-10-02 with sponsored access and financial
   safety accepted; Plan 029 closed 2026-10-17 with the intelligence and
   conversation system accepted. Plan 029.5 is not admitted.
