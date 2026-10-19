@@ -279,9 +279,25 @@ privacy, security, and rollback evidence.
 
 ## Foundational Reader Trials
 
-Pending the owner's separate fresh-session accept or reject record for canon
-reconstruction, time-aware comparison, and canon-grounded what-if, including
-their follow-up conversations.
+CP5 paused on 2026-10-17. The owner ran Trial 1 and gave Trial 2 feedback.
+
+### Trial 1: canon reconstruction
+
+- Not accepted. The owner rejected the tone and response structure: Weaver
+  reads as a chatbot and an essay, not a chat buddy. The owner wants an
+  interactive, gen-z/reddit register, shorter and less formal.
+- The reading and evidence result was not separately accepted.
+
+### Trial 2: time-aware comparison
+
+- Not accepted. Same tone and structure problem, plus speed. The owner
+  reported slow answers and asked for a full pipeline review.
+- The private run metadata shows 137.7s and 149.5s turns in the two trial
+  conversations. No answers are recorded here.
+- Trial 3 was not run.
+
+No Reader Trial is accepted. The experience redesign decision is pending, and
+the Plan 030 amendment-or-successor gate is open.
 
 ## v2.0.0 rollout
 

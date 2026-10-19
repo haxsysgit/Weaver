@@ -7,8 +7,9 @@
 not block. The 2026-10-17 read-only audit is complete in
 [`draft-audit.md`](draft-audit.md). It is audit evidence, not an independent
 review and not an acceptance decision. CP1 through CP4 are complete. The
-public privacy copy was approved on 2026-10-17. The CP5 Founder Reader Trials
-are in progress; only the owner can accept them.
+public privacy copy was approved on 2026-10-17. CP5 is paused: Trial 1 and
+Trial 2 were not accepted on voice, structure, and speed. The experience
+redesign and Plan 030 amendment-or-successor decision are pending.
 
 ## Checkpoint observations
 
@@ -79,6 +80,10 @@ are in progress; only the owner can accept them.
 - The owner alone accepts the allowance, Reader Trials, launch, and closure.
 - (2026-10-17) The public privacy page, README privacy section, and live/fake
   footer copy are approved as drafted.
+- (2026-10-17) Trial 1 and Trial 2 are not accepted. The owner rejected the
+  witness/essay voice and wants a chat-buddy, gen-z/reddit register, a faster
+  pipeline, a vs battle structure, and a transparent star-web sidebar. The
+  redesign and plan boundary are open decisions.
 - (2026-10-17) The semantic claim inspector is a private qualification tool.
   It is not an always-on production call and cannot decide canon.
 - (2026-10-17) The compact turn brief remains the production design. The

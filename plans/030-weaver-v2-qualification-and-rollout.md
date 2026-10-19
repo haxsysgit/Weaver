@@ -22,8 +22,9 @@
   stopped 2026-10-17, the `/srv/weaver` data volume preserved, and the old
   deploy workflow disabled. The Cloudflare launch is CP7 inside Plan 030,
   designed and set up with the owner. **CP1 through CP4 are complete. The
-  public privacy copy was approved 2026-10-17. The CP5 Founder Reader Trials
-  are in progress; only the owner can accept them.**
+  public privacy copy was approved 2026-10-17. CP5 is paused: Trial 1 and
+  Trial 2 were not accepted on voice, structure, and speed. The experience
+  redesign and amendment-or-successor decision are pending.**
 - **Depends on:** Plan 028 closed 2026-10-02 with sponsored access and financial
   safety accepted; Plan 029 closed 2026-10-17 with the intelligence and
   conversation system accepted. Plan 029.5 is not admitted.
