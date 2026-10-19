@@ -23,8 +23,9 @@ from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
+from weaver.agent.answer import ResponseMode, classify_response_mode
 from weaver.agent.errors import safe_error
-from weaver.agent.turn import REASONING_TIERS, TOOL_BUDGET_TIERS, TurnExitReason
+from weaver.agent.turn import REASONING_TIERS, TurnExitReason
 from weaver.chat_runtime import ChatRuntime
 from weaver.model_layer.deepseek import (
     current_api_key,
@@ -247,6 +248,16 @@ NAMING_SYSTEM_PROMPT = (
     "produce a short, concise, creative thread name of 2 to 6 words. "
     "Output only the name, no quotes, no punctuation at the end."
 )
+
+
+def _turn_profile(question: str) -> tuple[int, str | None, int]:
+    """Intent profile: tool budget, reasoning tier, packet cap."""
+    mode = classify_response_mode(question)
+    if mode in (ResponseMode.DIRECT_RECALL, ResponseMode.CORRECTION):
+        return 4, None, 8_000
+    if mode in (ResponseMode.RECONSTRUCTION, ResponseMode.DISCUSSION):
+        return 8, "ascended", 16_000
+    return 12, "transcendent", 24_000
 
 
 def _derived_title(first_message: str) -> str:
@@ -651,6 +662,9 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 await asyncio.sleep(runtime.fake_delta_delay_seconds)
 
         delta_callback = on_delta if not runtime.live else None
+        profile_budget, profile_reasoning_tier, profile_packet_cap = _turn_profile(
+            message
+        )
 
         # Plan 15 final reading phase: after a candidate passes the
         # mechanical checks, the packet builder re-reads the turn's
@@ -679,13 +693,21 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 user_chapter=prefs.reader_chapter if prefs is not None else None,
                 spoiler_mode=prefs.spoiler_mode if prefs is not None else "protect",
                 judge=spoiler_judge,
+                cap_override=profile_packet_cap,
             )
             return packet.text if packet is not None else None
 
         try:
-            prefs = await runtime.prefs.get() if runtime.prefs is not None else None
-            tier = prefs.tier if prefs is not None else "ascended"
-            tool_budget = 4 if sponsored_turn is not None else TOOL_BUDGET_TIERS[tier]
+            tool_budget = (
+                min(profile_budget, 4)
+                if sponsored_turn is not None
+                else profile_budget
+            )
+            reasoning = (
+                REASONING_TIERS[profile_reasoning_tier]
+                if profile_reasoning_tier is not None
+                else None
+            )
             # the naming call runs once, after the very first turn
             is_first_turn = (
                 len(await runtime.session.load_transcript(conversation_id)) == 0
@@ -697,7 +719,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                     on_delta=delta_callback,
                     on_tool_event=on_tool_event,
                     tool_budget=tool_budget,
-                    reasoning=REASONING_TIERS[tier],
+                    reasoning=reasoning,
                     packet_builder=on_packet,
                 )
                 if regenerated is None:
@@ -717,7 +739,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                     on_delta=delta_callback,
                     on_tool_event=on_tool_event,
                     tool_budget=tool_budget,
-                    reasoning=REASONING_TIERS[tier],
+                    reasoning=reasoning,
                     packet_builder=on_packet,
                 )
                 if retried is None:
@@ -739,7 +761,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                     # answer call is always guaranteed. Thinking is always on;
                     # the tier picks the reasoning effort.
                     tool_budget=tool_budget,
-                    reasoning=REASONING_TIERS[tier],
+                    reasoning=reasoning,
                     packet_builder=on_packet,
                 )
             reason = result.exit_reason
@@ -751,20 +773,10 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                         if regenerate
                         else (retried_message if retry else message)
                     )
-                    if sponsored_turn is not None:
-                        await runtime.session.set_generated_title(
-                            conversation_id,
-                            _derived_title(first_message),
-                        )
-                    else:
-                        asyncio.create_task(
-                            _name_thread(
-                                runtime,
-                                conversation_id,
-                                first_message,
-                                result.final_text,
-                            )
-                        )
+                    await runtime.session.set_generated_title(
+                        conversation_id,
+                        _derived_title(first_message),
+                    )
                 stream.emit(
                     "completed",
                     {

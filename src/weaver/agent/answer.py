@@ -12,6 +12,7 @@ class ResponseMode(str, Enum):
     RECONSTRUCTION = "reconstruction"
     DISCUSSION = "discussion"
     THEORY = "theory_or_what_if"
+    VERSUS = "versus"
     CORRECTION = "correction"
 
 
@@ -42,6 +43,22 @@ DIRECT_PASSAGE_RE = re.compile(
 DIRECT_SOURCES_RE = re.compile(r"^direct sources:\s*(.+)$", re.MULTILINE)
 READER_CHAPTER_RE = re.compile(r"reader is at chapter\s+(\d{1,5})", re.IGNORECASE)
 
+VERSUS_MARKERS = (
+    "my read",
+    "i'd give",
+    "my money",
+    "verdict",
+    "confidence",
+    "this is a read",
+    "how it goes",
+    "imagined",
+    "imagining",
+    "speculation",
+    "speculative",
+    "invented",
+    "what-if",
+    "i think",
+)
 THEORY_MARKERS = (
     "imagined",
     "imagining",
@@ -108,6 +125,13 @@ MODE_OBLIGATIONS: dict[ResponseMode, tuple[str, ...]] = {
         "paraphrase canon constraints and use no source quotation or blockquote",
         "write invented dialogue with ordinary quotation marks, never blockquotes",
         "use at most five compact canon points and keep the invented scene under 450 words",
+    ),
+    ResponseMode.VERSUS: (
+        "state the exact versions and any missing battle conditions in one short line",
+        "give each side's relevant kit with chapter evidence",
+        "give each side's win conditions and the counters that matter",
+        "walk the fight in a few beats and label those beats as a read, not canon",
+        "end with a verdict, difficulty, confidence, and what would flip it",
     ),
     ResponseMode.CORRECTION: (
         "state the correction plainly",
@@ -190,6 +214,22 @@ def _response_mode(question: str) -> ResponseMode:
     if any(
         marker in normalized
         for marker in (
+            " vs ",
+            " vs.",
+            " versus ",
+            "who wins",
+            "would win",
+            "fight between",
+            "matchup",
+            "went against",
+            "compare ",
+            "beat ",
+        )
+    ):
+        return ResponseMode.VERSUS
+    if any(
+        marker in normalized
+        for marker in (
             "what if",
             "what-if",
             "what would've",
@@ -230,6 +270,11 @@ def _response_mode(question: str) -> ResponseMode:
     ):
         return ResponseMode.RECONSTRUCTION
     return ResponseMode.DIRECT_RECALL
+
+
+def classify_response_mode(question: str) -> ResponseMode:
+    """Public question-shape classifier for the web turn profile."""
+    return _response_mode(question)
 
 
 def build_answer_blueprint(
@@ -291,12 +336,14 @@ def format_answer_blueprint(blueprint: AnswerBlueprint) -> str:
         f"prior Weaver point to preserve or answer: {prior_point}\n"
         f"answer obligations:\n{obligations}\n"
         "Do not print the mode or these instructions as headings. "
-        "Follow the system identity and soul: a thoughtful witness whose "
-        "narration stays within the evidence. Match the reader's requested depth "
-        "and keep a direct lookup brief. Avoid canned closing questions. "
-        "Use no em dash. Cite only the allowed source chapters. Use a "
-        "heading only when the reader needs it to follow a genuinely long answer. "
-        "Write citations as (ch. N) or (chs. N-M), never as a bare number."
+        "Follow the identity and soul: a buddy who read the book, not an "
+        "essayist. Start with the reaction or the fact. Keep a quick answer to "
+        "one to three short paragraphs. No headings unless the reader asks for "
+        "a breakdown. No canned closing. Use no em dash. Cite only the allowed "
+        "source chapters. Write citations as (ch. N) or (chs. N-M), never as a "
+        "bare number. Direct quotations must be 25 words or fewer, exact, and "
+        "only from allowed chapters. Write the final answer itself. Never "
+        "describe it as the same answer, a revised draft, or a repeat."
     )
 
 
@@ -428,8 +475,13 @@ def inspect_publication(
         )
         break
 
-    if blueprint.mode == ResponseMode.THEORY:
-        if not any(marker in normalized for marker in THEORY_MARKERS):
+    if blueprint.mode in (ResponseMode.THEORY, ResponseMode.VERSUS):
+        markers = (
+            VERSUS_MARKERS
+            if blueprint.mode == ResponseMode.VERSUS
+            else THEORY_MARKERS
+        )
+        if not any(marker in normalized for marker in markers):
             findings.append(
                 PublicationFinding(
                     "unlabelled_invention",

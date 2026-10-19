@@ -33,11 +33,11 @@ def test_narration_uses_reviewed_voice_without_forcing_the_ending_first() -> Non
 
     assert blueprint.mode == ResponseMode.RECONSTRUCTION
     assert "open inside a supported moment" in instruction
-    assert "system identity and soul" in instruction
-    assert "outcome before" not in instruction
-    assert "faintly unsettling" not in instruction
-    assert "every factual claim" in instruction
-    assert "several scenes" in instruction
+    assert "identity and soul" in instruction
+    assert "buddy who read the book" in instruction
+    assert "one to three short paragraphs" in instruction
+    assert "Direct quotations must be 25 words or fewer" in instruction
+    assert "No headings unless" in instruction
 
 
 @pytest.mark.parametrize(
@@ -49,6 +49,11 @@ def test_narration_uses_reviewed_voice_without_forcing_the_ending_first() -> Non
         ("What if Verne ordered an evacuation?", ResponseMode.THEORY),
         ("Make a short what-if about Verne.", ResponseMode.THEORY),
         ("Then imagine Verne ordering an evacuation.", ResponseMode.THEORY),
+        ("current Sunny vs Noctis, how does it go?", ResponseMode.VERSUS),
+        (
+            "Do you think current Sunny would beat Azarax in his prime?",
+            ResponseMode.VERSUS,
+        ),
         ("LO49 evacuated after Sunny left, right?", ResponseMode.CORRECTION),
     ],
 )

@@ -255,6 +255,49 @@ gate.
 - The failures move between runs. Further tuning against the held-out
   diagnostic risks overfitting; the Reader Trials remain the real gate.
 
+## CP4.5 experience rebuild
+
+- The owner rejected Trial 1 and Trial 2 on voice, structure, and speed and
+  approved an amendment inside Plan 030.
+- Voice: the packaged identity and soul now use a Reddit/deadpan buddy
+  register. The witness voice and essay shape are removed. The final reading
+  pass may not open with "same answer as before".
+- Speed: the web turn now uses an intent profile. Quick turns get 4 tool steps
+  and no thinking; discussion gets 8 steps; deep and vs get 12. Packet caps are
+  8k, 16k, and 24k. The BYOK model title call is removed and the title is
+  derived locally.
+- VS: a versus response mode adds versions and conditions, both kits, win
+  conditions, a labeled fight read, a verdict, confidence, and what flips it.
+  `what if` matchups route to versus, and `compare` questions use the same
+  deep profile.
+- Rail: the clear-night rail is transparent, the star web crosses it, the
+  active thread is a gold line rather than a card, and the mobile rail is a
+  translucent blurred edge sheet.
+- The first speed run was invalid because two web processes shared the Qdrant
+  index. The evidence is preserved. The rerun used one process.
+
+### Measured speed
+
+| Shape | p50 | max | Owner target |
+| --- | --- | --- | --- |
+| Quick | 11.4s | 27.8s | p50 10s, p95 20s |
+| Discussion | 18.2s | 26.7s | between quick and deep |
+| Deep or vs | 83.5s | 109.3s | p95 45s |
+
+- Quick completed at 6.3s, 11.4s, and 27.8s; one quick turn failed closed at
+  11.4s.
+- The vs turn completed in 57.8s with 2,604 characters and 12 citations.
+- The comparison turn completed in 109.3s with 2,406 characters and 12
+  citations.
+- The remaining cost is the final reading pass and the tool loop. Meeting the
+  quick and deep targets would require cutting the final pass or streaming a
+  draft earlier, which weakens the publication boundary. That tradeoff is open.
+
+### Gate
+
+CP4.5 is not accepted. The owner is reviewing the voice, the vs shape, the
+rail screenshots, and the speed tradeoff.
+
 ## DeepSeek qualification
 
 The held-out diagnostic is complete through two repair iterations. The latest

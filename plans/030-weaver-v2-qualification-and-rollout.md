@@ -23,8 +23,8 @@
   deploy workflow disabled. The Cloudflare launch is CP7 inside Plan 030,
   designed and set up with the owner. **CP1 through CP4 are complete. The
   public privacy copy was approved 2026-10-17. CP5 is paused: Trial 1 and
-  Trial 2 were not accepted on voice, structure, and speed. The experience
-  redesign and amendment-or-successor decision are pending.**
+  Trial 2 were not accepted on voice, structure, and speed. **CP4.5 experience
+  rebuild is in progress; CP5 is paused until the re-trials.**
 - **Depends on:** Plan 028 closed 2026-10-02 with sponsored access and financial
   safety accepted; Plan 029 closed 2026-10-17 with the intelligence and
   conversation system accepted. Plan 029.5 is not admitted.
@@ -431,3 +431,77 @@ report and an explicit gate. No checkpoint auto-advances.
    Plan 030; the exact Cloudflare service shape is decided and proven in this
    checkpoint with the owner. Gate: final accept or reject and the measured
    budget.
+
+## Experience amendment (CP4.5, 2026-10-17)
+
+The owner ran Trial 1 and gave Trial 2 feedback. Both are not accepted. This
+amendment keeps the work inside Plan 030 and adds one checkpoint before the
+re-trials.
+
+### Owner decisions
+
+1. The witness/essay voice is rejected. Weaver talks like a Reddit/deadpan
+   buddy: short, reactive, lowercase-friendly, contractions and natural slang,
+   no essay shape, no headings unless asked, and a real follow-up rather than
+   a canned offer.
+2. Speed target: quick chat p50 10 seconds or less and p95 20 seconds or less;
+   deep or vs p95 45 seconds or less. The current trial turns measured 137.7
+   and 149.5 seconds.
+3. Matchups use a vs structure, not a what-if story: versions and conditions,
+   both kits, win conditions and counters, how it goes, verdict, difficulty,
+   confidence, and what flips it. Canon, inference, and invention stay labeled.
+4. The sidebar is a clear-night rail: transparent, the star web visible, thread
+   points and a thin thread line instead of chat-app cards. Mobile gets a light
+   edge sheet, not an opaque drawer.
+5. CP5 is invalidated by the voice and experience change. The three Reader
+   Trials re-run after CP4.5 is accepted.
+
+### Scope
+
+- Rewrite the packaged identity and soul to the buddy register while preserving
+  evidence, citation, spoiler, and invention rules.
+- Add an intent router and turn profiles: quick, discussion, deep/vs. Tune the
+  tool budget, answer length, packet cap, final reading pass, and title call.
+- Add a vs response mode with the structure above.
+- Restyle the rail and mobile sheet to the clear-night direction.
+- Measure speed on a representative private set before the re-trials.
+
+### Out of scope
+
+- New retrieval, evidence, or conversation durability architecture.
+- Native mobile applications.
+- Any visual redesign outside the rail and its mobile sheet.
+
+### Verification floor
+
+- Prompt-content tests prove the buddy rules and remove the witness voice.
+- A private speed set measures p50 and p95 for quick, discussion, and deep/vs
+  turns against the owner targets.
+- A vs sample shows versions, kits, win conditions, how it goes, verdict,
+  confidence, citations, and labels.
+- Browser screenshots verify the transparent rail and the mobile edge sheet,
+  with no horizontal overflow and 24px controls.
+- 631 backend and 141 frontend tests or higher, Ruff, `tsc`, and the production
+  build pass.
+- No live call without the owner-approved cap. CP4.5 live spend is capped at
+  `$1.00` on top of the `$0.990386` already spent.
+
+### STOP conditions
+
+- If the quick speed target cannot be met without dropping direct evidence,
+  stop and report the tradeoff.
+- If the voice, vs, or rail samples are rejected, iterate at CP4.5 rather than
+  re-running the trials.
+- If a change needs a new retrieval or evidence architecture, stop for a new
+  plan.
+- If the re-trials are reached, the owner still decides each pass or fail.
+
+### Slices
+
+1. **E1 Voice.** Rewrite identity and soul, answer blueprint, and voice tests.
+2. **E2 Speed.** Intent router, turn profiles, packet cap, final pass, title
+   call, and a private timing set.
+3. **E3 VS.** Classifier, obligations, blueprint, and tests for the vs card.
+4. **E4 Rail.** Clear-night CSS and the mobile edge sheet.
+5. **E5 Gate.** Present samples, timings, screenshots, and the floor. Owner
+   accepts or rejects CP4.5, then the Reader Trials re-run.

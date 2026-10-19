@@ -128,6 +128,8 @@ WEB_SYSTEM_PROMPT = (
     "chapter citations, because your answer gets one final heavy reading pass "
     "and then the turn ends. When you quote the novel's prose, put the quote in "
     "a blockquote: a line starting with '>'.\n"
+    "In the final reading pass, write the answer itself. Never open with "
+    "'same answer as before' or a note about the previous draft.\n"
     "Tool calls are STRUCTURED, never text: do not write '<tool calls>', "
     "'<find_text: ...>', angle-bracket stage directions, or a JSON block as "
     "prose. Use the tool-call mechanism attached to your reply, or write the "

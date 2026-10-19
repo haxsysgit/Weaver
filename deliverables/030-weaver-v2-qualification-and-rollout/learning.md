@@ -58,6 +58,18 @@ redesign and Plan 030 amendment-or-successor decision are pending.
 - CP4: the remaining failures move between runs. Further tuning against the
   held-out diagnostic risks overfitting it. The Reader Trials remain the real
   acceptance gate.
+- CP4.5: the owner rejected the witness/essay voice, the response structure,
+  and the 137.7s and 149.5s turns. The accepted amendment is a buddy voice,
+  clear-night rail, vs mode, and a 10/20/45 second speed target.
+- CP4.5: the intent profile cut the quick p50 to 11.4s and the vs turn to
+  57.8s. The deep max is still 109.3s. The final reading pass and the tool loop
+  are the remaining cost.
+- CP4.5: two web processes cannot share the embedded Qdrant index. One process
+  at a time is an operating constraint, not just a test setup detail.
+- CP4.5: the first vs answer opened with "same answer as before", a final-pass
+  artifact. The prompt now forbids it, and the next live sample must verify it.
+- CP4.5: the clear-night rail is transparent with the star web crossing it; the
+  mobile rail is a blurred edge sheet. The owner gate is open.
 - CP3: the local test used an explicit future price date. The production price
   default is still stale and remains a CP7 preflight item.
 
