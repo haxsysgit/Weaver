@@ -250,14 +250,14 @@ NAMING_SYSTEM_PROMPT = (
 )
 
 
-def _turn_profile(question: str) -> tuple[int, str | None, int]:
-    """Intent profile: tool budget, reasoning tier, packet cap."""
+def _turn_profile(question: str) -> tuple[int, str | None, int, bool]:
+    """Intent profile: tool budget, reasoning tier, packet cap, final pass."""
     mode = classify_response_mode(question)
     if mode in (ResponseMode.DIRECT_RECALL, ResponseMode.CORRECTION):
-        return 4, None, 8_000
+        return 4, None, 8_000, False
     if mode in (ResponseMode.RECONSTRUCTION, ResponseMode.DISCUSSION):
-        return 8, "ascended", 16_000
-    return 12, "transcendent", 24_000
+        return 8, "ascended", 16_000, True
+    return 12, "transcendent", 24_000, True
 
 
 def _derived_title(first_message: str) -> str:
@@ -662,9 +662,12 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 await asyncio.sleep(runtime.fake_delta_delay_seconds)
 
         delta_callback = on_delta if not runtime.live else None
-        profile_budget, profile_reasoning_tier, profile_packet_cap = _turn_profile(
-            message
-        )
+        (
+            profile_budget,
+            profile_reasoning_tier,
+            profile_packet_cap,
+            profile_final_pass,
+        ) = _turn_profile(message)
 
         # Plan 15 final reading phase: after a candidate passes the
         # mechanical checks, the packet builder re-reads the turn's
@@ -721,6 +724,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                     tool_budget=tool_budget,
                     reasoning=reasoning,
                     packet_builder=on_packet,
+                    final_pass=profile_final_pass,
                 )
                 if regenerated is None:
                     stream.emit(
@@ -741,6 +745,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                     tool_budget=tool_budget,
                     reasoning=reasoning,
                     packet_builder=on_packet,
+                    final_pass=profile_final_pass,
                 )
                 if retried is None:
                     stream.emit(
@@ -756,13 +761,13 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                     cancel_event=stream.cancel_event,
                     on_delta=delta_callback,
                     on_tool_event=on_tool_event,
-                    # Plan 15: the tier is a user preference (the mode
-                    # selector). Tool calls are capped at 50/70/90; the final
-                    # answer call is always guaranteed. Thinking is always on;
-                    # the tier picks the reasoning effort.
+                    # Plan 030 CP4.5: the question shape picks the tool
+                    # budget, reasoning, packet cap, and whether the final
+                    # reading pass is needed.
                     tool_budget=tool_budget,
                     reasoning=reasoning,
                     packet_builder=on_packet,
+                    final_pass=profile_final_pass,
                 )
             reason = result.exit_reason
             if reason == TurnExitReason.COMPLETED:

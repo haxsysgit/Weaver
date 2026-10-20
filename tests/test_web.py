@@ -657,6 +657,7 @@ async def test_tool_stream_never_sends_private_reading_payload(tmp_path) -> None
         tool_budget=None,
         reasoning=None,
         packet_builder=None,
+        final_pass=None,
     ):
         assert on_tool_event is not None
         await on_tool_event(
@@ -821,6 +822,7 @@ async def test_cannot_archive_the_active_weaving_thread(tmp_path) -> None:
         tool_budget=None,
         reasoning=None,
         packet_builder=None,
+        final_pass=None,
     ):
         entered.set()
         await gate.wait()
@@ -1233,6 +1235,7 @@ async def test_shutdown_waits_until_cooperative_turn_settles(
         tool_budget=None,
         reasoning=None,
         packet_builder=None,
+        final_pass=None,
     ):
         entered.set()
         assert cancel_event is not None
@@ -1423,6 +1426,7 @@ async def test_retry_route_reruns_and_streams(tmp_path) -> None:
         tool_budget=None,
         reasoning=None,
         packet_builder=None,
+        final_pass=None,
     ):
         if on_delta:
             await on_delta("retried answer")
@@ -1477,6 +1481,7 @@ async def test_retry_route_reports_nothing_to_retry(tmp_path) -> None:
         tool_budget=None,
         reasoning=None,
         packet_builder=None,
+        final_pass=None,
     ):
         return None
 
@@ -1514,6 +1519,7 @@ async def test_regenerate_route_reanswers_in_place_and_streams(tmp_path) -> None
         tool_budget=None,
         reasoning=None,
         packet_builder=None,
+        final_pass=None,
     ):
         if on_delta:
             await on_delta("fresh answer")
@@ -1568,6 +1574,7 @@ async def test_regenerate_route_reports_nothing_to_regenerate(tmp_path) -> None:
         tool_budget=None,
         reasoning=None,
         packet_builder=None,
+        final_pass=None,
     ):
         return None
 

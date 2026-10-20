@@ -153,6 +153,7 @@ class SessionWeave:
         tool_budget: int | None = None,
         reasoning: ReasoningEffort | None = None,
         packet_builder: PacketBuilder | None = None,
+        final_pass: bool = True,
     ) -> TurnResult:
         """Run one full turn with the owner's input and return the result.
 
@@ -207,6 +208,7 @@ class SessionWeave:
             tool_budget=tool_budget,
             reasoning=reasoning,
             packet_builder=packet_builder,
+            final_pass=final_pass,
         )
 
     async def start_conversation(self, owner_text: str, device_id: str = "") -> str:
@@ -434,6 +436,7 @@ class SessionWeave:
         tool_budget: int | None = None,
         reasoning: ReasoningEffort | None = None,
         packet_builder: PacketBuilder | None = None,
+        final_pass: bool = True,
     ) -> tuple[TurnResult, str] | None:
         """Re-run the last interrupted turn with its own owner message.
 
@@ -492,6 +495,7 @@ class SessionWeave:
             tool_budget=tool_budget,
             reasoning=reasoning,
             packet_builder=packet_builder,
+            final_pass=final_pass,
         )
         return result, message
 
@@ -505,6 +509,7 @@ class SessionWeave:
         tool_budget: int | None = None,
         reasoning: ReasoningEffort | None = None,
         packet_builder: PacketBuilder | None = None,
+        final_pass: bool = True,
     ) -> tuple[TurnResult, str] | None:
         """Re-answer the last question in place, never as a new message.
 
@@ -569,6 +574,7 @@ class SessionWeave:
             tool_budget=tool_budget,
             reasoning=reasoning,
             packet_builder=packet_builder,
+            final_pass=final_pass,
             exclude_run_ids={target.id},
         )
         return result, message

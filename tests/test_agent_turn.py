@@ -203,6 +203,7 @@ async def execute_turn(
     reasoning: str | None = None,
     execution_policy: ToolExecutionPolicy | None = None,
     packet_builder=None,
+    final_pass: bool = True,
 ):
     return await run_turn(
         session_id=session_id,
@@ -220,6 +221,7 @@ async def execute_turn(
         tool_budget=tool_budget,
         reasoning=reasoning,
         packet_builder=packet_builder,
+        final_pass=final_pass,
     )
 
 
@@ -1142,6 +1144,30 @@ class TestFinalReadingPhase:
             "PACKET: chapter 104 prose" in (message.content or "")
             for message in final_request.messages
         )
+
+    async def test_quick_turn_can_skip_the_final_reading_pass(self) -> None:
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response("the passage says it happened (ch. 104)."),
+        )
+        persisted = []
+
+        async def packet_builder(results, draft):
+            return _direct_packet("PACKET: chapter 104 prose")
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            persist_message=_async_append(persisted),
+            packet_builder=packet_builder,
+            final_pass=False,
+        )
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert result.final_text == "the passage says it happened (ch. 104)."
+        assert len(provider.calls) == 2
+        assert persisted[-1].content == "the passage says it happened (ch. 104)."
 
     async def test_final_reading_call_includes_the_answer_blueprint(self) -> None:
         layer, model, provider = scripted_layer(

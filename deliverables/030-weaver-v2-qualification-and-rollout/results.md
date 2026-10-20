@@ -259,13 +259,16 @@ gate.
 
 - The owner rejected Trial 1 and Trial 2 on voice, structure, and speed and
   approved an amendment inside Plan 030.
-- Voice: the packaged identity and soul now use a Reddit/deadpan buddy
-  register. The witness voice and essay shape are removed. The final reading
-  pass may not open with "same answer as before".
+- Voice: voice packs live under `prompts/voices/`. `buddy` is the default
+  chat register; `storyteller` preserves the literary voice for prose and fan
+  fiction and adds a novel-quality storytelling instruction. `WEAVER_VOICE`
+  selects the pack at startup. The witness/essay voice is out of chat.
+- Voice: the final reading pass may not open with "same answer as before".
 - Speed: the web turn now uses an intent profile. Quick turns get 4 tool steps
   and no thinking; discussion gets 8 steps; deep and vs get 12. Packet caps are
   8k, 16k, and 24k. The BYOK model title call is removed and the title is
-  derived locally.
+  derived locally. Quick turns skip the final reading pass when the first
+  answer already passes the publication checks; deep and vs keep it.
 - VS: a versus response mode adds versions and conditions, both kits, win
   conditions, a labeled fight read, a verdict, confidence, and what flips it.
   `what if` matchups route to versus, and `compare` questions use the same
@@ -280,18 +283,27 @@ gate.
 
 | Shape | p50 | max | Owner target |
 | --- | --- | --- | --- |
-| Quick | 11.4s | 27.8s | p50 10s, p95 20s |
-| Discussion | 18.2s | 26.7s | between quick and deep |
-| Deep or vs | 83.5s | 109.3s | p95 45s |
+| Quick | 14.1s | 22.8s | p50 10s, p95 20s |
+| Discussion | 18.5s | 26.8s | between quick and deep |
+| Deep or vs | 49.8s | 58.6s | p95 45s |
 
-- Quick completed at 6.3s, 11.4s, and 27.8s; one quick turn failed closed at
-  11.4s.
-- The vs turn completed in 57.8s with 2,604 characters and 12 citations.
-- The comparison turn completed in 109.3s with 2,406 characters and 12
+- Quick completed at 6.2s, 14.1s, and 22.8s. The 6.2s turn was clean on the
+  first answer; the slower quick turns spent the time on publication findings
+  and the final pass.
+- The vs turn completed in 58.6s with 2,801 characters and 7 citations. The
+  meta opening is gone.
+- The comparison turn completed in 41.0s with 2,318 characters and 6
   citations.
-- The remaining cost is the final reading pass and the tool loop. Meeting the
-  quick and deep targets would require cutting the final pass or streaming a
-  draft earlier, which weakens the publication boundary. That tradeoff is open.
+- The hybrid improved the deep p50 from 83.5s to 49.8s and the deep max from
+  109.3s to 58.6s. It still misses the 45s deep target and the 10/20 quick
+  target.
+- The remaining quick cost is publication repair after a quoted or uncited
+  first answer. The remaining deep cost is the two-character evidence loop and
+  the kept final pass.
+- Open test defect: the full `tests/test_web.py` run hangs at
+  `test_stream_does_not_resend_events_already_seen` after the earlier tests.
+  The test passes alone and with its immediate predecessor. This is a test
+  isolation defect, not an accepted result.
 
 ### Gate
 

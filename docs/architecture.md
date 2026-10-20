@@ -47,7 +47,7 @@ is only for guessing where to look.
 | `src/weaver/web/` | FastAPI app, SSE endpoints, React 19 + Vite + TypeScript frontend | `app.py` (31K), `frontend/` |
 | `src/weaver/agent/` | Agent loop: tool dispatch, the turn, evidence packet, publication checks, one repair | `turn.py`, `tools.py`, `answer.py`, `claim_inspection.py` |
 | `src/weaver/chat_runtime.py` | The system prompt, answer candidate validation, fake responses | n/a |
-| `src/weaver/prompts/` | Packaged identity and soul resources (Plan 029) | `identity.md`, `soul.md` |
+| `src/weaver/prompts/voices/` | Voice packs: `identity.md` and `soul.md` per register; `WEAVER_VOICE` selects the pack | `buddy`, `storyteller` |
 | `src/weaver/sponsored.py` | Shared allowance, signed pass, reservations, usage, cost | `SponsoredTurn`, `SponsoredAccess`, `DeepSeekBalance` |
 | `src/weaver/conversation/` | Durable conversation ledger (sqlite via aiosqlite), replay, restart safety | `coordinator.py`, `session.py`, `repository.py`, `items.py` |
 | `src/weaver/model_layer/` | Provider-neutral model interface | `deepseek.py`, `fake.py`, `layer.py`, `types.py` |
@@ -144,4 +144,5 @@ is only for guessing where to look.
   answer modes, identity/soul, deterministic publication checks.
 - Plan 030: v2.0.0 qualification, sponsored preflight, allowance, Reader
   Trials, Cloudflare launch (admitted 2026-10-17). The EC2/Funnel path is
-  retired.
+  retired. The CP4.5 amendment adds voice packs, intent speed profiles, a vs
+  mode, and the clear-night rail.

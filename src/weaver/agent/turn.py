@@ -564,6 +564,7 @@ async def run_turn(
     # there is no evidence to re-read. The candidate remains ephemeral
     # until the final reading call succeeds or falls back to it.
     packet_builder: PacketBuilder | None = None,
+    final_pass: bool = True,
 ) -> TurnResult:
     max_steps = min(max(max_model_steps, 1), _MAX_MODEL_STEPS)
     if tool_budget is not None:
@@ -1064,6 +1065,38 @@ async def run_turn(
                 validated_candidate = assistant
                 validated_candidate_deltas = response_deltas
                 final_packet = packet
+                if not final_pass and answer_blueprint is None:
+                    quick_brief = _build_turn_brief(history)
+                    answer_blueprint = build_answer_blueprint(
+                        question=quick_brief.actual_ask,
+                        prior_weaver_position=quick_brief.prior_weaver_position,
+                        reader_challenges_prior_answer=(
+                            quick_brief.reader_challenges_prior_answer
+                        ),
+                        evidence_packet=packet,
+                    )
+                if not final_pass and answer_blueprint is not None:
+                    findings = inspect_publication(
+                        assistant.content,
+                        answer_blueprint,
+                        packet,
+                    )
+                    if not findings:
+                        persisted, published = await persist_answer(
+                            assistant,
+                            response_deltas,
+                        )
+                        if not persisted:
+                            exit_reason = TurnExitReason.PERSISTENCE_FAILED
+                            safe_failure = safe_error("assistant_persistence")
+                            break
+                        if not published:
+                            exit_reason = TurnExitReason.INTERRUPTED
+                            safe_failure = safe_error("interrupted")
+                            break
+                        final_text = assistant.content
+                        completed_response = True
+                        break
                 continue
 
             if tool_steps_used == 0 and not zero_evidence_reprompted:
@@ -1087,6 +1120,38 @@ async def run_turn(
                 validated_candidate = assistant
                 validated_candidate_deltas = response_deltas
                 final_packet = packet
+                if not final_pass and answer_blueprint is None:
+                    quick_brief = _build_turn_brief(history)
+                    answer_blueprint = build_answer_blueprint(
+                        question=quick_brief.actual_ask,
+                        prior_weaver_position=quick_brief.prior_weaver_position,
+                        reader_challenges_prior_answer=(
+                            quick_brief.reader_challenges_prior_answer
+                        ),
+                        evidence_packet=packet,
+                    )
+                if not final_pass and answer_blueprint is not None:
+                    findings = inspect_publication(
+                        assistant.content,
+                        answer_blueprint,
+                        packet,
+                    )
+                    if not findings:
+                        persisted, published = await persist_answer(
+                            assistant,
+                            response_deltas,
+                        )
+                        if not persisted:
+                            exit_reason = TurnExitReason.PERSISTENCE_FAILED
+                            safe_failure = safe_error("assistant_persistence")
+                            break
+                        if not published:
+                            exit_reason = TurnExitReason.INTERRUPTED
+                            safe_failure = safe_error("interrupted")
+                            break
+                        final_text = assistant.content
+                        completed_response = True
+                        break
                 continue
 
             if packet_builder is not None and (

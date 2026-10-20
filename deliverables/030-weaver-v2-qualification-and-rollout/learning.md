@@ -66,8 +66,14 @@ redesign and Plan 030 amendment-or-successor decision are pending.
   are the remaining cost.
 - CP4.5: two web processes cannot share the embedded Qdrant index. One process
   at a time is an operating constraint, not just a test setup detail.
+- CP4.5: the owner asked for config-selected voice packs. `buddy` is the chat
+  default; `storyteller` preserves the literary voice for prose and fan
+  fiction. The pack is the register foundation, not the full fan-fiction mode.
 - CP4.5: the first vs answer opened with "same answer as before", a final-pass
-  artifact. The prompt now forbids it, and the next live sample must verify it.
+  artifact. The prompt fix held on the next live sample.
+- CP4.5: the quick final-pass skip cut the clean quick turn to 6.2s, but quick
+  p50 is 14.1s/p95 22.8s and deep p95 is 58.6s. Publication repair and the
+  two-character evidence loop are the remaining cost.
 - CP4.5: the clear-night rail is transparent with the star web crossing it; the
   mobile rail is a blurred edge sheet. The owner gate is open.
 - CP3: the local test used an explicit future price date. The production price

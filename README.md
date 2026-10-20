@@ -74,6 +74,7 @@ For a local live run, set `DEEPSEEK_KEY` and the sponsored values in
 ```bash
 uv sync
 cp .env.example .env   # set DEEPSEEK_KEY and the shared-allowance values
+# WEAVER_VOICE=buddy (chat) or storyteller (prose and fan fiction)
 uv run weaver web      # the chat app
 ```
 

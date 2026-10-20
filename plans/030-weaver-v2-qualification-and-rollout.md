@@ -453,7 +453,13 @@ re-trials.
 4. The sidebar is a clear-night rail: transparent, the star web visible, thread
    points and a thin thread line instead of chat-app cards. Mobile gets a light
    edge sheet, not an opaque drawer.
-5. CP5 is invalidated by the voice and experience change. The three Reader
+5. Voice is config-selected. `buddy` is the chat default; `storyteller`
+   preserves the literary voice for prose and fan fiction. Each pack is an
+   identity and soul pair under `prompts/voices/`, selected by `WEAVER_VOICE`.
+   Later fan fiction needs the same writing quality as the novel.
+6. Quick turns skip the final reading pass when the first answer is already
+   clean; deep and vs keep it.
+7. CP5 is invalidated by the voice and experience change. The three Reader
    Trials re-run after CP4.5 is accepted.
 
 ### Scope

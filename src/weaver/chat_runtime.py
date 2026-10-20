@@ -24,7 +24,7 @@ from .agent.tools import (
 from .config import DEFAULT_TIMEOUT_SECONDS, normalize_model_id
 from .conversation.session import SessionWeave
 from .prefs import PreferencesStore
-from .prompts import WEAVER_PERSONALITY
+from .prompts import load_personality
 from .sponsored import (
     DeepSeekBalance,
     FixedBalance,
@@ -61,7 +61,6 @@ DEVELOPER_SYSTEM_PROMPT = (
 # hardcoded number (it answered "the library ends at 3127" while the
 # shelf held 3160).
 WEB_SYSTEM_PROMPT = (
-    WEAVER_PERSONALITY + "\n\n"
     "<what_you_have>\n"
     "- The whole novel, chapters 1-{NOVEL_CHAPTERS}, searchable and openable.\n"
     "- A story notebook: statements about the story, each with chapter evidence.\n"
@@ -136,6 +135,13 @@ WEB_SYSTEM_PROMPT = (
     "answer.\n"
     "</output>"
 )
+
+def web_system_prompt(personality: str, last_chapter: int) -> str:
+    """Assemble the web prompt from a voice pack and the real shelf."""
+    return personality + "\n\n" + WEB_SYSTEM_PROMPT.format(
+        NOVEL_CHAPTERS=last_chapter
+    )
+
 
 WEB_ACTIVE_TOOLS: tuple[str, ...] = (
     "semantic_search",
@@ -411,6 +417,7 @@ async def open_chat_runtime(
     live: bool,
     surface: Surface,
     fake_delay_seconds: float = 0,
+    voice: str | None = None,
 ) -> ChatRuntime:
     """Build the exact chat session for a surface (test seam).
 
@@ -490,8 +497,9 @@ async def open_chat_runtime(
             if library is not None
             else 3160
         )
-        system_prompt = WEB_SYSTEM_PROMPT.format(
-            NOVEL_CHAPTERS=last_chapter
+        system_prompt = web_system_prompt(
+            load_personality(voice),
+            last_chapter,
         )
         execution_policy = ToolExecutionPolicy.read_only()
 

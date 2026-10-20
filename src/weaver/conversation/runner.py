@@ -112,6 +112,7 @@ class ConversationRunner:
         tool_budget: int | None = None,
         reasoning: ReasoningEffort | None = None,
         packet_builder: PacketBuilder | None = None,
+        final_pass: bool = True,
         exclude_run_ids: set[str] | None = None,
     ) -> TurnResult:
         """Run one bounded model/tool turn inside an existing run.
@@ -179,6 +180,7 @@ class ConversationRunner:
             tool_budget=tool_budget,
             reasoning=reasoning,
             packet_builder=packet_builder,
+            final_pass=final_pass,
         )
 
         # Plan 010 Phase D: surface the context meter on the result so the
