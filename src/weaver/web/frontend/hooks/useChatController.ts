@@ -4,6 +4,7 @@ import type {
   ChatApi,
   ConversationMetadataPatch,
   ConversationSummary,
+  CreateThreadOptions,
   StoredMessage,
   StreamEvent,
 } from "../lib/chatApi";
@@ -189,11 +190,11 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
     return refreshed;
   }
 
-  async function startFreshConversation() {
+  async function startFreshConversation(options?: CreateThreadOptions) {
     const loadId = activeLoad.current + 1;
     activeLoad.current = loadId;
     try {
-      const created = await api.createConversation();
+      const created = await api.createConversation(options);
       setConversationId(created.conversation_id);
       setMessages([]);
       setLastOwnerText(null);
@@ -224,6 +225,25 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
       return true;
     } catch (error) {
       setConversationActionError(conversationActionMessage(error));
+      return false;
+    }
+  }
+
+  async function createThread(options: CreateThreadOptions) {
+    setConversationActionError(null);
+    if (turnActive) {
+      setConversationActionError(
+        "That thread is still weaving. Let its answer settle first.",
+      );
+      return false;
+    }
+    try {
+      await startFreshConversation(options);
+      return true;
+    } catch (error) {
+      setConversationActionError(
+        error instanceof Error ? error.message : product.wakeErrorMessage,
+      );
       return false;
     }
   }
@@ -524,6 +544,7 @@ export function useChatController(api: ChatApi, product: ChatProduct) {
     conversationActionError,
     conversations,
     createConversation,
+    createThread,
     deleteConversation,
     draft,
     lastReplyId,

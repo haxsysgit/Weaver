@@ -17,6 +17,7 @@ interface ConversationRailProps {
   mobileOpen: boolean;
   onClose: () => void;
   onCreate: () => void;
+  onCreateFanfic: () => void;
   onDelete: (conversationId: string) => void;
   onOpenSettings: () => void;
   onSelect: (conversationId: string) => void;
@@ -78,6 +79,7 @@ export function ConversationRail({
   mobileOpen,
   onClose,
   onCreate,
+  onCreateFanfic,
   onDelete,
   onOpenSettings,
   onSelect,
@@ -179,10 +181,24 @@ export function ConversationRail({
           className="new-weave-button"
           disabled={disabled}
           onClick={onCreate}
+          title={product.newConversationTitle}
           type="button"
         >
           <PlusIcon />
           <span>{product.newConversationLabel}</span>
+        </button>
+
+        <button
+          className="new-weave-button new-fanfic-button"
+          disabled={disabled}
+          onClick={onCreateFanfic}
+          title={product.newFanficTitle}
+          type="button"
+        >
+          <span aria-hidden="true" className="new-fanfic-mark">
+            ❖
+          </span>
+          <span>{product.newFanficLabel}</span>
         </button>
 
         {actionError && (

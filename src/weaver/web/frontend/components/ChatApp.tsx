@@ -90,6 +90,17 @@ export function ChatApp({
     }
   }
 
+  async function createFanficThread() {
+    const created = await chat.createThread({
+      domain: "fanfic",
+      fanfic_kind: "missing_scene",
+    });
+    if (created) {
+      setDrawerOpen(false);
+      window.setTimeout(() => composerRef.current?.focus(), 0);
+    }
+  }
+
   async function selectConversation(conversationId: string) {
     if (await chat.selectConversation(conversationId)) {
       setDrawerOpen(false);
@@ -134,6 +145,7 @@ export function ChatApp({
         mobileOpen={drawerOpen}
         onClose={closeConversationRail}
         onCreate={() => void createConversation()}
+        onCreateFanfic={() => void createFanficThread()}
         onDelete={(id) => void chat.deleteConversation(id)}
         onOpenSettings={openSettings}
         onSelect={(id) => void selectConversation(id)}

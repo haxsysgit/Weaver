@@ -464,6 +464,26 @@ def test_spoiler_boundary_answer_names_the_reader_position_without_story_fact() 
 
     answer = build_spoiler_boundary_answer(blueprint)
 
-    assert "chapter 850 boundary" in answer
-    assert "lift the spoiler boundary" in answer
+    assert "chapter 850" in answer
+    assert "lift the boundary" in answer
     assert "LO49" not in answer
+
+
+def test_prose_may_use_a_dash_but_chat_may_not() -> None:
+    prose = build_answer_blueprint(
+        question="write the missing scene where they talk",
+        prior_weaver_position="",
+        reader_challenges_prior_answer=False,
+        evidence_packet=PACKET,
+    )
+    scene = "Invented scene. He stopped\u2014then turned back."
+    assert inspect_publication(scene, prose, PACKET) == ()
+
+    chat = build_answer_blueprint(
+        question="who killed the Titan",
+        prior_weaver_position="",
+        reader_challenges_prior_answer=False,
+        evidence_packet=PACKET,
+    )
+    codes = {finding.code for finding in inspect_publication(scene, chat, PACKET)}
+    assert "em_dash" in codes

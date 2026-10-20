@@ -139,6 +139,8 @@ describe("ChatApp", () => {
         navigationLabel: "Career sessions",
         newConversationLabel: "New session",
         newConversationTitle: "A new session",
+        newFanficLabel: "New fanfic",
+        newFanficTitle: "A fanfic session",
         openRailLabel: "Open sessions",
         recentConversationsLabel: "Recent sessions",
         recoveryChooseLabel: "Choose another session",
@@ -372,6 +374,21 @@ describe("ChatApp weave management", () => {
     fireEvent.click(screen.getByRole("button", { name: "New weave" }));
     await waitFor(() => {
       expect(api.createConversation).toHaveBeenCalled();
+    });
+  });
+
+  it("new fanfic opens a fanfic thread even from an empty weave", async () => {
+    const api = createApi((async function* () {})());
+    localStorage.setItem("weaver.active-conversation", "thread-1");
+    render(<ChatApp api={api} modeLabel="fake" privacyLabel="Local fake mode" />);
+
+    await screen.findByText("What thread are we pulling?");
+    fireEvent.click(screen.getByRole("button", { name: "New fanfic" }));
+    await waitFor(() => {
+      expect(api.createConversation).toHaveBeenCalledWith({
+        domain: "fanfic",
+        fanfic_kind: "missing_scene",
+      });
     });
   });
 

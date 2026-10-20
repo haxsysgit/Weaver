@@ -2298,3 +2298,27 @@ a:focus-visible {
   letter-spacing: 0.08em;
   background: #050508;
 }
+
+.new-fanfic-button {
+  min-height: 40px;
+  margin: -12px 14px 22px;
+  border-color: rgba(224, 189, 120, 0.3);
+  background:
+    linear-gradient(105deg, rgba(224, 189, 120, 0.12), transparent 74%),
+    var(--shadow-raised);
+  font-weight: 500;
+}
+
+.new-fanfic-button:hover:not(:disabled) {
+  border-color: rgba(224, 189, 120, 0.55);
+  background:
+    linear-gradient(180deg, rgba(224, 189, 120, 0.16), rgba(120, 96, 48, 0.1)),
+    var(--shadow-hover);
+}
+
+.new-fanfic-mark {
+  width: 17px;
+  color: #e0bd78;
+  font-size: 13px;
+  text-align: center;
+}

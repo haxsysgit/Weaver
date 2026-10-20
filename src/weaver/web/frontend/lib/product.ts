@@ -16,6 +16,8 @@ export interface ChatProduct {
   navigationLabel: string;
   newConversationLabel: string;
   newConversationTitle: string;
+  newFanficLabel: string;
+  newFanficTitle: string;
   openRailLabel: string;
   recentConversationsLabel: string;
   recoveryChooseLabel: string;
@@ -49,6 +51,8 @@ export const weaverProduct: ChatProduct = {
   navigationLabel: "Conversation threads",
   newConversationLabel: "New weave",
   newConversationTitle: "A new thread",
+  newFanficLabel: "New fanfic",
+  newFanficTitle: "A thread where the story keeps going",
   openRailLabel: "Open conversation rail",
   recentConversationsLabel: "Recent threads",
   recoveryChooseLabel: "Choose another thread",

@@ -762,14 +762,18 @@ class TestUnsafeModelResponses:
         assert result.tool_starts == 0
         assert starts == {}
 
-    async def test_stop_with_tool_calls_fails_safely(self) -> None:
-        call = tool_call("call-1", "echo", "{}")
-        response = model_response(
-            stop_reason=ModelStopReason.STOP,
-            tool_calls=(call,),
-            raw_stop_reason="stop",
+    async def test_stop_with_tool_calls_runs_the_tools(self) -> None:
+        # DeepSeek sometimes labels a tool-call turn as STOP. Failing the
+        # reader's turn on the label is worse than running the call.
+        call = tool_call("call-1", "echo", '{"message": "a"}')
+        layer, model, provider = scripted_layer(
+            model_response(
+                stop_reason=ModelStopReason.STOP,
+                tool_calls=(call,),
+                raw_stop_reason="stop",
+            ),
+            stop_response("Done."),
         )
-        layer, model, _ = scripted_layer(response)
 
         result = await execute_turn(
             layer,
@@ -777,8 +781,9 @@ class TestUnsafeModelResponses:
             active_tools=("echo",),
         )
 
-        assert result.exit_reason == TurnExitReason.MODEL_FAILED
-        assert result.tool_starts == 0
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert result.tool_starts == 1
+        assert result.final_text == "Done."
 
     async def test_tool_use_without_calls_fails_safely(self) -> None:
         layer, model, _ = scripted_layer(
@@ -1317,7 +1322,8 @@ class TestFinalReadingPhase:
         )
 
         assert result.exit_reason == TurnExitReason.COMPLETED
-        assert "chapter 850 boundary" in result.final_text
+        assert "chapter 850" in result.final_text
+        assert "lift the boundary" in result.final_text
         assert "LO49" not in result.final_text
         assert "ch. 900" not in result.final_text
         assert len(provider.calls) == 4
@@ -1983,13 +1989,15 @@ class TestCandidateValidation:
             for message in result.new_messages
         )
 
-    async def test_working_note_rejection_limit_fails_without_persisting(
+    async def test_an_empty_candidate_gets_one_stripped_answer_attempt(
         self,
     ) -> None:
-        layer, model, _ = scripted_layer(
-            stop_response("Let me check."),
-            stop_response("I'll search."),
-            stop_response("One moment."),
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response(""),
+            stop_response(""),
+            stop_response(""),
+            stop_response("Here is the answer."),
         )
         persisted: list = []
 
@@ -2000,8 +2008,32 @@ class TestCandidateValidation:
             persist_message=_async_append(persisted),
         )
 
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert result.final_text == "Here is the answer."
+        # the last attempt has no tools, so the model has to speak
+        assert provider.calls[-1].request.tools == ()
+
+    async def test_working_note_rejection_limit_fails_without_persisting(
+        self,
+    ) -> None:
+        layer, model, _ = scripted_layer(
+            stop_response("Let me check."),
+            stop_response("I'll search."),
+            stop_response("One moment."),
+            stop_response("Let me check that."),
+        )
+        persisted: list = []
+
+        result = await execute_turn(
+            layer,
+            model,
+            active_tools=("echo",),
+            persist_message=_async_append(persisted),
+        )
+
+        # two corrections, then one tools-stripped attempt, then failure
         assert result.exit_reason == TurnExitReason.MODEL_FAILED
-        assert result.model_steps == 3
+        assert result.model_steps == 4
         assert persisted == []
 
 
@@ -2134,19 +2166,20 @@ class TestTextToolCallSlips:
             stop_response(self.SLIP),
             stop_response(self.SLIP),
             stop_response(self.SLIP),
+            stop_response(self.SLIP),
         )
         persisted: list = []
 
         result = await execute_turn(
-            layer,
-            model,
+            layer, model,
             registry=make_registry(),
             active_tools=("echo",),
             persist_message=_async_append(persisted),
         )
-        # two corrections are allowed; the third slip fails the turn
+        # two corrections and one tools-stripped attempt; then the slip fails
         assert result.exit_reason == TurnExitReason.MODEL_FAILED
-        assert result.model_steps == 4
+        assert result.model_steps == 5
+        assert provider.calls[-1].request.tools == ()
         # no slip text ever reached the store
         assert all(
             "tool calls>" not in (getattr(m, "content", "") or "")

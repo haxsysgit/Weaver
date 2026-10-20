@@ -31,6 +31,7 @@ class AnswerBlueprint:
     shape: str = ""
     quote_rule: str = ""
     needs_evidence: bool = True
+    label_invention: bool = True
 
 
 @dataclass(frozen=True, slots=True)
@@ -112,6 +113,23 @@ FOLLOW_UP_OPENINGS = (
     "what about ",
 )
 QUOTE_WORD_LIMIT = 25
+
+# A refusal makes no canon claim, so it needs no evidence packet. This is the
+# honest counterpart to the spoiler boundary: the reader is told no, warmy,
+# and nothing is cited because nothing is claimed.
+SPOILER_REFUSAL_MARKERS = (
+    "won't",
+    "will not",
+    "not going to",
+    "can't tell",
+    "cannot tell",
+    "past your",
+    "beyond your",
+    "when you get there",
+    "ask me when",
+    "lift the boundary",
+    "spoiler",
+)
 
 MODE_OBLIGATIONS: dict[ResponseMode, tuple[str, ...]] = {
     ResponseMode.DIRECT_RECALL: (
@@ -324,6 +342,9 @@ def build_answer_blueprint(
     if extra_skill_ids:
         plan = plan_for_ids([*plan.ids, *extra_skill_ids])
     needs_evidence = plan.needs_evidence and mode != ResponseMode.PROSE
+    # A fanfic thread is labelled as a thread. The first invented scene still
+    # says so; a continuation of that scene does not have to relabel.
+    label_invention = not (domain == "fanfic" and mode == ResponseMode.PROSE)
     spoiler_mode, reader_chapter = _spoiler_boundary(evidence_packet)
     obligations = [
         "fulfil the reader's actual request at the depth and in the mode they asked for",
@@ -368,6 +389,7 @@ def build_answer_blueprint(
         shape=plan.shape,
         quote_rule=plan.quote_rule,
         needs_evidence=needs_evidence,
+        label_invention=label_invention,
     )
 
 
@@ -433,6 +455,14 @@ def _quote_blocks(answer: str) -> tuple[str, ...]:
     return tuple(quotes)
 
 
+def _is_spoiler_refusal(text: str) -> bool:
+    """True for a short, claim-free refusal at a guarded boundary."""
+    if len(text) > 500:
+        return False
+    normalized = text.casefold()
+    return any(marker in normalized for marker in SPOILER_REFUSAL_MARKERS)
+
+
 def inspect_publication(
     answer: str,
     blueprint: AnswerBlueprint,
@@ -442,7 +472,11 @@ def inspect_publication(
     weaver_text = "\n".join(_weaver_lines(answer))
     normalized = weaver_text.strip().casefold()
 
-    if "\u2014" in weaver_text or "--" in weaver_text:
+    # The no-em-dash rule is for Weaver's chat voice. Invented prose may use a
+    # dash the way the novel does.
+    if blueprint.mode != ResponseMode.PROSE and (
+        "\u2014" in weaver_text or "--" in weaver_text
+    ):
         findings.append(
             PublicationFinding("em_dash", "Weaver-authored prose contains an em dash.")
         )
@@ -465,7 +499,8 @@ def inspect_publication(
     answer_chapters = set(_extract_answer_chapter_citations(weaver_text))
     allowed_chapters = set(blueprint.allowed_chapters)
     direct_passages = _direct_passages(evidence_packet)
-    if not direct_passages and blueprint.needs_evidence:
+    refusal = _is_spoiler_refusal(weaver_text)
+    if not direct_passages and blueprint.needs_evidence and not refusal:
         findings.append(
             PublicationFinding(
                 "missing_direct_evidence",
@@ -490,7 +525,7 @@ def inspect_publication(
                     f"The answer cites unopened chapter(s): {chapter_list}.",
                 )
             )
-        elif not answer_chapters and blueprint.needs_evidence:
+        elif not answer_chapters and blueprint.needs_evidence and not refusal:
             findings.append(
                 PublicationFinding(
                     "missing_citation",
@@ -535,7 +570,7 @@ def inspect_publication(
         )
         break
 
-    if blueprint.mode in (
+    if blueprint.label_invention and blueprint.mode in (
         ResponseMode.THEORY,
         ResponseMode.VERSUS,
         ResponseMode.PROSE,
@@ -625,6 +660,17 @@ def build_repair_instruction(findings: tuple[PublicationFinding, ...]) -> str:
     )
 
 
+# Only a spoiler finding may replace a written answer with the safe boundary.
+# Any other failure is a repair problem, not a spoiler.
+SPOILER_FINDING_CODES = frozenset({"spoiler_citation"})
+
+
+def has_spoiler_finding(
+    findings: tuple[PublicationFinding, ...],
+) -> bool:
+    return any(finding.code in SPOILER_FINDING_CODES for finding in findings)
+
+
 def build_spoiler_boundary_answer(blueprint: AnswerBlueprint) -> str:
     position = (
         f"chapter {blueprint.reader_chapter}"
@@ -632,7 +678,7 @@ def build_spoiler_boundary_answer(blueprint: AnswerBlueprint) -> str:
         else "your current chapter"
     )
     return (
-        f"That answer lies beyond your {position} boundary. I won't pull it "
-        "backward through the story. If you want the exact answer anyway, tell "
-        "me to lift the spoiler boundary for this question."
+        f"Not walking you into that one. You're at {position}, and this lands "
+        "past it. Ask me again when you get there, or tell me to lift the "
+        "boundary and I'll answer straight."
     )

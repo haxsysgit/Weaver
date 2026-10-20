@@ -66,6 +66,29 @@ def plan_for_ids(names: list[str]) -> SkillPlan:
     return SkillPlan(skills=resolve_skills(names))
 
 
+def format_skill_brief(plan: SkillPlan) -> str:
+    """The compact skill block for the running turn.
+
+    Without this, a turn with no final reading pass never sees its skill: the
+    answer blueprint only reaches the model in the final pass.
+    """
+    if not plan.skills:
+        return ""
+    lines = [
+        "--- answer skills ---",
+        f"chosen: {', '.join(plan.ids)}",
+    ]
+    lines.extend(f"- {instruction}" for instruction in plan.obligations)
+    lines.append(f"answer shape: {plan.shape}")
+    lines.append(f"quotation rule: {plan.quote_rule}")
+    if not plan.needs_evidence:
+        lines.append(
+            "This turn needs no reading and no chapter citation. Answer from "
+            "the conversation."
+        )
+    return "\n".join(lines)
+
+
 def skill_text(skill: Skill) -> str:
     """The full skill body returned by the load_skill tool."""
     lines = [

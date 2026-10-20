@@ -1,5 +1,10 @@
 import { weaverHeaders } from "./identity";
 
+export interface CreateThreadOptions {
+  domain?: "canon" | "fanfic";
+  fanfic_kind?: string | null;
+}
+
 export interface ConversationSummary {
   archived: boolean;
   conversation_id: string;
@@ -53,7 +58,7 @@ export interface ChatApi {
     conversationId: string,
     patch: ConversationMetadataPatch,
   ): Promise<ConversationSummary>;
-  createConversation(): Promise<{ conversation_id: string }>;
+  createConversation(options?: CreateThreadOptions): Promise<{ conversation_id: string }>;
   loadMessages(conversationId: string): Promise<StoredMessage[]>;
   streamTurn(conversationId: string, message: string): AsyncIterable<StreamEvent>;
   retryTurn(conversationId: string): AsyncIterable<StreamEvent>;
@@ -299,8 +304,12 @@ export function createHttpChatApi(fetcher: typeof fetch = fetch): ChatApi {
       return requireJson<ConversationSummary>(response, "Updating conversation");
     },
 
-    async createConversation() {
-      const response = await authed("/api/conversations", { method: "POST" });
+    async createConversation(options?: CreateThreadOptions) {
+      const response = await authed("/api/conversations", {
+        body: options ? JSON.stringify(options) : undefined,
+        headers: options ? { "Content-Type": "application/json" } : undefined,
+        method: "POST",
+      });
       return requireJson<{ conversation_id: string }>(
         response,
         "Creating a conversation",

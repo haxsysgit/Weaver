@@ -11,6 +11,7 @@ from .catalog import ALL_SKILLS
 from .models import CANON, FANFIC, Skill, SkillExample, SkillPlan
 from .registry import (
     MAX_TOOL_BUDGET,
+    format_skill_brief,
     SKILLS_BY_ID,
     catalogue_text,
     plan_for_ids,
@@ -30,6 +31,7 @@ __all__ = [
     "SkillExample",
     "SkillPlan",
     "catalogue_text",
+    "format_skill_brief",
     "plan_for_ids",
     "plan_for_question",
     "resolve_skills",

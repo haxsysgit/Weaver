@@ -88,6 +88,9 @@ SCENE_MARKERS = (
     "visualise",
     "visualize",
     "picture it",
+    "picture the",
+    "can't picture",
+    "cannot picture",
     "help me see",
 )
 CORRECTION_MARKERS = (
@@ -182,6 +185,18 @@ WORLD_MARKERS = (
     "history of the",
     "tell me about the domains",
 )
+FANFIC_FIT_MARKERS = (
+    "would this fit",
+    "would that fit",
+    "does this fit",
+    "is that canon",
+    "is this canon",
+    "does that contradict",
+    "contradict",
+    "timeline",
+    "before chapter",
+    "does this work",
+)
 FANFIC_WORLD_MARKERS = (
     "worldbuild",
     "world build",
@@ -252,6 +267,9 @@ def _asks_for_fanfic(normalized: str) -> bool:
 
 
 def _fanfic_skill(normalized: str) -> str:
+    if _has_any(normalized, FANFIC_FIT_MARKERS):
+        # A canon-fit question is a worldbuilding check, not more prose.
+        return "fanfic_worldbuilding"
     if _has_any(normalized, FANFIC_MISSING_MARKERS):
         return "fanfic_missing_scene"
     if _has_any(normalized, FANFIC_WORLD_MARKERS):
@@ -303,9 +321,29 @@ QUESTION_WORDS = (
 )
 
 
+BOOK_NOUNS = (
+    "chapter",
+    "chapter",
+    "scene",
+    "fight",
+    "battle",
+    "arena",
+    "arc",
+    "character",
+    "book",
+    "novel",
+    "nephis",
+    "sunny",
+    "mordret",
+    "ariel",
+)
+
+
 def _looks_like_company(normalized: str) -> bool:
     if _has_any(normalized, COMPANY_MARKERS):
         return True
+    if _has_any(normalized, BOOK_NOUNS):
+        return False
     is_short = len(normalized) <= 40
     asks_nothing = not _has_any(normalized, QUESTION_WORDS)
     has_no_question_mark = "?" not in normalized

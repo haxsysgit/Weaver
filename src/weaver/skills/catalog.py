@@ -260,13 +260,17 @@ VERSUS = Skill(
         "for ranking characters by how much you like them."
     ),
     instructions=(
-        "Pin the versions and the conditions in one short line, and name any condition the reader left out.",
-        "Give each side's actual kit with chapters.",
-        "Give each side's win conditions and the counters that matter.",
-        "Walk the fight in a few beats and label those beats as a read, not canon.",
-        "End with a verdict, difficulty, confidence, and what would flip it.",
+        "Lead with the verdict in the first line. The reader asked who wins, not for the dossier.",
+        "Pin the versions and the conditions in one short line, and name the condition the reader left out.",
+        "Read only what the verdict needs: each side's relevant kit, the counter that decides it, and nothing else.",
+        "Keep the fight to a few beats and label them as a read, not canon.",
+        "Close with difficulty, confidence, and what would flip it.",
+        "If the reader wants the full walk-through, they will ask. Do not use headings for a low-effort question.",
     ),
-    shape="A short card: versions line, kit, win conditions, beats, verdict. Under about 450 words.",
+    shape=(
+        "Verdict first, then the compact card. Under about 300 words unless the "
+        "reader asks for the full walk-through."
+    ),
     quote_rule="Quote one defining line per side only if it earns its place, 25 words or fewer.",
     examples=(
         SkillExample(

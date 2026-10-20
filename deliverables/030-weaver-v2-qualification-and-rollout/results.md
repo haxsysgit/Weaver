@@ -422,6 +422,56 @@ gives the final acceptance. No Reader Experience Trial is accepted yet.
 
 Trial 12 is the retelling and visualisation trial the owner asked for.
 
+### Evaluator run 5 (2026-10-20)
+
+The skills build, the canon/fanfic split, and the validated-only streaming ran
+the twelve trials again, 65 turns, fresh conversations. Six turns failed with
+a silent empty answer. The run exposed four defects, all fixed and re-tested:
+
+- The publication fallback broke on a stale `exit_reason is not None` guard,
+  which turned any failed repair into a silent empty "completed" turn.
+- DeepSeek sometimes labels a tool-call response as `stop`; the turn failed
+  the reader instead of running the call.
+- The spoiler boundary replaced every answer at `protect` mode, including good
+  answers with a citation problem, with one canned refusal.
+- Fanfic prose failed the no-em-dash chat rule, and canon-fit questions in a
+  fanfic thread were routed back into prose.
+
+Tournament after the fixes (each trial is a fresh conversation; a failed turn
+fails the trial):
+
+- 1 vibe: 5/5 completed, 168 to 310 characters, warm, short, asks back. Pass.
+- 2 hot take: 5/5, argues with cited scenes, takes the "that's not proof"
+  push. Pass.
+- 3 half memory: 5/5, corrects the order and even its own chapter number,
+  quotes the tomb line. Pass on both axes.
+- 4 first timer: 3/5. Turns 1 and 4 (the yes-or-no spoiler probes) fail
+  publication: a short answer at the reader's chapter 300 boundary carries no
+  evidence and no refusal marker, so the turn fails. Open.
+- 5 theory: 4/5. Turn 1 ("what evidence would prove me wrong?") fails with no
+  accepted answer; the others engage and label canon, inference, invention.
+  Open.
+- 6 vague ask: 5/5, one thread at a time, chapter 1488, an invitation. Pass.
+- 7 emotional favourite: 5/5, retells the Gateway goodbye with quotes and
+  motive, does not lecture. Pass on both axes.
+- 8 low effort: 5/5, verdict first ("sunny, high difficulty"), 270 words,
+  answers "why", "huh", "prep", "tldr". Pass, length noted.
+- 9 long thread: 9/9, holds its own ranking, catches the reader's misremember,
+  callbacks land. Pass.
+- 10 adversarial: 5/5, accepts the challenge, cites, admits being half wrong.
+  Pass.
+- 11 fanfic spark: 5/5, 3.5k to 5k characters per scene, labelled, canon
+  anchored, keeps Sunny in character, and the fit question routes to
+  worldbuilding instead of more prose. Pass on both axes.
+- 12 confusing fight: 6/6, reconstructs the Spire fight, answers who won,
+  paints the arena, labels the read. Pass on both axes.
+
+Verdict: 10 of 12 pass the evaluator, first timer and theory are open. The
+evaluator does not accept the suite. Live spend for runs 5 and the re-runs is
+not yet reconciled against the $5 plan cap, so no further live pass runs
+without the owner's word.
+
+
 ### Skills, streaming, and domain fix (2026-10-20)
 
 - **Skills (S1).** `src/weaver/skills/` now holds the catalogue: fourteen
