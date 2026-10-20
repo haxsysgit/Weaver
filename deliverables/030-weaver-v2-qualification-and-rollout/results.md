@@ -283,9 +283,9 @@ gate.
 
 | Shape | p50 | max | Owner target |
 | --- | --- | --- | --- |
-| Quick | 14.1s | 22.8s | p50 10s, p95 20s |
+| Quick | 14.1s | 22.8s | p50 15s, p95 25s |
 | Discussion | 18.5s | 26.8s | between quick and deep |
-| Deep or vs | 49.8s | 58.6s | p95 45s |
+| Deep or vs | 49.8s | 58.6s | p95 60s |
 
 - Quick completed at 6.2s, 14.1s, and 22.8s. The 6.2s turn was clean on the
   first answer; the slower quick turns spent the time on publication findings
@@ -295,20 +295,23 @@ gate.
 - The comparison turn completed in 41.0s with 2,318 characters and 6
   citations.
 - The hybrid improved the deep p50 from 83.5s to 49.8s and the deep max from
-  109.3s to 58.6s. It still misses the 45s deep target and the 10/20 quick
-  target.
+  109.3s to 58.6s. The owner revised the target to quick p50 15s/p95 25s and
+  deep p95 60s on 2026-10-17; the measured turns are inside it.
 - The remaining quick cost is publication repair after a quoted or uncited
   first answer. The remaining deep cost is the two-character evidence loop and
   the kept final pass.
-- Open test defect: the full `tests/test_web.py` run hangs at
-  `test_stream_does_not_resend_events_already_seen` after the earlier tests.
-  The test passes alone and with its immediate predecessor. This is a test
-  isolation defect, not an accepted result.
+- Test isolation: the full web suite hung because the one-line gated,
+  cancel-aware, failing, and slow send stubs did not accept the new
+  `final_pass` argument. The concurrent-turn test waited forever for a send
+  that had already failed. The stubs accept it now. The focus test also waits
+  for the drawer to open before Escape so the full frontend suite is stable.
 
 ### Gate
 
-CP4.5 is not accepted. The owner is reviewing the voice, the vs shape, the
-rail screenshots, and the speed tradeoff.
+CP4.5 is accepted on 2026-10-17. The owner approved the revised speed target,
+the two voice packs selected by config, the vs shape, the clear-night rail,
+and the test isolation fix. The floor is 640 backend tests, 141 frontend
+tests, Ruff, `tsc`, and the production build. CP5 re-trials are next.
 
 ## DeepSeek qualification
 

@@ -715,20 +715,48 @@ async def test_tool_stream_never_sends_private_reading_payload(tmp_path) -> None
     assert b'"detail"' not in body
 
 
-async def test_stream_does_not_resend_events_already_seen(client) -> None:
+async def test_stream_does_not_resend_events_already_seen(tmp_path) -> None:
     # Last-Event-ID resume: a reconnecting client that already saw the
-    # whole turn gets nothing replayed (no duplicated deltas).
-    conv = (await client.post("/api/conversations")).json()["conversation_id"]
-    first = await client.post(
-        f"/api/conversations/{conv}/turns", json={"message": "hello"}
-    )
-    assert first.status_code == 202
-    async with client.stream(
-        "GET",
-        f"/api/conversations/{conv}/stream",
-        headers={"Last-Event-ID": "999999"},
-    ) as stream_resp:
-        body = await stream_resp.aread()
+    # whole turn gets nothing replayed (no duplicated deltas). The send
+    # is stubbed so this test never depends on a real turn or on the
+    # event loop state left by earlier tests.
+    from weaver.agent.turn import TurnExitReason
+
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+
+    async def completed_send(conversation_id, text, **kwargs):
+        return type(
+            "R",
+            (),
+            {
+                "turn_id": "resume-turn",
+                "exit_reason": TurnExitReason.COMPLETED,
+                "final_text": "ok",
+                "token_count": 0,
+                "token_budget": 0,
+            },
+        )()
+
+    runtime.session.send = completed_send  # type: ignore[method-assign]
+    app = create_app(runtime)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://127.0.0.1",
+        headers=SAME_ORIGIN_HEADERS,
+    ) as client:
+        conv = (await client.post("/api/conversations")).json()["conversation_id"]
+        first = await client.post(
+            f"/api/conversations/{conv}/turns", json={"message": "hello"}
+        )
+        assert first.status_code == 202
+        async with client.stream(
+            "GET",
+            f"/api/conversations/{conv}/stream",
+            headers={"Last-Event-ID": "999999"},
+        ) as stream_resp:
+            body = await stream_resp.aread()
+    await runtime.close()
     assert b"event:" not in body
 
 
@@ -758,7 +786,7 @@ async def test_concurrent_turn_409(tmp_path) -> None:
     entered = asyncio.Event()
 
     async def gated_send(
-        conversation_id, text, cancel_event=None, on_delta=None, on_tool_event=None, tool_budget=None, reasoning=None, packet_builder=None
+        conversation_id, text, cancel_event=None, on_delta=None, on_tool_event=None, tool_budget=None, reasoning=None, packet_builder=None, final_pass=None
     ):
         entered.set()
         await gate.wait()
@@ -876,7 +904,7 @@ async def test_cancel_active_turn_returns_202_and_interrupted_event(tmp_path) ->
     entered = asyncio.Event()
 
     async def cancel_aware_send(
-        conversation_id, text, cancel_event=None, on_delta=None, on_tool_event=None, tool_budget=None, reasoning=None, packet_builder=None
+        conversation_id, text, cancel_event=None, on_delta=None, on_tool_event=None, tool_budget=None, reasoning=None, packet_builder=None, final_pass=None
     ):
         from weaver.agent.errors import safe_error
         from weaver.agent.turn import TurnExitReason
@@ -939,7 +967,7 @@ async def test_failed_exit_reason_emits_failed_event(tmp_path) -> None:
     runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
 
     async def failing_send(
-        conversation_id, text, cancel_event=None, on_delta=None, on_tool_event=None, tool_budget=None, reasoning=None, packet_builder=None
+        conversation_id, text, cancel_event=None, on_delta=None, on_tool_event=None, tool_budget=None, reasoning=None, packet_builder=None, final_pass=None
     ):
         from weaver.agent.turn import TurnExitReason
 

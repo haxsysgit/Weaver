@@ -10,7 +10,8 @@ from importlib.resources import files
 import pytest
 
 from weaver.agent.tools import EffectKind, ToolExecutionPolicy
-from weaver.chat_runtime import WEB_SYSTEM_PROMPT, open_chat_runtime
+from weaver.chat_runtime import open_chat_runtime, web_system_prompt
+from weaver.prompts import load_personality
 from weaver.conversation.session import SessionWeave
 
 
@@ -115,10 +116,11 @@ async def test_web_prompt_makes_library_claim_with_truth_rule(tmp_path) -> None:
 
 
 def test_web_prompt_separates_the_echo_from_the_daemon() -> None:
-    assert "an\nunnamed echo" in WEB_SYSTEM_PROMPT
-    assert "You are not the Daemon Weaver" in WEB_SYSTEM_PROMPT
-    assert "product fiction" in WEB_SYSTEM_PROMPT
-    assert "You carry the daemon's manner" not in WEB_SYSTEM_PROMPT
+    prompt = web_system_prompt(load_personality("buddy"), 3160)
+    assert "hidden thread" in prompt
+    assert "product flavor" in prompt
+    assert "Never claim to be the Daemon Weaver" in prompt
+    assert "You carry the daemon's manner" not in prompt
 
 
 async def test_web_prompt_loads_reviewed_resources_into_the_runtime(tmp_path) -> None:
@@ -126,7 +128,12 @@ async def test_web_prompt_loads_reviewed_resources_into_the_runtime(tmp_path) ->
     try:
         prompt = runtime.session._system_prompt
         for name in ("identity", "soul"):
-            component = files("weaver.prompts").joinpath(f"{name}.md").read_text(encoding="utf-8").strip()
+            component = (
+                files("weaver.prompts")
+                .joinpath("voices", "buddy", f"{name}.md")
+                .read_text(encoding="utf-8")
+                .strip()
+            )
             assert prompt.count(component) == 1
             assert f"<{name}>" in prompt
         assert "owner-review draft" not in prompt

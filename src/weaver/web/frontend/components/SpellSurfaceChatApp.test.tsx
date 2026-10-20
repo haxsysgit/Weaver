@@ -819,6 +819,7 @@ describe("mobile thread drawer", () => {
 
   it("closes on Escape and restores focus to the opener", async () => {
     render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
+    await waitForLiveApp();
 
     const opener = document.querySelector<HTMLButtonElement>(".lab-mobile-rail");
     expect(opener).not.toBeNull();
@@ -826,6 +827,7 @@ describe("mobile thread drawer", () => {
       return;
     }
     fireEvent.click(opener);
+    await screen.findByRole("dialog", { name: "Threads" });
     fireEvent.keyDown(window, { key: "Escape" });
 
     await waitFor(() => expect(opener).toHaveFocus());

@@ -20,11 +20,10 @@
   **Checkpoint cadence: 7 (owner decision 2026-10-17).** The EC2 and Tailscale
   Funnel path is retired. The public v1.2.1 site is down: instance `weaver-v1`
   stopped 2026-10-17, the `/srv/weaver` data volume preserved, and the old
-  deploy workflow disabled. The Cloudflare launch is CP7 inside Plan 030,
-  designed and set up with the owner. **CP1 through CP4 are complete. The
-  public privacy copy was approved 2026-10-17. CP5 is paused: Trial 1 and
-  Trial 2 were not accepted on voice, structure, and speed. **CP4.5 experience
-  rebuild is in progress; CP5 is paused until the re-trials.**
+  deploy workflow disabled. The Cloudflare launch is CP7 inside Plan 030.
+  **CP1 through CP4 are complete. CP4.5 is complete: buddy and storyteller
+  voice packs, revised speed target met, vs mode, clear-night rail, green
+  floor. CP5 re-trials are next.**
 - **Depends on:** Plan 028 closed 2026-10-02 with sponsored access and financial
   safety accepted; Plan 029 closed 2026-10-17 with the intelligence and
   conversation system accepted. Plan 029.5 is not admitted.
@@ -444,9 +443,10 @@ re-trials.
    buddy: short, reactive, lowercase-friendly, contractions and natural slang,
    no essay shape, no headings unless asked, and a real follow-up rather than
    a canned offer.
-2. Speed target: quick chat p50 10 seconds or less and p95 20 seconds or less;
-   deep or vs p95 45 seconds or less. The current trial turns measured 137.7
-   and 149.5 seconds.
+2. Speed target (revised 2026-10-17): quick chat p50 15 seconds or less and
+   p95 25 seconds or less; deep or vs p95 60 seconds or less. The original
+   10/20/45 target was not reachable without cutting the deep reading pass.
+   The trial turns measured 137.7 and 149.5 seconds before the rebuild.
 3. Matchups use a vs structure, not a what-if story: versions and conditions,
    both kits, win conditions and counters, how it goes, verdict, difficulty,
    confidence, and what flips it. Canon, inference, and invention stay labeled.

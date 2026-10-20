@@ -75,7 +75,16 @@ redesign and Plan 030 amendment-or-successor decision are pending.
   p50 is 14.1s/p95 22.8s and deep p95 is 58.6s. Publication repair and the
   two-character evidence loop are the remaining cost.
 - CP4.5: the clear-night rail is transparent with the star web crossing it; the
-  mobile rail is a blurred edge sheet. The owner gate is open.
+  mobile rail is a blurred edge sheet.
+- CP4.5: the full web suite hang was a test-stub signature bug, not the SSE
+  resume path. The one-line send stubs did not accept `final_pass`, so the
+  concurrent-turn test waited on a send that raised. The stubs accept it now.
+- CP4.5: the owner revised the speed target to quick p50 15s/p95 25s and deep
+  p95 60s. The measured 14.1s/22.8s and 58.6s are inside it.
+- CP4.5: the owner accepted the two voice packs with config selection. A
+  per-conversation picker waits for the fan-fiction mode.
+- CP4.5: CP4.5 is accepted. The floor is 640 backend tests, 141 frontend
+  tests, Ruff, `tsc`, and the production build. CP5 re-trials are next.
 - CP3: the local test used an explicit future price date. The production price
   default is still stale and remains a CP7 preflight item.
 
