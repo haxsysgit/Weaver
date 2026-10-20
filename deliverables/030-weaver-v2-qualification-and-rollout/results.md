@@ -364,9 +364,9 @@ CP5 paused on 2026-10-17. The owner ran Trial 1 and gave Trial 2 feedback.
   conversations. No answers are recorded here.
 - Trial 3 was not run.
 
-No Reader Experience Trial is accepted. The contract is rewritten and the
-owner's sign-off is the next gate. Trial 12 is the retelling and visualisation
-trial the owner asked for.
+The owner signed off the twelve-trial contract on 2026-10-20. Trial 1, the
+vibe check, is open. No Reader Experience Trial is accepted yet. Trial 12 is
+the retelling and visualisation trial the owner asked for.
 
 ## v2.0.0 rollout
 

@@ -1,8 +1,8 @@
 # Reader Experience Trials
 
-Status: contract rewritten 2026-10-20. Owner sign-off pending. The binding
-summary lives in `AGENTS.md`; this file carries the full suite, prompts,
-follow-ups, rubrics, and protocol.
+Status: contract rewritten and signed off by the owner on 2026-10-20. Trial 1
+is open. The binding summary lives in `AGENTS.md`; this file carries the full
+suite, prompts, follow-ups, rubrics, and protocol.
 
 The three old Foundational Reader Trials are now the retrieval regression set.
 They are not the final gate.

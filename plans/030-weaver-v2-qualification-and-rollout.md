@@ -23,7 +23,8 @@
   deploy workflow disabled. The Cloudflare launch is CP7 inside Plan 030.
   **CP1 through CP4 are complete. CP4.5 is complete: buddy and storyteller
   voice packs, revised speed target met, vs mode, clear-night rail, green
-  floor. CP5 trial contract is rewritten; owner sign-off is next.**
+  floor. The Reader Experience Trial contract is signed off. CP5 is in
+  progress; Trial 1 is open.**
 - **Depends on:** Plan 028 closed 2026-10-02 with sponsored access and financial
   safety accepted; Plan 029 closed 2026-10-17 with the intelligence and
   conversation system accepted. Plan 029.5 is not admitted.

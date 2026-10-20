@@ -108,8 +108,8 @@ redesign and Plan 030 amendment-or-successor decision are pending.
 - (2026-10-20) The three Founder Trials are not the final gate. The owner
   replaced them with the twelve Reader Experience Trials: all twelve must pass
   on the conversation and storytelling axes. The old three are retrieval
-  regression only. The contract is rewritten; the trials are paused for the
-  owner's sign-off.
+  regression only. The contract was signed off on 2026-10-20. Trial 1, the
+  vibe check, is open.
 - (2026-10-17) The public privacy page, README privacy section, and live/fake
   footer copy are approved as drafted.
 - (2026-10-17) Trial 1 and Trial 2 are not accepted. The owner rejected the
