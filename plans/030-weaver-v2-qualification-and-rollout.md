@@ -2,7 +2,7 @@
 
 > **Executor instructions:** Qualify the finished Weaver system on its admitted
 > DeepSeek model, measure the real sponsored cost, let the owner set the public
-> daily allowance, run the three Foundational Reader Trials, and release v2.0.0
+> daily allowance, run the twelve Reader Experience Trials, and release v2.0.0
 > only after the owner accepts the complete product.
 
 ## Status
@@ -23,7 +23,7 @@
   deploy workflow disabled. The Cloudflare launch is CP7 inside Plan 030.
   **CP1 through CP4 are complete. CP4.5 is complete: buddy and storyteller
   voice packs, revised speed target met, vs mode, clear-night rail, green
-  floor. CP5 re-trials are next.**
+  floor. CP5 trial contract is rewritten; owner sign-off is next.**
 - **Depends on:** Plan 028 closed 2026-10-02 with sponsored access and financial
   safety accepted; Plan 029 closed 2026-10-17 with the intelligence and
   conversation system accepted. Plan 029.5 is not admitted.
@@ -59,8 +59,10 @@
    conversation system, never through isolated trivia prompts.
 6. (2026-08-24) Every failed, cancelled, retried, incomplete, and exhausted turn
    remains in the denominator. Failed evidence cannot disappear from reports.
-7. (2026-08-24) The three Foundational Reader Trials are fresh-session,
-   multi-turn product conversations. Their answers are never hard-coded into
+7. (2026-08-24, rewritten 2026-10-20) The twelve Reader Experience Trials are
+   fresh-session, multi-turn product conversations judged on two axes:
+   conversation and storytelling. The old three Foundational Reader Trials
+   remain a retrieval regression set. Trial answers are never hard-coded into
    prompts, fixtures, retrieval rules, or expected strings.
 8. (2026-08-24) Only the owner can accept a Reader Trial and authorize launch.
    Automated checks and reviewers collect evidence only.
@@ -222,10 +224,12 @@ execution and come from the read-only audit in
   allowance, credential, retrieval, conversation, or answer architecture, stop
   for an owner-approved Plan 030 amendment or close this plan as rejected and
   draft a successor. Closed plans never reopen.
-- Run the three Foundational Reader Trials in fresh sessions through the real
+- Run the twelve Reader Experience Trials in fresh sessions through the real
   product. Continue each conversation through owner challenge and correction.
-- Record the owner's pass or fail separately for each trial. A failed trial
-  blocks v2.0.0 and triggers the Plan 030 amendment-or-successor path.
+  Judge both axes: conversation and storytelling. The old three are retrieval
+  regression only.
+- Record the owner's pass or fail separately for each of the twelve. A failed
+  trial blocks v2.0.0 and triggers the Plan 030 amendment-or-successor path.
 - After all gates pass, tag v2.0.0, publish release notes, deploy through the
   Cloudflare launch gate, verify live assets and health, and preserve the
   previous deployment for rollback.
@@ -336,11 +340,12 @@ execution and come from the read-only audit in
   ceiling, stop for an owner-approved Plan 030 amendment or a rejected closure
   and successor plan.
 - If live evaluation spend could exceed $5, stop before the request.
-- If any Reader Trial fails, stop the launch. Record the failure and return to
-  the owner for a Plan 030 amendment or a rejected closure and successor plan.
+- If any Reader Experience Trial fails, stop the launch. Record the failure and
+  return to the owner for a Plan 030 amendment or a rejected closure and
+  successor plan.
 - If private material or credentials enter telemetry, evidence, or browser
   state, stop and contain it.
-- If the owner has not explicitly accepted all three trials and the release,
+- If the owner has not explicitly accepted all twelve trials and the release,
   do not tag or deploy v2.0.0.
 
 ## Slices
@@ -384,10 +389,16 @@ execution and come from the read-only audit in
      distinct readers.
    - Verify the public privacy page, robots policy, footer, and AI-output
      disclosure.
-5. **Foundational Reader Trials**
-   - Run all three fresh-session, multi-turn trials through the real candidate.
-   - Include at least one challenge turn and one correction turn in each trial.
+5. **Reader Experience Trials**
+   - Run all twelve fresh-session conversations through the real candidate.
+   - Include at least one challenge or correction turn in each trial.
+   - Judge both axes: conversation and storytelling. Storytelling is mandatory
+     in Trials 3, 7, 11, and 12.
+   - Run the old three Foundational Reader Trials as retrieval regression, not
+     the final gate.
    - Stop after each trial for the owner's explicit pass or fail decision.
+   - The full suite is
+     `deliverables/030-weaver-v2-qualification-and-rollout/reader-experience-trials.md`.
 6. **Independent review and release gate**
    - Complete both reviews, repair findings, run the full floor, prove rollback,
      and present the exact release evidence.
@@ -422,8 +433,9 @@ report and an explicit gate. No checkpoint auto-advances.
    Gate: allowance numbers and live cap.
 4. **CP4: Reader and operations journeys, privacy and docs.** Slice 4.
    Gate: copy and docs approval.
-5. **CP5: Foundational Reader Trials.** Slice 5.
-   Gate: three separate owner pass or fail decisions.
+5. **CP5: Reader Experience Trials.** Slice 5.
+   Gate: all twelve owner pass or fail decisions, on both axes. The full suite
+   is `deliverables/030-weaver-v2-qualification-and-rollout/reader-experience-trials.md`.
 6. **CP6: Independent review and release gate.** Slice 6.
    Gate: release-candidate approval and launch authorization.
 7. **CP7: Cloudflare launch, observe, close.** Slices 7 and 8. CP7 is inside
@@ -510,4 +522,4 @@ re-trials.
 3. **E3 VS.** Classifier, obligations, blueprint, and tests for the vs card.
 4. **E4 Rail.** Clear-night CSS and the mobile edge sheet.
 5. **E5 Gate.** Present samples, timings, screenshots, and the floor. Owner
-   accepts or rejects CP4.5, then the Reader Trials re-run.
+   accepts or rejects CP4.5, then the Reader Experience Trials run.

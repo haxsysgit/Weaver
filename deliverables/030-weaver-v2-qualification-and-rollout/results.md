@@ -335,18 +335,28 @@ questions, `$1` global ceiling, and `$10` wallet on 2026-10-17.
 Pending version, migration, backup, restore, bundle, image, load, device,
 privacy, security, and rollback evidence.
 
-## Foundational Reader Trials
+## Reader Experience Trials
+
+The owner rejected the three Founder Trials as the final gate on 2026-10-20.
+They test retrieval. They do not test whether a reader enjoys the conversation
+or whether Weaver can retell, explain, and visualise the novel. The final gate
+is now the twelve Reader Experience Trials in
+[`reader-experience-trials.md`](reader-experience-trials.md). All twelve must
+pass on the conversation and storytelling axes. The old three are retrieval
+regression only. CP5 is paused for the owner's contract sign-off.
+
+### Former gate: the three Founder Trials
 
 CP5 paused on 2026-10-17. The owner ran Trial 1 and gave Trial 2 feedback.
 
-### Trial 1: canon reconstruction
+#### Trial 1: canon reconstruction
 
 - Not accepted. The owner rejected the tone and response structure: Weaver
   reads as a chatbot and an essay, not a chat buddy. The owner wants an
   interactive, gen-z/reddit register, shorter and less formal.
 - The reading and evidence result was not separately accepted.
 
-### Trial 2: time-aware comparison
+#### Trial 2: time-aware comparison
 
 - Not accepted. Same tone and structure problem, plus speed. The owner
   reported slow answers and asked for a full pipeline review.
@@ -354,8 +364,9 @@ CP5 paused on 2026-10-17. The owner ran Trial 1 and gave Trial 2 feedback.
   conversations. No answers are recorded here.
 - Trial 3 was not run.
 
-No Reader Trial is accepted. The experience redesign decision is pending, and
-the Plan 030 amendment-or-successor gate is open.
+No Reader Experience Trial is accepted. The contract is rewritten and the
+owner's sign-off is the next gate. Trial 12 is the retelling and visualisation
+trial the owner asked for.
 
 ## v2.0.0 rollout
 
