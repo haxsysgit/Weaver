@@ -721,7 +721,12 @@ function SpellSurfaceChatSurface({
           </div>
         </div>
 
-        <SpellSurfaceRunes announcement={announcement} eventKey={announcementKey} mode={preferences.runeMode} />
+        <SpellSurfaceRunes
+          announcement={announcement}
+          eventKey={announcementKey}
+          gathering={chat.turnActive && !streamingReplyHasText}
+          mode={preferences.runeMode}
+        />
 
         <footer className="lab-composer-dock">
           <Composer

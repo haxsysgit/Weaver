@@ -115,6 +115,11 @@ def project_messages(
 
 def _format_tool_result(message: ToolResultMessage) -> str:
     if message.ok and message.result is not None:
+        # A tool that returns exactly {"text": ...} is speaking prose to the
+        # model (load_skill). Send it raw instead of escaped JSON.
+        plain_text = message.result.get("text")
+        if set(message.result) == {"text"} and isinstance(plain_text, str):
+            return plain_text
         return json.dumps(
             message.result,
             separators=(",", ":"),

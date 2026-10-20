@@ -32,10 +32,12 @@ def test_narration_uses_reviewed_voice_without_forcing_the_ending_first() -> Non
     instruction = format_answer_blueprint(blueprint)
 
     assert blueprint.mode == ResponseMode.RECONSTRUCTION
+    assert blueprint.skills == ("scene_explanation",)
     assert "open inside a supported moment" in instruction
     assert "identity and soul" in instruction
     assert "buddy who read the book" in instruction
-    assert "one to three short paragraphs" in instruction
+    assert "Four to eight paragraphs" in instruction
+    assert "One exact quote per key beat" in instruction
     assert "Direct quotations must be 25 words or fewer" in instruction
     assert "No headings unless" in instruction
 
@@ -50,6 +52,10 @@ def test_narration_uses_reviewed_voice_without_forcing_the_ending_first() -> Non
         ("Make a short what-if about Verne.", ResponseMode.THEORY),
         ("Then imagine Verne ordering an evacuation.", ResponseMode.THEORY),
         ("current Sunny vs Noctis, how does it go?", ResponseMode.VERSUS),
+        (
+            "write the missing scene where Nephis comes back after the academy",
+            ResponseMode.PROSE,
+        ),
         (
             "Do you think current Sunny would beat Azarax in his prime?",
             ResponseMode.VERSUS,

@@ -114,6 +114,8 @@ class ConversationRunner:
         packet_builder: PacketBuilder | None = None,
         final_pass: bool = True,
         exclude_run_ids: set[str] | None = None,
+        system_prompt: str | None = None,
+        domain: str = "canon",
     ) -> TurnResult:
         """Run one bounded model/tool turn inside an existing run.
 
@@ -164,7 +166,10 @@ class ConversationRunner:
             turn_id=turn_id,
             model_layer=self._model_layer,
             model=model,
-            system_prompt=self._system_prompt,
+            system_prompt=(
+                self._system_prompt if system_prompt is None else system_prompt
+            ),
+            domain=domain,
             history=history,
             tool_registry=self._tool_registry,
             active_tools=self._active_tools,
@@ -208,5 +213,8 @@ class ConversationRunner:
                 error_category=result.error_category,
                 raw_stop_reason=result.raw_stop_reason,
             )
-            await self._coordinator.mark_interrupted(run_id)
+            if result.exit_reason == TurnExitReason.INTERRUPTED:
+                await self._coordinator.mark_interrupted(run_id)
+            else:
+                await self._coordinator.mark_failed(run_id)
         return result

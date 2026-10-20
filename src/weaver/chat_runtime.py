@@ -25,6 +25,8 @@ from .config import DEFAULT_TIMEOUT_SECONDS, normalize_model_id
 from .conversation.session import SessionWeave
 from .prefs import PreferencesStore
 from .prompts import load_personality
+from .skills import catalogue_text
+from .skills.loader import register_skill_tool
 from .sponsored import (
     DeepSeekBalance,
     FixedBalance,
@@ -69,6 +71,20 @@ WEB_SYSTEM_PROMPT = (
     "  a range), who_is (the story map: resolve names), lore_path (trace how two \n"
     "  entities connect).\n"
     "</what_you_have>\n"
+    "\n"
+    "<skills>\n"
+    "Load skills before you answer. The catalogue below is a map, not the "
+    "instructions. Call load_skill with one or more skill names. You may "
+    "combine related skills, in one call or across calls, when the request "
+    "truly needs both. Choose by scope first: one fact, one passage, one "
+    "scene, many chapters. Fanfic skills are only for writing or extending "
+    "the story, and everything you invent there must be labelled as "
+    "invention. Never mix invented content into a canon answer. Skill "
+    "examples show shape only: their names, events, and chapter numbers are "
+    "placeholders unless the passages you opened confirm them. Loading a "
+    "bigger skill raises your reading budget.\n"
+    "{SKILL_CATALOG}\n"
+    "</skills>\n"
     "\n"
     "<the_one_rule>\n"
     "The novel is the source of truth; the notebook is a summary map that can "
@@ -140,14 +156,52 @@ WEB_SYSTEM_PROMPT = (
     "</output>"
 )
 
-def web_system_prompt(personality: str, last_chapter: int) -> str:
-    """Assemble the web prompt from a voice pack and the real shelf."""
+CANON_DOMAIN_PROMPT = (
+    "\n\n<thread_domain>\n"
+    "This is a canon reading thread. The novel is the only source of story fact. "
+    "You may write an invented scene when the reader asks for one, but label it "
+    "plainly as invention and never treat it as canon afterwards. Do not add "
+    "invented lore to a canon answer.\n"
+    "</thread_domain>"
+)
+
+FANFIC_DOMAIN_PROMPT = (
+    "\n\n<thread_domain>\n"
+    "This is a fanfic thread: the reader's own continuation of the novel. The novel "
+    "stays canon and its ending stands. The conversation history is this thread's "
+    "continuation ledger: everything you wrote here is part of this version, so keep "
+    "it consistent and do not contradict an earlier invented beat. Before writing, "
+    "read the canon anchor: the chapters the scene touches, including what canon says "
+    "happens around them. Then write the scene. Label invented content once, plainly, "
+    "and never present it as canon. Never cite an invented event to a chapter.\n"
+    "</thread_domain>"
+)
+
+
+def domain_prompt(domain: str, fanfic_kind: str | None = None) -> str:
+    """The per-thread context rule appended to the surface system prompt."""
+    if domain != "fanfic":
+        return CANON_DOMAIN_PROMPT
+    prompt = FANFIC_DOMAIN_PROMPT
+    if fanfic_kind:
+        prompt += f"\nKind of fanfic: {fanfic_kind}."
+    return prompt
+
+
+def web_system_prompt(
+    personality: str,
+    last_chapter: int,
+    skill_catalog: str | None = None,
+) -> str:
+    """Assemble the web prompt from a voice pack, the shelf, and the skills."""
     return personality + "\n\n" + WEB_SYSTEM_PROMPT.format(
-        NOVEL_CHAPTERS=last_chapter
+        NOVEL_CHAPTERS=last_chapter,
+        SKILL_CATALOG=catalogue_text() if skill_catalog is None else skill_catalog,
     )
 
 
 WEB_ACTIVE_TOOLS: tuple[str, ...] = (
+    "load_skill",
     "semantic_search",
     "read_chapters",
     "find_text",
@@ -373,6 +427,7 @@ def _fake_web_tool_registry(delay_seconds: float) -> ToolRegistry:
                 retry_safe=True,
             )
         )
+    register_skill_tool(registry)
     return registry
 
 
@@ -490,6 +545,7 @@ async def open_chat_runtime(
         registry = ToolRegistry()
         if live and library is not None:
             register_reading_tools(registry, library)
+            register_skill_tool(registry)
         elif not live:
             registry = _fake_web_tool_registry(fake_delay_seconds)
         active_tools = WEB_ACTIVE_TOOLS
@@ -501,10 +557,11 @@ async def open_chat_runtime(
             if library is not None
             else 3160
         )
-        system_prompt = web_system_prompt(
+        base_prompt = web_system_prompt(
             load_personality(voice),
             last_chapter,
         )
+        system_prompt = base_prompt
         execution_policy = ToolExecutionPolicy.read_only()
 
     # Plan 15 (owner 2026-08-08): the web locate phase sees a bounded
@@ -522,6 +579,11 @@ async def open_chat_runtime(
         active_tools=active_tools,
         execution_policy=execution_policy,
         token_budget=web_context_budget,
+        system_prompt_by_domain=(
+            (lambda domain, fanfic_kind: base_prompt + domain_prompt(domain, fanfic_kind))
+            if surface == "web"
+            else None
+        ),
     )
     await sw.open()
     prefs = PreferencesStore(state_dir / "weaver.sqlite3")

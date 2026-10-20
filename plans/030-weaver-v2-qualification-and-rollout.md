@@ -24,10 +24,13 @@
   **CP1 through CP4 are complete. CP4.5 is complete: buddy and storyteller
   voice packs, revised speed target met, vs mode, clear-night rail, green
   floor. The Reader Experience Trial contract is signed off. CP5 evaluator
-  run 1 failed 22 of 49 turns; run 2 completed 59 of 60. The fanfic trial
-  still fails on empty storyteller answers, and the first-timer re-run shows
-  the conversation interrupts after a failed turn. The evaluator is not
-  satisfied.**
+  run 1 failed 22 of 49 turns; run 2 completed 59 of 60. The first-timer
+  failure is fixed. The fanfic empty-answer failure is fixed by the skills and
+  domain amendment: a private live missing-scene turn wrote 3,900 characters
+  labelled as invention, and a continuation turn in the same thread wrote
+  4,152 characters consistent with it. The twelve Reader Experience Trials
+  have not been judged and no suite is accepted. The evaluator is not
+  satisfied yet.**
 - **Depends on:** Plan 028 closed 2026-10-02 with sponsored access and financial
   safety accepted; Plan 029 closed 2026-10-17 with the intelligence and
   conversation system accepted. Plan 029.5 is not admitted.
@@ -529,3 +532,54 @@ re-trials.
 4. **E4 Rail.** Clear-night CSS and the mobile edge sheet.
 5. **E5 Gate.** Present samples, timings, screenshots, and the floor. Owner
    accepts or rejects CP4.5, then the Reader Experience Trials run.
+
+## Skills and domain amendment (CP5, 2026-10-20)
+
+The evaluator run and the fanfic re-run showed two structural problems. The
+answer shape was chosen by a single hard classifier, so a hundred-chapter
+recap and a one-fact lookup used the same machine. And the turn had no notion
+of a canon thread versus a fanfic thread, so a prose request was validated
+like a canon claim and returned empty.
+
+### Owner decisions
+
+1. Skills are loadable and lenient. The model chooses. It may load more than
+   one related skill per message, and the system's job is to make each skill
+   good and the catalogue clear, not to force one skill per turn.
+2. A canon and fanfic split is required, not optional, so an invented
+   continuation cannot corrupt canon context. The fanfic thread keeps the
+   novel as a constraint and the thread as its own continuation.
+3. Story-writing requests are prose, not recall. They label invention, they do
+   not need a canon citation inside the invented text, and they still read the
+   canon anchor before writing.
+
+### Slices
+
+1. **S1 Skills.** `src/weaver/skills/` with the catalogue, the router, the
+   `load_skill` tool, per-skill budgets, shapes, quote rules, and worked
+   examples. The catalogue sits in the system prompt as one line per skill.
+   Loading a bigger skill raises the reading budget mid-turn.
+2. **S2 Streaming.** The reader only sees the validated answer. Raw model
+   tokens are buffered and never published; the validated text is published
+   once, after the reading pass and any repair.
+3. **S3 Domain.** Schema v4 adds `domain` and `fanfic_kind` to a conversation.
+   The turn prompt switches on the domain, the profile routes fanfic skills,
+   and the answer blueprint treats prose as prose.
+4. **S4 Indicator.** The gathering state is three wobbly golden stars joined by
+   a flowing thread, replaced by the mode visual at the first streamed word.
+5. **S5 Evidence.** A private live fanfic trial: a missing scene and a
+   continuation in the same thread, judged for label, canon anchor, voice, and
+   consistency. Results go to `results.md`, never a public file.
+
+### Verification floor
+
+- 686 backend and 141 frontend tests or higher, Ruff, `tsc`, and the
+  production build pass.
+- Router tests cover the scope ladder: fact, passage, scene, arc, versus,
+  theory, correction, discussion, company, discovery, lore, and the three
+  fanfic skills.
+- A companion answer is not failed for missing citations; a canon answer still
+  is.
+- The fanfic trial writes a labelled missing scene and a consistent
+  continuation in the same thread, and does not cite an invented event to a
+  chapter.

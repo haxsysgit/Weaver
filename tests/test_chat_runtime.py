@@ -51,6 +51,7 @@ async def test_web_profile_has_reading_tools_and_read_only_policy(tmp_path) -> N
     try:
         assert runtime.surface == "web"
         assert runtime.session._active_tools == (
+            "load_skill",
             "semantic_search",
             "read_chapters",
             "find_text",
@@ -59,6 +60,7 @@ async def test_web_profile_has_reading_tools_and_read_only_policy(tmp_path) -> N
             "lore_path",
         )
         registry = runtime.session._tool_registry
+        assert registry.has("load_skill")
         assert registry.has("semantic_search")
         assert registry.has("read_chapters")
         assert registry.has("find_text")

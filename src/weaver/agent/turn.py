@@ -47,6 +47,7 @@ from ..model_layer import (
     ModelStreamEventType,
     ModelToolCall,
 )
+from ..skills import MAX_TOOL_BUDGET, plan_for_ids
 from ..model_layer.layer import ModelProtocolError
 from ..model_layer.types import ReasoningEffort
 
@@ -56,6 +57,18 @@ logger = logging.getLogger(__name__)
 # absolute guardrail sits above all three tiers so a runaway loop can never
 # exceed it; hermes uses 90 iterations, pi uses no cap at all.
 _MAX_MODEL_STEPS = 100
+
+
+class _TurnBudget:
+    """A tool budget the model can raise by loading a bigger skill."""
+
+    def __init__(self, limit: int | None) -> None:
+        self.limit = limit
+
+    def raise_to(self, floor: int) -> None:
+        if self.limit is None:
+            return
+        self.limit = max(self.limit, floor)
 
 # Plan 15 tiers: the model is trusted to find the answer without burning
 # the budget; the cap exists so a runaway tool loop cannot run forever.
@@ -213,17 +226,24 @@ async def _complete_buffered_stream(
     model: ModelSpec,
     request: ModelRequest,
     cancel_event: asyncio.Event,
+    preview: DeltaCallback | None = None,
 ) -> tuple[ModelResponse, tuple[str, ...]]:
-    """Drain a model stream without exposing unvalidated text.
+    """Drain a model stream, optionally previewing the deltas live.
 
-    The caller releases the buffered chunks only after deciding which
-    answer is safe to publish.
+    The full text is still buffered for validation. The preview lets the
+    reader see the answer as it is written; a failed validation replaces
+    it with the repair or the recovery panel.
     """
     final_response: ModelResponse | None = None
     text_deltas: list[str] = []
     async for event in model_layer.stream(model, request, cancel_event):
         if event.event_type == ModelStreamEventType.TEXT_DELTA and event.delta:
             text_deltas.append(event.delta)
+            if preview is not None and not cancel_event.is_set():
+                try:
+                    await preview(event.delta)
+                except Exception:
+                    logger.warning("delta preview failed", exc_info=True)
         elif event.event_type == ModelStreamEventType.RESPONSE_COMPLETE:
             final_response = event.response
     if final_response is None:
@@ -573,16 +593,21 @@ async def run_turn(
     # until the final reading call succeeds or falls back to it.
     packet_builder: PacketBuilder | None = None,
     final_pass: bool = True,
+    domain: str = "canon",
 ) -> TurnResult:
     max_steps = min(max(max_model_steps, 1), _MAX_MODEL_STEPS)
+    budget = _TurnBudget(tool_budget)
     if tool_budget is not None:
         # Plan 15 two-budget split: tool calls are capped at tool_budget
         # and the final answer call is always guaranteed. Candidate
         # corrections and the one zero-evidence check are bounded overhead;
         # they must not consume either the tool ceiling or answer slot.
+        # Plan 030: the model loop must allow the largest skill budget,
+        # because loading a bigger skill raises the ceiling mid-turn.
         correction_steps = TEXT_TOOL_SLIP_LIMIT + 1
+        loop_ceiling = max(tool_budget, MAX_TOOL_BUDGET)
         max_steps = min(
-            max(tool_budget, 0) + 1 + correction_steps,
+            loop_ceiling + 1 + correction_steps,
             _MAX_MODEL_STEPS,
         )
     new_messages: list[ConversationMessage] = []
@@ -590,6 +615,14 @@ async def run_turn(
     model_steps = 0
     tool_starts = 0
     tool_steps_used = 0
+    loaded_skills: list[str] = []
+
+    def note_skills_loaded(skill_ids: tuple[str, ...]) -> None:
+        for skill_id in skill_ids:
+            if skill_id not in loaded_skills:
+                loaded_skills.append(skill_id)
+        budget.raise_to(plan_for_ids(loaded_skills).tool_budget)
+
     final_text = ""
     safe_failure = ""
     error_category = ""
@@ -664,8 +697,8 @@ async def run_turn(
         in_final_phase = final_packet is not None and validated_candidate is not None
         forced_answer = (
             not in_final_phase
-            and tool_budget is not None
-            and tool_steps_used >= tool_budget
+            and budget.limit is not None
+            and tool_steps_used >= budget.limit
         )
         request_messages = project_messages(
             system_prompt=system_prompt,
@@ -693,6 +726,8 @@ async def run_turn(
                         turn_brief.reader_challenges_prior_answer
                     ),
                     evidence_packet=final_packet,
+                    extra_skill_ids=tuple(loaded_skills),
+                    domain=domain,
                 )
             final_history: list[ConversationMessage] = []
             if current_owner is not None:
@@ -722,14 +757,14 @@ async def run_turn(
                     content=final_instructions,
                 ),
             ]
-        if tool_budget is not None and not in_final_phase:
-            remaining = tool_budget - tool_steps_used
+        if budget.limit is not None and not in_final_phase:
+            remaining = budget.limit - tool_steps_used
             if forced_answer or remaining <= BUDGET_REMINDER_THRESHOLD:
                 reminder = (
                     "Your tool steps are spent. Answer now from what you "
                     "have gathered. Do not call tools."
                     if forced_answer
-                    else f"Tool steps remaining: {remaining} of {tool_budget}."
+                    else f"Tool steps remaining: {remaining} of {budget.limit}."
                 )
                 request_messages = [
                     *request_messages,
@@ -789,13 +824,15 @@ async def run_turn(
                     cancel_event,
                 )
             else:
-                # Candidate text stays buffered until validation chooses
-                # the one answer that may reach the public callback.
+                # Plan 030: the reader only ever sees the validated answer.
+                # Candidate tokens stay buffered until validation chooses the
+                # one answer that may reach the public callback.
                 response, response_deltas = await _complete_buffered_stream(
                     model_layer,
                     model,
                     request,
                     cancel_event,
+                    preview=None,
                 )
         except asyncio.CancelledError:
             exit_reason = TurnExitReason.INTERRUPTED
@@ -1000,7 +1037,9 @@ async def run_turn(
                     break
                 answer = validated_candidate
                 answer_deltas = validated_candidate_deltas
-            persisted, published = await persist_answer(answer, answer_deltas)
+            persisted, published = await persist_answer(
+                answer, answer_deltas
+            )
             if not persisted:
                 exit_reason = TurnExitReason.PERSISTENCE_FAILED
                 safe_failure = safe_error("assistant_persistence")
@@ -1215,7 +1254,9 @@ async def run_turn(
                 safe_failure = safe_error("model_protocol")
                 break
 
-            persisted, published = await persist_answer(assistant, response_deltas)
+            persisted, published = await persist_answer(
+                    assistant, response_deltas
+                )
             if not persisted:
                 exit_reason = TurnExitReason.PERSISTENCE_FAILED
                 safe_failure = safe_error("assistant_persistence")
@@ -1289,6 +1330,7 @@ async def run_turn(
                     call_id=tool_call.call_id,
                     cancel_event=cancel_event,
                     on_tool_event=on_tool_event,
+                    on_skills_loaded=note_skills_loaded,
                 )
                 tool_result = await tool_registry.dispatch(
                     tool_call.name,

@@ -198,7 +198,7 @@ async def test_version_two_migration_keeps_generated_title_and_retires_legacy_ta
             row[0]
             for row in database.execute("SELECT version FROM _migration ORDER BY version")
         ]
-        assert versions == [2, 3]
+        assert versions == [2, 3, 4]
 
     reopened_session = SessionWeave(state_dir)
     await reopened_session.open()
@@ -1334,9 +1334,9 @@ async def test_assembler_empty_input_tight_budget_does_not_raise():
     assert snapshot.token_count > 1  # the system prompt alone exceeds
 
 
-async def test_send_persist_failure_marks_run_interrupted():
-    """Plan 008 test-plan item 3: a raising persist callback produces
-    PERSISTENCE_FAILED and the run lands interrupted, not completed."""
+async def test_send_persist_failure_settles_the_run():
+    """A raising persist callback produces PERSISTENCE_FAILED and a failed
+    run, not a completed or permanently interrupted one. The next send runs."""
     from weaver.agent.tools import ToolExecutionPolicy
 
     import weaver.conversation.runner as runner_module
@@ -1368,7 +1368,11 @@ async def test_send_persist_failure_marks_run_interrupted():
             result = await sw.send(conv_id, "hi")
             assert result.exit_reason == "persistence_failed"
             runs = await sw._repo.load_runs(conv_id)
-            assert runs[-1].phase == "interrupted"
+            assert runs[-1].phase == "failed"
+            # the failed run no longer blocks the conversation
+            following = await sw.send(conv_id, "hi again")
+            assert following.exit_reason == "persistence_failed"
+            assert following.turn_id != ""
         finally:
             runner_module.ConversationRunner._persist_callback = real_callback
             await sw.close()
@@ -1762,11 +1766,10 @@ async def test_retry_last_turn_reruns_the_failed_message_and_unblocks_sends():
             failed = await sw.send(conv_id, "hello there")
             assert failed.exit_reason == "persistence_failed"
 
-            # the dead-end the web UI hit: a send is refused while the
-            # interrupted run exists
-            refused = await sw.send(conv_id, "hello there")
-            assert refused.exit_reason == "interrupted"
-            assert refused.turn_id == ""
+            # a failed run is settled; the next send is not refused
+            following = await sw.send(conv_id, "hello there")
+            assert following.exit_reason == "persistence_failed"
+            assert following.turn_id != ""
         finally:
             runner_module.ConversationRunner._persist_callback = real_callback
             await sw.close()

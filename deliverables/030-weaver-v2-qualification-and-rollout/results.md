@@ -422,6 +422,41 @@ gives the final acceptance. No Reader Experience Trial is accepted yet.
 
 Trial 12 is the retelling and visualisation trial the owner asked for.
 
+### Skills, streaming, and domain fix (2026-10-20)
+
+- **Skills (S1).** `src/weaver/skills/` now holds the catalogue: fourteen
+  skills across canon (quick recall, plain restatement, scene explanation, arc
+  summary, theory, versus, correction, discussion, company, discovery, how it
+  works) and fanfic (continuation, missing scene, worldbuilding). The system
+  prompt carries one line per skill; the model loads the body and examples
+  with `load_skill`, and may load several related skills. Loading a bigger
+  skill raises the reading budget mid-turn.
+- **Router (S1).** Scope first, intent second. "Summarize the domain war" now
+  routes to `arc_summary` with a twenty-call budget and a 600 to 1200 word
+  shape, not to quick recall.
+- **Streaming (S2).** The raw model preview is gone. The reader sees only the
+  validated answer, published once after the reading pass and any repair. The
+  duplicate-answer bug in the web stream test is gone.
+- **Domain (S3).** Schema v4 stores `domain` and `fanfic_kind` per
+  conversation. The thread prompt switches on the domain, the turn profile
+  routes the fanfic skills, and writing requests are prose: labelled
+  invention, no canon citation required inside the invented text.
+- **Recovery.** A failed run is retryable and no longer blocks the next send.
+- **Indicator (S4).** The gathering state is three wobbly golden stars joined
+  by a flowing thread, replaced by the mode visual at the first streamed word.
+- **Live fanfic evidence (S5).** One fanfic thread, two turns, real DeepSeek
+  calls. Turn 1 (missing scene): 3,900 characters, opened as "Invented scene",
+  cited the canon anchor, real characters and voice, exit completed. Turn 2
+  (continuation): 4,152 characters, same version, consistent with the invented
+  scene, exit completed. Private transcript:
+  `.weaver/evaluation/plan030/transcripts/fanfic-trial/`.
+- **Floor.** 686 backend tests and 141 frontend tests pass, Ruff clean, `tsc`
+  clean, production build passes.
+- **Still open.** The twelve Reader Experience Trials have not been judged
+  since this build. The fanfic thread is API-only for now; the sidebar has no
+  fanfic entry yet. The continuation ledger is the thread history, not a
+  separate durable store; a long fanfic thread will need one.
+
 ## v2.0.0 rollout
 
 Pending tag, exact artifact, deployment, public health, safe launch metrics,

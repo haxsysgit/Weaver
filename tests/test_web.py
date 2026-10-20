@@ -383,6 +383,8 @@ async def test_conversation_metadata_patch_returns_durable_summary(client) -> No
             "archived": False,
             "pinned": False,
             "edition_id": "shadow-slave",
+            "domain": "canon",
+            "fanfic_kind": None,
         }
     ]
 
@@ -399,6 +401,8 @@ async def test_conversation_metadata_patch_returns_durable_summary(client) -> No
         "archived": True,
         "pinned": True,
         "edition_id": "shadow-slave",
+        "domain": "canon",
+        "fanfic_kind": None,
     }
 
     reset = await client.patch(

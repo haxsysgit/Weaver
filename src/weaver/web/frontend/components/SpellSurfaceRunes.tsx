@@ -28,6 +28,36 @@ interface SpellSurfaceRunesProps {
   announcement: string;
   eventKey: number;
   mode: RuneMode;
+  gathering?: boolean;
+}
+
+const THREAD_STARS = [
+  { delay: "0s", x: 20, y: 22 },
+  { delay: "0.18s", x: 66, y: 22 },
+  { delay: "0.36s", x: 112, y: 22 },
+];
+
+const STAR_PATH =
+  "M0 -9 L2.6 -2.6 L9 0 L2.6 2.6 L0 9 L-2.6 2.6 L-9 0 L-2.6 -2.6 Z";
+
+function ThreadStars() {
+  return (
+    <svg aria-hidden="true" className="star-thread-gathering" viewBox="0 0 132 44">
+      <path
+        className="star-thread-path"
+        d="M20 22 C36 7 50 37 66 22 S96 7 112 22"
+      />
+      {THREAD_STARS.map((star) => (
+        <g key={star.x} transform={`translate(${star.x} ${star.y})`}>
+          <path
+            className="star-thread-star"
+            d={STAR_PATH}
+            style={{ animationDelay: star.delay }}
+          />
+        </g>
+      ))}
+    </svg>
+  );
 }
 
 const PARTICLES = Array.from({ length: 20 }, (_, index) => index);
@@ -40,21 +70,23 @@ export function SpellSurfaceRunes({
   announcement,
   eventKey,
   mode,
+  gathering = false,
 }: SpellSurfaceRunesProps) {
   return (
     <div
       aria-live="polite"
-      className={`lab-rune-event rune-${mode}`}
-      key={`${mode}-${eventKey}`}
+      className={`lab-rune-event rune-${mode}${gathering ? " rune-gathering" : ""}`}
+      key={`${mode}-${eventKey}-${gathering}`}
     >
-      {mode === "particles" && (
+      {gathering && <ThreadStars />}
+      {!gathering && mode === "particles" && (
         <div aria-hidden="true" className="rune-particles">
           {PARTICLES.map((particle) => (
             <span key={particle} style={particleStyle(particle)} />
           ))}
         </div>
       )}
-      {mode === "threads" && (
+      {!gathering && mode === "threads" && (
         <svg aria-hidden="true" className="rune-thread-weave" viewBox="0 0 420 72">
           <path d="M4 36 C60 4 95 65 150 25 S250 7 302 43 S375 64 416 20" />
           <path d="M12 55 C74 28 105 12 166 48 S264 63 318 25 S382 10 408 44" />

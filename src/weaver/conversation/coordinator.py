@@ -51,7 +51,11 @@ class RunCoordinator:
     # -- public API called by SessionWeave --
 
     async def start_conversation_and_turn(
-        self, owner_text: str, device_id: str = ""
+        self,
+        owner_text: str,
+        device_id: str = "",
+        domain: str = "canon",
+        fanfic_kind: str | None = None,
     ) -> tuple[str, str, str]:
         """Create relationship + conversation + first turn + first run in one
         transaction.  Returns (conversation_id, turn_id, run_id)."""
@@ -64,7 +68,14 @@ class RunCoordinator:
         db = self._repo._db
         async with _tx(db):
             await self._repo._insert_relationship(rel_id, ts)
-            await self._repo._insert_conversation(conv_id, rel_id, ts, device_id)
+            await self._repo._insert_conversation(
+                conv_id,
+                rel_id,
+                ts,
+                device_id,
+                domain=domain,
+                fanfic_kind=fanfic_kind,
+            )
             await self._repo._insert_turn(turn_id, conv_id, sequence=1, created_at=ts)
             await self._repo._insert_run(
                 run_id, turn_id, attempt=1, phase="queued", created_at=ts
@@ -332,6 +343,12 @@ class RunCoordinator:
         db = self._repo._db
         async with _tx(db):
             await self._repo._update_run_phase(run_id, "interrupted")
+
+    async def mark_failed(self, run_id: str) -> None:
+        """Mark a run as failed, not interrupted. The next turn may start."""
+        db = self._repo._db
+        async with _tx(db):
+            await self._repo._update_run_phase(run_id, "failed")
 
     async def continue_interrupted(
         self,

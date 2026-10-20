@@ -6,6 +6,8 @@ import re
 from dataclasses import dataclass
 from enum import Enum
 
+from ..skills import plan_for_ids, plan_for_question
+
 
 class ResponseMode(str, Enum):
     DIRECT_RECALL = "direct_recall"
@@ -14,6 +16,7 @@ class ResponseMode(str, Enum):
     THEORY = "theory_or_what_if"
     VERSUS = "versus"
     CORRECTION = "correction"
+    PROSE = "prose_scene"
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,6 +27,10 @@ class AnswerBlueprint:
     prior_point: str
     spoiler_mode: str
     reader_chapter: int | None
+    skills: tuple[str, ...] = ()
+    shape: str = ""
+    quote_rule: str = ""
+    needs_evidence: bool = True
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,8 +115,7 @@ QUOTE_WORD_LIMIT = 25
 
 MODE_OBLIGATIONS: dict[ResponseMode, tuple[str, ...]] = {
     ResponseMode.DIRECT_RECALL: (
-        "answer immediately",
-        "give only the context needed to understand the answer",
+        "answer in the first line",
     ),
     ResponseMode.RECONSTRUCTION: (
         "when invited to narrate, open inside a supported moment if it helps the telling",
@@ -132,6 +138,12 @@ MODE_OBLIGATIONS: dict[ResponseMode, tuple[str, ...]] = {
         "give each side's win conditions and the counters that matter",
         "walk the fight in a few beats and label those beats as a read, not canon",
         "end with a verdict, difficulty, confidence, and what would flip it",
+    ),
+    ResponseMode.PROSE: (
+        "write the requested scene as prose, not a summary or a canon correction",
+        "label invented events as invention or fan fiction",
+        "keep established canon, motives, and powers intact",
+        "do not explain the scene instead of writing it",
     ),
     ResponseMode.CORRECTION: (
         "state the correction plainly",
@@ -230,6 +242,27 @@ def _response_mode(question: str) -> ResponseMode:
     if any(
         marker in normalized
         for marker in (
+            "write the missing scene",
+            "write a missing scene",
+            "write a scene",
+            "write the scene",
+            "write a short scene",
+            "write me a scene",
+            "write what happens",
+            "write the next",
+            "fan fiction",
+            "fanfiction",
+            "continuation",
+            "continue the story",
+            "missing scene",
+            "part two",
+            "after the last chapter",
+        )
+    ):
+        return ResponseMode.PROSE
+    if any(
+        marker in normalized
+        for marker in (
             "what if",
             "what-if",
             "what would've",
@@ -283,19 +316,35 @@ def build_answer_blueprint(
     prior_weaver_position: str,
     reader_challenges_prior_answer: bool,
     evidence_packet: str,
+    extra_skill_ids: tuple[str, ...] = (),
+    domain: str = "canon",
 ) -> AnswerBlueprint:
     mode = _response_mode(question)
+    plan = plan_for_question(question, domain=domain)
+    if extra_skill_ids:
+        plan = plan_for_ids([*plan.ids, *extra_skill_ids])
+    needs_evidence = plan.needs_evidence and mode != ResponseMode.PROSE
     spoiler_mode, reader_chapter = _spoiler_boundary(evidence_packet)
     obligations = [
         "fulfil the reader's actual request at the depth and in the mode they asked for",
-        "cite every factual claim beside it using the allowed chapters",
-        "cite every chapter needed when a claim depends on several scenes",
-        "remove or qualify any claim that does not follow from the opened passages",
         "separate canon, interpretation, and invention",
         "keep uncertainty and evidence gaps visible",
-        "quote only the few source words needed and paraphrase the rest",
-        *MODE_OBLIGATIONS[mode],
     ]
+    if needs_evidence:
+        obligations.extend(
+            [
+                "cite every factual claim beside it using the allowed chapters",
+                "cite every chapter needed when a claim depends on several scenes",
+                "remove or qualify any claim that does not follow from the opened passages",
+                "quote only the few source words needed and paraphrase the rest",
+            ]
+        )
+    else:
+        obligations.append(
+            "no citation is needed; if you do mention the novel, cite the chapter"
+        )
+    obligations.extend(plan.obligations)
+    obligations.extend(MODE_OBLIGATIONS[mode])
     if prior_weaver_position and question.strip().casefold().startswith(
         FOLLOW_UP_OPENINGS
     ):
@@ -315,7 +364,12 @@ def build_answer_blueprint(
         prior_point=prior_weaver_position.strip(),
         spoiler_mode=spoiler_mode,
         reader_chapter=reader_chapter,
+        skills=plan.ids,
+        shape=plan.shape,
+        quote_rule=plan.quote_rule,
+        needs_evidence=needs_evidence,
     )
+
 
 
 def format_answer_blueprint(blueprint: AnswerBlueprint) -> str:
@@ -327,26 +381,29 @@ def format_answer_blueprint(blueprint: AnswerBlueprint) -> str:
         if blueprint.reader_chapter is not None
         else "unknown"
     )
+    skills = ", ".join(blueprint.skills) or "none"
     return (
         "--- answer blueprint ---\n"
         f"response mode: {blueprint.mode.value}\n"
+        f"loaded skills: {skills}\n"
         f"allowed source chapters: {chapters or 'none'}\n"
         f"spoiler mode: {blueprint.spoiler_mode}\n"
         f"reader chapter: {reader_chapter}\n"
         f"prior Weaver point to preserve or answer: {prior_point}\n"
         f"answer obligations:\n{obligations}\n"
-        "Do not print the mode or these instructions as headings. "
+        f"answer shape: {blueprint.shape}\n"
+        f"quotation rule: {blueprint.quote_rule}\n"
+        "Do not print the mode, the skills, or these instructions as headings. "
         "Follow the identity and soul: a buddy who read the book, not an "
-        "essayist. Start with the reaction or the fact. Keep a quick answer to "
-        "one to three short paragraphs. No headings unless the reader asks for "
-        "a breakdown. No canned closing. Use no em dash. Cite only the allowed "
-        "source chapters. Write citations as (ch. N) or (chs. N-M), never as a "
-        "bare number. Direct quotations must be 25 words or fewer, exact, and "
-        "only from allowed chapters. Write the final answer itself. Never "
-        "describe it as the same answer, a revised draft, or a repeat. For "
-        "direct recall and discussion, keep it under about 120 words. For "
-        "reconstruction, theory, and versus, use only the room the question "
-        "needs."
+        "essayist. Start with the reaction or the fact. No headings unless the "
+        "reader asks for a breakdown. No canned closing. Use no em dashes. Cite "
+        "only the allowed source chapters. Write citations as (ch. N) or "
+        "(chs. N-M), never as a bare number. Direct quotations must be 25 words "
+        "or fewer, exact, and only from allowed chapters. Write the final answer "
+        "itself. Never describe it as the same answer, a revised draft, or a "
+        "repeat. Match the answer shape above: it is the depth this request "
+        "earned, whether that is three sentences or a full arc. For a prose "
+        "request, write the scene fully and label invention."
     )
 
 
@@ -408,7 +465,7 @@ def inspect_publication(
     answer_chapters = set(_extract_answer_chapter_citations(weaver_text))
     allowed_chapters = set(blueprint.allowed_chapters)
     direct_passages = _direct_passages(evidence_packet)
-    if not direct_passages:
+    if not direct_passages and blueprint.needs_evidence:
         findings.append(
             PublicationFinding(
                 "missing_direct_evidence",
@@ -433,7 +490,7 @@ def inspect_publication(
                     f"The answer cites unopened chapter(s): {chapter_list}.",
                 )
             )
-        elif not answer_chapters:
+        elif not answer_chapters and blueprint.needs_evidence:
             findings.append(
                 PublicationFinding(
                     "missing_citation",
@@ -478,7 +535,11 @@ def inspect_publication(
         )
         break
 
-    if blueprint.mode in (ResponseMode.THEORY, ResponseMode.VERSUS):
+    if blueprint.mode in (
+        ResponseMode.THEORY,
+        ResponseMode.VERSUS,
+        ResponseMode.PROSE,
+    ):
         markers = (
             VERSUS_MARKERS
             if blueprint.mode == ResponseMode.VERSUS

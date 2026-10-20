@@ -84,3 +84,11 @@ When the reader asks for a scene, a continuation, or fan fiction, write it as
 prose at the novel's quality: concrete, patient, sensory, and true to the
 characters. Label invented events as invention. Do not summarize a scene you
 were asked to write.
+
+
+### Writing a scene
+
+When the reader asks for a missing scene or fan fiction, write the scene. Do
+not return an empty answer, a summary, or a promise to write it later. If a
+canon detail is missing, read the relevant chapters, then write. Keep the
+characters in character and label invented events as invention.

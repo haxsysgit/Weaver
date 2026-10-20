@@ -23,7 +23,7 @@ from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
-from weaver.agent.answer import ResponseMode, classify_response_mode
+from weaver.skills import plan_for_question
 from weaver.agent.errors import safe_error
 from weaver.agent.turn import REASONING_TIERS, TurnExitReason
 from weaver.chat_runtime import ChatRuntime
@@ -123,6 +123,13 @@ class ConversationMetadataBody(BaseModel):
     title: str | None = Field(default=None, max_length=80)
     archived: bool = False
     pinned: bool = False
+
+
+class CreateConversationBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    domain: str = Field(default="canon", pattern="^(canon|fanfic)$")
+    fanfic_kind: str | None = Field(default=None, max_length=40)
 
 
 def _reject_blank(message: str) -> None:
@@ -250,14 +257,17 @@ NAMING_SYSTEM_PROMPT = (
 )
 
 
-def _turn_profile(question: str) -> tuple[int, str | None, int, bool]:
-    """Intent profile: tool budget, reasoning tier, packet cap, final pass."""
-    mode = classify_response_mode(question)
-    if mode in (ResponseMode.DIRECT_RECALL, ResponseMode.CORRECTION):
-        return 4, None, 8_000, False
-    if mode in (ResponseMode.RECONSTRUCTION, ResponseMode.DISCUSSION):
-        return 8, "ascended", 16_000, True
-    return 12, "transcendent", 24_000, True
+def _turn_profile(
+    question: str,
+    domain: str = "canon",
+) -> tuple[int, str | None, int, bool]:
+    """Suggested skill profile: tool budget, reasoning tier, packet cap, final pass.
+
+    This is a starting point, not a lock. The model may load more skills with
+    load_skill, and doing so raises its budget to match.
+    """
+    plan = plan_for_question(question, domain=domain)
+    return plan.tool_budget, plan.reasoning_tier, plan.packet_cap, plan.final_pass
 
 
 def _derived_title(first_message: str) -> str:
@@ -563,10 +573,24 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
     @app.post(
         "/api/conversations", status_code=201, dependencies=[Depends(_check_local)]
     )
-    async def create_conversation(request: Request) -> dict:
+    async def create_conversation(
+        request: Request,
+        body: CreateConversationBody | None = None,
+    ) -> dict:
         device = _device_id(request)
-        conversation_id = await runtime.session.start_conversation("", device)
-        return {"conversation_id": conversation_id}
+        domain = body.domain if body is not None else "canon"
+        fanfic_kind = body.fanfic_kind if body is not None else None
+        conversation_id = await runtime.session.start_conversation(
+            "",
+            device,
+            domain=domain,
+            fanfic_kind=fanfic_kind,
+        )
+        return {
+            "conversation_id": conversation_id,
+            "domain": domain,
+            "fanfic_kind": fanfic_kind,
+        }
 
     @app.delete(
         "/api/conversations/{conversation_id}",
@@ -661,13 +685,16 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
             if runtime.fake_delta_delay_seconds > 0:
                 await asyncio.sleep(runtime.fake_delta_delay_seconds)
 
-        delta_callback = on_delta if not runtime.live else None
+        delta_callback = on_delta
+        conversation_domain, _ = await runtime.session.conversation_domain(
+            conversation_id
+        )
         (
             profile_budget,
             profile_reasoning_tier,
             profile_packet_cap,
             profile_final_pass,
-        ) = _turn_profile(message)
+        ) = _turn_profile(message, domain=conversation_domain)
 
         # Plan 15 final reading phase: after a candidate passes the
         # mechanical checks, the packet builder re-reads the turn's

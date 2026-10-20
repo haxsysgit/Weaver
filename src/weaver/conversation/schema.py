@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import aiosqlite
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 SCHEMA = """
 CREATE TABLE _migration (
@@ -25,7 +25,9 @@ CREATE TABLE conversation (
     manual_title TEXT,
     archived_at TEXT,
     pinned_at TEXT,
-    edition_id TEXT NOT NULL DEFAULT 'shadow-slave'
+    edition_id TEXT NOT NULL DEFAULT 'shadow-slave',
+    domain TEXT NOT NULL DEFAULT 'canon',
+    fanfic_kind TEXT
 );
 
 CREATE TABLE turn (
@@ -175,4 +177,19 @@ async def migrate(db: aiosqlite.Connection) -> None:
         )
         await _migrate_legacy_generated_titles(db)
         await db.execute("INSERT INTO _migration (version) VALUES (?)", (3,))
+        await db.commit()
+    if version < 4:
+        # v4 (Plan 030): a conversation is either a canon reading thread or a
+        # fanfic thread. The domain decides which context the turn may use.
+        await _add_conversation_column_if_missing(
+            db,
+            "domain",
+            "domain TEXT NOT NULL DEFAULT 'canon'",
+        )
+        await _add_conversation_column_if_missing(
+            db,
+            "fanfic_kind",
+            "fanfic_kind TEXT",
+        )
+        await db.execute("INSERT INTO _migration (version) VALUES (?)", (4,))
         await db.commit()
