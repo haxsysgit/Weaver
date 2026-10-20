@@ -117,7 +117,10 @@ redesign and Plan 030 amendment-or-successor decision are pending.
   and a voice example are in. Run 2: 59/60 turns completed; the long thread
   went 9/9 failed to 9/9 clean; the first-timer spoiler turn is fixed with the
   protect-mode boundary. The fanfic trial still fails on empty storyteller
-  answers. The evaluator is not satisfied; the fanfic fix and judge are next.
+  answers. The first-timer re-run exposed a second bug: after a failed turn,
+  the next turns return `interrupted`, so the conversation cannot recover. The
+  evaluator is not satisfied; the empty forced-answer path and the post-failure
+  recovery are the next fixes.
 - (2026-10-17) The public privacy page, README privacy section, and live/fake
   footer copy are approved as drafted.
 - (2026-10-17) Trial 1 and Trial 2 are not accepted. The owner rejected the

@@ -630,6 +630,9 @@ async def run_turn(
         answer: AssistantMessage,
         deltas: tuple[str, ...],
     ) -> tuple[bool, bool]:
+        if not (answer.content or "").strip():
+            logger.warning("empty answer rejected")
+            return False, False
         new_messages.append(answer)
         persisted = await _persist(answer, persist_message)
         if not persisted:

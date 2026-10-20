@@ -25,7 +25,9 @@
   voice packs, revised speed target met, vs mode, clear-night rail, green
   floor. The Reader Experience Trial contract is signed off. CP5 evaluator
   run 1 failed 22 of 49 turns; run 2 completed 59 of 60. The fanfic trial
-  still fails on empty storyteller answers. The evaluator is not satisfied.**
+  still fails on empty storyteller answers, and the first-timer re-run shows
+  the conversation interrupts after a failed turn. The evaluator is not
+  satisfied.**
 - **Depends on:** Plan 028 closed 2026-10-02 with sponsored access and financial
   safety accepted; Plan 029 closed 2026-10-17 with the intelligence and
   conversation system accepted. Plan 029.5 is not admitted.

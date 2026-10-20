@@ -408,6 +408,18 @@ gives the final acceptance. No Reader Experience Trial is accepted yet.
 - The evaluator is not satisfied yet. The fanfic empty-answer bug is the
   blocker; the first-timer re-run and the judge come after it.
 
+### Re-run blockers (2026-10-20)
+
+- First-timer re-run: turn 0 returned the 187-character safe boundary, turn 1
+  failed, and turns 2 to 4 returned `interrupted` immediately. The conversation
+  does not recover after a failed turn.
+- Fanfic re-run: the empty final and empty persist guards are in, but three of
+  five storyteller turns still complete empty. The empty candidate and forced
+  answer paths are the blocker.
+- The evaluator is not satisfied. The twelve-trial gate is not passed. The next
+  fixes are the empty candidate and forced-answer rejection, the post-failure
+  conversation recovery, then the fanfic and first-timer re-runs and the judge.
+
 Trial 12 is the retelling and visualisation trial the owner asked for.
 
 ## v2.0.0 rollout
