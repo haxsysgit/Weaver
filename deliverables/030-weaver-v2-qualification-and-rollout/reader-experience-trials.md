@@ -13,9 +13,11 @@ The reader trials decide whether a reader enjoys talking with Weaver, and
 whether Weaver can retell, explain, and visualise the novel well. Retrieval
 accuracy is necessary. It is not sufficient, and it is not the final test.
 
-Every trial is a fresh conversation. The owner is the reader. The owner may
-improvise. The prompts below are examples; they are never hard-coded into the
-product, the system prompt, the retrieval path, or a test fixture.
+Every trial is a fresh conversation. The evaluator may run it as a simulated
+reader through the product API; the owner may also run it by hand. The
+evaluator's pass is evidence, not the owner's final acceptance. The prompts
+below are examples; they are never hard-coded into the product, the system
+prompt, the retrieval path, or a test fixture.
 
 ## The two axes
 
@@ -177,10 +179,14 @@ range is not disclosed to the product in advance.
 ## Protocol
 
 - Each trial is a fresh conversation. Six to twelve turns.
-- The owner opens with the prompt or an improvisation, then pushes at least
-  once: a challenge, a correction, a "huh", a "prove it", or a follow-up.
-- The owner may change the prompts. The product must not know which trial is
-  running.
+- The evaluator or the owner opens with the prompt or an improvisation, then
+  pushes at least once: a challenge, a correction, a "huh", a "prove it", or a
+  follow-up.
+- The evaluator may change the reader turns. The product must not know which
+  trial is running.
+- The evaluator judges both axes, records the result, improves the product,
+  and re-runs the failed trials. The owner receives the results and the pass
+  recommendation.
 - Set the reading position, spoiler mode, and voice before the conversation
   where the trial needs it. Record them.
 - The private transcript stays private. Record the build commit, the verdict,
@@ -201,9 +207,9 @@ All twelve must pass.
 - A storytelling failure blocks where the axis applies.
 - A re-run needs a changed build and the owner's explicit approval. No silent
   retries. Failures stay in the record.
-- Only the owner can pass a trial or accept the suite. Pytest, retrieval
-  scores, validators, checkers, reviewers, and other agents collect evidence
-  only.
+- Only the owner can give the final acceptance. The evaluator's pass is
+  evidence; it is not the owner's acceptance. Pytest, retrieval scores,
+  validators, checkers, reviewers, and other agents collect evidence only.
 
 The owner's overall verdict is the final gate, but it does not override a
 safety or accuracy failure.

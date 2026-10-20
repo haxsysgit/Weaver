@@ -252,6 +252,14 @@ async def _publish_deltas(
     return True
 
 
+def _answer_without_blockquotes(answer: str) -> str:
+    """Drop blockquoted lines so a long quote cannot kill the turn."""
+    kept = [
+        line for line in answer.splitlines() if not line.lstrip().startswith(">")
+    ]
+    return "\n".join(kept).strip()
+
+
 # Plan 15 (owner 2026-08-08): the answer call must never truncate. The
 # model writes long answers while thinking is on, and DeepSeek counts
 # reasoning tokens against max_tokens, so the default 4096 cap cut the
@@ -934,6 +942,48 @@ async def run_turn(
                             break
                         final_text = build_spoiler_boundary_answer(answer_blueprint)
                         completed_response = True
+                        break
+                    for stripped_source in (
+                        proposed_answer,
+                        validated_candidate,
+                    ):
+                        stripped_content = _answer_without_blockquotes(
+                            stripped_source.content
+                        )
+                        if (
+                            not stripped_content
+                            or stripped_content == stripped_source.content
+                        ):
+                            continue
+                        stripped_findings = inspect_publication(
+                            stripped_content,
+                            answer_blueprint,
+                            final_packet,
+                        )
+                        if stripped_findings:
+                            continue
+                        stripped = replace(
+                            stripped_source,
+                            content=stripped_content,
+                            tool_calls=(),
+                            reasoning_content="",
+                        )
+                        persisted, published = await persist_answer(
+                            stripped,
+                            (stripped_content,),
+                        )
+                        if not persisted:
+                            exit_reason = TurnExitReason.PERSISTENCE_FAILED
+                            safe_failure = safe_error("assistant_persistence")
+                            break
+                        if not published:
+                            exit_reason = TurnExitReason.INTERRUPTED
+                            safe_failure = safe_error("interrupted")
+                            break
+                        final_text = stripped_content
+                        completed_response = True
+                        break
+                    if completed_response or exit_reason is not None:
                         break
                     logger.warning(
                         "publication repair failed: %s",

@@ -83,9 +83,14 @@ judged wherever the answer retells or explains the novel.
 
 ## Reader Trial protocol
 
-- Each trial is a fresh conversation. The owner opens with the prompt, then
-  pushes at least once: a challenge, a correction, a "huh", a "prove it", or a
-  follow-up.
+- Each trial is a fresh conversation. The evaluator (the assistant) may run
+  the trial through the product API as a simulated reader, or the owner may run
+  it by hand. The reader pushes at least once: a challenge, a correction, a
+  "huh", a "prove it", or a follow-up.
+- The evaluator writes the reader turns, judges both axes, improves the
+  product, and re-runs the failing trials. The evaluator's pass is evidence,
+  not the owner's acceptance. The owner receives the results and gives the
+  final acceptance.
 - Six to twelve turns per trial. The owner may improvise. The prompts are
   examples, never hard-coded into the product, the system prompt, or the
   retrieval path.
@@ -95,9 +100,11 @@ judged wherever the answer retells or explains the novel.
 - All twelve must pass. A failure on safety or accuracy blocks. A failure on
   enjoyment or storytelling blocks. A re-run needs a changed build and the
   owner's explicit approval. No silent retries.
-- Only the owner can pass a trial or accept the suite. Pytest, retrieval
-  scores, validators, checkers, reviewers, and other agents may collect
-  evidence, but they cannot accept a trial or declare Weaver complete.
+- Only the owner can give the final acceptance. The evaluator may pass a
+  trial in the evaluator record, iterate, and recommend; that is evidence, not
+  the owner's acceptance. Pytest, retrieval scores, validators, checkers,
+  reviewers, and other agents cannot accept a trial or declare Weaver
+  complete.
 
 ## Retrieval regression
 

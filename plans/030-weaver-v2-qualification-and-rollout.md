@@ -23,8 +23,9 @@
   deploy workflow disabled. The Cloudflare launch is CP7 inside Plan 030.
   **CP1 through CP4 are complete. CP4.5 is complete: buddy and storyteller
   voice packs, revised speed target met, vs mode, clear-night rail, green
-  floor. The Reader Experience Trial contract is signed off. CP5 is in
-  progress; Trial 1 is open.**
+  floor. The Reader Experience Trial contract is signed off. CP5 evaluator
+  run 1 is a failure: 22 of 49 turns failed closed. The fixes are in; the
+  re-run is next.**
 - **Depends on:** Plan 028 closed 2026-10-02 with sponsored access and financial
   safety accepted; Plan 029 closed 2026-10-17 with the intelligence and
   conversation system accepted. Plan 029.5 is not admitted.
@@ -435,8 +436,10 @@ report and an explicit gate. No checkpoint auto-advances.
 4. **CP4: Reader and operations journeys, privacy and docs.** Slice 4.
    Gate: copy and docs approval.
 5. **CP5: Reader Experience Trials.** Slice 5.
-   Gate: all twelve owner pass or fail decisions, on both axes. The full suite
-   is `deliverables/030-weaver-v2-qualification-and-rollout/reader-experience-trials.md`.
+   Gate: the evaluator runs all twelve trials through the product API, judges
+   both axes, iterates until satisfied, and records the results. The owner
+   gives the final acceptance on the evidence. The full suite is
+   `deliverables/030-weaver-v2-qualification-and-rollout/reader-experience-trials.md`.
 6. **CP6: Independent review and release gate.** Slice 6.
    Gate: release-candidate approval and launch authorization.
 7. **CP7: Cloudflare launch, observe, close.** Slices 7 and 8. CP7 is inside

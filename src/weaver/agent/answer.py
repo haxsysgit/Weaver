@@ -343,7 +343,10 @@ def format_answer_blueprint(blueprint: AnswerBlueprint) -> str:
         "source chapters. Write citations as (ch. N) or (chs. N-M), never as a "
         "bare number. Direct quotations must be 25 words or fewer, exact, and "
         "only from allowed chapters. Write the final answer itself. Never "
-        "describe it as the same answer, a revised draft, or a repeat."
+        "describe it as the same answer, a revised draft, or a repeat. For "
+        "direct recall and discussion, keep it under about 120 words. For "
+        "reconstruction, theory, and versus, use only the room the question "
+        "needs."
     )
 
 

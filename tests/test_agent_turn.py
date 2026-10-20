@@ -1145,6 +1145,19 @@ class TestFinalReadingPhase:
             for message in final_request.messages
         )
 
+    def test_answer_without_blockquotes_strips_only_quotes(self) -> None:
+        from weaver.agent.turn import _answer_without_blockquotes
+
+        answer = (
+            "ok so this happened (ch. 1).\n"
+            "> a long quoted passage that should not kill the turn\n"
+            "and then this happened (ch. 2)."
+        )
+        stripped = _answer_without_blockquotes(answer)
+        assert "long quoted passage" not in stripped
+        assert "ok so this happened" in stripped
+        assert "and then this happened" in stripped
+
     async def test_quick_turn_can_skip_the_final_reading_pass(self) -> None:
         layer, model, provider = scripted_layer(
             tool_response(tool_call("c1", "echo", '{"message": "a"}')),

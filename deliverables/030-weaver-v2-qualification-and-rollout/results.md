@@ -364,9 +364,34 @@ CP5 paused on 2026-10-17. The owner ran Trial 1 and gave Trial 2 feedback.
   conversations. No answers are recorded here.
 - Trial 3 was not run.
 
-The owner signed off the twelve-trial contract on 2026-10-20. Trial 1, the
-vibe check, is open. No Reader Experience Trial is accepted yet. Trial 12 is
-the retelling and visualisation trial the owner asked for.
+The owner signed off the twelve-trial contract on 2026-10-20. The evaluator
+runs the suite through the API, improves the product, and re-runs. The owner
+gives the final acceptance. No Reader Experience Trial is accepted yet.
+
+### Evaluator run 1 (2026-10-20)
+
+- Nine of twelve trials reached. The adversarial trial hung on a versus turn;
+  the confusing and fanfic trials did not run.
+- 49 turns, 22 failed closed (45%).
+- Passed: vibe 5/5, emotional favourite 5/5, low-effort 5/5.
+- Failed: first-timer 4/5, hot-take 3/5, vague 3/5, half-memory 2/5, theory
+  1/5, long thread 9/9.
+- Failure classes: `long_quote`, `missing_direct_evidence`,
+  `unsupported_chapter`. The product's publication checks ended normal
+  conversation turns.
+- The buddy voice lands in the clean turns ("nah, hard disagree", "lol the
+  wiki open and close"). The answers are still long, and the first turn
+  interviews the reader about their reading position.
+- Fixes in the same slice: a quote-strip safety net so a long quote cannot
+  kill a turn; a read-every-turn and cite-only-opened rule; a 120-word guide
+  for direct recall and discussion; a short voice example; the concurrent-turn
+  test stubs now accept the evaluator protocol.
+- Private transcripts:
+  `.weaver/evaluation/plan030/experience/transcripts/run1/`.
+- Verdict: the evaluator is not satisfied. The first pass fails the reader
+  gate. A re-run is next; this run is evidence, not an acceptance.
+
+Trial 12 is the retelling and visualisation trial the owner asked for.
 
 ## v2.0.0 rollout
 
