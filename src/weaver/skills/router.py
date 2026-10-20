@@ -22,6 +22,19 @@ CHAPTER_ONE_RE = re.compile(
     re.IGNORECASE,
 )
 
+RANKING_MARKERS = (
+    "rank ",
+    "ranking",
+    "top 10",
+    "top ten",
+    "top five",
+    "tier list",
+    "best to worst",
+    "strongest",
+    "most powerful",
+    "power scaling",
+    "scaling ",
+)
 VERSUS_MARKERS = (
     " vs ",
     " vs.",
@@ -225,6 +238,10 @@ def route_skill_id(question: str, *, domain: str = CANON) -> str:
     normalized = _normalize(question)
     if _asks_for_fanfic(normalized):
         return _fanfic_skill(normalized)
+    if _has_any(normalized, RANKING_MARKERS) and not _has_any(
+        normalized, (" vs ", " versus ", "who wins")
+    ):
+        return "ranking"
     if domain == FANFIC:
         return _fanfic_skill(normalized)
     if _has_any(normalized, VERSUS_MARKERS):

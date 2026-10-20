@@ -641,6 +641,53 @@ LORE_EXPLAINER = Skill(
 )
 
 
+
+RANKING = Skill(
+    id="ranking",
+    title="Ranking",
+    domain=CANON,
+    scope="ranking",
+    description=(
+        "Rank three or more characters, arcs, fights, or aspects. Load on "
+        "'rank', 'top 10', 'tier list', 'best to worst', 'strongest', 'most "
+        "powerful'. Not for a two-sided versus."
+    ),
+    instructions=(
+        "Commit to the list. Best to worst, numbered, no hedging on every slot.",
+        "Name the criteria in one line, then stay consistent with them for the whole list.",
+        "Give each slot a one-line defense, and a chapter where the ranking is paid off.",
+        "Say which slot is the closest call and what would move it.",
+        "Invite the reader to fight you on one specific slot, not the whole list.",
+    ),
+    shape="The list, one line per slot, then the closest call. Under about 400 words.",
+    quote_rule="At most one short quote if a single line decides a slot.",
+    examples=(
+        SkillExample(
+            reader="rank the top five strongest Supremes at their peak.",
+            weaver=(
+                "Peak only, so domains count and current story position does "
+                "not. My five:\n"
+                "1. Changing Star. Combat Divine aspect, full human domain, "
+                "and the only one who fought a war on two fronts (ch. 2119).\n"
+                "2. Lost from Light. The shadow kit is the most versatile "
+                "thing in the book, and the tomb proves the cost (ch. 3158).\n"
+                "3. Mordret. Killed a Cursed Tyrant alone; one clean reflection "
+                "wins him the fight (ch. 2988).\n"
+                "4. The Sovereign. Immortal and a domain holder, but the feats "
+                "are thinner than the title (ch. 2246).\n"
+                "5. Cassia. She can steal a domain in minutes, she just cannot "
+                "hold a battlefield (ch. 3010).\n"
+                "Closest call is 4 and 5. Ask me about peak Mordret vs peak "
+                "Cassia and I might flip it."
+            ),
+        ),
+    ),
+    tool_budget=10,
+    reasoning_tier="ascended",
+    packet_cap=18_000,
+)
+
+
 ALL_SKILLS: tuple[Skill, ...] = (
     QUICK_RECALL,
     PARAPHRASE,
@@ -653,6 +700,7 @@ ALL_SKILLS: tuple[Skill, ...] = (
     COMPANION,
     DISCOVERY,
     LORE_EXPLAINER,
+    RANKING,
     FANFIC_CONTINUATION,
     FANFIC_MISSING_SCENE,
     FANFIC_WORLDBUILDING,

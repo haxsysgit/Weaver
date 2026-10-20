@@ -40,6 +40,8 @@ direct sources: chapter 650 lines 1-3
     [
         ("who killed the hollow king", "canon", "quick_recall"),
         ("what chapter does Weaver first speak?", "canon", "quick_recall"),
+        ("rank the top five strongest Supremes", "canon", "ranking"),
+        ("tier list the arcs", "canon", "ranking"),
         ("summarize the domain war", "canon", "arc_summary"),
         ("recap chs. 400-500", "canon", "arc_summary"),
         ("summarize chapter 5", "canon", "scene_explanation"),
