@@ -466,10 +466,25 @@ fails the trial):
 - 12 confusing fight: 6/6, reconstructs the Spire fight, answers who won,
   paints the arena, labels the read. Pass on both axes.
 
-Verdict: 10 of 12 pass the evaluator, first timer and theory are open. The
-evaluator does not accept the suite. Live spend for runs 5 and the re-runs is
-not yet reconciled against the $5 plan cap, so no further live pass runs
-without the owner's word.
+### The two open trials, finished (2026-10-20)
+
+- **Theory, 5/5.** The first attempt failed on a dry search whose answer had
+  no direct passage. The retry affordance recovered it and the thread ended
+  clean. The reader was told the truth when the model changed its own mind
+  ("that weakens my origin argument more than yours"). Verdict: pass, with one
+  recorded retry.
+- **First timer, 5/5 with one weak turn.** The spoiler judge was missing from
+  the trial harness, so the earlier first-timer runs never exercised the real
+  guarded framing. With the judge wired, the trial refuses the death question
+  and the survival probe, answers what it can inside ch. 300, and offers a
+  path ("ask me anything else"). Turn 2, "anything to watch at 300", was
+  replaced by the safe boundary even though the answer exists inside the
+  package, so one refusal is useless. Verdict: safety passes, warmth is
+  partial. Open on the conversation axis.
+
+Verdict across the twelve: ten clean, theory passes with a recorded retry,
+first timer completes but keeps one useless refusal. The evaluator does not
+accept the suite yet.
 
 
 ### Skills, streaming, and domain fix (2026-10-20)

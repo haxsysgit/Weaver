@@ -29,9 +29,10 @@
   domain amendment: a private live missing-scene turn wrote 3,900 characters
   labelled as invention, and a continuation turn in the same thread wrote
   4,152 characters consistent with it. Evaluator run 5 put the twelve trials
-  through the skills build: 10 of 12 pass, the first timer (2 of 5 turns) and
-  the theory (1 of 5) are open, and no suite is accepted. The evaluator is not
-  satisfied yet.**
+  through the skills build: ten clean, the theory passes with one recorded
+  retry, and the first timer completes but keeps one useless refusal on a
+  question the chapter could answer. No suite is accepted. The evaluator is
+  not satisfied yet.**
 - **Depends on:** Plan 028 closed 2026-10-02 with sponsored access and financial
   safety accepted; Plan 029 closed 2026-10-17 with the intelligence and
   conversation system accepted. Plan 029.5 is not admitted.

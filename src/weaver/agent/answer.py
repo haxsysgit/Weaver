@@ -463,6 +463,33 @@ def _is_spoiler_refusal(text: str) -> bool:
     return any(marker in normalized for marker in SPOILER_REFUSAL_MARKERS)
 
 
+def strip_unsupported_citations(
+    text: str,
+    allowed_chapters: tuple[int, ...],
+) -> str:
+    """Remove parenthetical chapter citations the turn did not open.
+
+    The claim stays, the unverified receipt goes. Used only when dropping the
+    citation makes the answer pass; the rest of the answer is unchanged.
+    """
+    allowed = set(allowed_chapters)
+
+    def replace(match: re.Match[str]) -> str:
+        start = int(match.group(1))
+        end = int(match.group(2)) if match.group(2) else start
+        cited = set(range(start, end + 1))
+        if cited <= allowed:
+            return match.group(0)
+        return ""
+
+    cleaned = CHAPTER_CITATION_RE.sub(replace, text)
+    # Collapse the space a removed citation leaves before punctuation.
+    cleaned = re.sub(r"[ \t]+\(\s*\)", "", cleaned)
+    cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
+    cleaned = re.sub(r"[ \t]+([.,;:!?])", r"\1", cleaned)
+    return cleaned
+
+
 def inspect_publication(
     answer: str,
     blueprint: AnswerBlueprint,
@@ -669,6 +696,13 @@ def has_spoiler_finding(
     findings: tuple[PublicationFinding, ...],
 ) -> bool:
     return any(finding.code in SPOILER_FINDING_CODES for finding in findings)
+
+
+def has_unsupported_citation(
+    findings: tuple[PublicationFinding, ...],
+) -> bool:
+    """True when a citation points at a chapter this turn did not open."""
+    return any(finding.code == "unsupported_chapter" for finding in findings)
 
 
 def build_spoiler_boundary_answer(blueprint: AnswerBlueprint) -> str:

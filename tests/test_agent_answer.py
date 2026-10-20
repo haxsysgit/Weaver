@@ -8,6 +8,7 @@ from weaver.agent.answer import (
     build_spoiler_boundary_answer,
     format_answer_blueprint,
     inspect_publication,
+    strip_unsupported_citations,
 )
 
 
@@ -487,3 +488,12 @@ def test_prose_may_use_a_dash_but_chat_may_not() -> None:
     )
     codes = {finding.code for finding in inspect_publication(scene, chat, PACKET)}
     assert "em_dash" in codes
+
+
+def test_an_unopened_citation_is_dropped_but_the_claim_stays() -> None:
+    stripped = strip_unsupported_citations(
+        "Sunny wins because the shadow answers (ch. 900), not ch. 12.",
+        allowed_chapters=(900,),
+    )
+    assert "(ch. 900)" in stripped
+    assert "ch. 12" not in stripped

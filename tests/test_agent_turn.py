@@ -1495,7 +1495,11 @@ class TestFinalReadingPhase:
             == ANSWER_MAX_OUTPUT_TOKENS
         )
 
-    async def test_builder_none_after_reading_rejects_the_candidate(self) -> None:
+    async def test_builder_none_after_a_dry_search_lets_the_answer_stand(
+        self,
+    ) -> None:
+        # A search that turns up nothing citable must not brick the turn:
+        # the reader gets the answer with its own gap, not an error.
         layer, model, provider = scripted_layer(
             tool_response(tool_call("c1", "echo", '{"message": "a"}')),
             stop_response("Draft answer."),
@@ -1513,13 +1517,14 @@ class TestFinalReadingPhase:
             persist_message=_async_append(persisted),
             packet_builder=packet_builder,
         )
-        assert result.exit_reason == TurnExitReason.MODEL_FAILED
-        assert result.final_text == ""
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert result.final_text == "Draft answer."
         assert len(provider.calls) == 2
         assert [m.kind for m in persisted] == [
             "assistant",
             "tool_call",
             "tool_result",
+            "assistant",
         ]
 
     async def test_zero_evidence_candidate_gets_one_reprompt_then_publishes(

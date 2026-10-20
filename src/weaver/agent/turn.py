@@ -21,6 +21,7 @@ from weaver.agent.answer import (
     build_spoiler_boundary_answer,
     format_answer_blueprint,
     has_spoiler_finding,
+    strip_unsupported_citations,
     inspect_publication,
 )
 from weaver.agent.messages import (
@@ -207,6 +208,16 @@ def _build_turn_brief(history: list[ConversationMessage]) -> TurnBrief:
         version_signals=version_signals,
         reader_challenges_prior_answer=reader_challenges,
     )
+
+
+def _may_use_spoiler_boundary(
+    blueprint: AnswerBlueprint,
+    findings: tuple[PublicationFinding, ...],
+) -> bool:
+    """A guarded turn may fall back to the safe line on a real spoiler leak."""
+    if blueprint.spoiler_mode not in {"guarded", "ask_first", "protect"}:
+        return False
+    return has_spoiler_finding(findings)
 
 
 def _format_turn_brief(brief: TurnBrief) -> str:
@@ -900,9 +911,9 @@ async def run_turn(
                 publication_repair_attempted = True
                 continue
             if fallback_findings:
-                if (
-                    answer_blueprint.spoiler_mode in {"guarded", "ask_first", "protect"}
-                    and has_spoiler_finding(fallback_findings)
+                if _may_use_spoiler_boundary(
+                    answer_blueprint,
+                    fallback_findings,
                 ):
                     persisted, published = await persist_spoiler_boundary(
                         validated_candidate,
@@ -1003,9 +1014,39 @@ async def run_turn(
                     final_packet,
                 )
                 if fallback_findings:
-                    if (
-                        answer_blueprint.spoiler_mode in {"guarded", "ask_first"}
-                        and has_spoiler_finding(fallback_findings)
+                    citation_clean = strip_unsupported_citations(
+                        validated_candidate.content,
+                        answer_blueprint.allowed_chapters,
+                    )
+                    if citation_clean != validated_candidate.content and not inspect_publication(
+                        citation_clean,
+                        answer_blueprint,
+                        final_packet,
+                    ):
+                        stripped_citation = replace(
+                            validated_candidate,
+                            content=citation_clean,
+                            tool_calls=(),
+                            reasoning_content="",
+                        )
+                        persisted, published = await persist_answer(
+                            stripped_citation,
+                            (citation_clean,),
+                        )
+                        if not persisted:
+                            exit_reason = TurnExitReason.PERSISTENCE_FAILED
+                            safe_failure = safe_error("assistant_persistence")
+                            break
+                        if not published:
+                            exit_reason = TurnExitReason.INTERRUPTED
+                            safe_failure = safe_error("interrupted")
+                            break
+                        final_text = citation_clean
+                        completed_response = True
+                        break
+                    if _may_use_spoiler_boundary(
+                        answer_blueprint,
+                        fallback_findings,
                     ):
                         persisted, published = await persist_spoiler_boundary(
                             validated_candidate,
@@ -1298,12 +1339,14 @@ async def run_turn(
                         break
                 continue
 
-            if packet_builder is not None and (
-                packet_build_failed or tool_steps_used > 0
-            ):
+            if packet_builder is not None and packet_build_failed:
                 exit_reason = TurnExitReason.MODEL_FAILED
                 safe_failure = safe_error("model_protocol")
                 break
+            # Tools were used but produced nothing citable. Failing the turn
+            # would punish the reader for a dry search, so the answer stands
+            # with its own honesty about the gap.
+            
 
             persisted, published = await persist_answer(
                     assistant, response_deltas
