@@ -829,7 +829,7 @@ async def run_turn(
                 publication_repair_attempted = True
                 continue
             if fallback_findings:
-                if answer_blueprint.spoiler_mode in {"guarded", "ask_first"}:
+                if answer_blueprint.spoiler_mode in {"guarded", "ask_first", "protect"}:
                     persisted, published = await persist_spoiler_boundary(
                         validated_candidate,
                         answer_blueprint,
@@ -893,6 +893,7 @@ async def run_turn(
                 valid_final = (
                     response.stop_reason == ModelStopReason.STOP
                     and not response_message.tool_calls
+                    and (response_message.content or "").strip() != ""
                     and rejection_note is None
                     and not _is_final_phase_refusal(response_message.content or "")
                 )

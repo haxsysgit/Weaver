@@ -391,6 +391,23 @@ gives the final acceptance. No Reader Experience Trial is accepted yet.
 - Verdict: the evaluator is not satisfied. The first pass fails the reader
   gate. A re-run is next; this run is evidence, not an acceptance.
 
+### Evaluator run 2 (2026-10-20)
+
+- 11 of the 12 trials ran; 59 of 60 turns completed. The only failed turn was
+  the last first-timer spoiler turn, and the protect-mode safe boundary now
+  handles it.
+- The long thread went from 9/9 failed to 9/9 completed. The hot take, vague,
+  half-memory, theory, low-effort, adversarial, confusing, emotional, and vibe
+  trials were clean.
+- The fanfic trial still fails: three of five storyteller turns completed with
+  an empty answer. The empty final-answer guard is in; the empty candidate and
+  persistence path still need the same guard, then the trial re-runs.
+- Fixes in run 2: quote stripping, read-every-turn and cite-only-opened rules,
+  a 120-word guide for direct recall and discussion, a short voice example, the
+  protect-mode safe boundary, and empty final-answer rejection.
+- The evaluator is not satisfied yet. The fanfic empty-answer bug is the
+  blocker; the first-timer re-run and the judge come after it.
+
 Trial 12 is the retelling and visualisation trial the owner asked for.
 
 ## v2.0.0 rollout

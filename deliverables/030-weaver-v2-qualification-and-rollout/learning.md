@@ -114,8 +114,10 @@ redesign and Plan 030 amendment-or-successor decision are pending.
   long thread failed every turn. The buddy voice lands in the clean turns, but
   the answers are long and the first turn interviews the reader. A quote-strip
   safety net, a read-every-turn and cite-only-opened rule, a 120-word guide,
-  and a voice example are in. The evaluator is not satisfied; the re-run is
-  next.
+  and a voice example are in. Run 2: 59/60 turns completed; the long thread
+  went 9/9 failed to 9/9 clean; the first-timer spoiler turn is fixed with the
+  protect-mode boundary. The fanfic trial still fails on empty storyteller
+  answers. The evaluator is not satisfied; the fanfic fix and judge are next.
 - (2026-10-17) The public privacy page, README privacy section, and live/fake
   footer copy are approved as drafted.
 - (2026-10-17) Trial 1 and Trial 2 are not accepted. The owner rejected the
