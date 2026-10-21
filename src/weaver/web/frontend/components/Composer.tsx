@@ -18,6 +18,7 @@ interface ComposerProps {
   onTierChange: (tier: ReadingTier) => void;
   placeholder?: string;
   sendDisabled?: boolean;
+  showTierControl?: boolean;
   sendLabel?: string;
   stopLabel?: string;
   stoppingLabel?: string;
@@ -41,6 +42,7 @@ export function Composer({
   placeholder = "Write a message...",
   sendDisabled = false,
   sendLabel = "Send message",
+  showTierControl = true,
   stopLabel = "Stop assistant",
   stoppingLabel = "Stopping assistant",
   statusText,
@@ -135,6 +137,7 @@ export function Composer({
           rows={1}
           value={draft}
         />
+        {showTierControl && (
         <div className="composer-tier" ref={tierRef}>
           <button
             aria-expanded={tierOpen}
@@ -171,6 +174,7 @@ export function Composer({
             </ul>
           )}
         </div>
+        )}
         {turnActive ? (
           <button
             aria-label={cancelling ? stoppingLabel : stopLabel}

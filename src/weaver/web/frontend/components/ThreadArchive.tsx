@@ -66,6 +66,7 @@ interface ThreadArchiveProps {
   onArchive: (threadId: string) => Promise<boolean | void> | boolean | void;
   onClose: () => void;
   onCreate: () => void;
+  onCreateFanfic?: () => void;
   onDelete: (threadId: string) => Promise<boolean | void> | boolean | void;
   onOpen: () => void;
   onOpenSettings: () => void;
@@ -87,6 +88,7 @@ export function ThreadArchive({
   onArchive,
   onClose,
   onCreate,
+  onCreateFanfic,
   onDelete,
   onOpen,
   onOpenSettings,
@@ -431,6 +433,18 @@ export function ThreadArchive({
         <PlusIcon />
         <span>New Weave</span>
       </button>
+
+      {onCreateFanfic && (
+        <button
+          aria-label="Start a fanfic thread"
+          className="lab-new-fanfic"
+          onClick={onCreateFanfic}
+          type="button"
+        >
+          <span aria-hidden="true" className="lab-fanfic-mark">❖</span>
+          <span>New fanfic</span>
+        </button>
+      )}
 
       <div className="lab-rail-scroll">
         {actionError && <p className="lab-archive-error" role="alert">{actionError}</p>}

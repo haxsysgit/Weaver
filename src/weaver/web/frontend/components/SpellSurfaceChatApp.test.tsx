@@ -460,7 +460,7 @@ describe("first Nightmare setup", () => {
     expect(screen.getByRole("textbox", { name: "Message Weaver" })).not.toHaveAttribute(
       "readonly",
     );
-    expect(screen.getByText("What are we reading?")).toBeVisible();
+    expect(screen.getByText("[An empty thread. Start anywhere.]")).toBeVisible();
   });
 
   it("blocks shared use until the DeepSeek notice is accepted", async () => {
@@ -1370,3 +1370,24 @@ describe("live Spellweave foundation", () => {
     expect(screen.queryByText("[The weave is complete.]")).toBeNull();
   });
 });
+  it("opens a fanfic thread from the sheet without leaving the conversation", async () => {
+    localStorage.setItem(FIRST_NIGHTMARE_STORAGE_KEY, "completed");
+    const api = createApi();
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+    await waitForLiveApp();
+
+    await openThreadSheet();
+    fireEvent.click(screen.getByRole("button", { name: "Start a fanfic thread" }));
+
+    await waitFor(() => {
+      expect(api.createConversation).toHaveBeenCalledWith({
+        domain: "fanfic",
+        fanfic_kind: "missing_scene",
+      });
+    });
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Threads and settings" }),
+      ).toBeNull(),
+    );
+  });

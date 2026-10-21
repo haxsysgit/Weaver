@@ -422,6 +422,16 @@ gives the final acceptance. No Reader Experience Trial is accepted yet.
 
 Trial 12 is the retelling and visualisation trial the owner asked for.
 
+### Immersion pass (2026-10-21)
+
+The chat surface is one canvas: transcript, star web, composer. No rail on
+any screen. The `+` opens a floating sheet with new weave, new fanfic, pinned
+and recent threads, the archive, the reader position, and settings. The
+reading-depth pill left the composer; depth now lives in settings. The empty
+state is a single line, not a title and a hint. The sheet traps focus, closes
+on backdrop or Escape, and returns to the `+`. 143 frontend tests.
+
+
 ### Evaluator run 7 (2026-10-21): the acceptance pass
 
 The twelve trials ran again on the full-bleed build with the real reader

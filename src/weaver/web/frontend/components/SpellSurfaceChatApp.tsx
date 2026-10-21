@@ -469,6 +469,18 @@ function SpellSurfaceChatSurface({
     setSetupOpen(true);
   }
 
+  async function createFanficThread() {
+    const created = await chat.createThread({
+      domain: "fanfic",
+      fanfic_kind: "missing_scene",
+    });
+    if (created) {
+      focusComposerAfterRailClose.current = true;
+      setRailOpen(false);
+      announce("[A fanfic thread opens. The story keeps going.]");
+    }
+  }
+
   async function createThread() {
     const created = await chat.createConversation();
     if (created) {
@@ -678,6 +690,7 @@ function SpellSurfaceChatSurface({
         onArchive={toggleArchivedThread}
         onClose={closeRail}
         onCreate={() => void createThread()}
+        onCreateFanfic={() => void createFanficThread()}
         onDelete={(threadId) => chat.deleteConversation(threadId)}
         onOpen={openRail}
         onOpenSettings={() => void openSettings()}
@@ -704,9 +717,7 @@ function SpellSurfaceChatSurface({
             {!chat.bootError && chat.messages.length === 0 && (
               <section className="lab-empty-weave">
                 <span className="lab-empty-mark"><WeaverMark /></span>
-                <p>[An empty thread trembles in the void.]</p>
-                <h1>What are we reading?</h1>
-                <span>ask about canon, argue a take, or bend the story into a what-if</span>
+                <p>[An empty thread. Start anywhere.]</p>
               </section>
             )}
             {chat.messages.map((message) => (
@@ -765,6 +776,7 @@ function SpellSurfaceChatSurface({
             }}
             placeholder={weaverProduct.composerPlaceholder}
             sendDisabled={sharedExhausted || sharedAwaitingConsent || sharedUnavailable}
+            showTierControl={false}
             sendLabel={weaverProduct.sendLabel}
             stopLabel={weaverProduct.stopLabel}
             stoppingLabel={weaverProduct.stoppingLabel}
