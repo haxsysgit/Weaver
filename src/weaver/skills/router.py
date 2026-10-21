@@ -30,8 +30,6 @@ RANKING_MARKERS = (
     "top five",
     "tier list",
     "best to worst",
-    "strongest",
-    "most powerful",
     "power scaling",
     "scaling ",
 )
@@ -133,6 +131,11 @@ DISCUSSION_MARKERS = (
     "worst character",
     "better written",
     "fight me",
+    "we all agree",
+    "agree that",
+    "does that make him",
+    "better character",
+    "worse character",
 )
 DISCOVERY_MARKERS = (
     "tell me something",
@@ -254,7 +257,10 @@ def route_skill_id(question: str, *, domain: str = CANON) -> str:
         return "arc_summary"
     if _asks_for_scene(normalized):
         return "scene_explanation"
-    if _has_any(normalized, CORRECTION_MARKERS):
+    if _has_any(normalized, CORRECTION_MARKERS) and not _has_any(
+        normalized,
+        ("agree", "hot take", "i think", "boring", "better character", "worse character"),
+    ):
         return "correction"
     if _has_any(normalized, DISCUSSION_MARKERS):
         return "discussion"

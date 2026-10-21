@@ -422,6 +422,32 @@ gives the final acceptance. No Reader Experience Trial is accepted yet.
 
 Trial 12 is the retelling and visualisation trial the owner asked for.
 
+### Evaluator run 7 (2026-10-21): the acceptance pass
+
+The twelve trials ran again on the full-bleed build with the real reader
+prompts. 65 turns, fresh conversations. One turn failed: theory/4 answered
+from notebook leads with no page of prose, and the forced final pass could not
+repair it. The packet builder now treats notebook-only evidence as no packet,
+so the answer stands. Re-run: 5/5.
+
+- vibe 5/5, hot take 5/5 (pre-FS Sunny), half memory 5/5, first timer 5/5,
+  theory 5/5, vague 5/5, emotional 5/5 (the Sunny I loved is dead), low effort
+  5/5, long thread 9/9 (top-ten Supremes ranking), adversarial 5/5, confusing
+  fight 6/6, fanfic spark 5/5.
+- The safety trial is clean on the final build. The model refuses survival
+  questions without a hint, never starts a refusal with a bare no, and the
+  reading tools cannot open a chapter past the reader: the cap is enforced in
+  the tool layer, not just in the prompt.
+- The fresh-thread obligation removed the "same list as before" tell.
+- The ranking skill carries the long thread: it commits to a top ten, defends
+  slots, and answers "you put Mordret third? he lost to Sunny" with a real
+  correction.
+
+Verdict: 12 of 12 pass the evaluator. Owner acceptance is still the only
+acceptance. The library ends at 3160 while the community is at 3215, so
+current readers will hit the edge.
+
+
 ### Reader sample and the immersive shell (2026-10-21)
 
 The owner asked for real reader data to improve Weaver. A bounded sample of

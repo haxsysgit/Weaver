@@ -116,6 +116,8 @@ class ConversationRunner:
         exclude_run_ids: set[str] | None = None,
         system_prompt: str | None = None,
         domain: str = "canon",
+        reader_note: str = "",
+        max_chapter: int | None = None,
     ) -> TurnResult:
         """Run one bounded model/tool turn inside an existing run.
 
@@ -170,6 +172,8 @@ class ConversationRunner:
                 self._system_prompt if system_prompt is None else system_prompt
             ),
             domain=domain,
+            reader_note=reader_note,
+            max_chapter=max_chapter,
             history=history,
             tool_registry=self._tool_registry,
             active_tools=self._active_tools,

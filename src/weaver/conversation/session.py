@@ -159,6 +159,8 @@ class SessionWeave:
         reasoning: ReasoningEffort | None = None,
         packet_builder: PacketBuilder | None = None,
         final_pass: bool = True,
+        reader_note: str = "",
+        max_chapter: int | None = None,
     ) -> TurnResult:
         """Run one full turn with the owner's input and return the result.
 
@@ -217,6 +219,8 @@ class SessionWeave:
             final_pass=final_pass,
             system_prompt=system_prompt,
             domain=domain,
+            reader_note=reader_note,
+            max_chapter=max_chapter,
         )
 
     async def start_conversation(
@@ -477,6 +481,8 @@ class SessionWeave:
         reasoning: ReasoningEffort | None = None,
         packet_builder: PacketBuilder | None = None,
         final_pass: bool = True,
+        reader_note: str = "",
+        max_chapter: int | None = None,
     ) -> tuple[TurnResult, str] | None:
         """Re-run the last interrupted or failed turn with its own owner message.
 
@@ -539,6 +545,8 @@ class SessionWeave:
             final_pass=final_pass,
             system_prompt=system_prompt,
             domain=domain,
+            reader_note=reader_note,
+            max_chapter=max_chapter,
         )
         return result, message
 
@@ -553,6 +561,8 @@ class SessionWeave:
         reasoning: ReasoningEffort | None = None,
         packet_builder: PacketBuilder | None = None,
         final_pass: bool = True,
+        reader_note: str = "",
+        max_chapter: int | None = None,
     ) -> tuple[TurnResult, str] | None:
         """Re-answer the last question in place, never as a new message.
 
@@ -622,6 +632,8 @@ class SessionWeave:
             exclude_run_ids={target.id},
             system_prompt=system_prompt,
             domain=domain,
+            reader_note=reader_note,
+            max_chapter=max_chapter,
         )
         return result, message
 

@@ -225,6 +225,33 @@ async def execute_turn(
     )
 
 
+async def test_reader_boundary_note_reaches_every_model_call() -> None:
+    layer, model, provider = scripted_layer(
+        tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+        stop_response("Done."),
+    )
+
+    result = await run_turn(
+        session_id="s",
+        turn_id="t",
+        model_layer=layer,
+        model=model,
+        system_prompt="You are Weaver.",
+        history=[],
+        tool_registry=make_registry(),
+        active_tools=("echo",),
+        execution_policy=ToolExecutionPolicy.read_only(),
+        cancel_event=asyncio.Event(),
+        tool_budget=2,
+        reader_note="The reader is at chapter 300. Protect the story.",
+    )
+
+    assert result.exit_reason == TurnExitReason.COMPLETED
+    for call in provider.calls:
+        system = call.request.messages[0]
+        assert "chapter 300" in (system.content or "")
+
+
 def tool_context() -> ToolExecutionContext:
     return ToolExecutionContext(
         session_id="session",

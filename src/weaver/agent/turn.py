@@ -611,6 +611,8 @@ async def run_turn(
     packet_builder: PacketBuilder | None = None,
     final_pass: bool = True,
     domain: str = "canon",
+    reader_note: str = "",
+    max_chapter: int | None = None,
 ) -> TurnResult:
     max_steps = min(max(max_model_steps, 1), _MAX_MODEL_STEPS)
     budget = _TurnBudget(tool_budget)
@@ -736,6 +738,8 @@ async def run_turn(
                 # The skill shapes this answer, so it belongs in the system
                 # prompt on every call, not only the final reading pass.
                 turn_system_prompt = system_prompt + "\n\n" + skill_brief
+        if reader_note:
+            turn_system_prompt = turn_system_prompt + "\n\n" + reader_note
         request_messages = project_messages(
             system_prompt=turn_system_prompt,
             history=history + new_messages,
@@ -1431,6 +1435,7 @@ async def run_turn(
                     cancel_event=cancel_event,
                     on_tool_event=on_tool_event,
                     on_skills_loaded=note_skills_loaded,
+                    max_chapter=max_chapter,
                 )
                 tool_result = await tool_registry.dispatch(
                     tool_call.name,

@@ -366,6 +366,11 @@ def build_answer_blueprint(
         )
     obligations.extend(plan.obligations)
     obligations.extend(MODE_OBLIGATIONS[mode])
+    if not prior_weaver_position.strip():
+        obligations.append(
+            "this thread has no earlier answer: never refer to a previous list, "
+            "ranking, or answer as if you already gave it"
+        )
     if prior_weaver_position and question.strip().casefold().startswith(
         FOLLOW_UP_OPENINGS
     ):
@@ -376,8 +381,17 @@ def build_answer_blueprint(
         obligations.append("address the reader's challenge and the prior Weaver position")
     if spoiler_mode == "guarded":
         obligations.append("protect later story beats and do not cite beyond the reader's position")
+        obligations.append(
+            "if the reader asks whether a character survives, dies, or appears "
+            "later, do not confirm or deny, not even with a hint; say the answer "
+            "is past their chapter"
+        )
     elif spoiler_mode == "ask_first":
         obligations.append("warn about the major spoiler and ask before revealing it")
+        obligations.append(
+            "do not confirm or deny a survival question before the reader says "
+            "they want the spoil"
+        )
     return AnswerBlueprint(
         mode=mode,
         obligations=tuple(obligations),

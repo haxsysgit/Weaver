@@ -662,6 +662,8 @@ async def test_tool_stream_never_sends_private_reading_payload(tmp_path) -> None
         reasoning=None,
         packet_builder=None,
         final_pass=None,
+        reader_note="",
+        max_chapter=None,
     ):
         assert on_tool_event is not None
         await on_tool_event(
@@ -790,7 +792,7 @@ async def test_concurrent_turn_409(tmp_path) -> None:
     entered = asyncio.Event()
 
     async def gated_send(
-        conversation_id, text, cancel_event=None, on_delta=None, on_tool_event=None, tool_budget=None, reasoning=None, packet_builder=None, final_pass=None
+        conversation_id, text, cancel_event=None, on_delta=None, on_tool_event=None, tool_budget=None, reasoning=None, packet_builder=None, final_pass=None, reader_note="", max_chapter=None
     ):
         entered.set()
         await gate.wait()
@@ -855,6 +857,8 @@ async def test_cannot_archive_the_active_weaving_thread(tmp_path) -> None:
         reasoning=None,
         packet_builder=None,
         final_pass=None,
+        reader_note="",
+        max_chapter=None,
     ):
         entered.set()
         await gate.wait()
@@ -908,7 +912,7 @@ async def test_cancel_active_turn_returns_202_and_interrupted_event(tmp_path) ->
     entered = asyncio.Event()
 
     async def cancel_aware_send(
-        conversation_id, text, cancel_event=None, on_delta=None, on_tool_event=None, tool_budget=None, reasoning=None, packet_builder=None, final_pass=None
+        conversation_id, text, cancel_event=None, on_delta=None, on_tool_event=None, tool_budget=None, reasoning=None, packet_builder=None, final_pass=None, reader_note="", max_chapter=None
     ):
         from weaver.agent.errors import safe_error
         from weaver.agent.turn import TurnExitReason
@@ -971,7 +975,7 @@ async def test_failed_exit_reason_emits_failed_event(tmp_path) -> None:
     runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
 
     async def failing_send(
-        conversation_id, text, cancel_event=None, on_delta=None, on_tool_event=None, tool_budget=None, reasoning=None, packet_builder=None, final_pass=None
+        conversation_id, text, cancel_event=None, on_delta=None, on_tool_event=None, tool_budget=None, reasoning=None, packet_builder=None, final_pass=None, reader_note="", max_chapter=None
     ):
         from weaver.agent.turn import TurnExitReason
 
@@ -1268,6 +1272,8 @@ async def test_shutdown_waits_until_cooperative_turn_settles(
         reasoning=None,
         packet_builder=None,
         final_pass=None,
+        reader_note="",
+        max_chapter=None,
     ):
         entered.set()
         assert cancel_event is not None
@@ -1459,6 +1465,8 @@ async def test_retry_route_reruns_and_streams(tmp_path) -> None:
         reasoning=None,
         packet_builder=None,
         final_pass=None,
+        reader_note="",
+        max_chapter=None,
     ):
         if on_delta:
             await on_delta("retried answer")
@@ -1514,6 +1522,8 @@ async def test_retry_route_reports_nothing_to_retry(tmp_path) -> None:
         reasoning=None,
         packet_builder=None,
         final_pass=None,
+        reader_note="",
+        max_chapter=None,
     ):
         return None
 
@@ -1552,6 +1562,8 @@ async def test_regenerate_route_reanswers_in_place_and_streams(tmp_path) -> None
         reasoning=None,
         packet_builder=None,
         final_pass=None,
+        reader_note="",
+        max_chapter=None,
     ):
         if on_delta:
             await on_delta("fresh answer")
@@ -1607,6 +1619,8 @@ async def test_regenerate_route_reports_nothing_to_regenerate(tmp_path) -> None:
         reasoning=None,
         packet_builder=None,
         final_pass=None,
+        reader_note="",
+        max_chapter=None,
     ):
         return None
 

@@ -117,6 +117,9 @@ class ToolExecutionContext:
     # Plan 030 skills seam: the load_skill handler reports which skills the
     # model loaded so the turn can raise its reading budget to match.
     on_skills_loaded: Callable[[tuple[str, ...]], None] | None = None
+    # The reader's position when they asked Weaver to protect the story.
+    # Reading tools must not open a chapter past this.
+    max_chapter: int | None = None
 
     def raise_if_cancelled(self) -> None:
         """Stop at a cooperative handler checkpoint.

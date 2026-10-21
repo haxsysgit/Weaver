@@ -270,6 +270,25 @@ def _turn_profile(
     return plan.tool_budget, plan.reasoning_tier, plan.packet_cap, plan.final_pass
 
 
+def _reader_note(prefs) -> str:
+    """The spoiler position the model must see before it writes anything.
+
+    The reading packet carries this too, but the packet is only built after
+    the candidate answer, so the answer itself needs the boundary up front.
+    """
+    if prefs is None or prefs.reader_chapter is None:
+        return ""
+    if prefs.spoiler_mode != "protect":
+        return ""
+    return (
+        f"The reader is at chapter {prefs.reader_chapter}. Protect the story: "
+        "never reveal, confirm, deny, or hint at anything past that chapter. "
+        "A question about whether a character survives, dies, or appears later "
+        "gets no yes or no, not even a hint. Say it is past their chapter. "
+        "Never open a refusal with yes or no: a bare no reads as an answer."
+    )
+
+
 def _derived_title(first_message: str) -> str:
     """Fallback title from the first owner message (fake mode / failure)."""
     words = [w for w in first_message.split() if len(w) > 2][:5]
@@ -686,6 +705,16 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 await asyncio.sleep(runtime.fake_delta_delay_seconds)
 
         delta_callback = on_delta
+        turn_prefs = (
+            await runtime.prefs.get() if runtime.prefs is not None else None
+        )
+        reader_note = _reader_note(turn_prefs)
+        max_chapter = (
+            turn_prefs.reader_chapter
+            if turn_prefs is not None
+            and turn_prefs.spoiler_mode == "protect"
+            else None
+        )
         conversation_domain, _ = await runtime.session.conversation_domain(
             conversation_id
         )
@@ -725,7 +754,11 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 judge=spoiler_judge,
                 cap_override=profile_packet_cap,
             )
-            return packet.text if packet is not None else None
+            if packet is None or "direct sources: none" in packet.text:
+                # Notebook leads without a page of prose are not evidence:
+                # forcing the final pass here only produces a failed repair.
+                return None
+            return packet.text
 
         try:
             tool_budget = (
@@ -752,6 +785,8 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                     reasoning=reasoning,
                     packet_builder=on_packet,
                     final_pass=profile_final_pass,
+                    reader_note=reader_note,
+                    max_chapter=max_chapter,
                 )
                 if regenerated is None:
                     stream.emit(
@@ -773,6 +808,8 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                     reasoning=reasoning,
                     packet_builder=on_packet,
                     final_pass=profile_final_pass,
+                    reader_note=reader_note,
+                    max_chapter=max_chapter,
                 )
                 if retried is None:
                     stream.emit(
@@ -795,6 +832,8 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                     reasoning=reasoning,
                     packet_builder=on_packet,
                     final_pass=profile_final_pass,
+                    reader_note=reader_note,
+                    max_chapter=max_chapter,
                 )
             reason = result.exit_reason
             if reason == TurnExitReason.COMPLETED:

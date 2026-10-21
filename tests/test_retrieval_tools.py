@@ -1076,3 +1076,54 @@ async def test_lore_path_rejects_out_of_range_max_hops(tmp_path: Path) -> None:
     )
     assert res["ok"] is False
     assert res["error_category"] == "validation"
+
+
+async def test_reading_tools_cannot_open_past_the_readers_chapter() -> None:
+    from weaver.agent.tools import ToolExecutionContext
+    from weaver.retrieval.tools import _cap_to_reader
+
+    async def handler(arguments, context):
+        return {
+            "ok": True,
+            "result": {
+                "hits": [
+                    {"chapter": 299, "text": "allowed"},
+                    {"chapter": 301, "text": "spoiler"},
+                ]
+            },
+        }
+
+    capped = _cap_to_reader(handler)
+    context = ToolExecutionContext(
+        session_id="s",
+        turn_id="t",
+        call_id="c",
+        cancel_event=asyncio.Event(),
+        max_chapter=300,
+    )
+
+    trimmed = await capped({"query": "anything"}, context)
+    assert [hit["chapter"] for hit in trimmed["result"]["hits"]] == [299]
+
+    refused = await capped({"handle": "novel:0301:1-5"}, context)
+    assert refused["ok"] is False
+    assert refused["error_category"] == "spoiler_boundary"
+
+
+async def test_reading_tools_are_uncapped_without_protect_mode() -> None:
+    from weaver.agent.tools import ToolExecutionContext
+    from weaver.retrieval.tools import _cap_to_reader
+
+    async def handler(arguments, context):
+        return {"ok": True, "result": {"hits": [{"chapter": 301}]}}
+
+    capped = _cap_to_reader(handler)
+    context = ToolExecutionContext(
+        session_id="s",
+        turn_id="t",
+        call_id="c",
+        cancel_event=asyncio.Event(),
+    )
+
+    kept = await capped({"query": "anything"}, context)
+    assert [hit["chapter"] for hit in kept["result"]["hits"]] == [301]

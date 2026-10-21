@@ -689,6 +689,51 @@ class LibraryService:
         }
 
 
+def _chapter_of(item: dict) -> int | None:
+    chapter = item.get("chapter")
+    return chapter if isinstance(chapter, int) else None
+
+
+def _trim_to_chapter(value, max_chapter: int):
+    """Drop novel hits that sit past the reader's chapter."""
+    if isinstance(value, dict):
+        return {key: _trim_to_chapter(item, max_chapter) for key, item in value.items()}
+    if isinstance(value, list):
+        kept = []
+        for item in value:
+            chapter = _chapter_of(item) if isinstance(item, dict) else None
+            if chapter is not None and chapter > max_chapter:
+                continue
+            kept.append(_trim_to_chapter(item, max_chapter))
+        return kept
+    return value
+
+
+def _cap_to_reader(handler):
+    """Wrap a reading tool so protect mode cannot read ahead."""
+
+    async def capped(arguments: dict[str, Any], context: ToolExecutionContext) -> dict[str, Any]:
+        max_chapter = context.max_chapter
+        if max_chapter is None:
+            return await handler(arguments, context)
+        handle = arguments.get("handle")
+        if isinstance(handle, str):
+            parsed = lib.parse_passage_handle(handle)
+            if parsed is not None and parsed[0] > max_chapter:
+                return {
+                    "ok": False,
+                    "error_category": "spoiler_boundary",
+                    "error": (
+                        "That passage is past the reader's chapter. "
+                        "Answer within what they have read."
+                    ),
+                }
+        result = await handler(arguments, context)
+        return _trim_to_chapter(result, max_chapter)
+
+    return capped
+
+
 def register_reading_tools(
     registry: ToolRegistry,
     service: LibraryService,
@@ -707,7 +752,7 @@ def register_reading_tools(
                 "automatically and can only be narrowed."
             ),
             parameters=SearchStoryInput.model_json_schema(),
-            handler=service.semantic_search,
+            handler=_cap_to_reader(service.semantic_search),
             max_result_chars=24_000,
             effect_kind=EffectKind.READ,
             retry_safe=True,
@@ -725,7 +770,7 @@ def register_reading_tools(
                 "end_of_chapter tells you when to inspect the next chapter."
             ),
             parameters=ReadChaptersInput.model_json_schema(),
-            handler=service.read_chapters,
+            handler=_cap_to_reader(service.read_chapters),
             max_result_chars=24_000,
             effect_kind=EffectKind.READ,
             retry_safe=True,
@@ -751,7 +796,7 @@ def register_reading_tools(
                 "applied automatically and can only be narrowed."
             ),
             parameters=FindTextInput.model_json_schema(),
-            handler=service.find_text,
+            handler=_cap_to_reader(service.find_text),
             max_result_chars=24_000,
             effect_kind=EffectKind.READ,
             retry_safe=True,
@@ -769,7 +814,7 @@ def register_reading_tools(
                 "always searchable."
             ),
             parameters=BrowseChaptersInput.model_json_schema(),
-            handler=service.browse_chapters,
+            handler=_cap_to_reader(service.browse_chapters),
             max_result_chars=24_000,
             effect_kind=EffectKind.READ,
             retry_safe=True,
