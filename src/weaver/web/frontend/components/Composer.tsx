@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 
-import { ArrowUpIcon, ChevronDownIcon, StopIcon } from "./Icons";
+import { ArrowUpIcon, ChevronDownIcon, PlusIcon, StopIcon } from "./Icons";
 
 export type ReadingTier = "awakened" | "ascended" | "transcendent";
 
@@ -12,6 +12,8 @@ interface ComposerProps {
   inputLabel?: string;
   onCancel: () => void;
   onDraftChange: (value: string) => void;
+  menuButtonRef?: React.RefObject<HTMLButtonElement | null>;
+  onOpenMenu?: () => void;
   onSubmit: (value: string) => void;
   onTierChange: (tier: ReadingTier) => void;
   placeholder?: string;
@@ -30,8 +32,10 @@ export function Composer({
   cancelling,
   draft,
   inputLabel = "Message assistant",
+  menuButtonRef,
   onCancel,
   onDraftChange,
+  onOpenMenu,
   onSubmit,
   onTierChange,
   placeholder = "Write a message...",
@@ -108,6 +112,19 @@ export function Composer({
           <span />
           <span />
         </span>
+        {onOpenMenu && (
+          <button
+            aria-expanded={false}
+            aria-haspopup="dialog"
+            aria-label="Open threads and settings"
+            className="composer-action composer-menu"
+            onClick={onOpenMenu}
+            ref={menuButtonRef}
+            type="button"
+          >
+            <PlusIcon />
+          </button>
+        )}
         <textarea
           aria-label={inputLabel}
           onChange={(event) => onDraftChange(event.target.value)}

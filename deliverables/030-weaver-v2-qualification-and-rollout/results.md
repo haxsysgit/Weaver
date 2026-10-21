@@ -422,6 +422,33 @@ gives the final acceptance. No Reader Experience Trial is accepted yet.
 
 Trial 12 is the retelling and visualisation trial the owner asked for.
 
+### Reader sample and the immersive shell (2026-10-21)
+
+The owner asked for real reader data to improve Weaver. A bounded sample of
+r/ShadowSlave (1,500 posts, the top threads' comments; raw rows deleted) gave
+the community's actual activities: reactions, ships, rankings, character-change
+arguments, lore compiles, and author criticism. The findings:
+
+- The voice is lowercase, clipped, and meme fluent, but the strongest threads
+  are evidence arguments. The buddy soul now carries that register: shorthand
+  only when the reader uses it, one meme per answer, argue with receipts,
+  allowed to call a popular take boring.
+- The community ranks three or more constantly. A `ranking` skill now commits
+  to a list, one line per slot, names the closest call, and invites the fight.
+- Three trial prompts were replaced with real ones: the hot take ("pre-FS
+  Sunny would hate current Sunny"), the emotional favourite ("the Sunny I
+  loved is dead"), and the long thread (a top-ten Supremes ranking).
+- The subreddit is on chapter 3215. The library ends at 3160. A current reader
+  will ask about chapters Weaver does not have. This is a launch blocker for
+  credibility.
+
+The chat surface is now full-bleed. The permanent rail is gone. A `+` control
+on the composer opens one floating sheet with threads, new weave, fanfic,
+archive, reader status, and settings. The header controls are gone. The sheet
+is modal with a focus trap, a backdrop, Escape, and it returns focus to the
+`+`. 142 frontend tests and the production build pass.
+
+
 ### Evaluator run 5 (2026-10-20)
 
 The skills build, the canon/fanfic split, and the validated-only streaming ran

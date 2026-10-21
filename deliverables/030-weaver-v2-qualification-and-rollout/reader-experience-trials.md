@@ -62,12 +62,14 @@ the reader.
 
 ### 2. The hot take
 
-> nephis is boring. she's just the stoic girl archetype.
+> so... we all agree that pre-FS Sunless would hate current Sunless, right?
 
-Push: "give me one scene that actually proves she's not."
+Push: "okay but does that make him a better character or a worse one?" then
+"give me a scene that proves it."
 
 Tests: a real argument with canon evidence, disagreement, and banter. Pass:
-Weaver takes a position, cites the novel, and keeps it fun.
+Weaver takes a position, cites the novel, and keeps it fun. (Prompt from the
+r/ShadowSlave sample, paraphrased.)
 
 ### 3. The half-memory
 
@@ -113,12 +115,13 @@ Pass: one good thread, a real chapter, and an invitation to follow it.
 
 ### 7. The emotional favourite
 
-> the scene where sunny [owner pick]. it wrecked me.
+> the sunny i loved is dead.
 
-Push: "why does it hit so hard?"
+Push: "why does it hit so hard?" then "do you think the change was earned?"
 
 Tests: matching the energy, adding insight, and not lecturing. Storytelling:
 retell the moment and explain why it lands. Pass: the reader feels heard.
+(Prompt from the r/ShadowSlave sample, paraphrased.)
 
 ### 8. The low-effort
 
@@ -131,13 +134,15 @@ low-effort question. Pass: a short verdict the reader can follow, not an essay.
 
 ### 9. The long thread
 
-> let's rank the arcs. i'll go first.
+> rank the top ten strongest supremes at their peak.
 
 Push: eight to ten turns, a callback, a running joke, and at least one "wait,
-what did we say earlier?" moment.
+what did we say earlier?" moment. The reader defends a slot, moves one, and
+asks "has sunny officially surpassed mordret now?".
 
-Tests: memory, continuity, no repetition, no drift. Pass: the thread holds and
-the reader wants the next turn.
+Tests: memory, continuity, no repetition, no drift, and a ranking that commits
+instead of hedging. Pass: the thread holds and the reader wants the next turn.
+(Prompt from the r/ShadowSlave sample, paraphrased.)
 
 ### 10. The adversarial
 

@@ -199,6 +199,9 @@ describe("Plan 027 deterministic fake journey", () => {
     expect(reply.querySelector("script")).toBeNull();
     expect(reply.querySelector('a[href^="javascript:"]')).toBeNull();
 
+    fireEvent.click(await screen.findByRole("button", {
+      name: "Open threads and settings",
+    }));
     let thread = await screen.findByTestId("thread-thread-1");
     fireEvent.click(within(thread).getByRole("button", {
       name: "Rename Ariel and the Tomb",
@@ -228,6 +231,9 @@ describe("Plan 027 deterministic fake journey", () => {
     render(<SpellSurfaceChatApp api={api} privacyLabel="Local fake mode" />);
 
     expect(screen.queryByRole("dialog", { name: "First Nightmare setup" })).toBeNull();
+    fireEvent.click(await screen.findByRole("button", {
+      name: "Open threads and settings",
+    }));
     fireEvent.click(await screen.findByRole("button", {
       name: /Open archived threads/,
     }));

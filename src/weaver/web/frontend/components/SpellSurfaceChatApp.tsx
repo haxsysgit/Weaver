@@ -20,7 +20,6 @@ import {
 import { getApiKey, isApiKeyDisabled } from "../lib/identity";
 import { Composer, type ReadingTier } from "./Composer";
 import { FirstNightmareSetup, type SharedAccessStatus } from "./FirstNightmareSetup";
-import { RailOpenIcon, SettingsIcon } from "./Icons";
 import { Message } from "./Message";
 import { RecoveryPanel } from "./RecoveryPanel";
 import { SpellMotionProvider } from "./SpellMotionProvider";
@@ -222,13 +221,13 @@ function SpellSurfaceChatSurface({
   const [access, setAccess] = useState<AccessStatus | null>(null);
   const [accessFailed, setAccessFailed] = useState(false);
   const [railOpen, setRailOpen] = useState(false);
-  const [desktopRailCollapsed, setDesktopRailCollapsed] = useState(false);
   const [archivedOpen, setArchivedOpen] = useState(false);
   const [spellState, setSpellState] = useState<SpellweaveActivityState>("idle");
   const [announcement, setAnnouncement] = useState("[The Spell listens.]");
   const [announcementKey, setAnnouncementKey] = useState(0);
   const composerRef = useRef<HTMLTextAreaElement>(null);
-  const railOpenerRef = useRef<HTMLButtonElement>(null);
+  const menuOpenerRef = useRef<HTMLButtonElement>(null);
+  const menuPanelRef = useRef<HTMLDivElement>(null);
   const focusComposerAfterRailClose = useRef(false);
   const transcriptRef = useRef<HTMLDivElement>(null);
   const previousTurnActive = useRef(false);
@@ -421,20 +420,12 @@ function SpellSurfaceChatSurface({
   }
 
   function openRail() {
-    if (window.innerWidth < 768) {
-      setRailOpen(true);
-      return;
-    }
-    setDesktopRailCollapsed(false);
+    setRailOpen(true);
   }
 
   function closeRail() {
-    if (window.innerWidth < 768) {
-      setRailOpen(false);
-      window.setTimeout(() => railOpenerRef.current?.focus(), 0);
-      return;
-    }
-    setDesktopRailCollapsed(true);
+    setRailOpen(false);
+    window.setTimeout(() => menuOpenerRef.current?.focus(), 0);
   }
 
   function closeSetup() {
@@ -613,9 +604,8 @@ function SpellSurfaceChatSurface({
       className={[
         "spell-surface-lab",
         "spell-surface-live",
-        railOpen ? "lab-rail-open" : "",
+        "lab-immersive",
         settingsOpen ? "lab-settings-open" : "",
-        desktopRailCollapsed ? "lab-desktop-rail-collapsed" : "",
       ].filter(Boolean).join(" ")}
       data-density={preferences.density}
       data-font-size={preferences.fontSize}
@@ -643,10 +633,46 @@ function SpellSurfaceChatSurface({
         state={soulSeaState}
       />
 
+      {railOpen && (
+        <div className="lab-menu-layer">
+          <button
+            aria-label="Close threads and settings"
+            className="lab-menu-backdrop"
+            onClick={closeRail}
+            tabIndex={-1}
+            type="button"
+          />
+          <div
+            aria-label="Threads and settings"
+            aria-modal="true"
+            className="lab-menu-panel"
+            onKeyDown={(event) => {
+              if (event.key !== "Tab" || !menuPanelRef.current) {
+                return;
+              }
+              const focusable = menuPanelRef.current.querySelectorAll<HTMLElement>(
+                'button:not(:disabled), input:not(:disabled), select:not(:disabled), [href]',
+              );
+              const first = focusable[0];
+              const last = focusable[focusable.length - 1];
+              if (!first || !last) {
+                return;
+              }
+              if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+              } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+              }
+            }}
+            ref={menuPanelRef}
+            role="dialog"
+          >
       <ThreadArchive
         activeThreadId={chat.conversationId ?? ""}
         archivedOpen={archivedOpen}
-        collapsed={desktopRailCollapsed}
+        collapsed={false}
         drawerOpen={railOpen}
         actionError={chat.conversationActionError}
         onArchive={toggleArchivedThread}
@@ -663,21 +689,15 @@ function SpellSurfaceChatSurface({
         startupReady={!chat.booting && !setupOpen}
         threads={threads}
       />
+          </div>
+        </div>
+      )}
 
       <main
         aria-hidden={chat.booting || railOpen || setupOpen ? true : undefined}
         className="lab-chat-main"
         inert={chat.booting || railOpen || setupOpen}
       >
-        <div className="lab-chat-controls">
-          <button aria-controls="spell-surface-rail" aria-expanded={railOpen} aria-label="Open threads" className="lab-mobile-rail" onClick={openRail} ref={railOpenerRef} type="button">
-            <RailOpenIcon />
-          </button>
-          <button aria-label="Open Soul Sea settings from header" className="lab-header-settings" onClick={() => void openSettings()} type="button">
-            <SettingsIcon />
-          </button>
-        </div>
-
         <div className="lab-transcript" ref={transcriptRef}>
           <div className="lab-transcript-column">
             {chat.bootError && <div className="boot-error">{chat.bootError}</div>}
@@ -733,8 +753,10 @@ function SpellSurfaceChatSurface({
             cancelling={chat.turnState === "cancelling"}
             draft={chat.draft}
             inputLabel={weaverProduct.inputLabel}
+            menuButtonRef={menuOpenerRef}
             onCancel={() => void chat.cancelTurn()}
             onDraftChange={chat.setDraft}
+            onOpenMenu={openRail}
             onSubmit={sendMessage}
             onTierChange={(tier: ReadingTier) => {
               const nextPreferences = { ...preferences, tier };
