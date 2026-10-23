@@ -556,7 +556,7 @@
 .lab-rail-footer svg { width: 12px; }
 
 /* Chat */
-.lab-chat-main { position: relative; z-index: 2; display: grid; min-width: 0; height: 100dvh; grid-template-rows: 72px minmax(0, 1fr) auto; }
+.lab-chat-main { position: relative; z-index: 2; display: grid; min-width: 0; height: 100dvh; grid-template-rows: minmax(0, 1fr) auto; }
 .lab-chat-header { display: flex; align-items: center; gap: 14px; padding: 0 22px; border-bottom: 1px solid var(--lab-line); background: var(--lab-glass-soft); backdrop-filter: blur(var(--lab-blur)); }
 .lab-active-thread { display: flex; min-width: 0; flex-direction: column; }
 .lab-active-thread small { color: var(--lab-dim); font-size: 8px; letter-spacing: 0.15em; text-transform: uppercase; }
@@ -569,7 +569,7 @@
 .lab-desktop-rail-collapsed .lab-mobile-rail { display: none; }
 
 .lab-transcript { min-height: 0; overflow: auto; scrollbar-width: thin; scrollbar-color: rgba(192, 194, 208, 0.18) transparent; }
-.lab-transcript-column { display: flex; width: min(760px, calc(100% - 44px)); min-height: 100%; margin: 0 auto; flex-direction: column; justify-content: flex-end; gap: 20px; padding: 148px 0 38px; }
+.lab-transcript-column { display: flex; width: min(760px, calc(100% - 44px)); min-height: 100%; margin: 0 auto; flex-direction: column; justify-content: flex-end; gap: 20px; padding: 72px 0 38px; }
 .lab-message { display: flex; align-items: flex-start; gap: 10px; animation: message-arrives 400ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 @keyframes message-arrives { from { opacity: 0; transform: translateY(10px); } }
 .lab-message-owner { justify-content: flex-end; }
@@ -616,7 +616,7 @@
 .lab-composer-dock > p a { display: inline-flex; align-items: center; min-height: 24px; padding: 0 2px; color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 
 /* Rune materialisation */
-.lab-rune-event { position: absolute; z-index: 7; left: 50%; bottom: 102px; width: min(430px, 76vw); min-height: 52px; pointer-events: none; transform: translateX(-50%); }
+.lab-rune-event { position: absolute; z-index: 7; left: 50%; bottom: 148px; width: min(430px, 76vw); min-height: 52px; pointer-events: none; transform: translateX(-50%); }
 .rune-announcement { position: absolute; inset: 50% 0 auto; margin: 0; color: rgba(223, 222, 233, 0.82); font-family: var(--font-display); font-size: 12px; letter-spacing: 0.06em; text-align: center; text-shadow: 0 0 9px rgba(192, 194, 220, 0.55), 0 2px 5px #000; animation: rune-voice-appears 3.4s ease both; transform: translateY(-50%); }
 @keyframes rune-voice-appears { 0% { opacity: 0; filter: blur(5px); letter-spacing: 0.22em; } 18%, 72% { opacity: 1; filter: blur(0); letter-spacing: 0.06em; } 100% { opacity: 0.35; } }
 .rune-particles span { --angle: calc(var(--index) * 18deg); position: absolute; left: 50%; top: 26px; width: 3px; height: 1px; background: #d9dae6; box-shadow: 0 0 5px #b7bad0; animation: particle-assembles 2.8s cubic-bezier(0.2, 0.8, 0.2, 1) both; transform: rotate(var(--angle)) translateX(180px); }
@@ -716,7 +716,7 @@
   .lab-composer-dock { padding: 8px 10px 10px; }
   .lab-tier-pill { display: none; }
   .lab-composer { grid-template-columns: minmax(0, 1fr) auto; }
-  .lab-rune-event { bottom: 92px; width: 88vw; }
+  .lab-rune-event { bottom: 150px; width: 88vw; }
   .lab-soul-sea { left: 0; height: 31%; }
   .lab-soul-caption { display: none; }
   .lab-rail-scrim { position: fixed; z-index: 34; inset: 0; display: block; border: 0; background: rgba(0, 0, 3, 0.16); }
@@ -1867,7 +1867,9 @@
   .lab-thread-row:focus-within .lab-thread-actions,
   .lab-thread-row.actions-open .lab-thread-actions { opacity: 1; }
 
-  .lab-thread-row.actions-open .lab-thread-actions-trigger { display: none; }
+  .lab-thread-row.actions-open .lab-thread-actions-trigger,
+  .lab-thread-row.active .lab-thread-actions-trigger,
+  .lab-thread-row:focus-within .lab-thread-actions-trigger { display: none; }
 }
 
 @media (max-width: 767px) {
@@ -4093,14 +4095,23 @@
 
 /* Immersive shell: no permanent rail. The + control on the composer opens
    threads, fanfic, position, and settings as one sheet. */
-.spell-surface-lab.lab-immersive { --lab-layout-rail: 0px; }
+.spell-surface-lab.lab-immersive { --lab-layout-rail: 0px; grid-template-columns: minmax(0, 1fr); }
+.lab-composer-dock .composer-wrap { width: min(760px, 100%); margin: 0 auto; }
 .composer-menu { display: grid; width: 34px; height: 34px; flex: 0 0 auto; align-self: center; place-items: center; color: var(--lab-silver); border: 1px solid var(--lab-faint); border-radius: 50%; background: rgba(0, 0, 0, 0.18); cursor: pointer; transition: color 160ms ease, border-color 160ms ease; }
 .composer-menu svg { width: 13px; }
 .composer-menu:hover { color: var(--lab-ink); border-color: var(--lab-line); }
 .lab-menu-layer { position: fixed; z-index: 46; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding: 72px 16px 108px; }
 .lab-menu-backdrop { position: absolute; inset: 0; border: 0; background: radial-gradient(circle at 50% 82%, rgba(22, 23, 34, 0.4), rgba(3, 4, 7, 0.74)); backdrop-filter: blur(7px); cursor: default; }
 .lab-menu-panel { position: relative; z-index: 1; width: min(430px, 94vw); height: min(72dvh, 640px); overflow: hidden; border: 1px solid var(--lab-line); border-radius: 18px; background: linear-gradient(180deg, rgba(17, 18, 26, 0.97), rgba(7, 8, 13, 0.98)); box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6); }
-.lab-menu-panel .lab-rail { width: 100%; height: 100%; opacity: 1; pointer-events: auto; transform: none; border-right: 0; }
+.lab-menu-panel .lab-rail { width: 100%; height: 100%; opacity: 1; pointer-events: auto; transform: none; border-right: 0; background: linear-gradient(180deg, rgba(20, 21, 30, 0.99), rgba(10, 11, 17, 0.99)); }
+.lab-menu-panel .lab-thread-copy strong { color: #e8e5ec; }
+.lab-menu-panel .lab-thread-copy small,
+.lab-menu-panel .lab-rail-footer small { color: #9a9cad; }
+.lab-menu-panel .lab-rail-section-head h2 { color: #c9cad5; }
+.lab-menu-panel .lab-thread-group h2,
+.lab-menu-panel .lab-thread-group small { color: #9fa1b1; }
+.lab-menu-panel .lab-new-fanfic { color: #d5d6e0; }
+.lab-menu-panel .lab-rail-footer > button { color: #cfd0dc; }
 .lab-menu-panel .lab-rail-close { display: grid; }
 @media (max-width: 767px) {
   .lab-menu-layer { padding: 56px 10px 96px; }
