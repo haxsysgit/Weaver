@@ -35,21 +35,17 @@ describe("Spell Surface v2 lab", () => {
     expect(surface).toHaveAttribute("data-runes", "threads");
   }, 20_000);
 
-  it("keeps the sidebar clean while thread actions remain available on hover", async () => {
+  it("keeps the drawer to Chats and Fanfic with thread actions on hover", async () => {
     render(<ThemeLab />);
 
     expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Start a new weave" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Organize chats" })).toBeVisible();
-    expect(screen.queryByRole("region", { name: "Novels" })).toBeNull();
-    expect(screen.getByRole("region", { name: "Pinned threads" })).toHaveTextContent("Ariel and the Tomb");
-
-    fireEvent.click(screen.getByRole("button", { name: "Organize chats" }));
-    fireEvent.click(screen.getByRole("menuitemradio", { name: /In one list/ }));
     expect(screen.queryByText("Today")).not.toBeInTheDocument();
+    const chats = screen.getByRole("region", { name: "Chats" });
+    expect(within(chats).getByText("Ariel and the Tomb")).toBeVisible();
+    expect(screen.getByRole("region", { name: "Fanfic" })).toBeVisible();
 
-    const threadNavigation = screen.getByRole("navigation", { name: "Active threads" });
-    expect(within(threadNavigation).getByText("Sunny vs Azarax")).toBeVisible();
+    const threadNavigation = chats;
     const thread = screen.getByTestId("thread-sunny-azarax");
     fireEvent.click(within(thread).getByRole("button", { name: "Pin Sunny vs Azarax" }));
     const pinnedThread = screen.getByTestId("thread-sunny-azarax");
@@ -71,19 +67,15 @@ describe("Spell Surface v2 lab", () => {
     expect(screen.getByText("Azarax win conditions")).toBeVisible();
   }, 10_000);
 
-  it("shows every date group and lets the reader fold one", () => {
+  it("shows one chats list and one fanfic list, with no date buckets", () => {
     render(<ThemeLab />);
 
-    const today = screen.getByRole("button", { name: /Today/ });
-    const yesterday = screen.getByRole("button", { name: /Yesterday/ });
-    const others = screen.getByRole("button", { name: /Others/ });
-
-    expect(today).toHaveAttribute("aria-expanded", "true");
-    expect(yesterday).toHaveAttribute("aria-expanded", "true");
-    expect(others).toHaveAttribute("aria-expanded", "true");
-
-    fireEvent.click(yesterday);
-    expect(yesterday).toHaveAttribute("aria-expanded", "false");
+    const chats = screen.getByRole("region", { name: "Chats" });
+    const fanfic = screen.getByRole("region", { name: "Fanfic" });
+    expect(within(chats).getByText("Ariel and the Tomb")).toBeVisible();
+    expect(within(fanfic).getByText("[No fanfic yet. Start one above.]")).toBeVisible();
+    expect(screen.queryByRole("button", { name: /Today/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Yesterday/ })).toBeNull();
   });
 
   it("opens the full settings surface and applies readable display controls", () => {

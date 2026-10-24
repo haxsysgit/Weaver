@@ -585,9 +585,11 @@ describe("Thread Archive", () => {
     render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
     await openThreadSheet();
 
-    const pinned = await screen.findByRole("region", { name: "Pinned threads" });
-    expect(within(pinned).getByText("Ariel and the Tomb")).toBeVisible();
-    const unpinButton = within(pinned).getByRole("button", {
+    const chats = await screen.findByRole("region", { name: "Chats" });
+    expect(within(chats).getByText("Ariel and the Tomb")).toBeVisible();
+    expect(within(chats).getByText("Sunny and Nephis")).toBeVisible();
+    expect(within(chats).queryByText("Forgotten Shore")).toBeNull();
+    const unpinButton = within(chats).getByRole("button", {
       name: "Unpin Ariel and the Tomb",
     });
     expect(unpinButton).toHaveAttribute("title", "Unpin");
@@ -595,15 +597,15 @@ describe("Thread Archive", () => {
       "data-icon",
       "thumbtack-slash",
     );
-    const active = screen.getByRole("navigation", { name: "Active threads" });
-    expect(within(active).getByText("Sunny and Nephis")).toBeVisible();
-    expect(within(active).queryByText("Ariel and the Tomb")).toBeNull();
+    // Pinned chats come first inside the one Chats list.
+    const rows = within(chats).getAllByRole("listitem");
+    expect(rows[0]).toHaveTextContent("Ariel and the Tomb");
     expect(
-      within(active).getByRole("button", { name: "Pin Sunny and Nephis" }),
+      within(chats).getByRole("button", { name: "Pin Sunny and Nephis" }),
     ).toHaveAttribute("title", "Pin");
-    expect(
-      within(active).getByRole("button", { name: "Rename Sunny and Nephis" }),
-    ).toHaveAttribute("title", "Rename");
+
+    const fanfic = screen.getByRole("region", { name: "Fanfic" });
+    expect(within(fanfic).getByText("[No fanfic yet. Start one above.]")).toBeVisible();
 
     fireEvent.click(screen.getByRole("button", { name: /Open archived threads/ }));
     expect(screen.getByRole("heading", { name: "Archived threads" })).toBeVisible();
@@ -715,16 +717,19 @@ describe("Thread Archive", () => {
       within(row).getByRole("button", { name: "Pin Durable theory" }),
     );
 
-    const pinned = await screen.findByRole("region", { name: "Pinned threads" });
-    expect(within(pinned).getByText("Durable theory")).toBeVisible();
+    const chats = await screen.findByRole("region", { name: "Chats" });
+    expect(
+      within(chats).getByRole("button", { name: "Unpin Durable theory" }),
+    ).toBeInTheDocument();
     firstRender.unmount();
     render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
     await openThreadSheet();
 
-    const restoredPinned = await screen.findByRole("region", {
-      name: "Pinned threads",
-    });
-    expect(within(restoredPinned).getByText("Durable theory")).toBeVisible();
+    const restored = await screen.findByRole("region", { name: "Chats" });
+    expect(within(restored).getByText("Durable theory")).toBeVisible();
+    expect(
+      within(restored).getByRole("button", { name: "Unpin Durable theory" }),
+    ).toBeInTheDocument();
   });
 
   it("keeps the thread unchanged and shows safe copy when a mutation fails", async () => {
@@ -752,10 +757,10 @@ describe("Thread Archive", () => {
     expect(
       await screen.findByText("The change could not be saved. Try again."),
     ).toBeVisible();
-    expect(screen.queryByRole("region", { name: "Pinned threads" })).toBeNull();
     expect(
-      within(screen.getByRole("navigation", { name: "Active threads" }))
-        .getByText("Unbroken thread"),
+      within(screen.getByRole("region", { name: "Chats" })).getByText(
+        "Unbroken thread",
+      ),
     ).toBeVisible();
   });
 

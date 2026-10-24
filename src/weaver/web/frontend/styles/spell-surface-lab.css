@@ -621,15 +621,6 @@
 @keyframes rune-voice-appears { 0% { opacity: 0; filter: blur(5px); letter-spacing: 0.22em; } 18%, 72% { opacity: 1; filter: blur(0); letter-spacing: 0.06em; } 100% { opacity: 0.35; } }
 .rune-particles span { --angle: calc(var(--index) * 18deg); position: absolute; left: 50%; top: 26px; width: 3px; height: 1px; background: #d9dae6; box-shadow: 0 0 5px #b7bad0; animation: particle-assembles 2.8s cubic-bezier(0.2, 0.8, 0.2, 1) both; transform: rotate(var(--angle)) translateX(180px); }
 @keyframes particle-assembles { 0% { opacity: 0; transform: rotate(var(--angle)) translateX(210px) scaleX(0.3); } 32%, 68% { opacity: 0.7; transform: rotate(var(--angle)) translateX(86px) scaleX(2.4); } 100% { opacity: 0; transform: rotate(var(--angle)) translateX(42px) scaleX(0.3); } }
-.star-thread-gathering { display: block; margin: 0 auto; width: 132px; height: 44px; overflow: visible; animation: star-thread-appear 0.4s ease both; }
-.star-thread-path { fill: none; stroke: var(--lab-gold); stroke-width: 0.9; stroke-linecap: round; stroke-dasharray: 5 6; opacity: 0.75; filter: drop-shadow(0 0 4px rgba(224, 189, 120, 0.55)); animation: star-thread-flow 2.6s linear infinite; }
-.star-thread-star { fill: var(--lab-gold); filter: drop-shadow(0 0 7px rgba(224, 189, 120, 0.7)); transform-box: fill-box; transform-origin: center; animation: star-wobble 1.9s ease-in-out infinite; }
-.rune-gathering .rune-announcement { inset: 48px 0 auto; font-size: 11px; opacity: 0.8; transform: none; }
-@keyframes star-thread-appear { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes star-thread-flow { to { stroke-dashoffset: -22; } }
-@keyframes star-wobble { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-2.5px) scale(1.18); } }
-@media (prefers-reduced-motion: reduce) {
-  .star-thread-path, .star-thread-star, .star-thread-gathering { animation: none; }
 }
 .rune-thread-weave { width: 100%; height: 72px; overflow: visible; opacity: 0.54; }
 .rune-thread-weave path { fill: none; stroke: rgba(213, 214, 229, 0.74); stroke-width: 0.7; stroke-dasharray: 460; stroke-dashoffset: 460; filter: drop-shadow(0 0 4px rgba(184, 187, 213, 0.8)); animation: thread-rune-draw 3.2s ease both; }
@@ -1674,7 +1665,7 @@
 .lab-thread-row:hover { border-color: transparent; background: rgba(255, 255, 255, 0.04); }
 .lab-thread-row.active {
   border-color: transparent;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(224, 189, 120, 0.06);
 }
 .lab-thread-row.active::before { display: none; }
 
@@ -2966,1144 +2957,103 @@
     inset 0 1px rgba(203, 204, 204, 0.08);
 }
 
-.spell-surface-live .composer-rune-border {
-  position: absolute;
-  z-index: 0;
-  inset: 4px 62px 4px 10px;
-  color: rgba(203, 204, 204, 0.28);
-  pointer-events: none;
-  transition: color var(--motion-smooth) var(--ease-weave);
-}
 
-.spell-surface-live .composer-rune-border span {
-  position: absolute;
-  width: 7px;
-  height: 7px;
-  border-top: 1px solid currentColor;
-  border-left: 1px solid currentColor;
-  transform: rotate(45deg);
-}
-
-.spell-surface-live .composer-rune-border span:nth-child(1) {
-  top: -1px;
-  left: 18%;
-}
-
-.spell-surface-live .composer-rune-border span:nth-child(2) {
-  top: -1px;
-  left: 50%;
-}
-
-.spell-surface-live .composer-rune-border span:nth-child(3) {
-  top: -1px;
-  right: 18%;
-}
-
-.spell-surface-live .composer-rune-border span:nth-child(4) {
-  bottom: -1px;
-  left: 34%;
-  transform: rotate(225deg);
-}
-
-.spell-surface-live .composer-rune-border span:nth-child(5) {
-  right: 34%;
-  bottom: -1px;
-  transform: rotate(225deg);
-}
-
-.spell-surface-live .composer-shell:focus-within .composer-rune-border {
-  color: rgba(232, 192, 120, 0.52);
-}
-
-.spell-surface-live .composer-shell > textarea,
-.spell-surface-live .composer-shell > .composer-tier,
-.spell-surface-live .composer-shell > .composer-action {
-  position: relative;
-  z-index: 1;
-}
-
-.spell-surface-live[data-theme] .composer-action {
-  color: var(--edition-spell-void);
-  background: var(--edition-thread-silver);
-}
-
-.spell-surface-live .lab-composer-dock {
-  background: linear-gradient(transparent, rgba(5, 5, 5, 0.68));
-}
-
-.spell-surface-live[data-theme] .tier-pill,
-.spell-surface-live[data-theme] .tier-menu {
-  color: var(--edition-reader-ivory);
-  border-color: rgba(203, 204, 204, 0.2);
-  background: rgba(11, 11, 11, 0.94);
-}
-
-.spell-surface-live .lab-novel-list button.active {
-  color: var(--edition-reader-ivory);
-  background: rgba(203, 204, 204, 0.055);
-}
-
-.spell-surface-live .lab-novel-list button.active small {
-  color: var(--lab-dim);
-}
-
-.spell-surface-live .message-actions button {
-  border-color: transparent;
-  background: transparent;
-}
-
-.spell-surface-live .message-actions button:hover {
-  border-color: transparent;
-  background: transparent;
-  color: var(--edition-thread-silver);
-}
-
-/* Conversation Chamber: replies are written into the Spellweave itself. */
-.spell-surface-live .message-weaver {
-  display: grid;
-  grid-template-columns: 34px minmax(0, min(680px, 88%));
-  gap: 12px;
-  align-items: stretch;
-}
-
-.spell-surface-live .weaver-response-spine {
-  position: relative;
-  display: flex;
-  min-height: 52px;
-  justify-content: center;
-}
-
-.spell-surface-live .weaver-avatar {
-  position: relative;
-  z-index: 1;
-  width: 28px;
-  height: 28px;
-  flex-basis: 28px;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.spell-surface-live .weaver-avatar .weaver-mark-icon {
-  width: 28px;
-  height: 28px;
-  filter: saturate(0.7) drop-shadow(0 0 7px rgba(183, 154, 98, 0.2));
-}
-
-.spell-surface-live .weaver-response-body {
-  min-width: 0;
-  padding: 2px 0 18px;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-  backdrop-filter: none;
-}
-
-.spell-surface-live .weaver-response-body .message-role {
-  margin-bottom: 8px;
-  color: var(--edition-appraisal-gold);
-  font-size: 9px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-}
-
-.spell-surface-live .weaver-response-body .markdown-body {
-  max-width: 64ch;
-  color: var(--edition-reader-ivory);
-}
-
-.spell-surface-live .owner-message-runes {
-  position: relative;
-  max-width: 58ch;
-  padding: 3px 0 3px 22px;
-  color: var(--edition-reader-ivory);
-  border: 0;
-  background: transparent;
-  font-family: var(--font-display);
-  font-size: 1.06rem;
-  line-height: 1.68;
-  overflow-wrap: anywhere;
-  white-space: pre-wrap;
-  text-align: right;
-  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.96), 0 0 16px rgba(0, 0, 0, 0.72);
-}
-
-.spell-surface-live .owner-message-runes::before {
-  position: absolute;
-  top: 0.84em;
-  left: 3px;
-  width: 7px;
-  height: 7px;
-  content: "";
-  border: 1px solid var(--edition-appraisal-gold);
-  transform: rotate(45deg);
-}
-
-.spell-surface-live .chapter-reference-knot {
-  display: inline;
-  margin: 0 0.08em;
-  padding: 0;
-  color: var(--edition-appraisal-gold);
-  border: 0;
-  background: transparent;
-  font-family: var(--font-body);
-  font-size: 0.82em;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-}
-
-.spell-surface-live .chapter-reference-knot::before {
-  content: "\2726\00a0";
-  font-size: 0.72em;
-}
-
-.spell-surface-live .recovery-panel,
-.spell-surface-live .boot-error {
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.spell-surface-live .recovery-knot {
-  border-radius: 0;
-  transform: rotate(45deg);
-}
-
-.spell-surface-live .recovery-actions button,
-.spell-surface-live .recovery-actions .recovery-retry {
-  border-color: transparent;
-  background: transparent;
-}
-
-.spell-surface-live .recovery-actions button:hover,
-.spell-surface-live .recovery-actions .recovery-retry:hover {
-  border-color: transparent;
-  background: transparent;
-}
-
-@media (max-width: 767px) {
-  .spell-surface-live .lab-chat-main {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .spell-surface-live .lab-transcript {
-    width: 100%;
-    min-width: 0;
-    max-width: 100%;
-    overflow-x: hidden;
-  }
-
-  .spell-surface-live .lab-transcript-column {
-    width: calc(100% - 24px);
-    min-width: 0;
-    max-width: calc(100% - 24px);
-  }
-
-  .spell-surface-live .message-weaver {
-    width: 100%;
-    max-width: 100%;
-    grid-template-columns: 28px minmax(0, 1fr);
-    gap: 9px;
-  }
-
-  .spell-surface-live .owner-message-runes {
-    max-width: 88%;
-    padding-left: 18px;
-    font-size: 1rem;
-  }
-
-  .spell-surface-live .message-actions button,
-  .spell-surface-live .recovery-actions button {
-    min-width: 48px;
-    min-height: 48px;
-  }
-
-}
-
-.spell-surface-live .lab-thread-row.active,
-.spell-surface-live .lab-new-thread,
-.spell-surface-live .lab-rail-footer > button,
-.spell-surface-live .lab-live-mode {
-  border-color: var(--edition-depth-line);
-  background: rgba(203, 204, 204, 0.045);
-}
-
-.spell-surface-live .lab-new-thread:active {
-  border-color: rgba(183, 154, 98, 0.48);
-  background: rgba(183, 154, 98, 0.1);
-  transform: scale(0.985);
-}
-
-.spell-surface-live .lab-chat-main::before {
-  background:
-    linear-gradient(110deg, rgba(203, 204, 204, 0.018), transparent 34%),
-    radial-gradient(circle at 100% 52%, rgba(142, 141, 141, 0.018), transparent 32rem);
-}
-
-/* Plan 027: Reader Appraisal settings. */
-.lab-settings-backdrop {
-  padding: 20px;
-  background: rgba(0, 0, 2, 0.82);
-  backdrop-filter: blur(4px);
-}
-
-.lab-settings-panel {
-  width: min(1050px, 96vw);
-  height: min(780px, 94dvh);
-  grid-template-rows: 122px minmax(0, 1fr) auto;
-  border-color: rgba(203, 204, 204, 0.17);
-  border-radius: 3px;
-  background:
-    linear-gradient(110deg, rgba(203, 204, 204, 0.02), transparent 32%),
-    #030405;
-  box-shadow: 0 36px 110px rgba(0, 0, 0, 0.78);
-}
-
-.lab-settings-content .lab-setting-title > p {
-  margin: 0 0 5px;
-  color: var(--edition-appraisal-gold);
-  font-family: var(--font-body);
-  font-size: 11px;
-  font-weight: 400;
-  letter-spacing: 0.08em;
-  text-transform: none;
-}
-
-.lab-settings-atmosphere {
-  position: relative;
-  min-height: 0;
-  overflow: hidden;
-  border-bottom: 1px solid rgba(203, 204, 204, 0.1);
-  background: #030405;
-}
-
-.lab-settings-atmosphere > .lab-soul-sea {
-  position: absolute;
-  z-index: 0;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0.94;
-  mask-image: linear-gradient(to bottom, black 68%, rgba(0, 0, 0, 0.7) 100%);
-}
-
-.lab-settings-atmosphere > span {
-  position: absolute;
-  z-index: 1;
-  right: 24px;
-  bottom: 12px;
-  color: rgba(203, 204, 204, 0.58);
-  font-family: var(--font-body);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-}
-
-.lab-settings-close {
-  position: absolute;
-  z-index: 2;
-  top: 12px;
-  right: 14px;
-  display: grid;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  place-items: center;
-  color: rgba(238, 236, 232, 0.82);
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  cursor: pointer;
-  font-size: 21px;
-}
-
-.lab-settings-close:hover,
-.lab-settings-close:focus-visible {
-  color: #fff;
-  border: 0;
-  background: transparent;
-}
-
-.lab-settings-layout {
-  grid-template-columns: 248px minmax(0, 1fr);
-}
-
-.lab-settings-nav {
-  position: relative;
-  padding: 23px 17px 30px 27px;
-  border-right-color: rgba(203, 204, 204, 0.1);
-  background: rgba(0, 0, 2, 0.24);
-}
-
-.lab-settings-nav::before {
-  position: absolute;
-  z-index: 0;
-  top: 55px;
-  bottom: 38px;
-  left: 29px;
-  width: 1px;
-  content: "";
-  background: linear-gradient(transparent, rgba(203, 204, 204, 0.32) 8%, rgba(203, 204, 204, 0.26) 92%, transparent);
-}
-
-.lab-settings-nav > p {
-  position: relative;
-  z-index: 1;
-  margin: 0 0 14px 19px;
-  color: rgba(203, 204, 204, 0.5);
-  font-size: 10px;
-  letter-spacing: 0.17em;
-}
-
-.lab-settings-nav nav {
-  position: relative;
-  z-index: 1;
-  gap: 0;
-}
-
-.lab-settings-nav button {
-  min-height: 66px;
-  padding: 10px 10px 10px 28px;
-  border: 0;
-  border-radius: 0;
-  transition:
-    color var(--motion-fast) var(--ease-weave),
-    transform var(--motion-fast) var(--ease-weave);
-}
-
-.lab-settings-nav button::after {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  width: 7px;
-  height: 7px;
-  content: "";
-  border: 1px solid rgba(203, 204, 204, 0.38);
-  background: #030405;
-  transform: translateY(-50%) rotate(45deg);
-}
-
-.lab-settings-nav button:hover {
-  color: #f0efec;
-  background: transparent;
-  transform: translateX(2px);
-}
-
-.lab-settings-nav button.on {
-  color: #f2f0eb;
-  border: 0;
-  background: transparent;
-}
-
-.lab-settings-nav button.on::before {
-  display: none;
-}
-
-.lab-settings-nav button.on::after {
-  border-color: var(--edition-appraisal-gold);
-  background: var(--edition-appraisal-gold);
-  box-shadow: 0 0 13px rgba(193, 150, 81, 0.5);
-}
-
-.lab-settings-nav strong {
-  font-family: var(--font-body);
+.spell-surface-live .composer-shell textarea {
+  padding: 9px 2px 7px;
+  color: #efecef;
   font-size: 15px;
-  font-weight: 400;
+  line-height: 1.5;
 }
-
-.lab-settings-nav span {
-  margin-top: 5px;
-  color: rgba(203, 204, 204, 0.48);
-  font-size: 10px;
-}
-
-.lab-settings-main {
-  display: block;
-  overflow: hidden;
-}
-
-.lab-settings-back {
-  display: none;
-}
-
-.lab-settings-content {
-  height: 100%;
-  padding: 30px 34px 40px;
-}
-
-.lab-settings-content .lab-setting-title {
-  margin-bottom: 25px;
-}
-
-.lab-settings-content .lab-setting-title h3 {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 29px;
-  font-weight: 400;
-  letter-spacing: 0.015em;
-}
-
-.lab-settings-content .lab-setting-title > span {
-  display: block;
-  max-width: 640px;
-  margin-top: 8px;
-  color: rgba(203, 204, 204, 0.65);
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-.lab-reader-position {
-  max-width: 660px;
-  padding: 19px 0 22px;
-  border-block: 1px solid rgba(203, 204, 204, 0.12);
-}
-
-.lab-reader-position > label,
-.lab-spoiler-boundary legend {
-  color: rgba(203, 204, 204, 0.64);
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.lab-reader-position > div:first-of-type {
-  display: flex;
-  align-items: baseline;
-  gap: 18px;
-  margin-top: 7px;
-}
-
-.lab-reader-position input {
-  width: min(210px, 55vw);
-  min-height: 55px;
-  padding: 4px 0;
-  color: #f0eeea;
+.spell-surface-live .composer-shell textarea::placeholder { color: #7c7e8c; }
+.spell-surface-live .composer-shell .composer-action {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
   border: 0;
-  border-bottom: 1px solid rgba(203, 204, 204, 0.34);
-  border-radius: 0;
-  outline: 0;
+  border-radius: 50%;
   background: transparent;
-  font-family: var(--font-display);
-  font-size: 34px;
+  box-shadow: none;
+  color: #a9aab7;
 }
-
-.lab-reader-position input:focus {
-  border-bottom-color: var(--edition-appraisal-gold);
+.spell-surface-live .composer-shell .composer-action:hover:not(:disabled) {
+  color: var(--lab-ink);
+  background: rgba(255, 255, 255, 0.05);
+  transform: none;
 }
-
-.lab-reader-position strong {
-  color: var(--edition-appraisal-gold);
-  font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 400;
-}
-
-.lab-chapter-steps {
-  display: flex;
-  gap: 4px;
-  margin-top: 12px;
-}
-
-.lab-chapter-steps button {
-  min-width: 48px;
-  min-height: 44px;
-  color: rgba(203, 204, 204, 0.7);
-  border: 1px solid rgba(203, 204, 204, 0.12);
-  border-radius: 0;
-  background: transparent;
-  cursor: pointer;
-}
-
-.lab-chapter-steps button:hover {
-  color: #fff;
-  border-color: rgba(203, 204, 204, 0.3);
-}
-
-.lab-spoiler-boundary {
-  display: grid;
-  max-width: 660px;
-  gap: 4px;
-  margin: 24px 0 0;
-  padding: 0;
-  border: 0;
-}
-
-.lab-spoiler-boundary legend {
-  margin-bottom: 9px;
-}
-
-.lab-spoiler-boundary label {
-  display: grid;
-  min-height: 65px;
-  grid-template-columns: 22px minmax(0, 1fr);
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  color: rgba(203, 204, 204, 0.75);
-  border-left: 1px solid rgba(203, 204, 204, 0.14);
-  cursor: pointer;
-}
-
-.lab-spoiler-boundary label.on {
-  color: #f0eeea;
-  border-left-color: var(--edition-appraisal-gold);
-  background: linear-gradient(90deg, rgba(193, 150, 81, 0.07), transparent 70%);
-}
-
-.lab-spoiler-boundary input {
-  accent-color: var(--edition-appraisal-gold);
-}
-
-.lab-spoiler-boundary span,
-.lab-spoiler-boundary small {
-  display: block;
-}
-
-.lab-spoiler-boundary strong {
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.lab-spoiler-boundary small {
-  margin-top: 4px;
-  color: rgba(203, 204, 204, 0.5);
-  font-size: 11px;
-  line-height: 1.45;
-}
-
-.lab-settings-content .lab-choice-grid button {
-  border-color: rgba(203, 204, 204, 0.13);
-  border-radius: 1px;
-  background: transparent;
-}
-
-.lab-settings-content .lab-choice-grid button.on {
-  border-color: rgba(193, 150, 81, 0.52);
-  background: linear-gradient(145deg, rgba(193, 150, 81, 0.08), transparent 70%);
-}
-
-.lab-settings-content .lab-choice-grid button.on::after {
-  border-color: var(--edition-appraisal-gold);
-  background: var(--edition-appraisal-gold);
-}
-
-.lab-fixed-identity {
-  display: flex;
-  max-width: 650px;
-  align-items: center;
-  gap: 13px;
-  padding: 14px 0 18px;
-  border-bottom: 1px solid rgba(203, 204, 204, 0.12);
-}
-
-.lab-fixed-identity > span {
-  color: var(--edition-appraisal-gold);
-  font-size: 18px;
-}
-
-.lab-fixed-identity strong,
-.lab-fixed-identity small {
-  display: block;
-}
-
-.lab-fixed-identity strong {
-  color: #efede9;
-  font-family: var(--font-body);
-  font-size: 14px;
-  font-weight: 400;
-}
-
-.lab-soul-sea-picker > p {
-  margin: -4px 0 12px;
-  color: rgba(203, 204, 204, 0.5);
-  font-size: 11px;
-}
-
-.lab-settings-content .lab-soul-sea-picker .lab-choice-grid button {
-  position: relative;
-  min-height: 172px;
-  overflow: hidden;
-  padding: 102px 14px 14px;
-}
-
-.lab-soul-sea-picker button > .lab-soul-sea {
-  position: absolute;
-  z-index: 0;
-  inset: 0 0 auto;
-  width: 100%;
-  height: 92px;
-  opacity: 0.94;
-  mask-image: linear-gradient(black 70%, transparent);
-  transition: opacity var(--motion-fast) var(--ease-weave);
-}
-
-.lab-soul-sea-picker button > strong,
-.lab-soul-sea-picker button > span {
-  position: relative;
-  z-index: 1;
-}
-
-.lab-soul-sea-picker button.on > .lab-soul-sea {
-  opacity: 1;
-}
-
-.lab-fixed-identity small {
-  margin-top: 3px;
-  color: rgba(203, 204, 204, 0.48);
-}
-
-.lab-segmented-control {
-  border-color: rgba(203, 204, 204, 0.13);
-  border-radius: 1px;
-  background: transparent;
-}
-
-.lab-segmented-control button {
-  min-height: 44px;
-  border-radius: 0;
-}
-
-.lab-segmented-control button.on {
-  color: #f0ede8;
-  border-color: rgba(193, 150, 81, 0.38);
-  background: rgba(193, 150, 81, 0.07);
-}
-
-.lab-privacy-boundaries {
-  display: grid;
-  max-width: 680px;
-  gap: 0;
-  margin-bottom: 26px;
-  border-block: 1px solid rgba(203, 204, 204, 0.12);
-}
-
-.lab-privacy-boundaries p {
-  display: grid;
-  grid-template-columns: 105px minmax(0, 1fr);
-  gap: 15px;
-  margin: 0;
-  padding: 15px 0;
-  border-bottom: 1px solid rgba(203, 204, 204, 0.08);
-}
-
-.lab-privacy-boundaries p:last-child {
-  border-bottom: 0;
-}
-
-.lab-privacy-boundaries strong {
-  color: var(--edition-appraisal-gold);
-  font-family: var(--font-body);
-  font-size: 12px;
-  font-weight: 400;
-}
-
-.lab-privacy-boundaries span {
-  color: rgba(203, 204, 204, 0.67);
-  font-size: 12px;
-  line-height: 1.55;
-}
-
-.lab-rite-settings {
-  min-height: 330px;
-  background: radial-gradient(circle at 50% 90%, rgba(193, 150, 81, 0.06), transparent 17rem);
-}
-
-.lab-rite-replay {
-  min-height: 50px;
-  margin-top: 14px;
-  padding: 10px 22px;
-  color: #efece6;
-  border: 1px solid rgba(203, 204, 204, 0.3);
-  border-radius: 0;
-  background: transparent;
-  cursor: pointer;
-  font-family: var(--font-body);
-  font-size: 15px;
-}
-
-.lab-settings-actions {
-  min-height: 66px;
-  align-items: center;
-  padding: 10px 20px;
-  border-top-color: rgba(203, 204, 204, 0.12);
-  background: #030405;
-}
-
-.lab-settings-actions button {
-  min-width: 108px;
-  min-height: 44px;
-  border-radius: 1px;
-  font-size: 12px;
-}
-
-.lab-settings-actions button.primary {
-  color: #080704;
-  border-color: var(--edition-appraisal-gold);
-  background: var(--edition-appraisal-gold);
-}
-
-.lab-settings-actions button:disabled {
-  cursor: default;
-  opacity: 0.35;
-}
-
-.lab-discard-prompt {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.lab-discard-prompt p {
-  display: grid;
-  margin: 0 auto 0 0;
-}
-
-.lab-discard-prompt strong {
-  color: #e9e5df;
-  font-size: 12px;
-}
-
-.lab-discard-prompt span {
-  margin-top: 3px;
-  color: rgba(203, 204, 204, 0.48);
-  font-size: 10px;
-}
-
-.lab-discard-prompt button.danger {
-  color: #dba6a0;
-  border-color: rgba(183, 72, 62, 0.38);
-}
-
-@media (max-width: 767px) {
-  .lab-settings-backdrop {
-    display: block;
-    padding: 0;
-    background: #030405;
-    backdrop-filter: none;
-  }
-
-  .lab-settings-panel {
-    width: 100%;
-    height: 100%;
-    max-height: none;
-    grid-template-rows: 104px minmax(0, 1fr) auto;
-    border: 0;
-    border-radius: 0;
-    animation-duration: var(--motion-smooth);
-  }
-
-  .lab-settings-atmosphere > span {
-    right: 15px;
-    bottom: 8px;
-    font-size: 9px;
-  }
-
-  .lab-settings-close {
-    top: max(9px, env(safe-area-inset-top));
-    right: 10px;
-  }
-
-  .lab-settings-layout {
-    display: block;
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  .lab-settings-nav {
-    height: 100%;
-    padding: 20px 18px 30px 28px;
-    overflow: auto;
-    border: 0;
-  }
-
-  .lab-settings-nav::before {
-    top: 58px;
-    bottom: 38px;
-    left: 30px;
-  }
-
-  .lab-settings-nav > p {
-    display: block;
-    margin-left: 20px;
-  }
-
-  .lab-settings-nav nav {
-    display: grid;
-    width: auto;
-  }
-
-  .lab-settings-nav button {
-    min-width: 0;
-    min-height: 70px;
-    align-items: flex-start;
-    padding-left: 30px;
-    text-align: left;
-  }
-
-  .lab-settings-nav button.on::before {
-    display: none;
-  }
-
-  .lab-settings-nav span {
-    display: block;
-  }
-
-  .lab-settings-main {
-    display: none;
-    height: 100%;
-    animation: lab-settings-section-in var(--motion-smooth) var(--ease-weave) both;
-  }
-
-  .lab-settings-panel.settings-detail-open .lab-settings-nav {
-    display: none;
-  }
-
-  .lab-settings-panel.settings-detail-open .lab-settings-main {
-    display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
-  }
-
-  .lab-settings-back {
-    display: block;
-    min-height: 48px;
-    padding: 6px 17px;
-    color: rgba(203, 204, 204, 0.76);
-    border: 0;
-    border-bottom: 1px solid rgba(203, 204, 204, 0.1);
-    background: transparent;
-    cursor: pointer;
-    text-align: left;
-  }
-
-  .lab-settings-content {
-    height: auto;
-    padding: 22px 17px calc(34px + env(safe-area-inset-bottom));
-  }
-
-  .lab-settings-content .lab-setting-title h3 {
-    font-size: 26px;
-  }
-
-  .lab-settings-content .lab-choice-grid.three {
-    grid-template-columns: 1fr;
-  }
-
-  .lab-settings-content .lab-choice-grid button {
-    min-height: 82px;
-  }
-
-  .lab-customize-row,
-  .lab-privacy-boundaries p {
-    grid-template-columns: 1fr;
-    gap: 5px;
-  }
-
-  .lab-settings-actions {
-    min-height: calc(64px + env(safe-area-inset-bottom));
-    padding: 9px 12px calc(9px + env(safe-area-inset-bottom));
-  }
-
-  .lab-discard-prompt {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .lab-discard-prompt p {
-    grid-column: 1 / -1;
-  }
-}
-
-/* The installed PWA owns a standalone window between the operating system's
-   status and navigation bars. Keep that window continuous and stop animation
-   work hidden behind its full-screen settings surface. */
-@media (display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui) {
-  html,
-  body,
-  #root {
-    background: #030405;
-  }
-
-  .spell-surface-live .lab-chat-main {
-    height: 100%;
-  }
-}
-
-.lab-settings-open > .lab-soul-sea *,
-.lab-settings-open .spellweave-field-foreground,
-.lab-settings-panel .lab-soul-sea * {
-  animation-play-state: paused !important;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .lab-settings-panel,
-  .lab-settings-main,
-  .lab-settings-content .lab-settings-section {
-    animation: none;
-  }
-
-  .lab-settings-nav button {
-    transition: none;
-  }
-}
-
-
-/* Plan 027 checkpoint three: phone input and touch floor. */
-@media (max-width: 767px) {
-  .spell-surface-live .lab-mobile-rail,
-  .spell-surface-live .lab-header-settings,
-  .spell-surface-live .lab-rail-close {
-    width: 48px;
-    min-width: 48px;
-    height: 48px;
-    min-height: 48px;
-  }
-
-  .spell-surface-live .lab-rail button,
-  .spell-surface-live .lab-settings-panel button,
-  .spell-surface-live .lab-settings-panel a,
-  .spell-surface-live .lab-thread-select {
-    min-height: 48px;
-  }
-
-  .spell-surface-live .lab-thread-actions button {
-    width: 48px;
-    height: 48px;
-  }
-
-  .spell-surface-live .lab-settings-close,
-  .spell-surface-live .lab-secret-input button {
-    width: 48px;
-    min-width: 48px;
-    height: 48px;
-  }
-
-  .spell-surface-live .composer-shell textarea {
-    min-height: 48px;
-    font-size: 16px;
-  }
-
-  .spell-surface-live .tier-pill {
-    min-height: 48px;
-  }
-
-  .spell-surface-live .composer-action {
-    flex-basis: 48px;
-    width: 48px;
-    height: 48px;
-  }
-}
-
-
-@media (max-height: 500px) and (hover: none) {
-  .spell-surface-live .lab-mobile-rail,
-  .spell-surface-live .lab-header-settings,
-  .spell-surface-live .lab-rail-close {
-    width: 48px;
-    min-width: 48px;
-    height: 48px;
-    min-height: 48px;
-  }
-
-  .spell-surface-live .lab-rail button,
-  .spell-surface-live .lab-settings-panel button,
-  .spell-surface-live .lab-settings-panel a,
-  .spell-surface-live .lab-thread-select {
-    min-height: 48px;
-  }
-
-  .spell-surface-live .lab-thread-actions button {
-    width: 48px;
-    height: 48px;
-  }
-
-  .spell-surface-live .lab-settings-close,
-  .spell-surface-live .lab-secret-input button {
-    width: 48px;
-    min-width: 48px;
-    height: 48px;
-  }
-
-  .spell-surface-live .composer-shell textarea {
-    min-height: 48px;
-    font-size: 16px;
-  }
-
-  .spell-surface-live .tier-pill {
-    min-height: 48px;
-  }
-
-  .spell-surface-live .composer-action {
-    flex-basis: 48px;
-    width: 48px;
-    height: 48px;
-  }
-}
-
-
-/* Clear-night rail: no chat-app cards on the open field. */
-.spell-surface-live .lab-new-thread {
-  background: transparent;
-}
-
-.spell-surface-live .lab-thread-row.active,
-.spell-surface-lab[data-theme] .lab-thread-row.active {
-  border-color: transparent;
-  background: transparent;
-}
-
-.spell-surface-live .lab-thread-row.active::before {
-  display: block;
-  position: absolute;
-  inset: 9px auto 9px -1px;
-  width: 1px;
-  content: "";
+.spell-surface-live .composer-shell .composer-action svg { width: 16px; height: 16px; }
+.spell-surface-live .composer-shell .composer-send {
+  color: #171208;
   background: var(--lab-gold);
-  box-shadow: 0 0 8px var(--lab-gold);
+  box-shadow: 0 0 18px rgba(224, 189, 120, 0.22);
 }
-
-.spell-surface-live .lab-thread-row.active .lab-thread-copy strong {
-  color: #f1eee4;
-  text-shadow: 0 0 14px rgba(224, 189, 120, 0.22);
+.spell-surface-live .composer-shell .composer-send:hover:not(:disabled) {
+  color: #171208;
+  background: #eed39a;
 }
-
-/* Clear-night rail beats the edition themes: the field, not a panel. */
-.spell-surface-live .lab-rail,
-.spell-surface-lab[data-theme] .lab-rail {
-  border-right-color: rgba(255, 255, 255, 0.05);
-  background-color: transparent;
-  background-image:
-    radial-gradient(1.5px 1.5px at 14% 12%, rgba(224, 229, 245, 0.65), transparent),
-    radial-gradient(1.5px 1.5px at 72% 22%, rgba(224, 229, 245, 0.45), transparent),
-    radial-gradient(1.5px 1.5px at 40% 48%, rgba(236, 220, 180, 0.40), transparent),
-    radial-gradient(1.5px 1.5px at 22% 66%, rgba(224, 229, 245, 0.40), transparent),
-    radial-gradient(1.5px 1.5px at 82% 78%, rgba(224, 229, 245, 0.35), transparent),
-    radial-gradient(1.5px 1.5px at 55% 88%, rgba(224, 229, 245, 0.40), transparent),
-    linear-gradient(90deg, rgba(3, 4, 8, 0.16), rgba(3, 4, 8, 0.02));
+.spell-surface-live .composer-shell .composer-send:disabled {
+  color: rgba(224, 189, 120, 0.45);
+  background: rgba(224, 189, 120, 0.12);
   box-shadow: none;
-  backdrop-filter: none;
+}
+.spell-surface-live .composer-shell .composer-stop {
+  color: #f0c9c6;
+  background: rgba(185, 75, 72, 0.16);
 }
 
-@media (max-width: 720px) {
-  .spell-surface-live .lab-rail,
-  .spell-surface-lab[data-theme] .lab-rail {
-    background-color: rgba(3, 4, 8, 0.10);
-    backdrop-filter: blur(6px);
-  }
+/* Gathering: the older three-core thread loader, gold and bright. */
+.rune-gathering .fate-weaving-loader { width: 168px; height: 46px; margin: 0 auto; color: var(--lab-gold); }
+.rune-gathering .fate-loader-thread { stroke: var(--lab-gold); opacity: 0.55; }
+.rune-gathering .fate-loader-core {
+  fill: var(--lab-gold);
+  opacity: 0.95;
+  filter: drop-shadow(0 0 6px rgba(224, 189, 120, 0.8));
 }
+.rune-gathering .rune-announcement { inset: 50px 0 auto; }
 
+/* Drawer sections: Chats and Fanfic, flat. No date buckets. */
+.lab-chat-section { margin-top: 2px; }
+.lab-chat-section + .lab-chat-section { margin-top: 14px; }
+.lab-chat-section .lab-rail-section-head { padding: 10px 12px 4px; }
+.lab-chat-section .lab-rail-section-head h2 { color: var(--lab-ink); font-size: 12px; }
+.lab-chat-section .lab-rail-section-head small { color: var(--lab-dim); }
+.lab-chat-section .lab-thread-list { flex: none; overflow: visible; }
+.lab-menu-panel .lab-chat-section .lab-rail-section-head h2 { color: #e6e3ea; }
 
-/* Immersive shell: no permanent rail. The + control on the composer opens
-   threads, fanfic, position, and settings as one sheet. */
+/* The pending-reply loader carries the same gold as the rune gathering. */
+.spell-surface-live .fate-loader-core {
+  fill: var(--lab-gold);
+  filter: drop-shadow(0 0 6px rgba(224, 189, 120, 0.75));
+}
+.spell-surface-live .fate-loader-thread { stroke: var(--lab-gold); }
+.spell-surface-live .fate-weaving-loader { width: 168px; height: 46px; margin: 4px 0 6px; }
+
+/* --- Immersive shell (restored after an over-broad cleanup) --- */
 .spell-surface-lab.lab-immersive { --lab-layout-rail: 0px; grid-template-columns: minmax(0, 1fr); }
 .lab-composer-dock .composer-wrap { width: min(760px, 100%); margin: 0 auto; }
-.composer-menu { display: grid; width: 34px; height: 34px; flex: 0 0 auto; align-self: center; place-items: center; color: var(--lab-silver); border: 1px solid var(--lab-faint); border-radius: 50%; background: rgba(0, 0, 0, 0.18); cursor: pointer; transition: color 160ms ease, border-color 160ms ease; }
-.composer-menu svg { width: 13px; }
-.composer-menu:hover { color: var(--lab-ink); border-color: var(--lab-line); }
+
+.spell-surface-live .composer-shell {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 9px 9px 9px 14px;
+  border: 1px solid rgba(224, 189, 120, 0.14);
+  border-radius: 26px;
+  background: rgba(13, 14, 21, 0.82);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.42), inset 0 1px rgba(255, 255, 255, 0.035);
+  backdrop-filter: blur(18px);
+}
+.spell-surface-live .composer-shell::before,
+.spell-surface-live .composer-shell::after { display: none; }
+.spell-surface-live .composer-shell:focus-within {
+  border-color: rgba(224, 189, 120, 0.32);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.42), 0 0 0 3px rgba(224, 189, 120, 0.05);
+}
+
 .lab-menu-layer { position: fixed; z-index: 46; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding: 72px 16px 108px; }
 .lab-menu-backdrop { position: absolute; inset: 0; border: 0; background: radial-gradient(circle at 50% 82%, rgba(22, 23, 34, 0.4), rgba(3, 4, 7, 0.74)); backdrop-filter: blur(7px); cursor: default; }
-.lab-menu-panel { position: relative; z-index: 1; width: min(430px, 94vw); height: min(72dvh, 640px); overflow: hidden; border: 1px solid var(--lab-line); border-radius: 18px; background: linear-gradient(180deg, rgba(17, 18, 26, 0.97), rgba(7, 8, 13, 0.98)); box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6); }
-.lab-menu-panel .lab-rail { width: 100%; height: 100%; opacity: 1; pointer-events: auto; transform: none; border-right: 0; background: linear-gradient(180deg, rgba(20, 21, 30, 0.99), rgba(10, 11, 17, 0.99)); }
+.lab-menu-panel { position: relative; z-index: 1; width: min(430px, 94vw); height: auto; max-height: min(72dvh, 640px); overflow: hidden; border: 1px solid var(--lab-line); border-radius: 18px; background: linear-gradient(180deg, rgba(20, 21, 30, 0.99), rgba(10, 11, 17, 0.99)); box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6); }
+.lab-menu-panel .lab-rail { width: 100%; height: auto; max-height: inherit; opacity: 1; pointer-events: auto; transform: none; border-right: 0; background: transparent; }
+.lab-menu-panel .lab-rail-close { display: grid; }
 .lab-menu-panel .lab-thread-copy strong { color: #e8e5ec; }
 .lab-menu-panel .lab-thread-copy small,
 .lab-menu-panel .lab-rail-footer small { color: #9a9cad; }
@@ -4112,12 +3062,12 @@
 .lab-menu-panel .lab-thread-group small { color: #9fa1b1; }
 .lab-menu-panel .lab-new-fanfic { color: #d5d6e0; }
 .lab-menu-panel .lab-rail-footer > button { color: #cfd0dc; }
-.lab-menu-panel .lab-rail-close { display: grid; }
 @media (max-width: 767px) {
   .lab-menu-layer { padding: 56px 10px 96px; }
-  .lab-menu-panel { width: 100%; height: min(76dvh, 620px); border-radius: 16px; }
+  .lab-menu-panel { width: 100%; height: auto; max-height: min(76dvh, 620px); border-radius: 16px; }
 }
 
-.lab-new-fanfic { display: flex; align-items: center; gap: 9px; margin: -4px 13px 10px; padding: 9px 11px; color: var(--lab-silver); border: 1px solid rgba(224, 189, 120, 0.22); border-radius: 9px; background: linear-gradient(105deg, rgba(224, 189, 120, 0.08), transparent 72%); cursor: pointer; font-size: 11px; letter-spacing: 0.04em; }
+/* Fanfic entry in the sheet. */
+.lab-new-fanfic { display: flex; align-items: center; gap: 9px; margin: 0 13px 10px; padding: 9px 11px; color: var(--lab-silver); border: 1px solid rgba(224, 189, 120, 0.22); border-radius: 9px; background: linear-gradient(105deg, rgba(224, 189, 120, 0.08), transparent 72%); cursor: pointer; font-size: 11px; letter-spacing: 0.04em; }
 .lab-new-fanfic:hover { color: var(--lab-ink); border-color: rgba(224, 189, 120, 0.42); }
 .lab-fanfic-mark { width: 12px; color: var(--lab-gold); text-align: center; }

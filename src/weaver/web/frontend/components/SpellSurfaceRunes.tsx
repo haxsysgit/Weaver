@@ -1,5 +1,7 @@
 import type { CSSProperties } from "react";
 
+import { FateWeavingLoader } from "./FateWeavingLoader";
+
 export type RuneMode = "particles" | "voice" | "threads";
 
 export const RUNE_OPTIONS: Array<{
@@ -31,35 +33,6 @@ interface SpellSurfaceRunesProps {
   gathering?: boolean;
 }
 
-const THREAD_STARS = [
-  { delay: "0s", x: 20, y: 22 },
-  { delay: "0.18s", x: 66, y: 22 },
-  { delay: "0.36s", x: 112, y: 22 },
-];
-
-const STAR_PATH =
-  "M0 -9 L2.6 -2.6 L9 0 L2.6 2.6 L0 9 L-2.6 2.6 L-9 0 L-2.6 -2.6 Z";
-
-function ThreadStars() {
-  return (
-    <svg aria-hidden="true" className="star-thread-gathering" viewBox="0 0 132 44">
-      <path
-        className="star-thread-path"
-        d="M20 22 C36 7 50 37 66 22 S96 7 112 22"
-      />
-      {THREAD_STARS.map((star) => (
-        <g key={star.x} transform={`translate(${star.x} ${star.y})`}>
-          <path
-            className="star-thread-star"
-            d={STAR_PATH}
-            style={{ animationDelay: star.delay }}
-          />
-        </g>
-      ))}
-    </svg>
-  );
-}
-
 const PARTICLES = Array.from({ length: 20 }, (_, index) => index);
 
 function particleStyle(index: number): CSSProperties {
@@ -78,7 +51,9 @@ export function SpellSurfaceRunes({
       className={`lab-rune-event rune-${mode}${gathering ? " rune-gathering" : ""}`}
       key={`${mode}-${eventKey}-${gathering}`}
     >
-      {gathering && <ThreadStars />}
+      {gathering && (
+        <FateWeavingLoader label="Weaver is gathering the thread" />
+      )}
       {!gathering && mode === "particles" && (
         <div aria-hidden="true" className="rune-particles">
           {PARTICLES.map((particle) => (

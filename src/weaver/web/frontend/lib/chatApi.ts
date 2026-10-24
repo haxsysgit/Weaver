@@ -9,6 +9,7 @@ export interface ConversationSummary {
   archived: boolean;
   conversation_id: string;
   created_at: string;
+  domain?: "canon" | "fanfic";
   edition_id: string;
   pinned: boolean;
   title: string;

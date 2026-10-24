@@ -173,27 +173,6 @@ function volumeForChapter(chapter: number): number {
   return volumeIndex === -1 ? VOLUME_ENDS.length : volumeIndex + 1;
 }
 
-function dateGroupFor(createdAt?: string): LabThread["dateGroup"] {
-  if (!createdAt) {
-    return "Others";
-  }
-  const created = new Date(createdAt);
-  if (Number.isNaN(created.getTime())) {
-    return "Others";
-  }
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
-  const startOfYesterday = new Date(startOfToday);
-  startOfYesterday.setDate(startOfYesterday.getDate() - 1);
-  if (created >= startOfToday) {
-    return "Today";
-  }
-  if (created >= startOfYesterday) {
-    return "Yesterday";
-  }
-  return "Others";
-}
-
 function toApiPreferences(preferences: LabPreferences): UserPreferences {
   return {
     reader_chapter: preferences.chapter,
@@ -237,7 +216,7 @@ function SpellSurfaceChatSurface({
   const threads = useMemo(
     () => chat.conversations.map((conversation: ConversationSummary): LabThread => ({
       archived: conversation.archived,
-      dateGroup: dateGroupFor(conversation.created_at),
+      domain: conversation.domain === "fanfic" ? "fanfic" : "canon",
       id: conversation.conversation_id,
       pinned: conversation.pinned,
       preview: "private reading thread",

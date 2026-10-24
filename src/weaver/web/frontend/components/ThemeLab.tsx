@@ -30,7 +30,7 @@ interface LabMessage {
 const INITIAL_THREADS: LabThread[] = [
   {
     archived: false,
-    dateGroup: "Today",
+    domain: "canon",
     id: "ariel-tomb",
     pinned: true,
     preview: "people online keep saying Ariel one-shotted an Unholy Titan...",
@@ -39,7 +39,7 @@ const INITIAL_THREADS: LabThread[] = [
   },
   {
     archived: false,
-    dateGroup: "Today",
+    domain: "canon",
     id: "sunny-azarax",
     pinned: false,
     preview: "could current Sunny comfortably beat Azarax in his prime?",
@@ -48,7 +48,7 @@ const INITIAL_THREADS: LabThread[] = [
   },
   {
     archived: false,
-    dateGroup: "Yesterday",
+    domain: "canon",
     id: "anvil-what-if",
     pinned: false,
     preview: "what if Anvil of Valor entered Effie's Fourth Nightmare?",
@@ -57,7 +57,7 @@ const INITIAL_THREADS: LabThread[] = [
   },
   {
     archived: false,
-    dateGroup: "Others",
+    domain: "canon",
     id: "memory-spheres",
     pinned: false,
     preview: "memory lights circling a lonely soul core",
@@ -66,7 +66,7 @@ const INITIAL_THREADS: LabThread[] = [
   },
   {
     archived: true,
-    dateGroup: "Others",
+    domain: "canon",
     id: "seven-suns",
     pinned: false,
     preview: "a later Soul Sea state, hidden while spoiler protection is active",

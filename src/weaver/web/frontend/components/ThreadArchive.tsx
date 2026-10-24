@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   ArchiveIcon,
-  ChevronDownIcon,
   EditIcon,
   PinIcon,
   PlusIcon,
@@ -16,7 +15,7 @@ import { WeaverMark } from "./WeaverMark";
 
 export interface LabThread {
   archived: boolean;
-  dateGroup: "Today" | "Yesterday" | "Others";
+  domain: "canon" | "fanfic";
   id: string;
   pinned: boolean;
   preview: string;
@@ -24,37 +23,8 @@ export interface LabThread {
   volume: number | null;
 }
 
-type ThreadGrouping = "date" | "flat";
-
-interface ThreadGroup {
-  label: string | null;
-  threads: LabThread[];
-}
-
-const DATE_GROUPS: LabThread["dateGroup"][] = ["Today", "Yesterday", "Others"];
-
-const GROUPING_OPTIONS: Array<{
-  description: string;
-  label: string;
-  value: ThreadGrouping;
-}> = [
-  { description: "Today, yesterday, and older threads", label: "By date", value: "date" },
-  { description: "Every thread together", label: "In one list", value: "flat" },
-];
-
-function groupThreads(threads: LabThread[], grouping: ThreadGrouping): ThreadGroup[] {
-  if (grouping === "flat") {
-    return [{ label: null, threads }];
-  }
-
-  if (grouping === "date") {
-    return DATE_GROUPS.map((label) => ({
-      label,
-      threads: threads.filter((thread) => thread.dateGroup === label),
-    }));
-  }
-
-  return [];
+function pinFirst(threads: LabThread[]): LabThread[] {
+  return [...threads].sort((left, right) => Number(right.pinned) - Number(left.pinned));
 }
 
 interface ThreadArchiveProps {
@@ -105,11 +75,6 @@ export function ThreadArchive({
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
   const [actionsOpenId, setActionsOpenId] = useState<string | null>(null);
   const [pendingIds, setPendingIds] = useState<Set<string>>(() => new Set());
-  const [grouping, setGrouping] = useState<ThreadGrouping>("date");
-  const [groupingMenuOpen, setGroupingMenuOpen] = useState(false);
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
-    () => new Set(),
-  );
   const [mobileLayout, setMobileLayout] = useState(() => {
     return window.matchMedia("(max-width: 767px)").matches;
   });
@@ -136,17 +101,24 @@ export function ThreadArchive({
     }
   }, [drawerOpen, mobileLayout]);
 
-  const pinnedThreads = useMemo(() => {
-    return threads.filter((thread) => !thread.archived && thread.pinned);
-  }, [threads]);
-  const activeThreads = useMemo(() => {
-    return threads.filter((thread) => !thread.archived && !thread.pinned);
-  }, [threads]);
+  const chats = useMemo(
+    () =>
+      pinFirst(
+        threads.filter((thread) => !thread.archived && thread.domain !== "fanfic"),
+      ),
+    [threads],
+  );
+  const fanfic = useMemo(
+    () =>
+      pinFirst(
+        threads.filter((thread) => !thread.archived && thread.domain === "fanfic"),
+      ),
+    [threads],
+  );
   const archivedThreads = useMemo(() => {
     return threads.filter((thread) => thread.archived);
   }, [threads]);
-  const threadGroups = groupThreads(activeThreads, grouping);
-  const archivedCount = threads.filter((thread) => thread.archived).length;
+  const archivedCount = archivedThreads.length;
   const railVisible = mobileLayout ? drawerOpen : !collapsed;
   const railOperable = startupReady && (mobileLayout ? drawerOpen : true);
 
@@ -200,7 +172,7 @@ export function ThreadArchive({
       setConfirmingDelete(null);
       const visibleThreads = archivedOpen
         ? archivedThreads
-        : [...pinnedThreads, ...activeThreads];
+        : [...chats, ...fanfic];
       const deletedIndex = visibleThreads.findIndex(
         (thread) => thread.id === threadId,
       );
@@ -214,18 +186,6 @@ export function ThreadArchive({
         newWeaveRef.current?.focus();
       }, 0);
     }
-  }
-
-  function toggleGroup(groupLabel: string) {
-    setCollapsedGroups((current) => {
-      const next = new Set(current);
-      if (next.has(groupLabel)) {
-        next.delete(groupLabel);
-      } else {
-        next.add(groupLabel);
-      }
-      return next;
-    });
   }
 
   function renderThread(thread: LabThread) {
@@ -472,91 +432,37 @@ export function ThreadArchive({
           </section>
         ) : (
           <>
-            {pinnedThreads.length > 0 && (
-              <section aria-label="Pinned threads" className="lab-pinned-section">
-                <header className="lab-rail-section-head">
-                  <h2>Pinned</h2>
-                  <small>{pinnedThreads.length}</small>
-                </header>
-                <ul className="lab-thread-flat-list">
-                  {pinnedThreads.map(renderThread)}
-                </ul>
-              </section>
-            )}
-
-            <section className="lab-chat-section">
+            <section className="lab-chat-section" aria-label="Chats">
               <header className="lab-rail-section-head">
                 <h2>Chats</h2>
-                <div className="lab-grouping-picker">
-                  <button
-                    aria-expanded={groupingMenuOpen}
-                    aria-haspopup="menu"
-                    aria-label="Organize chats"
-                    onClick={() => setGroupingMenuOpen((open) => !open)}
-                    type="button"
-                  >
-                    {GROUPING_OPTIONS.find((option) => option.value === grouping)?.label}
-                    <ChevronDownIcon />
-                  </button>
-                  {groupingMenuOpen && (
-                    <div aria-label="Organize threads" className="lab-grouping-menu" role="menu">
-                      <p>Organize threads</p>
-                      {GROUPING_OPTIONS.map((option) => (
-                        <button
-                          aria-checked={grouping === option.value}
-                          key={option.value}
-                          onClick={() => {
-                            setGrouping(option.value);
-                            setGroupingMenuOpen(false);
-                          }}
-                          role="menuitemradio"
-                          type="button"
-                        >
-                          <span aria-hidden="true">{grouping === option.value ? "✓" : ""}</span>
-                          <strong>{option.label}</strong>
-                          <small>{option.description}</small>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <small>{chats.length}</small>
               </header>
-
-              <nav aria-label="Active threads" className="lab-thread-list">
-                {threadGroups.map((group) => {
-                  const groupLabel = group.label;
-                  const groupCollapsed = groupLabel
-                    ? collapsedGroups.has(groupLabel)
-                    : false;
-                  return (
-                    <section className="lab-thread-group" key={groupLabel ?? "all"}>
-                      {groupLabel && (
-                        <button
-                          aria-expanded={!groupCollapsed}
-                          className="lab-thread-group-toggle"
-                          onClick={() => toggleGroup(groupLabel)}
-                          type="button"
-                        >
-                          <span>{groupLabel}</span>
-                          <small>{group.threads.length}</small>
-                          <ChevronDownIcon />
-                        </button>
-                      )}
-                      <div
-                        aria-hidden={groupCollapsed}
-                        className={`lab-thread-group-body ${groupCollapsed ? "collapsed" : ""}`}
-                      >
-                        <div>
-                          <ul className="lab-thread-flat-list">{group.threads.map(renderThread)}</ul>
-                        </div>
-                      </div>
-                    </section>
-                  );
-                })}
-                {activeThreads.length === 0 && (
+              <nav aria-label="Chats" className="lab-thread-list">
+                <ul className="lab-thread-flat-list">
+                  {chats.map(renderThread)}
+                </ul>
+                {chats.length === 0 && (
                   <div className="lab-thread-empty">
                     <span aria-hidden="true" />
-                    <p>[No active threads answer the call.]</p>
+                    <p>[No chats yet.]</p>
+                  </div>
+                )}
+              </nav>
+            </section>
+
+            <section className="lab-chat-section" aria-label="Fanfic">
+              <header className="lab-rail-section-head">
+                <h2>Fanfic</h2>
+                <small>{fanfic.length}</small>
+              </header>
+              <nav aria-label="Fanfic" className="lab-thread-list">
+                <ul className="lab-thread-flat-list">
+                  {fanfic.map(renderThread)}
+                </ul>
+                {fanfic.length === 0 && (
+                  <div className="lab-thread-empty">
+                    <span aria-hidden="true" />
+                    <p>[No fanfic yet. Start one above.]</p>
                   </div>
                 )}
               </nav>

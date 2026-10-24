@@ -158,7 +158,7 @@ describe("Composer", () => {
     expect(screen.queryByText("Shadow Slave")).toBeNull();
   });
 
-  it("keeps the rune-cut border decorative", () => {
+  it("keeps the composer free of decorative rune cuts", () => {
     const { container } = render(
       <Composer
         cancelling={false}
@@ -172,9 +172,7 @@ describe("Composer", () => {
       />,
     );
 
-    const decoration = container.querySelector(".composer-rune-border");
-    expect(decoration).toHaveAttribute("aria-hidden", "true");
-    expect(decoration?.querySelectorAll("span")).toHaveLength(5);
+    expect(container.querySelector(".composer-rune-border")).toBeNull();
   });
 describe("Composer reading tier", () => {
   it("opens the tier menu and reports the pick", async () => {
