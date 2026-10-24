@@ -1249,7 +1249,7 @@ describe("live Spellweave foundation", () => {
     await waitFor(() => {
       expect(screen.getByRole("textbox", { name: "Message Weaver" })).toHaveFocus();
     });
-    expect(screen.getByText("[An empty thread waits in the void.]")).toBeVisible();
+    expect(screen.getByText("[An empty thread. Start anywhere.]")).toBeVisible();
     expect(localStorage.getItem("weaver.active-conversation")).toBe("empty-thread");
   });
 

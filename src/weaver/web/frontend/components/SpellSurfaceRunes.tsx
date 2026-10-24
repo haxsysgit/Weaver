@@ -1,6 +1,5 @@
 import type { CSSProperties } from "react";
 
-import { FateWeavingLoader } from "./FateWeavingLoader";
 
 export type RuneMode = "particles" | "voice" | "threads";
 
@@ -51,9 +50,6 @@ export function SpellSurfaceRunes({
       className={`lab-rune-event rune-${mode}${gathering ? " rune-gathering" : ""}`}
       key={`${mode}-${eventKey}-${gathering}`}
     >
-      {gathering && (
-        <FateWeavingLoader label="Weaver is gathering the thread" />
-      )}
       {!gathering && mode === "particles" && (
         <div aria-hidden="true" className="rune-particles">
           {PARTICLES.map((particle) => (

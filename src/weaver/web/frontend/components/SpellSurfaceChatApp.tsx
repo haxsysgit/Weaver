@@ -28,7 +28,6 @@ import {
   type SpellweaveActivityState,
 } from "./SpellweaveBackdrop";
 import { ThreadArchive, type LabThread } from "./ThreadArchive";
-import { SpellSurfaceRunes } from "./SpellSurfaceRunes";
 import {
   SpellSurfaceSoulSea,
   type SoulSeaMode,
@@ -730,13 +729,6 @@ function SpellSurfaceChatSurface({
             )}
           </div>
         </div>
-
-        <SpellSurfaceRunes
-          announcement={announcement}
-          eventKey={announcementKey}
-          gathering={chat.turnActive && !streamingReplyHasText}
-          mode={preferences.runeMode}
-        />
 
         <footer className="lab-composer-dock">
           <Composer

@@ -616,7 +616,7 @@
 .lab-composer-dock > p a { display: inline-flex; align-items: center; min-height: 24px; padding: 0 2px; color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 
 /* Rune materialisation */
-.lab-rune-event { position: absolute; z-index: 7; left: 50%; bottom: 148px; width: min(430px, 76vw); min-height: 52px; pointer-events: none; transform: translateX(-50%); }
+.lab-rune-event { position: absolute; z-index: 7; left: 50%; bottom: 208px; width: min(430px, 76vw); min-height: 52px; pointer-events: none; transform: translateX(-50%); }
 .rune-announcement { position: absolute; inset: 50% 0 auto; margin: 0; color: rgba(223, 222, 233, 0.82); font-family: var(--font-display); font-size: 12px; letter-spacing: 0.06em; text-align: center; text-shadow: 0 0 9px rgba(192, 194, 220, 0.55), 0 2px 5px #000; animation: rune-voice-appears 3.4s ease both; transform: translateY(-50%); }
 @keyframes rune-voice-appears { 0% { opacity: 0; filter: blur(5px); letter-spacing: 0.22em; } 18%, 72% { opacity: 1; filter: blur(0); letter-spacing: 0.06em; } 100% { opacity: 0.35; } }
 .rune-particles span { --angle: calc(var(--index) * 18deg); position: absolute; left: 50%; top: 26px; width: 3px; height: 1px; background: #d9dae6; box-shadow: 0 0 5px #b7bad0; animation: particle-assembles 2.8s cubic-bezier(0.2, 0.8, 0.2, 1) both; transform: rotate(var(--angle)) translateX(180px); }
@@ -707,7 +707,7 @@
   .lab-composer-dock { padding: 8px 10px 10px; }
   .lab-tier-pill { display: none; }
   .lab-composer { grid-template-columns: minmax(0, 1fr) auto; }
-  .lab-rune-event { bottom: 150px; width: 88vw; }
+  .lab-rune-event { bottom: 196px; width: 88vw; }
   .lab-soul-sea { left: 0; height: 31%; }
   .lab-soul-caption { display: none; }
   .lab-rail-scrim { position: fixed; z-index: 34; inset: 0; display: block; border: 0; background: rgba(0, 0, 3, 0.16); }
@@ -3001,14 +3001,8 @@
 }
 
 /* Gathering: the older three-core thread loader, gold and bright. */
-.rune-gathering .fate-weaving-loader { width: 168px; height: 46px; margin: 0 auto; color: var(--lab-gold); }
-.rune-gathering .fate-loader-thread { stroke: var(--lab-gold); opacity: 0.55; }
-.rune-gathering .fate-loader-core {
-  fill: var(--lab-gold);
-  opacity: 0.95;
-  filter: drop-shadow(0 0 6px rgba(224, 189, 120, 0.8));
-}
-.rune-gathering .rune-announcement { inset: 50px 0 auto; }
+.rune-gathering .rune-announcement { inset: 0 0 auto; }
+
 
 /* Drawer sections: Chats and Fanfic, flat. No date buckets. */
 .lab-chat-section { margin-top: 2px; }
@@ -3071,3 +3065,38 @@
 .lab-new-fanfic { display: flex; align-items: center; gap: 9px; margin: 0 13px 10px; padding: 9px 11px; color: var(--lab-silver); border: 1px solid rgba(224, 189, 120, 0.22); border-radius: 9px; background: linear-gradient(105deg, rgba(224, 189, 120, 0.08), transparent 72%); cursor: pointer; font-size: 11px; letter-spacing: 0.04em; }
 .lab-new-fanfic:hover { color: var(--lab-ink); border-color: rgba(224, 189, 120, 0.42); }
 .lab-fanfic-mark { width: 12px; color: var(--lab-gold); text-align: center; }
+
+/* The one gathering loader: three gold cores on a single quiet thread. */
+.spell-surface-live .fate-weaving-loader {
+  width: 132px;
+  height: 28px;
+  margin: 2px 0 2px;
+}
+.spell-surface-live .fate-loader-core {
+  fill: var(--lab-gold);
+  filter: drop-shadow(0 0 5px rgba(224, 189, 120, 0.7));
+}
+.spell-surface-live .fate-loader-thread {
+  stroke: var(--lab-gold);
+  opacity: 0.35;
+}
+
+/* Composer geometry: the send sits inside the field, never on its edge. */
+.spell-surface-live .composer-shell {
+  align-items: center;
+  min-height: 56px;
+  padding: 8px 8px 8px 14px;
+}
+.spell-surface-live .composer-shell textarea {
+  min-height: 0;
+  padding: 9px 2px;
+}
+.spell-surface-live .composer-shell .composer-action {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+}
+.spell-surface-live .composer-shell .composer-send {
+  margin-right: 1px;
+  box-shadow: none;
+}
