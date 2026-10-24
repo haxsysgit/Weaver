@@ -3068,9 +3068,9 @@
 
 /* The one gathering loader: three gold cores on a single quiet thread. */
 .spell-surface-live .fate-weaving-loader {
-  width: 132px;
-  height: 28px;
-  margin: 2px 0 2px;
+  width: 160px;
+  height: 44px;
+  margin: 2px 0 4px;
 }
 .spell-surface-live .fate-loader-core {
   fill: var(--lab-gold);
@@ -3078,7 +3078,6 @@
 }
 .spell-surface-live .fate-loader-thread {
   stroke: var(--lab-gold);
-  opacity: 0.35;
 }
 
 /* Composer geometry: the send sits inside the field, never on its edge. */
