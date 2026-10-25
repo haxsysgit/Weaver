@@ -38,6 +38,7 @@ interface ThreadArchiveProps {
   onClose: () => void;
   onCreate: () => void;
   onCreateFanfic?: () => void;
+  newMenuSignal?: number;
   onDelete: (threadId: string) => Promise<boolean | void> | boolean | void;
   onOpen: () => void;
   onOpenSettings: () => void;
@@ -58,6 +59,7 @@ export function ThreadArchive({
   drawerOpen,
   onArchive,
   onClose,
+  newMenuSignal = 0,
   onCreate,
   onCreateFanfic,
   onDelete,
@@ -72,6 +74,7 @@ export function ThreadArchive({
   threads,
 }: ThreadArchiveProps) {
   const [query, setQuery] = useState("");
+  const [newMenuOpen, setNewMenuOpen] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
@@ -96,6 +99,12 @@ export function ThreadArchive({
     mediaQuery.addEventListener("change", syncMobileLayout);
     return () => mediaQuery.removeEventListener("change", syncMobileLayout);
   }, []);
+
+  useEffect(() => {
+    if (newMenuSignal > 0) {
+      setNewMenuOpen(true);
+    }
+  }, [newMenuSignal]);
 
   useEffect(() => {
     if (mobileLayout && drawerOpen) {
@@ -395,28 +404,34 @@ export function ThreadArchive({
         </button>
       </header>
 
-      <button
-        aria-label="Start a new weave"
-        className="lab-new-thread"
-        onClick={onCreate}
-        ref={newWeaveRef}
-        type="button"
-      >
-        <PlusIcon />
-        <span>New Weave</span>
-      </button>
-
-      {onCreateFanfic && (
+      <div className="lab-new-wrap">
         <button
-          aria-label="Start a fanfic thread"
-          className="lab-new-fanfic"
-          onClick={onCreateFanfic}
+          aria-expanded={newMenuOpen}
+          aria-haspopup="menu"
+          aria-label="Start a new weave"
+          className="lab-new-thread"
+          onClick={() => setNewMenuOpen((open) => !open)}
+          ref={newWeaveRef}
           type="button"
         >
-          <span aria-hidden="true" className="lab-fanfic-mark">❖</span>
-          <span>New fanfic</span>
+          <PlusIcon />
+          <span>New</span>
         </button>
-      )}
+        {newMenuOpen && (
+          <div aria-label="Choose a thread kind" className="lab-new-menu" role="menu">
+            <button onClick={onCreate} role="menuitem" type="button">
+              <strong>Chat about the novel</strong>
+              <small>Canon answers with citations. Your spoiler boundary stays on.</small>
+            </button>
+            {onCreateFanfic && (
+              <button onClick={onCreateFanfic} role="menuitem" type="button">
+                <strong>Fanfic</strong>
+                <small>Invented scenes in the storyteller voice. Canon stays canon.</small>
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
       <label className="lab-thread-search">
         <SearchIcon />

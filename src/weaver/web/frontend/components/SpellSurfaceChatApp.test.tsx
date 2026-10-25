@@ -151,14 +151,14 @@ function setDesktopMedia() {
 function setMobileMedia() {
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
-    value: vi.fn().mockReturnValue({
+    value: vi.fn().mockImplementation((query: string) => ({
       addEventListener: vi.fn(),
       dispatchEvent: vi.fn(),
-      matches: true,
-      media: "(max-width: 767px)",
+      matches: query.includes("max-width"),
+      media: query,
       onchange: null,
       removeEventListener: vi.fn(),
-    }),
+    })),
   });
   Object.defineProperty(window, "innerWidth", {
     configurable: true,
@@ -424,9 +424,7 @@ describe("first Nightmare setup", () => {
     const dialog = await screen.findByRole("dialog", {
       name: "Reader Appraisal settings",
     });
-    expect(
-      within(dialog).getByRole("img", { name: /Sunny's Soul Sea/ }),
-    ).toBeVisible();
+    expect(within(dialog).getByRole("heading", { name: "Settings" })).toBeVisible();
     fireEvent.click(
       within(dialog).getByRole("button", { name: "Advanced" }),
     );
@@ -1239,6 +1237,7 @@ describe("live Spellweave foundation", () => {
     await screen.findByTestId("thread-empty-thread");
     const drawer = screen.getByRole("dialog", { name: "Threads and settings" });
     fireEvent.click(within(drawer).getByRole("button", { name: "Start a new weave" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /Chat about the novel/ }));
 
     expect(api.createConversation).not.toHaveBeenCalled();
     await waitFor(() =>
@@ -1322,7 +1321,7 @@ describe("live Spellweave foundation", () => {
 
     await openThreadSheet();
     const sheet = await screen.findByRole("dialog", { name: "Threads and settings" });
-    expect(within(sheet).getByText("New Weave")).toBeVisible();
+    expect(within(sheet).getByRole("button", { name: "Start a new weave" })).toBeVisible();
 
     fireEvent.click(within(sheet).getByRole("button", { name: "Close threads" }));
     await waitFor(() =>
@@ -1382,7 +1381,8 @@ describe("live Spellweave foundation", () => {
     await waitForLiveApp();
 
     await openThreadSheet();
-    fireEvent.click(screen.getByRole("button", { name: "Start a fanfic thread" }));
+    fireEvent.click(screen.getByRole("button", { name: "Start a new weave" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /Fanfic/ }));
 
     await waitFor(() => {
       expect(api.createConversation).toHaveBeenCalledWith({

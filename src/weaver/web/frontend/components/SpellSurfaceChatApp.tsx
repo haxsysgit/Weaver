@@ -186,6 +186,12 @@ function SpellSurfaceChatSurface({
 }: SpellSurfaceChatAppProps) {
   const chat = useChatController(api, weaverProduct);
   const [preferences, setPreferences] = useState(loadInitialPreferences);
+  const [desktop, setDesktop] = useState(() => {
+    return typeof window !== "undefined"
+      && window.matchMedia("(min-width: 900px)").matches;
+  });
+  const [railCollapsed, setRailCollapsed] = useState(false);
+  const [newMenuSignal, setNewMenuSignal] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsInitialSection, setSettingsInitialSection] =
     useState<SettingsSection>("reader");
@@ -227,6 +233,15 @@ function SpellSurfaceChatSurface({
 
   useEffect(() => {
     void refreshAccess();
+  }, []);
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 900px)");
+    function sync(event: MediaQueryListEvent) {
+      setDesktop(event.matches);
+    }
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
   }, []);
 
   useEffect(() => {
@@ -596,6 +611,8 @@ function SpellSurfaceChatSurface({
         "spell-surface-lab",
         "spell-surface-live",
         "lab-immersive",
+        desktop ? "lab-has-rail" : "",
+        desktop && railCollapsed ? "lab-desktop-rail-collapsed" : "",
         settingsOpen ? "lab-settings-open" : "",
       ].filter(Boolean).join(" ")}
       data-density={preferences.density}
@@ -624,7 +641,32 @@ function SpellSurfaceChatSurface({
         state={soulSeaState}
       />
 
-      {railOpen && (
+      {desktop && (
+        <ThreadArchive
+          activeThreadId={chat.conversationId ?? ""}
+          archivedOpen={archivedOpen}
+          collapsed={railCollapsed}
+          drawerOpen={false}
+          actionError={chat.conversationActionError}
+          onArchive={toggleArchivedThread}
+          onClose={() => setRailCollapsed(true)}
+          onCreate={() => void createThread()}
+          onCreateFanfic={() => void createFanficThread()}
+          onDelete={(threadId) => chat.deleteConversation(threadId)}
+          onOpen={() => setRailCollapsed(false)}
+          onOpenSettings={() => void openSettings()}
+          onPin={togglePinnedThread}
+          onRename={renameThread}
+          onSelect={(threadId) => void selectThread(threadId)}
+          onSetArchivedOpen={setArchivedOpen}
+          readerStatus={readerStatus}
+          startupReady={!chat.booting && !setupOpen}
+          newMenuSignal={newMenuSignal}
+          threads={threads}
+        />
+      )}
+
+      {railOpen && !desktop && (
         <div className="lab-menu-layer">
           <button
             aria-label="Close threads and settings"
@@ -747,7 +789,18 @@ function SpellSurfaceChatSurface({
             menuButtonRef={menuOpenerRef}
             onCancel={() => void chat.cancelTurn()}
             onDraftChange={chat.setDraft}
-            onOpenMenu={openRail}
+            onOpenMenu={() => {
+              if (!desktop) {
+                openRail();
+                return;
+              }
+              if (railCollapsed) {
+                setRailCollapsed(false);
+                window.setTimeout(() => setNewMenuSignal((n) => n + 1), 80);
+                return;
+              }
+              setNewMenuSignal((n) => n + 1);
+            }}
             onSubmit={sendMessage}
             onTierChange={(tier: ReadingTier) => {
               const nextPreferences = { ...preferences, tier };

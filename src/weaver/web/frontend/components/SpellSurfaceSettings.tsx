@@ -265,9 +265,11 @@ export function SpellSurfaceSettings({
         ref={panelRef}
         role="dialog"
       >
-        <div className="lab-settings-atmosphere">
-          <SpellSurfaceSoulSea compact mode={preferences.soulMode} state="idle" />
-          <span>The Soul Sea holds your place.</span>
+        <header className="lab-settings-head">
+          <div>
+            <p>Reader appraisal</p>
+            <h2>Settings</h2>
+          </div>
           <button
             aria-label="Close settings"
             className="lab-settings-close"
@@ -276,7 +278,7 @@ export function SpellSurfaceSettings({
           >
             ×
           </button>
-        </div>
+        </header>
 
         <div className="lab-settings-layout">
           <aside className="lab-settings-nav">
