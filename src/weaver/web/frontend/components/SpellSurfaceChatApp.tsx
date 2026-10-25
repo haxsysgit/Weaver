@@ -255,12 +255,15 @@ function SpellSurfaceChatSurface({
         if (railOpen) {
           closeRail();
         }
+        if (desktop && !railCollapsed) {
+          setRailCollapsed(true);
+        }
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [railOpen, setupOpen]);
+  }, [desktop, railCollapsed, railOpen, setupOpen]);
 
   useEffect(() => {
     if (!railOpen) {
@@ -612,7 +615,7 @@ function SpellSurfaceChatSurface({
         "spell-surface-live",
         "lab-immersive",
         desktop ? "lab-has-rail" : "",
-        desktop && railCollapsed ? "lab-desktop-rail-collapsed" : "",
+        desktop && railCollapsed ? "lab-mini-rail" : "",
         settingsOpen ? "lab-settings-open" : "",
       ].filter(Boolean).join(" ")}
       data-density={preferences.density}
@@ -641,7 +644,19 @@ function SpellSurfaceChatSurface({
         state={soulSeaState}
       />
 
-      {desktop && (
+      {desktop && railCollapsed && (
+        <aside className="lab-rail-mini">
+          <button
+            aria-label="Open threads"
+            onClick={() => setRailCollapsed(false)}
+            type="button"
+          >
+            <WeaverMark compact />
+          </button>
+        </aside>
+      )}
+
+      {desktop && !railCollapsed && (
         <ThreadArchive
           activeThreadId={chat.conversationId ?? ""}
           archivedOpen={archivedOpen}
@@ -740,7 +755,15 @@ function SpellSurfaceChatSurface({
           <span>{readerStatus}</span>
         </header>
 
-        <div className="lab-transcript" ref={transcriptRef}>
+        <div
+          className="lab-transcript"
+          onClick={() => {
+            if (desktop && !railCollapsed) {
+              setRailCollapsed(true);
+            }
+          }}
+          ref={transcriptRef}
+        >
           <div className="lab-transcript-column">
             {chat.bootError && <div className="boot-error">{chat.bootError}</div>}
             {!chat.bootError && chat.messages.length === 0 && (

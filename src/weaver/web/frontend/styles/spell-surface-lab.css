@@ -642,7 +642,7 @@
 /* Settings */
 .lab-settings-backdrop { position: fixed; z-index: 50; inset: 0; display: grid; place-items: center; padding: 24px; background: rgba(0, 0, 3, 0.67); backdrop-filter: blur(7px); animation: settings-fades-in 200ms ease-out; }
 @keyframes settings-fades-in { from { opacity: 0; } }
-.lab-settings-panel { display: grid; width: min(880px, 96vw); max-height: min(900px, 94dvh); grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; border: 1px solid rgba(221, 222, 233, 0.2); border-radius: 18px; background: rgba(7, 8, 14, 0.93); box-shadow: 0 34px 100px rgba(0, 0, 0, 0.62), inset 0 1px rgba(255, 255, 255, 0.03); }
+.lab-settings-panel { display: grid; width: min(880px, 96vw); max-height: min(900px, 94dvh); grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; border: 1px solid rgba(221, 222, 233, 0.2); border-radius: 18px; background: #07080e; box-shadow: 0 34px 100px rgba(0, 0, 0, 0.62), inset 0 1px rgba(255, 255, 255, 0.03); }
 .lab-settings-head { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px 14px; border-bottom: 1px solid var(--lab-faint); }
 .lab-settings-head p { margin: 0 0 3px; color: var(--lab-gold); font-size: 8px; letter-spacing: 0.2em; text-transform: uppercase; }
 .lab-settings-head h2 { margin: 0; font-family: var(--font-display); font-size: 24px; font-weight: 400; }
@@ -2121,7 +2121,7 @@
   border-color: rgba(184, 75, 77, 0.3);
   background:
     radial-gradient(circle at 0 0, rgba(127, 27, 34, 0.2), transparent 30rem),
-    rgba(19, 6, 10, 0.96);
+    #10050a;
   box-shadow: 0 34px 100px rgba(29, 0, 4, 0.68), inset 0 1px rgba(255, 255, 255, 0.03);
 }
 
@@ -3214,3 +3214,62 @@
 .lab-new-menu button:focus-visible { background: rgba(224, 189, 120, 0.08); }
 .lab-new-menu strong { font-size: 12px; font-weight: 500; }
 .lab-new-menu small { color: #8f909d; font-size: 10px; line-height: 1.4; }
+
+/* The side list: a column, a logo toggle, and a quiet collapsed strip. */
+.spell-surface-lab.lab-has-rail { --lab-layout-rail: 280px; }
+.spell-surface-lab.lab-has-rail.lab-mini-rail { --lab-layout-rail: 62px; }
+.lab-brand-toggle {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0;
+  color: inherit;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+.lab-rail-mini {
+  display: flex;
+  height: 100dvh;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 20px;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+.lab-rail-mini button {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  color: var(--lab-silver);
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+.lab-rail-mini button:hover { background: rgba(255, 255, 255, 0.05); }
+.lab-rail-mini .weaver-mark-icon { width: 27px; height: 27px; }
+
+/* Two new-thread options under one standard button. */
+.lab-new-pair { width: calc(100% - 26px); }
+.lab-new-options { display: grid; gap: 6px; margin: 0 13px 10px; }
+.lab-new-options button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 11px;
+  color: var(--lab-ink);
+  border: 1px solid var(--lab-faint);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.015);
+  cursor: pointer;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  text-align: left;
+}
+.lab-new-options button:hover { border-color: rgba(224, 189, 120, 0.34); background: rgba(224, 189, 120, 0.05); }
+.lab-star-control { max-width: 340px; }
+
+/* Settings is a modal: the conversation is not a backdrop for it. */
+.lab-settings-open .lab-chat-main { visibility: hidden; }

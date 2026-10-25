@@ -24,7 +24,7 @@ describe("Spell Surface v2 lab", () => {
     fireEvent.click(screen.getByRole("button", { name: "Open Soul Sea settings" }));
     const dialog = screen.getByRole("dialog", { name: "Reader Appraisal settings" });
     fireEvent.click(within(dialog).getByRole("button", { name: "Appearance" }));
-    fireEvent.click(within(dialog).getByRole("button", { name: "Thread weave" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Star web" }));
     fireEvent.click(within(dialog).getByRole("button", { name: "vivid" }));
     fireEvent.click(within(dialog).getByRole("button", { name: "Apply changes" }));
 
@@ -32,7 +32,7 @@ describe("Spell Surface v2 lab", () => {
     expect(surface).toHaveAttribute("data-glass", "immersive");
     expect(surface).toHaveAttribute("data-theme", "void");
     expect(surface).toHaveAttribute("data-star-intensity", "vivid");
-    expect(surface).toHaveAttribute("data-runes", "threads");
+    expect(surface).toHaveAttribute("data-runes", "particles");
   }, 20_000);
 
   it("keeps the drawer to Chats and Fanfic with thread actions on hover", async () => {

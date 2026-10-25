@@ -5,8 +5,6 @@ import {
   EditIcon,
   PinIcon,
   PlusIcon,
-  RailCloseIcon,
-  RailOpenIcon,
   SearchIcon,
   SettingsIcon,
   TrashIcon,
@@ -391,16 +389,15 @@ export function ThreadArchive({
       role={mobileLayout ? "dialog" : undefined}
     >
       <header className="lab-brand">
-        <span className="lab-brand-mark"><WeaverMark compact /></span>
-        <span><strong>weaver</strong></span>
         <button
           aria-label={railVisible ? "Close threads" : "Open threads"}
-          className="lab-rail-close"
+          className="lab-brand-toggle"
           onClick={railVisible ? onClose : onOpen}
           ref={closeButtonRef}
           type="button"
         >
-          {railVisible ? <RailCloseIcon /> : <RailOpenIcon />}
+          <span className="lab-brand-mark"><WeaverMark compact /></span>
+          <span><strong>weaver</strong></span>
         </button>
       </header>
 
@@ -409,24 +406,34 @@ export function ThreadArchive({
           aria-expanded={newMenuOpen}
           aria-haspopup="menu"
           aria-label="Start a new weave"
-          className="lab-new-thread"
+          className="lab-new-fanfic lab-new-pair"
           onClick={() => setNewMenuOpen((open) => !open)}
           ref={newWeaveRef}
           type="button"
         >
-          <PlusIcon />
-          <span>New</span>
+          <span aria-hidden="true" className="lab-fanfic-mark">❖</span>
+          <span>New thread/fanfic</span>
         </button>
         {newMenuOpen && (
-          <div aria-label="Choose a thread kind" className="lab-new-menu" role="menu">
-            <button onClick={onCreate} role="menuitem" type="button">
-              <strong>Chat about the novel</strong>
-              <small>Canon answers with citations. Your spoiler boundary stays on.</small>
+          <div aria-label="Choose a thread kind" className="lab-new-options" role="menu">
+            <button
+              onClick={onCreate}
+              role="menuitem"
+              title="Canon conversation: cited answers and your spoiler boundary."
+              type="button"
+            >
+              <span aria-hidden="true" className="lab-fanfic-mark">◇</span>
+              <span>New thread</span>
             </button>
             {onCreateFanfic && (
-              <button onClick={onCreateFanfic} role="menuitem" type="button">
-                <strong>Fanfic</strong>
-                <small>Invented scenes in the storyteller voice. Canon stays canon.</small>
+              <button
+                onClick={onCreateFanfic}
+                role="menuitem"
+                title="Fanfic: invented scenes in the storyteller voice, canon kept straight."
+                type="button"
+              >
+                <span aria-hidden="true" className="lab-fanfic-mark">❖</span>
+                <span>New fanfic</span>
               </button>
             )}
           </div>

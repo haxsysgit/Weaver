@@ -10,7 +10,7 @@ import {
   setModelId,
 } from "../lib/identity";
 import { EyeIcon, EyeSlashIcon } from "./Icons";
-import { RUNE_OPTIONS, type RuneMode } from "./SpellSurfaceRunes";
+import { type RuneMode } from "./SpellSurfaceRunes";
 import {
   SOUL_SEA_DESCRIPTIONS,
   SOUL_SEA_LABELS,
@@ -44,6 +44,7 @@ export type SettingsSection =
   | "reading"
   | "model"
   | "appearance"
+  | "stars"
   | "privacy"
   | "rite";
 
@@ -246,9 +247,14 @@ export function SpellSurfaceSettings({
       label: "Advanced",
     },
     {
-      hint: `${titleCase(preferences.runeMode)} runes · ${titleCase(preferences.starIntensity)} stars`,
+      hint: `${titleCase(preferences.theme)} · ${titleCase(preferences.glass)}`,
       id: "appearance",
       label: "Appearance",
+    },
+    {
+      hint: `${titleCase(preferences.starIntensity)} stars`,
+      id: "stars",
+      label: "Star web",
     },
     { hint: "Local library and DeepSeek", id: "privacy", label: "Privacy and controls" },
     { hint: "Replay the initiation", id: "rite", label: "First Nightmare" },
@@ -492,24 +498,6 @@ export function SpellSurfaceSettings({
                       ))}
                     </div>
                   </div>
-                  <div className="lab-customize-block">
-                    <h4>Rune appearance</h4>
-                    <div className="lab-choice-grid three">
-                      {RUNE_OPTIONS.map((option) => (
-                        <button aria-label={option.label} aria-pressed={preferences.runeMode === option.mode} className={preferences.runeMode === option.mode ? "on" : ""} key={option.mode} onClick={() => update("runeMode", option.mode)} type="button">
-                          <strong>{option.label}</strong><span>{option.description}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="lab-customize-block">
-                    <h4>Star web</h4>
-                    <div className="lab-segmented-control">
-                      {(["quiet", "balanced", "vivid"] as StarIntensity[]).map((intensity) => (
-                        <button aria-label={intensity} aria-pressed={preferences.starIntensity === intensity} className={preferences.starIntensity === intensity ? "on" : ""} key={intensity} onClick={() => update("starIntensity", intensity)} type="button">{intensity}</button>
-                      ))}
-                    </div>
-                  </div>
                   <div className="lab-customize-row">
                     <div>
                       <h4>Reading density</h4>
@@ -527,6 +515,21 @@ export function SpellSurfaceSettings({
                         ))}
                       </div>
                     </div>
+                  </div>
+                </section>
+              )}
+
+              {activeSection === "stars" && (
+                <section className="lab-settings-section">
+                  <div className="lab-setting-title">
+                    <p>[The web behind the thread.]</p>
+                    <h3>Star web</h3>
+                    <span>How much of the night sky shows behind the conversation. Quiet stays almost black; vivid draws the full web.</span>
+                  </div>
+                  <div className="lab-segmented-control lab-star-control">
+                    {(["quiet", "balanced", "vivid"] as StarIntensity[]).map((intensity) => (
+                      <button aria-label={intensity} aria-pressed={preferences.starIntensity === intensity} className={preferences.starIntensity === intensity ? "on" : ""} key={intensity} onClick={() => update("starIntensity", intensity)} type="button">{intensity}</button>
+                    ))}
                   </div>
                 </section>
               )}

@@ -1237,7 +1237,7 @@ describe("live Spellweave foundation", () => {
     await screen.findByTestId("thread-empty-thread");
     const drawer = screen.getByRole("dialog", { name: "Threads and settings" });
     fireEvent.click(within(drawer).getByRole("button", { name: "Start a new weave" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: /Chat about the novel/ }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /New thread/ }));
 
     expect(api.createConversation).not.toHaveBeenCalled();
     await waitFor(() =>
@@ -1382,7 +1382,7 @@ describe("live Spellweave foundation", () => {
 
     await openThreadSheet();
     fireEvent.click(screen.getByRole("button", { name: "Start a new weave" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: /Fanfic/ }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /New fanfic/ }));
 
     await waitFor(() => {
       expect(api.createConversation).toHaveBeenCalledWith({
