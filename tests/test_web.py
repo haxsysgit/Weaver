@@ -379,6 +379,7 @@ async def test_conversation_metadata_patch_returns_durable_summary(client) -> No
         {
             "conversation_id": conversation_id,
             "title": "New chat",
+            "preview": "",
             "created_at": listed.json()[0]["created_at"],
             "archived": False,
             "pinned": False,
@@ -397,6 +398,7 @@ async def test_conversation_metadata_patch_returns_durable_summary(client) -> No
     assert updated.json() == {
         "conversation_id": conversation_id,
         "title": "Ananke theory",
+        "preview": "",
         "created_at": listed.json()[0]["created_at"],
         "archived": True,
         "pinned": True,

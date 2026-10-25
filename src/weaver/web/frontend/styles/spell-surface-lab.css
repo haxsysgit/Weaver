@@ -3099,3 +3099,59 @@
   margin-right: 1px;
   box-shadow: none;
 }
+
+/* The thread you are in, quiet at the top. */
+.lab-thread-head {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: flex;
+  height: 64px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(4, 5, 9, 0.92);
+  backdrop-filter: blur(14px);
+  pointer-events: none;
+}
+.lab-thread-head small {
+  display: block;
+  color: var(--lab-dim);
+  font-size: 8px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.lab-thread-head strong {
+  display: block;
+  max-width: 62vw;
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--lab-silver);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lab-thread-head > span { color: var(--lab-dim); font-size: 8px; letter-spacing: 0.08em; }
+
+/* Rows carry a message preview, the way a chat list should. */
+.lab-menu-panel .lab-thread-copy small {
+  margin-top: 2px;
+  overflow: hidden;
+  color: #8f91a0;
+  font-size: 9.5px;
+  letter-spacing: 0.01em;
+  text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .lab-thread-head { height: 56px; padding: 0 16px; }
+  .lab-thread-head > span { display: none; }
+  .lab-thread-head strong { max-width: 74vw; }
+}

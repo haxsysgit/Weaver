@@ -52,6 +52,7 @@ class ConversationSummary(TypedDict):
 
     conversation_id: str
     title: str
+    preview: str
     created_at: str
     archived: bool
     pinned: bool
@@ -267,6 +268,7 @@ class SessionWeave:
         return {
             "conversation_id": record.id,
             "title": title,
+            "preview": cls._last_owner_text(record.last_owner_body)[:120],
             "created_at": record.created_at,
             "archived": record.archived_at is not None,
             "pinned": record.pinned_at is not None,

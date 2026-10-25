@@ -7,6 +7,7 @@ import {
   PlusIcon,
   RailCloseIcon,
   RailOpenIcon,
+  SearchIcon,
   SettingsIcon,
   TrashIcon,
   UnpinIcon,
@@ -70,6 +71,7 @@ export function ThreadArchive({
   startupReady = true,
   threads,
 }: ThreadArchiveProps) {
+  const [query, setQuery] = useState("");
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
@@ -119,6 +121,12 @@ export function ThreadArchive({
     return threads.filter((thread) => thread.archived);
   }, [threads]);
   const archivedCount = archivedThreads.length;
+  const needle = query.trim().toLowerCase();
+  const matches = (thread: LabThread) =>
+    !needle ||
+    `${thread.title} ${thread.preview}`.toLowerCase().includes(needle);
+  const visibleChats = chats.filter(matches);
+  const visibleFanfic = fanfic.filter(matches);
   const railVisible = mobileLayout ? drawerOpen : !collapsed;
   const railOperable = startupReady && (mobileLayout ? drawerOpen : true);
 
@@ -230,6 +238,7 @@ export function ThreadArchive({
           ) : (
             <button
               aria-current={active ? "page" : undefined}
+              aria-label={thread.title}
               className="lab-thread-select"
               onClick={() => onSelect(thread.id)}
               ref={(button) => {
@@ -241,6 +250,9 @@ export function ThreadArchive({
             >
               <span className="lab-thread-copy">
                 <strong>{thread.title}</strong>
+                <small>
+                  {thread.preview || (thread.domain === "fanfic" ? "Fanfic" : "Canon")}
+                </small>
               </span>
             </button>
           )}
@@ -406,6 +418,17 @@ export function ThreadArchive({
         </button>
       )}
 
+      <label className="lab-thread-search">
+        <SearchIcon />
+        <input
+          aria-label="Search chats and fanfic"
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search chats"
+          type="search"
+          value={query}
+        />
+      </label>
+
       <div className="lab-rail-scroll">
         {actionError && <p className="lab-archive-error" role="alert">{actionError}</p>}
 
@@ -435,13 +458,13 @@ export function ThreadArchive({
             <section className="lab-chat-section" aria-label="Chats">
               <header className="lab-rail-section-head">
                 <h2>Chats</h2>
-                <small>{chats.length}</small>
+                <small>{visibleChats.length}</small>
               </header>
               <nav aria-label="Chats" className="lab-thread-list">
                 <ul className="lab-thread-flat-list">
-                  {chats.map(renderThread)}
+                  {visibleChats.map(renderThread)}
                 </ul>
-                {chats.length === 0 && (
+                {visibleChats.length === 0 && (
                   <div className="lab-thread-empty">
                     <span aria-hidden="true" />
                     <p>[No chats yet.]</p>
@@ -453,13 +476,13 @@ export function ThreadArchive({
             <section className="lab-chat-section" aria-label="Fanfic">
               <header className="lab-rail-section-head">
                 <h2>Fanfic</h2>
-                <small>{fanfic.length}</small>
+                <small>{visibleFanfic.length}</small>
               </header>
               <nav aria-label="Fanfic" className="lab-thread-list">
                 <ul className="lab-thread-flat-list">
-                  {fanfic.map(renderThread)}
+                  {visibleFanfic.map(renderThread)}
                 </ul>
-                {fanfic.length === 0 && (
+                {visibleFanfic.length === 0 && (
                   <div className="lab-thread-empty">
                     <span aria-hidden="true" />
                     <p>[No fanfic yet. Start one above.]</p>

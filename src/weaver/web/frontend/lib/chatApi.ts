@@ -12,6 +12,7 @@ export interface ConversationSummary {
   domain?: "canon" | "fanfic";
   edition_id: string;
   pinned: boolean;
+  preview?: string;
   title: string;
 }
 

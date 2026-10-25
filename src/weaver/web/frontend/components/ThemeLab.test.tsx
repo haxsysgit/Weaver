@@ -38,7 +38,7 @@ describe("Spell Surface v2 lab", () => {
   it("keeps the drawer to Chats and Fanfic with thread actions on hover", async () => {
     render(<ThemeLab />);
 
-    expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: "Search chats and fanfic" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Start a new weave" })).toBeVisible();
     expect(screen.queryByText("Today")).not.toBeInTheDocument();
     const chats = screen.getByRole("region", { name: "Chats" });

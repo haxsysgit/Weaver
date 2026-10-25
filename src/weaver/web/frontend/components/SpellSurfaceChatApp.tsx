@@ -217,8 +217,8 @@ function SpellSurfaceChatSurface({
       archived: conversation.archived,
       domain: conversation.domain === "fanfic" ? "fanfic" : "canon",
       id: conversation.conversation_id,
+      preview: conversation.preview ?? "",
       pinned: conversation.pinned,
-      preview: "private reading thread",
       title: conversation.title,
       volume: null,
     })),
@@ -542,6 +542,7 @@ function SpellSurfaceChatSurface({
   }
 
   const readerStatus = `Vol ${preferences.volume} · ch ${preferences.chapter} · ${preferences.tier}`;
+  const activeThread = threads.find((thread) => thread.id === chat.conversationId);
   const sharedStatus = sharedStatusFor(access, accessFailed);
   const sharedExhausted = (
     !voiceBound
@@ -689,6 +690,14 @@ function SpellSurfaceChatSurface({
         className="lab-chat-main"
         inert={chat.booting || railOpen || setupOpen}
       >
+        <header className="lab-thread-head">
+          <div>
+            <small>{activeThread?.domain === "fanfic" ? "Fanfic" : "Chat"}</small>
+            <strong>{activeThread?.title ?? "New thread"}</strong>
+          </div>
+          <span>{readerStatus}</span>
+        </header>
+
         <div className="lab-transcript" ref={transcriptRef}>
           <div className="lab-transcript-column">
             {chat.bootError && <div className="boot-error">{chat.bootError}</div>}
