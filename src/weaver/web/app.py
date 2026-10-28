@@ -489,10 +489,10 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
     )
 
     @app.get("/api/preferences", dependencies=[Depends(_check_local)])
-    async def get_preferences() -> dict:
+    async def get_preferences(request: Request) -> dict:
         if runtime.prefs is None:
             return {"reader_chapter": None, "spoiler_mode": "protect", "tier": "ascended"}
-        prefs = await runtime.prefs.get()
+        prefs = await runtime.prefs.get(_device_id(request))
         return {
             "reader_chapter": prefs.reader_chapter,
             "spoiler_mode": prefs.spoiler_mode,
@@ -524,12 +524,13 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         )
 
     @app.put("/api/preferences", dependencies=[Depends(_check_local)])
-    async def put_preferences(body: PreferencesBody) -> dict:
+    async def put_preferences(request: Request, body: PreferencesBody) -> dict:
         if runtime.prefs is None:
             raise HTTPException(status_code=404, detail="preferences store unavailable")
         from weaver.prefs import UserPreferences
 
         await runtime.prefs.set(
+            _device_id(request),
             UserPreferences(
                 reader_chapter=body.reader_chapter,
                 spoiler_mode=body.spoiler_mode,
@@ -705,8 +706,14 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 await asyncio.sleep(runtime.fake_delta_delay_seconds)
 
         delta_callback = on_delta
+        # The spoiler boundary belongs to the device that owns this
+        # conversation, read once so the answer and its reading packet
+        # agree even if that device saves new settings mid-turn.
+        owner_device = await runtime.session.conversation_device(conversation_id)
         turn_prefs = (
-            await runtime.prefs.get() if runtime.prefs is not None else None
+            await runtime.prefs.get(owner_device)
+            if runtime.prefs is not None and owner_device is not None
+            else None
         )
         reader_note = _reader_note(turn_prefs)
         max_chapter = (
@@ -744,13 +751,16 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                     "--- spoiler framing ---\n"
                     "The synthetic development fixture may be answered completely."
                 )
-            prefs = await runtime.prefs.get() if runtime.prefs is not None else None
             packet = build_packet(
                 runtime.library,
                 tool_results,
                 candidate=candidate,
-                user_chapter=prefs.reader_chapter if prefs is not None else None,
-                spoiler_mode=prefs.spoiler_mode if prefs is not None else "protect",
+                user_chapter=(
+                    turn_prefs.reader_chapter if turn_prefs is not None else None
+                ),
+                spoiler_mode=(
+                    turn_prefs.spoiler_mode if turn_prefs is not None else "protect"
+                ),
                 judge=spoiler_judge,
                 cap_override=profile_packet_cap,
             )

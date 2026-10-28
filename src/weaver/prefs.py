@@ -1,12 +1,16 @@
-"""User preferences store (Plan 15 slices 2 + 5).
+"""User preferences store (Plan 15 slices 2 + 5; per device since Plan 030).
 
-Single-owner app, single row (id=1): the reader's current chapter, the
-spoiler knob, and the reading tier (awakened / ascended / transcendent)
-which picks the tool budget and reasoning effort for web turns. Never seen
-by tools, never a retrieval filter; the spoiler judge consumes the
-position at answer-framing time. Flavor prefs (best character, best
-scene, fun stuff) are reserved for later memory plans.
+One row per browser device id: the reader's current chapter, the spoiler
+knob, and the reading tier (awakened / ascended / transcendent). Never seen
+by tools, never a retrieval filter; the spoiler judge consumes the position
+at answer-framing time. Flavor prefs (best character, best scene, fun
+stuff) are reserved for later memory plans.
 
+Plan 030 settings audit, finding 1: the old store was a single row shared
+by every device, so one reader's save set another reader's spoiler cap.
+Owner decision (2026-10-28): start fresh. The old ``preferences`` row is
+left in the database untouched and nothing reads it; every device starts
+with no saved boundary until it saves one.
 """
 
 from __future__ import annotations
@@ -46,20 +50,13 @@ class PreferencesStore:
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
         self._db = await aiosqlite.connect(self._db_path)
         await self._db.execute(
-            "CREATE TABLE IF NOT EXISTS preferences ("
-            " id INTEGER PRIMARY KEY CHECK (id = 1),"
+            "CREATE TABLE IF NOT EXISTS device_preferences ("
+            " device_id TEXT PRIMARY KEY,"
             " reader_chapter INTEGER,"
             " spoiler_mode TEXT NOT NULL DEFAULT 'protect',"
             " tier TEXT NOT NULL DEFAULT 'ascended',"
             " flavor TEXT NOT NULL DEFAULT '{}')"
         )
-        # existing databases predate the tier column: add it in place
-        cur = await self._db.execute("PRAGMA table_info(preferences)")
-        columns = [row[1] for row in await cur.fetchall()]
-        if "tier" not in columns:
-            await self._db.execute(
-                "ALTER TABLE preferences ADD COLUMN tier TEXT NOT NULL DEFAULT 'ascended'"
-            )
         await self._db.commit()
 
     async def close(self) -> None:
@@ -67,10 +64,13 @@ class PreferencesStore:
             await self._db.close()
             self._db = None
 
-    async def get(self) -> UserPreferences:
+    async def get(self, device_id: str) -> UserPreferences:
+        """This device's preferences, or the defaults if it saved none."""
         assert self._db is not None
         cur = await self._db.execute(
-            "SELECT reader_chapter, spoiler_mode, tier, flavor FROM preferences WHERE id = 1"
+            "SELECT reader_chapter, spoiler_mode, tier, flavor"
+            " FROM device_preferences WHERE device_id = ?",
+            (device_id,),
         )
         row = await cur.fetchone()
         if row is None:
@@ -84,7 +84,8 @@ class PreferencesStore:
             flavor=json.loads(row[3] or "{}"),
         )
 
-    async def set(self, prefs: UserPreferences) -> UserPreferences:
+    async def set(self, device_id: str, prefs: UserPreferences) -> UserPreferences:
+        """Replace this device's preferences; other devices are untouched."""
         assert self._db is not None
         if prefs.reader_chapter is not None and not 1 <= prefs.reader_chapter <= MAX_CHAPTER:
             raise ValueError(f"reader_chapter must be 1..{MAX_CHAPTER} or null")
@@ -93,14 +94,21 @@ class PreferencesStore:
         if prefs.tier not in TIERS:
             raise ValueError(f"tier must be one of {TIERS}")
         await self._db.execute(
-            "INSERT INTO preferences (id, reader_chapter, spoiler_mode, tier, flavor)"
-            " VALUES (1, ?, ?, ?, ?)"
-            " ON CONFLICT(id) DO UPDATE SET"
+            "INSERT INTO device_preferences"
+            " (device_id, reader_chapter, spoiler_mode, tier, flavor)"
+            " VALUES (?, ?, ?, ?, ?)"
+            " ON CONFLICT(device_id) DO UPDATE SET"
             " reader_chapter = excluded.reader_chapter,"
             " spoiler_mode = excluded.spoiler_mode,"
             " tier = excluded.tier,"
             " flavor = excluded.flavor",
-            (prefs.reader_chapter, prefs.spoiler_mode, prefs.tier, json.dumps(prefs.flavor)),
+            (
+                device_id,
+                prefs.reader_chapter,
+                prefs.spoiler_mode,
+                prefs.tier,
+                json.dumps(prefs.flavor),
+            ),
         )
         await self._db.commit()
         return prefs

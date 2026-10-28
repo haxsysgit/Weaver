@@ -268,6 +268,155 @@ async def test_preferences_reject_invalid(client) -> None:
     assert (await client.put("/api/preferences", json={"spoiler_mode": "maybe"})).status_code == 422
 
 
+async def test_preferences_are_per_device(client) -> None:
+    """Audit finding 1: one device's boundary never reaches another."""
+    a = {"X-Device-Id": "device-a"}
+    b = {"X-Device-Id": "device-b"}
+    saved_a = await client.put(
+        "/api/preferences", headers=a, json={"reader_chapter": 200}
+    )
+    saved_b = await client.put(
+        "/api/preferences",
+        headers=b,
+        json={"reader_chapter": 2500, "spoiler_mode": "none", "tier": "transcendent"},
+    )
+    assert saved_a.status_code == 200
+    assert saved_b.status_code == 200
+
+    assert (await client.get("/api/preferences", headers=a)).json() == {
+        "reader_chapter": 200,
+        "spoiler_mode": "protect",
+        "tier": "ascended",
+    }
+    assert (await client.get("/api/preferences", headers=b)).json() == {
+        "reader_chapter": 2500,
+        "spoiler_mode": "none",
+        "tier": "transcendent",
+    }
+    fresh = await client.get("/api/preferences", headers={"X-Device-Id": "device-c"})
+    assert fresh.json() == {
+        "reader_chapter": None,
+        "spoiler_mode": "protect",
+        "tier": "ascended",
+    }
+
+
+async def test_concurrent_turns_use_their_own_device_boundary(tmp_path) -> None:
+    """Two devices' turns in flight at once each get their own cap."""
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    gate = asyncio.Event()
+    both_entered = asyncio.Event()
+    seen: dict[str, tuple[int | None, str]] = {}
+
+    async def recording_send(
+        conversation_id,
+        text,
+        cancel_event=None,
+        on_delta=None,
+        on_tool_event=None,
+        tool_budget=None,
+        reasoning=None,
+        packet_builder=None,
+        final_pass=None,
+        reader_note="",
+        max_chapter=None,
+    ):
+        seen[conversation_id] = (max_chapter, reader_note)
+        if len(seen) == 2:
+            both_entered.set()
+        await gate.wait()
+        return TurnResult(
+            turn_id="t",
+            exit_reason=TurnExitReason.COMPLETED,
+            final_text="ok",
+        )
+
+    runtime.session.send = recording_send  # type: ignore[method-assign]
+    app = create_app(runtime)
+    transport = ASGITransport(app=app)
+    a = {"X-Device-Id": "device-a"}
+    b = {"X-Device-Id": "device-b"}
+    try:
+        async with AsyncClient(
+            transport=transport,
+            base_url="http://127.0.0.1",
+            headers=SAME_ORIGIN_HEADERS,
+        ) as client:
+            await client.put("/api/preferences", headers=a, json={"reader_chapter": 200})
+            await client.put("/api/preferences", headers=b, json={"reader_chapter": 2500})
+            conv_a = (await client.post("/api/conversations", headers=a)).json()[
+                "conversation_id"
+            ]
+            conv_b = (await client.post("/api/conversations", headers=b)).json()[
+                "conversation_id"
+            ]
+
+            started_a = await client.post(
+                f"/api/conversations/{conv_a}/turns", headers=a, json={"message": "hi"}
+            )
+            started_b = await client.post(
+                f"/api/conversations/{conv_b}/turns", headers=b, json={"message": "hi"}
+            )
+            assert started_a.status_code == 202
+            assert started_b.status_code == 202
+            await asyncio.wait_for(both_entered.wait(), timeout=5)
+            gate.set()
+            for conv, headers in ((conv_a, a), (conv_b, b)):
+                streamed = await client.get(
+                    f"/api/conversations/{conv}/stream", headers=headers
+                )
+                assert "event: completed" in streamed.text
+    finally:
+        await runtime.close()
+
+    cap_a, note_a = seen[conv_a]
+    cap_b, note_b = seen[conv_b]
+    assert cap_a == 200
+    assert cap_b == 2500
+    assert "chapter 200." in note_a
+    assert "chapter 2500." in note_b
+
+
+async def test_turn_without_saved_boundary_is_uncapped(tmp_path) -> None:
+    """Start fresh: a device that saved nothing gets no cap and no note,
+    even when another device has saved one."""
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    seen: list[tuple[int | None, str]] = []
+
+    async def recording_send(conversation_id, text, reader_note="", max_chapter=None, **_):
+        seen.append((max_chapter, reader_note))
+        return TurnResult(
+            turn_id="t", exit_reason=TurnExitReason.COMPLETED, final_text="ok"
+        )
+
+    runtime.session.send = recording_send  # type: ignore[method-assign]
+    app = create_app(runtime)
+    transport = ASGITransport(app=app)
+    try:
+        async with AsyncClient(
+            transport=transport,
+            base_url="http://127.0.0.1",
+            headers=SAME_ORIGIN_HEADERS,
+        ) as client:
+            await client.put(
+                "/api/preferences",
+                headers={"X-Device-Id": "device-a"},
+                json={"reader_chapter": 200},
+            )
+            fresh = {"X-Device-Id": "device-fresh"}
+            conv = (await client.post("/api/conversations", headers=fresh)).json()[
+                "conversation_id"
+            ]
+            await client.post(
+                f"/api/conversations/{conv}/turns", headers=fresh, json={"message": "hi"}
+            )
+            await client.get(f"/api/conversations/{conv}/stream", headers=fresh)
+    finally:
+        await runtime.close()
+
+    assert seen == [(None, "")]
+
+
 async def test_create_conversation_returns_201(client) -> None:
     resp = await client.post("/api/conversations")
     assert resp.status_code == 201

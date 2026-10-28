@@ -359,6 +359,11 @@ class SessionWeave:
             return False
         return owner == device_id
 
+    async def conversation_device(self, conversation_id: str) -> str | None:
+        """The device id that owns this conversation (None if unknown)."""
+        assert self._repo is not None
+        return await self._repo.conversation_owner(conversation_id)
+
     async def load_transcript(
         self, conversation_id: str
     ) -> list[TranscriptMessage]:
