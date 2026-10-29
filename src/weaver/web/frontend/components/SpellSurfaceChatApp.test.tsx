@@ -1449,3 +1449,96 @@ describe("live Spellweave foundation", () => {
       ).toBeNull(),
     );
   });
+
+describe("spoiler boundary", () => {
+  beforeEach(() => {
+    setDesktopMedia();
+    localStorage.clear();
+    localStorage.setItem(FIRST_NIGHTMARE_STORAGE_KEY, "completed");
+  });
+
+  function freshDeviceApi(): ChatApi {
+    const api = createApi();
+    api.getPreferences = vi.fn().mockResolvedValue({
+      reader_chapter: null,
+      spoiler_mode: "protect",
+    });
+    return api;
+  }
+
+  async function send(text: string) {
+    fireEvent.change(screen.getByRole("textbox", { name: "Message Weaver" }), {
+      target: { value: text },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+  }
+
+  it("says there is no boundary instead of showing the placeholder chapter", async () => {
+    render(<SpellSurfaceChatApp api={freshDeviceApi()} privacyLabel="Private" />);
+    await waitForLiveApp();
+
+    expect((await screen.findAllByText(/No spoiler boundary/)).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/ch 1000/)).toBeNull();
+  });
+
+  it("offers to protect a chapter the reader mentions, and saves it on one tap", async () => {
+    const api = freshDeviceApi();
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+    await waitForLiveApp();
+    await screen.findAllByText(/No spoiler boundary/);
+
+    await send("I'm at chapter 742, who is the Warden?");
+    const offer = await screen.findByRole("group", { name: "Spoiler boundary" });
+    expect(offer).toHaveTextContent("[Chapter 742, noted.]");
+    expect(api.savePreferences).not.toHaveBeenCalled();
+
+    fireEvent.click(within(offer).getByRole("button", { name: "Protect after ch 742" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("group", { name: "Spoiler boundary" })).toBeNull();
+    });
+    expect(api.savePreferences).toHaveBeenCalledWith({
+      reader_chapter: 742,
+      spoiler_mode: "protect",
+    });
+    expect(screen.getAllByText(/ch 742/).length).toBeGreaterThan(0);
+  });
+
+  it("keeps the offer with a retry when the save fails", async () => {
+    const api = freshDeviceApi();
+    api.savePreferences = vi.fn().mockRejectedValue(new Error("offline"));
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+    await waitForLiveApp();
+    await screen.findAllByText(/No spoiler boundary/);
+
+    await send("just finished chapter 742");
+    const offer = await screen.findByRole("group", { name: "Spoiler boundary" });
+    fireEvent.click(within(offer).getByRole("button", { name: "Protect after ch 742" }));
+
+    expect(await within(offer).findByText(/Your boundary was not saved/)).toBeVisible();
+    expect(within(offer).getByRole("button", { name: "Try again" })).toBeVisible();
+  });
+
+  it("does not offer the chapter that is already the boundary", async () => {
+    render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
+    await waitForLiveApp();
+    await screen.findAllByText(/ch 1000/);
+
+    await send("I'm at chapter 1000 now");
+    await act(async () => {});
+    expect(screen.queryByRole("group", { name: "Spoiler boundary" })).toBeNull();
+  });
+
+  it("can be dismissed without saving", async () => {
+    const api = freshDeviceApi();
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+    await waitForLiveApp();
+    await screen.findAllByText(/No spoiler boundary/);
+
+    await send("im on ch 900");
+    const offer = await screen.findByRole("group", { name: "Spoiler boundary" });
+    fireEvent.click(within(offer).getByRole("button", { name: "Not now" }));
+
+    expect(screen.queryByRole("group", { name: "Spoiler boundary" })).toBeNull();
+    expect(api.savePreferences).not.toHaveBeenCalled();
+  });
+});

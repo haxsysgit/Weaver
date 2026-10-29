@@ -9,6 +9,7 @@ import {
   setApiKeyDisabled,
   setModelId,
 } from "../lib/identity";
+import { MAX_CHAPTER } from "../lib/readerPosition";
 import { EyeIcon, EyeSlashIcon } from "./Icons";
 import { type RuneMode } from "./SpellSurfaceRunes";
 import {
@@ -45,7 +46,16 @@ export type SettingsSection =
   | "privacy"
   | "rite";
 
+export interface SaveOptions {
+  /** False when the reader never set a chapter: save no boundary rather
+   * than the placeholder chapter. */
+  boundaryChosen: boolean;
+}
+
 interface SpellSurfaceSettingsProps {
+  /** Whether this device has a saved chapter. Without one, Settings says so
+   * instead of presenting the placeholder chapter as an active boundary. */
+  boundarySaved?: boolean;
   initialSection?: SettingsSection;
   initial: LabPreferences;
   onApiKeyChange?: (hasApiKey: boolean) => void;
@@ -53,7 +63,7 @@ interface SpellSurfaceSettingsProps {
   onReplayFirstNightmare?: () => void;
   /** May return a promise: Settings shows Saving, then Saved, and closes
    * only once it resolves; a rejection keeps the edits open with a retry. */
-  onSave: (preferences: LabPreferences) => void | Promise<void>;
+  onSave: (preferences: LabPreferences, options: SaveOptions) => void | Promise<void>;
 }
 
 type SaveState = "idle" | "saving" | "saved" | "failed";
@@ -61,7 +71,6 @@ type SaveState = "idle" | "saving" | "saved" | "failed";
 /** How long the Saved confirmation stays up before the panel closes. */
 export const SAVED_HOLD_MS = 900;
 
-const MAX_CHAPTER = 3160;
 const VOLUMES = [
   { end: 95, number: 1 },
   { end: 350, number: 2 },
@@ -115,6 +124,7 @@ function preferencesMatch(left: LabPreferences, right: LabPreferences) {
 }
 
 export function SpellSurfaceSettings({
+  boundarySaved = true,
   initial,
   initialSection = "reader",
   onApiKeyChange,
@@ -131,6 +141,7 @@ export function SpellSurfaceSettings({
   const [mobileDetailOpen, setMobileDetailOpen] = useState(initialSection !== "reader");
   const [discardPromptOpen, setDiscardPromptOpen] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [chapterTouched, setChapterTouched] = useState(false);
   const mounted = useRef(true);
   const closeTimer = useRef<number | undefined>(undefined);
   const panelRef = useRef<HTMLElement>(null);
@@ -145,8 +156,11 @@ export function SpellSurfaceSettings({
     () => withHiddenThreadIdentity(preferences),
     [preferences],
   );
+  const boundaryChosen = boundarySaved || chapterTouched;
+  const boundaryPending = !boundaryChosen;
   const isDirty =
     !preferencesMatch(fixedPreferences, initialPreferences.current) ||
+    (!boundarySaved && chapterTouched) ||
     apiKey !== initialApiKey.current ||
     apiKeyDisabled !== initialApiKeyDisabled.current ||
     modelId !== initialModelId.current;
@@ -166,7 +180,7 @@ export function SpellSurfaceSettings({
   // A failed save stays on screen until the reader edits again.
   useEffect(() => {
     setSaveState((current) => (current === "failed" ? "idle" : current));
-  }, [preferences, apiKey, apiKeyDisabled, modelId]);
+  }, [preferences, apiKey, apiKeyDisabled, modelId, chapterTouched]);
 
   useEffect(() => {
     if (isDirty) {
@@ -186,6 +200,7 @@ export function SpellSurfaceSettings({
 
   function setChapter(nextChapter: number) {
     const chapter = Math.min(MAX_CHAPTER, Math.max(1, nextChapter || 1));
+    setChapterTouched(true);
     setPreferences((current) => ({
       ...current,
       chapter,
@@ -227,7 +242,7 @@ export function SpellSurfaceSettings({
     }
     setSaveState("saving");
     try {
-      await onSave(fixedPreferences);
+      await onSave(fixedPreferences, { boundaryChosen });
     } catch {
       if (mounted.current) {
         setSaveState("failed");
@@ -279,7 +294,9 @@ export function SpellSurfaceSettings({
   const selectedModel = AVAILABLE_MODELS.find((model) => model.id === modelId);
   const sections: Array<{ hint: string; id: SettingsSection; label: string }> = [
     {
-      hint: `Chapter ${preferences.chapter} · Volume ${preferences.volume}`,
+      hint: boundaryPending
+        ? "No boundary saved"
+        : `Chapter ${preferences.chapter} · Volume ${preferences.volume}`,
       id: "reader",
       label: "Reader position",
     },
@@ -370,6 +387,11 @@ export function SpellSurfaceSettings({
                     <h3>Reader position</h3>
                     <span>Chapter is the source of truth. Weaver derives the volume and protects everything beyond your reach.</span>
                   </div>
+                  {boundaryPending && (
+                    <p className="lab-boundary-unset" role="note">
+                      <strong>[No boundary saved.]</strong> Weaver does not know how far you have read, so it asks before revealing anything big. Enter your chapter to protect everything after it.
+                    </p>
+                  )}
                   <div className="lab-reader-position">
                     <label htmlFor="reader-chapter">Current chapter</label>
                     <div>
@@ -378,10 +400,11 @@ export function SpellSurfaceSettings({
                         max={MAX_CHAPTER}
                         min={1}
                         onChange={(event) => setChapter(Number(event.target.value))}
+                        placeholder="Chapter"
                         type="number"
-                        value={preferences.chapter}
+                        value={boundaryPending ? "" : preferences.chapter}
                       />
-                      <strong>Volume {preferences.volume}</strong>
+                      {!boundaryPending && <strong>Volume {preferences.volume}</strong>}
                     </div>
                     <div className="lab-chapter-steps">
                       {[-10, -1, 1, 10].map((step) => (
@@ -405,7 +428,10 @@ export function SpellSurfaceSettings({
                         onChange={() => update("spoilerMode", "protect")}
                         type="radio"
                       />
-                      <span><strong>Protect everything after Chapter {preferences.chapter}</strong><small>Weaver answers only from the story you have reached.</small></span>
+                      <span>
+                        <strong>{boundaryPending ? "Protect everything after your chapter" : `Protect everything after Chapter ${preferences.chapter}`}</strong>
+                        <small>{boundaryPending ? "Until you set a chapter, Weaver asks before revealing anything big." : "Weaver answers only from the story you have reached."}</small>
+                      </span>
                     </label>
                     <label className={preferences.spoilerMode === "none" ? "on" : ""}>
                       <input

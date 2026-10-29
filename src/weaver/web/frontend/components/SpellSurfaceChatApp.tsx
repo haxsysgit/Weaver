@@ -18,6 +18,7 @@ import {
   shouldOpenFirstNightmare,
 } from "../lib/firstNightmare";
 import { getApiKey, isApiKeyDisabled } from "../lib/identity";
+import { mentionedChapter } from "../lib/readerPosition";
 import { Composer } from "./Composer";
 import { FirstNightmareSetup, type SharedAccessStatus } from "./FirstNightmareSetup";
 import { Message } from "./Message";
@@ -171,11 +172,32 @@ function volumeForChapter(chapter: number): number {
   return volumeIndex === -1 ? VOLUME_ENDS.length : volumeIndex + 1;
 }
 
-function toApiPreferences(preferences: LabPreferences): UserPreferences {
+function toApiPreferences(
+  preferences: LabPreferences,
+  boundaryChosen: boolean,
+): UserPreferences {
   return {
-    reader_chapter: preferences.chapter,
+    // No chapter chosen means no boundary saved, never the placeholder.
+    reader_chapter: boundaryChosen ? preferences.chapter : null,
     spoiler_mode: preferences.spoilerMode,
   };
+}
+
+/** The reader line under the thread title: honest about an unset boundary. */
+export function readerStatusFor(
+  preferences: LabPreferences,
+  chapterSaved: boolean | null,
+): string {
+  if (chapterSaved === null) {
+    return "";
+  }
+  if (preferences.spoilerMode === "none") {
+    return "Whole novel";
+  }
+  if (!chapterSaved) {
+    return "No spoiler boundary";
+  }
+  return `Vol ${preferences.volume} · ch ${preferences.chapter}`;
 }
 
 function SpellSurfaceChatSurface({
@@ -184,6 +206,10 @@ function SpellSurfaceChatSurface({
 }: SpellSurfaceChatAppProps) {
   const chat = useChatController(api, weaverProduct);
   const [preferences, setPreferences] = useState(loadInitialPreferences);
+  // null while the saved boundary loads; false when this device has none.
+  const [chapterSaved, setChapterSaved] = useState<boolean | null>(null);
+  const [chapterOffer, setChapterOffer] = useState<number | null>(null);
+  const [chapterOfferFailed, setChapterOfferFailed] = useState(false);
   const [desktop, setDesktop] = useState(() => {
     return typeof window !== "undefined"
       && window.matchMedia("(min-width: 900px)").matches;
@@ -231,6 +257,7 @@ function SpellSurfaceChatSurface({
 
   useEffect(() => {
     void refreshAccess();
+    void loadStoredBoundary();
   }, []);
 
   useEffect(() => {
@@ -393,18 +420,44 @@ function SpellSurfaceChatSurface({
     setSettingsInitialSection("reader");
     setSettingsOpen(true);
     announce("[The sea within opens.]");
+    await loadStoredBoundary();
+  }
+
+  async function loadStoredBoundary() {
     try {
       const stored = await api.getPreferences();
-      const chapter = stored.reader_chapter ?? preferences.chapter;
-      setPreferences((current) => ({
-        ...current,
-        chapter,
-        spoilerMode: stored.spoiler_mode,
-        volume: volumeForChapter(chapter),
-      }));
+      setPreferences((current) => {
+        const chapter = stored.reader_chapter ?? current.chapter;
+        return {
+          ...current,
+          chapter,
+          spoilerMode: stored.spoiler_mode,
+          volume: volumeForChapter(chapter),
+        };
+      });
+      setChapterSaved(stored.reader_chapter !== null);
     } catch {
       // The local settings remain usable when the server preference read fails.
     }
+  }
+
+  async function acceptChapterOffer(chapter: number) {
+    setChapterOfferFailed(false);
+    try {
+      await api.savePreferences({ reader_chapter: chapter, spoiler_mode: "protect" });
+    } catch {
+      setChapterOfferFailed(true);
+      return;
+    }
+    setPreferences((current) => ({
+      ...current,
+      chapter,
+      spoilerMode: "protect",
+      volume: volumeForChapter(chapter),
+    }));
+    setChapterSaved(true);
+    setChapterOffer(null);
+    announce(`[Boundary set at chapter ${chapter}.]`);
   }
 
   function closeSettings() {
@@ -542,6 +595,16 @@ function SpellSurfaceChatSurface({
   }
 
   function sendMessage(message: string) {
+    // "I'm at chapter 742": offer to make that the boundary, unless it
+    // already is. Weaver never changes the boundary without a tap.
+    const chapter = mentionedChapter(message);
+    const alreadyProtected = chapterSaved === true
+      && preferences.spoilerMode === "protect"
+      && preferences.chapter === chapter;
+    if (chapter !== null && chapterSaved !== null && !alreadyProtected) {
+      setChapterOfferFailed(false);
+      setChapterOffer(chapter);
+    }
     answerPhaseAnnounced.current = false;
     setSpellState("reaching");
     announce("[The Spell reaches for the first thread.]");
@@ -556,7 +619,7 @@ function SpellSurfaceChatSurface({
     chat.regenerateReply();
   }
 
-  const readerStatus = `Vol ${preferences.volume} · ch ${preferences.chapter}`;
+  const readerStatus = readerStatusFor(preferences, chapterSaved);
   const activeThread = threads.find((thread) => thread.id === chat.conversationId);
   const sharedStatus = sharedStatusFor(access, accessFailed);
   const sharedExhausted = (
@@ -802,6 +865,19 @@ function SpellSurfaceChatSurface({
         </div>
 
         <footer className="lab-composer-dock">
+          {chapterOffer !== null && (
+            <div aria-label="Spoiler boundary" className="lab-boundary-offer" role="group">
+              <p>
+                {chapterOfferFailed
+                  ? "[The thread slipped. Your boundary was not saved.]"
+                  : `[Chapter ${chapterOffer}, noted.] Protect everything after it?`}
+              </p>
+              <button className="primary" onClick={() => void acceptChapterOffer(chapterOffer)} type="button">
+                {chapterOfferFailed ? "Try again" : `Protect after ch ${chapterOffer}`}
+              </button>
+              <button onClick={() => setChapterOffer(null)} type="button">Not now</button>
+            </div>
+          )}
           <Composer
             cancelling={chat.turnState === "cancelling"}
             draft={chat.draft}
@@ -840,6 +916,7 @@ function SpellSurfaceChatSurface({
 
       {settingsOpen && (
         <SpellSurfaceSettings
+          boundarySaved={chapterSaved !== false}
           initial={preferences}
           initialSection={settingsInitialSection}
           onApiKeyChange={(hasApiKey) => {
@@ -848,11 +925,15 @@ function SpellSurfaceChatSurface({
           }}
           onClose={closeSettings}
           onReplayFirstNightmare={replayFirstNightmare}
-          onSave={async (nextPreferences) => {
+          onSave={async (nextPreferences, { boundaryChosen }) => {
             // Settings waits on this: nothing applies until the server has
             // the reader state, and Settings closes itself after "Saved".
-            await api.savePreferences(toApiPreferences(nextPreferences));
+            await api.savePreferences(toApiPreferences(nextPreferences, boundaryChosen));
             setPreferences(nextPreferences);
+            setChapterSaved(boundaryChosen);
+            if (boundaryChosen) {
+              setChapterOffer(null);
+            }
             saveVisualPreferences(nextPreferences);
             announce("[Reader state remembered.]");
           }}

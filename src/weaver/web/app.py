@@ -278,10 +278,20 @@ def _reader_note(prefs) -> str:
     The reading packet carries this too, but the packet is only built after
     the candidate answer, so the answer itself needs the boundary up front.
     """
-    if prefs is None or prefs.reader_chapter is None:
+    if prefs is None or prefs.spoiler_mode != "protect":
         return ""
-    if prefs.spoiler_mode != "protect":
-        return ""
+    if prefs.reader_chapter is None:
+        # No boundary saved yet: talk like a friend who does not know how
+        # far you are, instead of spoiling blindly or refusing everything.
+        return (
+            "You do not know how far the reader has read; they have not saved "
+            "a chapter. If they mention where they are in this conversation, "
+            "treat that chapter as their boundary. Before you reveal a major "
+            "story beat (a death, a hidden identity, a twist, an ending, who "
+            "someone turns out to be), ask once, casually, how far they have "
+            "read, unless they already told you. Early setup and general "
+            "questions need no check."
+        )
     return (
         f"The reader is at chapter {prefs.reader_chapter}. Protect the story: "
         "never reveal, confirm, deny, or hint at anything past that chapter. "
@@ -490,7 +500,9 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         else SpoilerJudge()
     )
 
-    @app.get("/api/preferences", dependencies=[Depends(_check_local)])
+    # A read: browsers send no Origin on a same-origin GET, so requiring one
+    # made every real read fail (Plan 030 slice 4). Writes keep the check.
+    @app.get("/api/preferences", dependencies=[Depends(_check_local_hostname)])
     async def get_preferences(request: Request) -> dict:
         if runtime.prefs is None:
             return {"reader_chapter": None, "spoiler_mode": "protect"}

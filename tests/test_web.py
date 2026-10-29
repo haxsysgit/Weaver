@@ -374,9 +374,10 @@ async def test_concurrent_turns_use_their_own_device_boundary(tmp_path) -> None:
     assert "chapter 2500." in note_b
 
 
-async def test_turn_without_saved_boundary_is_uncapped(tmp_path) -> None:
-    """Start fresh: a device that saved nothing gets no cap and no note,
-    even when another device has saved one."""
+async def test_turn_without_saved_boundary_asks_before_spoiling(tmp_path) -> None:
+    """Start fresh: a device that saved nothing gets no cap, even when another
+    device has saved one. Slice 4: it is not answered blind either; the model
+    is told it does not know the reader's position and must ask first."""
     runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
     seen: list[tuple[int | None, str]] = []
 
@@ -408,6 +409,38 @@ async def test_turn_without_saved_boundary_is_uncapped(tmp_path) -> None:
                 f"/api/conversations/{conv}/turns", headers=fresh, json={"message": "hi"}
             )
             await client.get(f"/api/conversations/{conv}/stream", headers=fresh)
+    finally:
+        await runtime.close()
+
+    assert len(seen) == 1
+    cap, note = seen[0]
+    assert cap is None
+    assert "do not know how far the reader has read" in note
+    assert "ask once" in note
+    assert "chapter 200" not in note
+
+
+async def test_a_reader_who_allows_spoilers_gets_no_note(tmp_path) -> None:
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    seen: list[tuple[int | None, str]] = []
+
+    async def recording_send(conversation_id, text, reader_note="", max_chapter=None, **_):
+        seen.append((max_chapter, reader_note))
+        return TurnResult(
+            turn_id="t", exit_reason=TurnExitReason.COMPLETED, final_text="ok"
+        )
+
+    runtime.session.send = recording_send  # type: ignore[method-assign]
+    app = create_app(runtime)
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://127.0.0.1",
+            headers=SAME_ORIGIN_HEADERS,
+        ) as client:
+            await client.put("/api/preferences", json={"spoiler_mode": "none"})
+            conv = (await client.post("/api/conversations")).json()["conversation_id"]
+            await _turn(client, conv, "turns", {"message": "hi"})
     finally:
         await runtime.close()
 
@@ -1928,3 +1961,33 @@ async def test_a_failure_while_planning_the_read_ends_the_turn_visibly(
 
     assert "event: failed" in streamed
     assert "planning broke" not in streamed
+
+
+async def test_a_browser_can_read_its_preferences_without_an_origin(tmp_path) -> None:
+    """Browsers send no Origin header on a same-origin GET. The read must
+    work without one, or the app never sees the saved boundary."""
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    app = create_app(runtime)
+    device = {"X-Device-Id": "browser-device"}
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://127.0.0.1"
+        ) as client:
+            saved = await client.put(
+                "/api/preferences",
+                headers={**device, **SAME_ORIGIN_HEADERS},
+                json={"reader_chapter": 742},
+            )
+            assert saved.status_code == 200
+            read = await client.get("/api/preferences", headers=device)
+            foreign = await client.put(
+                "/api/preferences",
+                headers={**device, "Origin": "https://evil.example"},
+                json={"reader_chapter": 1},
+            )
+    finally:
+        await runtime.close()
+
+    assert read.status_code == 200
+    assert read.json()["reader_chapter"] == 742
+    assert foreign.status_code == 403

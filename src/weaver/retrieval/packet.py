@@ -33,6 +33,18 @@ PACKET_CHAR_CAP = 24_000
 MAX_NOTEBOOK_STATEMENTS = 5
 MAX_OPENED_PASSAGES = 12
 
+# Both keep "answer completely" so the answer checks read them as the full
+# mode: with no chapter there is nothing to cap against.
+UNKNOWN_POSITION_FRAMING = (
+    "The reader has not said how far they have read. Answer completely, "
+    "but if the answer would reveal a major story beat (a death, a hidden "
+    "identity, a twist, or an arc payoff), first ask how far they have read "
+    "and whether they want it spoiled."
+)
+ALL_SPOILERS_FRAMING = (
+    "The reader allows spoilers from the whole novel, so answer completely."
+)
+
 VERDICT_FRAMING = {
     "full": (
         "The reader is at chapter {chapter}; all cited material is at or "
@@ -419,7 +431,17 @@ def build_packet(
         user_chapter=user_chapter,
         no_spoilers=spoiler_mode == "none",
     )
-    framing = VERDICT_FRAMING[verdict.mode].format(chapter=user_chapter)
+    if user_chapter is None:
+        # No saved position: never tell the model "chapter None". A reader
+        # who allowed spoilers gets everything; one who never said how far
+        # they are gets the answer, but is asked before a major beat.
+        framing = (
+            UNKNOWN_POSITION_FRAMING
+            if spoiler_mode != "none"
+            else ALL_SPOILERS_FRAMING
+        )
+    else:
+        framing = VERDICT_FRAMING[verdict.mode].format(chapter=user_chapter)
     framing_text = f"--- spoiler framing ---\n{framing}"
 
     # 4. Size cap: direct novel evidence outranks notebook leads. The evidence

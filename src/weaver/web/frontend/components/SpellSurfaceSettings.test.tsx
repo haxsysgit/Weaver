@@ -70,6 +70,7 @@ describe("Reader Appraisal settings", () => {
 
     expect(onSave).toHaveBeenCalledWith(
       expect.objectContaining({ soulMode: "nephis" }),
+      { boundaryChosen: true },
     );
   });
 
@@ -148,7 +149,10 @@ describe("Reader Appraisal settings", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(onSave).toHaveBeenCalledTimes(2);
-    expect(onSave).toHaveBeenLastCalledWith(expect.objectContaining({ chapter: 1200 }));
+    expect(onSave).toHaveBeenLastCalledWith(
+      expect.objectContaining({ chapter: 1200 }),
+      { boundaryChosen: true },
+    );
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce(), { timeout: 2000 });
   });
 
@@ -230,5 +234,75 @@ describe("Reader Appraisal settings", () => {
       />,
     );
     expect(screen.getByLabelText("Current chapter")).toHaveValue(1210);
+  });
+
+  describe("with no boundary saved", () => {
+    it("says so instead of showing the placeholder chapter as protected", () => {
+      render(
+        <SpellSurfaceSettings
+          boundarySaved={false}
+          initial={LEGACY_PREFERENCES}
+          onClose={vi.fn()}
+          onSave={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByRole("note")).toHaveTextContent("[No boundary saved.]");
+      expect(screen.getByRole("button", { name: /Reader position/ })).toHaveTextContent(
+        "No boundary saved",
+      );
+      expect(screen.getByLabelText("Current chapter")).toHaveValue(null);
+      expect(screen.queryByText(/Protect everything after Chapter 1000/)).toBeNull();
+      expect(screen.getByText("Protect everything after your chapter")).toBeVisible();
+      expect(screen.getByRole("button", { name: "Apply changes" })).toBeDisabled();
+    });
+
+    it("saves the chapter the reader enters, even the placeholder number", async () => {
+      const onSave = vi.fn().mockResolvedValue(undefined);
+      render(
+        <SpellSurfaceSettings
+          boundarySaved={false}
+          initial={LEGACY_PREFERENCES}
+          onClose={vi.fn()}
+          onSave={onSave}
+        />,
+      );
+
+      fireEvent.change(screen.getByLabelText("Current chapter"), {
+        target: { value: "1000" },
+      });
+      expect(screen.queryByRole("note")).toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: "Apply changes" }));
+
+      await waitFor(() =>
+        expect(onSave).toHaveBeenCalledWith(
+          expect.objectContaining({ chapter: 1000 }),
+          { boundaryChosen: true },
+        ),
+      );
+    });
+
+    it("saves other settings without inventing a boundary", async () => {
+      const onSave = vi.fn().mockResolvedValue(undefined);
+      render(
+        <SpellSurfaceSettings
+          boundarySaved={false}
+          initial={LEGACY_PREFERENCES}
+          onClose={vi.fn()}
+          onSave={onSave}
+        />,
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: "Appearance" }));
+      fireEvent.click(screen.getByRole("button", { name: "Nephis' Soul Sea" }));
+      fireEvent.click(screen.getByRole("button", { name: "Apply changes" }));
+
+      await waitFor(() =>
+        expect(onSave).toHaveBeenCalledWith(
+          expect.objectContaining({ soulMode: "nephis" }),
+          { boundaryChosen: false },
+        ),
+      );
+    });
   });
 });

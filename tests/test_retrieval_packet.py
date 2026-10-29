@@ -344,3 +344,20 @@ async def test_packet_beat_context_only_for_matching_chapters(tmp_path: Path) ->
     assert packet is not None
     assert "beat:" not in packet.text
     assert packet.verdict.mode == "full"  # ch98 not in any beat
+
+
+@pytest.mark.asyncio
+async def test_packet_never_frames_an_unsaved_position_as_chapter_none(
+    tmp_path: Path,
+) -> None:
+    svc = _service(tmp_path)
+    unknown = build_packet(svc, [_read_result(98, 5, 8)], user_chapter=None)
+    finished = build_packet(
+        svc, [_read_result(98, 5, 8)], user_chapter=None, spoiler_mode="none"
+    )
+    assert unknown is not None and finished is not None
+    assert "chapter None" not in unknown.text
+    assert "chapter None" not in finished.text
+    assert "has not said how far they have read" in unknown.text
+    assert "ask how far they have read" in unknown.text
+    assert "whole novel" in finished.text

@@ -82,26 +82,34 @@ Findings:
    still exists in `LabPreferences` and localStorage.
 5. **Saving is silent.** Modal closes before PUT resolves; failures invisible.
 
-Approved next steps, in order:
+Approved next steps. Renumbered by priority on 2026-10-29 (owner): the
+explicit boundary moved ahead of the dead rune cleanup, and the additions were
+re-scoped to fit the product direction (a chat buddy for non-technical
+readers, not a harness of settings).
 
-1. **Per-device preferences.** Add a preference table keyed by `device_id`;
-   move get/set into it; make `/api/preferences` read/write the requesting
-   device; make the turn read the boundary of the device that owns the
-   conversation (not the global store). Backfill the single existing store to
-   the owner's device. Tests: two devices save different chapters, two
-   concurrent turns get different caps.
-2. **Visible save state.** Disable Apply until dirty; show "Saved" and a retry
-   on failure; do not close on a failed write.
-3. **Wire or remove Answer depth.** If wired: pass `turn_prefs.tier` into
-   `_turn_profile`, scale tool budget and reasoning effort. If not: delete the
-   section.
-4. **Remove the dead rune preference** from `LabPreferences`, storage, and
-   `data-runes` once nothing reads it.
-5. **Explicit boundary.** If prefs have no chapter, show "No boundary saved"
-   and do not present protect as active. Offer "I am at chapter N" from the
-   last asked chapter.
-6. Additions: default thread kind for the chooser, export conversations,
-   clear local library index, usage/spend for BYOK, per-thread boundary.
+1. **Per-device preferences.** Done (`0b6b108`). Start fresh: the old shared
+   row is left unread.
+2. **Visible save state.** Done (`a890062`).
+3. **Answer depth.** Done (`e103a1a`): removed. Weaver decides depth from the
+   conversation: short follow-ups keep the earlier read, pushes ("prove it")
+   read deeper, a loaded skill raises thinking and the final reread, and each
+   run records its skills, lookups, and thinking.
+4. **Explicit boundary.** Done (slice 4 commit). No saved chapter now reads
+   "No spoiler boundary" in the header and "No boundary saved" in Settings;
+   the model is told it does not know the reader's position and asks before a
+   major beat; the packet never says "chapter None". Saying "I'm at chapter N"
+   in chat offers a one-tap boundary. Also fixed: `GET /api/preferences`
+   required an Origin header, which browsers do not send on a same-origin
+   GET, so every real read had failed silently since it shipped.
+5. **Reader additions, re-scoped.** Export a thread as a Markdown file. Dropped
+   from the old list: default thread kind (another setting), clear local
+   library index (admin work), per-thread boundary (more settings; the chapter
+   offer covers moving forward). Deferred: usage and spend for readers with
+   their own key, until usage is captured per device.
+6. **Dead code cleanup.** Remove the rune preference from the live app
+   (`LabPreferences`, storage, `data-runes`, the "runes" rail label), delete
+   the unmounted legacy `ChatApp`, `SettingsModal`, and `ConversationRail`,
+   and fix the stray `}` in the rune styles.
 
 Do not implement these silently as one blob. The owner approved the list and
 will want screenshots and tests per slice.
