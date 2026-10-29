@@ -1991,3 +1991,97 @@ async def test_a_browser_can_read_its_preferences_without_an_origin(tmp_path) ->
     assert read.status_code == 200
     assert read.json()["reader_chapter"] == 742
     assert foreign.status_code == 403
+
+
+async def _owner_switch_client(tmp_path, monkeypatch, *, switch: str | None):
+    monkeypatch.setenv("DEEPSEEK_KEY", "sk-test-owner-key")
+    if switch is None:
+        monkeypatch.delenv("WEAVER_LOCAL_OWNER_KEY", raising=False)
+    else:
+        monkeypatch.setenv("WEAVER_LOCAL_OWNER_KEY", switch)
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    # Behave as a live server without a network: the turn itself is stubbed.
+    runtime.live = True
+    sent: list[str] = []
+
+    async def recording_send(conversation_id, text, **_):
+        sent.append(text)
+        return TurnResult(turn_id="t", exit_reason=TurnExitReason.COMPLETED, final_text="ok")
+
+    runtime.session.send = recording_send  # type: ignore[method-assign]
+    return runtime, sent
+
+
+async def test_the_owner_switch_lets_this_machine_chat_on_the_server_key(
+    tmp_path, monkeypatch
+) -> None:
+    runtime, sent = await _owner_switch_client(tmp_path, monkeypatch, switch="1")
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=create_app(runtime)),
+            base_url="http://127.0.0.1",
+            headers=SAME_ORIGIN_HEADERS,
+        ) as client:
+            access = (await client.get("/api/access")).json()
+            conv = (await client.post("/api/conversations")).json()["conversation_id"]
+            started = await client.post(
+                f"/api/conversations/{conv}/turns", json={"message": "hi"}
+            )
+            streamed = await client.get(f"/api/conversations/{conv}/stream")
+    finally:
+        await runtime.close()
+
+    assert access["development"] is True
+    assert access["source"] == "owner_key"
+    assert started.status_code == 202
+    assert "event: completed" in streamed.text
+    assert sent == ["hi"]
+
+
+async def test_the_owner_switch_never_covers_a_forwarded_request(
+    tmp_path, monkeypatch
+) -> None:
+    """Behind a proxy or Tailscale Funnel the client looks local; the
+    forwarding header is what gives it away."""
+    runtime, sent = await _owner_switch_client(tmp_path, monkeypatch, switch="1")
+    forwarded = {**SAME_ORIGIN_HEADERS, "X-Forwarded-For": "203.0.113.9"}
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=create_app(runtime)),
+            base_url="http://127.0.0.1",
+            headers=forwarded,
+        ) as client:
+            access = (await client.get("/api/access")).json()
+            conv = (await client.post("/api/conversations")).json()["conversation_id"]
+            started = await client.post(
+                f"/api/conversations/{conv}/turns", json={"message": "hi"}
+            )
+    finally:
+        await runtime.close()
+
+    assert access["source"] == "unavailable"
+    assert started.status_code == 503
+    assert sent == []
+
+
+@pytest.mark.parametrize("switch", [None, "0", "yes"])
+async def test_the_owner_switch_is_off_unless_set_to_1(
+    tmp_path, monkeypatch, switch
+) -> None:
+    runtime, sent = await _owner_switch_client(tmp_path, monkeypatch, switch=switch)
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=create_app(runtime)),
+            base_url="http://127.0.0.1",
+            headers=SAME_ORIGIN_HEADERS,
+        ) as client:
+            conv = (await client.post("/api/conversations")).json()["conversation_id"]
+            started = await client.post(
+                f"/api/conversations/{conv}/turns", json={"message": "hi"}
+            )
+    finally:
+        await runtime.close()
+
+    assert started.status_code == 503
+    assert started.json()["detail"] == {"code": "disabled"}
+    assert sent == []

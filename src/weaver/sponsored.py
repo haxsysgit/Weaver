@@ -36,13 +36,18 @@ class PriceSchedule:
     output_microdollars_per_million: int
 
 
+# deepseek-flash peak rates per 1M tokens, checked against DeepSeek's pricing
+# page on 2026-10-29: cache hit $0.006, cache miss $0.30, output $1.20.
+# Off-peak is half; budgeting at peak keeps every reservation conservative.
+# Re-check the page before the validity date, or sponsored turns refuse with
+# stale_price.
 DEFAULT_PRICE = PriceSchedule(
-    version="deepseek-flash-2026-09-10-peak",
+    version="deepseek-flash-2026-10-29-peak",
     cache_hit_microdollars_per_million=6_000,
     cache_miss_microdollars_per_million=300_000,
     output_microdollars_per_million=1_200_000,
 )
-DEFAULT_PRICE_VALID_UNTIL = datetime(2026, 10, 10, tzinfo=UTC)
+DEFAULT_PRICE_VALID_UNTIL = datetime(2026, 11, 29, tzinfo=UTC)
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,7 +56,8 @@ class SponsoredConfig:
     price: PriceSchedule
     price_valid_until: datetime
     daily_question_limit: int = 3
-    daily_budget_microdollars: int = MICRODOLLARS_PER_DOLLAR
+    # Owner decision 2026-10-29: $10 a day across all sponsored readers.
+    daily_budget_microdollars: int = 10 * MICRODOLLARS_PER_DOLLAR
     reservation_microdollars: int = 370_000
     network_hourly_limit: int = 6
     stale_after_seconds: int = 15 * 60

@@ -104,8 +104,9 @@ async def test_signed_pass_rejects_tampering_and_persists_no_raw_identity(
 @pytest.mark.asyncio
 async def test_atomic_reservations_hold_reader_and_global_limits(tmp_path) -> None:
     database = tmp_path / "sponsored.sqlite3"
-    first = await open_access(database)
-    second = await open_access(database)
+    # A $1 ceiling: two $0.37 reservations fit, the racing third does not.
+    first = await open_access(database, daily_budget_microdollars=1_000_000)
+    second = await open_access(database, daily_budget_microdollars=1_000_000)
     passes = [
         first.issue_pass(at=NOW, reader_id=f"reader-{index}")
         for index in range(3)
@@ -600,3 +601,20 @@ async def test_missing_or_unavailable_usd_balance_fails_closed(response) -> None
     )
 
     assert await balance.available_microdollars() is None
+
+
+def test_the_shared_allowance_defaults_to_ten_dollars_a_day_at_peak_prices(
+    monkeypatch,
+) -> None:
+    from weaver.sponsored import DEFAULT_PRICE, config_from_environment
+
+    monkeypatch.delenv("WEAVER_SPONSORED_PRICE_VALID_UNTIL", raising=False)
+    config = config_from_environment()
+
+    assert config.daily_budget_microdollars == 10_000_000
+    # deepseek-flash peak rates per 1M tokens, checked 2026-10-29.
+    assert DEFAULT_PRICE.cache_hit_microdollars_per_million == 6_000
+    assert DEFAULT_PRICE.cache_miss_microdollars_per_million == 300_000
+    assert DEFAULT_PRICE.output_microdollars_per_million == 1_200_000
+    assert config.price.version == "deepseek-flash-2026-10-29-peak"
+    assert config.price_valid_until.isoformat() == "2026-11-29T00:00:00+00:00"

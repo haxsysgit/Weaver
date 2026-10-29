@@ -171,7 +171,7 @@ def test_shared_allowance_reports_only_safe_totals(
     summary = json.loads(output)
 
     assert exit_code == 0
-    assert summary["remaining_microdollars"] == 1_000_000
+    assert summary["remaining_microdollars"] == 10_000_000  # $10 a day
     assert summary["completed_questions"] == 0
     assert secret not in output
     assert "prompt" not in output

@@ -67,6 +67,38 @@ def _request_model(request: Request) -> str | None:
     return model or None
 
 
+OWNER_KEY_SWITCH = "WEAVER_LOCAL_OWNER_KEY"
+LOOPBACK_CLIENTS = frozenset({"127.0.0.1", "::1", "localhost"})
+FORWARDING_HEADERS = (
+    "x-forwarded-for",
+    "x-forwarded-host",
+    "x-real-ip",
+    "forwarded",
+    "tailscale-user-login",
+    "tailscale-funnel-request",
+)
+
+
+def _owner_key_applies(request: Request) -> bool:
+    """The local owner switch: a request made directly on this machine uses
+    the server's own DeepSeek key, with no shared-allowance limits.
+
+    Off unless WEAVER_LOCAL_OWNER_KEY=1. Only a loopback client with no
+    forwarding header qualifies, so a request that came through a proxy or
+    Tailscale Funnel never spends the owner's key this way.
+    """
+    if os.environ.get(OWNER_KEY_SWITCH) != "1":
+        return False
+    if not os.environ.get("DEEPSEEK_KEY"):
+        return False
+    client = request.client.host if request.client is not None else ""
+    if client not in LOOPBACK_CLIENTS:
+        return False
+    extra_header = os.environ.get("WEAVER_ORIGINAL_ADDRESS_HEADER", "").strip().lower()
+    headers = (*FORWARDING_HEADERS, *((extra_header,) if extra_header else ()))
+    return not any(request.headers.get(name) for name in headers)
+
+
 def _client_address(request: Request) -> str:
     """Use a forwarded address only from an explicitly trusted proxy."""
     direct_address = request.client.host if request.client is not None else "unknown"
@@ -387,6 +419,15 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         response: Response,
         pass_token_override: str | None = None,
     ) -> dict:
+        if runtime.live and not _request_key(request) and _owner_key_applies(request):
+            return {
+                "enabled": False,
+                "development": True,
+                "remaining_questions": 0,
+                "reset_at": None,
+                "consented": False,
+                "source": "owner_key",
+            }
         if runtime.sponsored is None or runtime.sponsored_balance is None:
             return {
                 "enabled": False,
@@ -454,6 +495,9 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         request_key = _request_key(request)
         if request_key is not None:
             return request_key, _request_model(request), None
+        if runtime.live and _owner_key_applies(request):
+            # No per-request key: the runner falls back to the server key.
+            return None, _request_model(request), None
         if not runtime.live and runtime.sponsored is None:
             return None, _request_model(request), None
         if runtime.sponsored is None or runtime.sponsored_balance is None:

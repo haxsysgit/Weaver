@@ -48,7 +48,7 @@ export interface AccessStatus {
   enabled: boolean;
   remaining_questions: number;
   reset_at: string | null;
-  source: "reader_byok" | "sponsored" | "unavailable";
+  source: "reader_byok" | "sponsored" | "unavailable" | "owner_key";
 }
 
 export interface ChatApi {

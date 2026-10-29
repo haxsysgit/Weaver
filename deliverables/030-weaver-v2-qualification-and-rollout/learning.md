@@ -100,6 +100,15 @@ redesign and Plan 030 amendment-or-successor decision are pending.
   $0.014, and the $1 ceiling supports about 23 to 37 readers per day.
 - Production limits may change only after complete-turn measurement and owner
   approval.
+- Owner decisions 2026-10-29: the global daily ceiling is now $10 (three
+  questions per reader per day is unchanged). At the CP3 measurement of
+  $0.009 to $0.014 per turn and a $0.37 reservation per question, $10 covers
+  about 27 readers asking all three at once, and far more on settled cost.
+  The price table was re-checked against DeepSeek's page (deepseek-flash
+  peak: $0.006 cache hit, $0.30 cache miss, $1.20 output per 1M tokens),
+  unchanged, and is valid to 2026-11-29. A local owner switch
+  (`WEAVER_LOCAL_OWNER_KEY=1`) lets the owner chat on the server key on this
+  machine without the allowance; forwarded requests never get it.
 - Accounts, subscriptions, reader payments, donations, ads, automatic top-up,
   and silent model fallback remain out.
 - The current EC2, Compose, GitHub Actions SSH, and Funnel path remains the

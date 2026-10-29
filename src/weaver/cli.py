@@ -223,6 +223,13 @@ async def _run_web(
             "session. No call was made."
         )
         return 2
+    if live and os.environ.get("WEAVER_LOCAL_OWNER_KEY") == "1":
+        print(
+            "WARNING WEAVER_LOCAL_OWNER_KEY is on: chats opened directly on this "
+            "machine use the DEEPSEEK_KEY from .env with no daily limit. "
+            "Requests through a proxy or Tailscale Funnel do not. Turn it off "
+            "before sharing this server."
+        )
     fake_delays = {"instant": 0.0, "normal": 0.35, "slow": 1.2}
     runtime = await open_chat_runtime(
         state_dir,
