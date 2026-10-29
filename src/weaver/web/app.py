@@ -23,7 +23,7 @@ from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
-from weaver.skills import plan_for_question
+from weaver.skills import plan_for_turn
 from weaver.agent.errors import safe_error
 from weaver.agent.turn import REASONING_TIERS, TurnExitReason
 from weaver.chat_runtime import ChatRuntime
@@ -114,7 +114,6 @@ class TurnBody(BaseModel):
 class PreferencesBody(BaseModel):
     reader_chapter: int | None = Field(default=None, ge=1, le=MAX_CHAPTER)
     spoiler_mode: str = Field(default="protect", pattern="^(protect|none)$")
-    tier: str = Field(default="ascended", pattern="^(awakened|ascended|transcendent)$")
 
 
 class ConversationMetadataBody(BaseModel):
@@ -260,13 +259,16 @@ NAMING_SYSTEM_PROMPT = (
 def _turn_profile(
     question: str,
     domain: str = "canon",
+    earlier_asks: tuple[str, ...] = (),
 ) -> tuple[int, str | None, int, bool]:
     """Suggested skill profile: tool budget, reasoning tier, packet cap, final pass.
 
-    This is a starting point, not a lock. The model may load more skills with
-    load_skill, and doing so raises its budget to match.
+    Weaver decides this per question; the reader never picks a depth. A short
+    follow-up ("huh", "prove it") is read against the earlier question. This
+    is a starting point, not a lock: the model may load more skills with
+    load_skill, and doing so raises its budget and thinking to match.
     """
-    plan = plan_for_question(question, domain=domain)
+    plan = plan_for_turn(question, earlier_asks=earlier_asks, domain=domain)
     return plan.tool_budget, plan.reasoning_tier, plan.packet_cap, plan.final_pass
 
 
@@ -491,12 +493,11 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
     @app.get("/api/preferences", dependencies=[Depends(_check_local)])
     async def get_preferences(request: Request) -> dict:
         if runtime.prefs is None:
-            return {"reader_chapter": None, "spoiler_mode": "protect", "tier": "ascended"}
+            return {"reader_chapter": None, "spoiler_mode": "protect"}
         prefs = await runtime.prefs.get(_device_id(request))
         return {
             "reader_chapter": prefs.reader_chapter,
             "spoiler_mode": prefs.spoiler_mode,
-            "tier": prefs.tier,
         }
 
     @app.get("/api/access", dependencies=[Depends(_check_local_hostname)])
@@ -534,13 +535,11 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
             UserPreferences(
                 reader_chapter=body.reader_chapter,
                 spoiler_mode=body.spoiler_mode,
-                tier=body.tier,
             )
         )
         return {
             "reader_chapter": body.reader_chapter,
             "spoiler_mode": body.spoiler_mode,
-            "tier": body.tier,
         }
 
     @app.get("/api/conversations")
@@ -725,12 +724,6 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         conversation_domain, _ = await runtime.session.conversation_domain(
             conversation_id
         )
-        (
-            profile_budget,
-            profile_reasoning_tier,
-            profile_packet_cap,
-            profile_final_pass,
-        ) = _turn_profile(message, domain=conversation_domain)
 
         # Plan 15 final reading phase: after a candidate passes the
         # mechanical checks, the packet builder re-reads the turn's
@@ -771,6 +764,31 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
             return packet.text
 
         try:
+            # Inside the try, so a failure here ends the turn with a visible
+            # failure instead of a stream that never finishes.
+            # A retry or regenerate arrives without a message: route the stored
+            # question it re-answers, not the empty string, or a retried hard
+            # question is read as small talk.
+            transcript = await runtime.session.load_transcript(conversation_id)
+            owner_asks = tuple(
+                item["content"] for item in transcript if item["role"] == "owner"
+            )
+            if retry or regenerate:
+                routed_ask = owner_asks[-1] if owner_asks else message
+                earlier_asks = owner_asks[:-1]
+            else:
+                routed_ask = message
+                earlier_asks = owner_asks
+            (
+                profile_budget,
+                profile_reasoning_tier,
+                profile_packet_cap,
+                profile_final_pass,
+            ) = _turn_profile(
+                routed_ask,
+                domain=conversation_domain,
+                earlier_asks=earlier_asks,
+            )
             tool_budget = (
                 min(profile_budget, 4)
                 if sponsored_turn is not None
@@ -782,9 +800,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 else None
             )
             # the naming call runs once, after the very first turn
-            is_first_turn = (
-                len(await runtime.session.load_transcript(conversation_id)) == 0
-            )
+            is_first_turn = len(transcript) == 0
             if regenerate:
                 regenerated = await runtime.session.regenerate_last_turn(
                     conversation_id,

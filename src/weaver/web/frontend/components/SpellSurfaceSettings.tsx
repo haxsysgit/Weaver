@@ -23,7 +23,6 @@ export type FontSize = "small" | "medium" | "large";
 export type GlassMode = "subtle" | "immersive";
 export type StarIntensity = "quiet" | "balanced" | "vivid";
 export type SurfaceTheme = "crimson" | "cosmos" | "starlight" | "void";
-export type Tier = "awakened" | "ascended" | "transcendent";
 
 export interface LabPreferences {
   chapter: number;
@@ -35,13 +34,11 @@ export interface LabPreferences {
   spoilerMode: "protect" | "none";
   starIntensity: StarIntensity;
   theme: SurfaceTheme;
-  tier: Tier;
   volume: number;
 }
 
 export type SettingsSection =
   | "reader"
-  | "reading"
   | "model"
   | "appearance"
   | "stars"
@@ -81,12 +78,6 @@ const VOLUMES = [
   { end: MAX_CHAPTER, number: 13 },
 ];
 
-const TIER_COPY: Record<Tier, string> = {
-  awakened: "A quick reread for direct questions.",
-  ascended: "A balanced reread with connected evidence.",
-  transcendent: "The deepest reread for hard canon debates.",
-};
-
 const MODEL_DESCRIPTIONS: Record<string, string> = {
   "deepseek-flash": "Fast responses for everyday chapter questions.",
   "deepseek-v4-pro": "More reasoning for hard canon debates and theories.",
@@ -119,7 +110,6 @@ function preferencesMatch(left: LabPreferences, right: LabPreferences) {
     left.spoilerMode === right.spoilerMode &&
     left.starIntensity === right.starIntensity &&
     left.theme === right.theme &&
-    left.tier === right.tier &&
     left.volume === right.volume
   );
 }
@@ -293,7 +283,6 @@ export function SpellSurfaceSettings({
       id: "reader",
       label: "Reader position",
     },
-    { hint: titleCase(preferences.tier), id: "reading", label: "Answer depth" },
     {
       hint: `${selectedModel?.label ?? "DeepSeek"} · ${apiKey.trim() && !apiKeyDisabled ? "bound" : "unbound"}`,
       id: "model",
@@ -428,31 +417,6 @@ export function SpellSurfaceSettings({
                       <span><strong>Allow knowledge from the complete novel</strong><small>Use this after you have finished the story.</small></span>
                     </label>
                   </fieldset>
-                </section>
-              )}
-
-              {activeSection === "reading" && (
-                <section className="lab-settings-section">
-                  <div className="lab-setting-title">
-                    <p>[Choose how deeply the thread is followed.]</p>
-                    <h3>Answer depth</h3>
-                    <span>This controls how much reading and connecting Weaver does before answering. It is separate from the model.</span>
-                  </div>
-                  <div className="lab-choice-grid three">
-                    {(["awakened", "ascended", "transcendent"] as Tier[]).map((tier) => (
-                      <button
-                        aria-label={tier}
-                        aria-pressed={preferences.tier === tier}
-                        className={preferences.tier === tier ? "on" : ""}
-                        key={tier}
-                        onClick={() => update("tier", tier)}
-                        type="button"
-                      >
-                        <strong>{titleCase(tier)}</strong>
-                        <span>{TIER_COPY[tier]}</span>
-                      </button>
-                    ))}
-                  </div>
                 </section>
               )}
 

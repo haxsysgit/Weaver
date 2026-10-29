@@ -32,7 +32,6 @@ function createDurableFakeApi(): { api: ChatApi; store: DurableFakeStore } {
   let preferences: UserPreferences = {
     reader_chapter: 1000,
     spoiler_mode: "protect" as const,
-    tier: "ascended" as const,
   };
 
   function findConversation(conversationId: string): ConversationSummary {

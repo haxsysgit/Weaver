@@ -98,7 +98,6 @@ const INITIAL_PREFERENCES: LabPreferences = {
   spoilerMode: "protect",
   starIntensity: "balanced",
   theme: "void",
-  tier: "ascended",
   volume: 5,
 };
 
@@ -280,7 +279,7 @@ export function ThemeLab() {
     }, 900);
   }
 
-  const readerStatus = `Vol ${preferences.volume} · ch ${preferences.chapter} · ${preferences.tier}`;
+  const readerStatus = `Vol ${preferences.volume} · ch ${preferences.chapter}`;
   const threadAlpha = preferences.starIntensity === "quiet"
     ? 0.12
     : preferences.starIntensity === "vivid"
@@ -399,7 +398,6 @@ export function ThemeLab() {
               rows={1}
               value={draft}
             />
-            <span className="lab-tier-pill">{preferences.tier}</span>
             <button aria-label="Send message" disabled={!draft.trim() || weaving} type="submit"><ArrowUpIcon /></button>
           </form>
           <p><span /> everything stays on this machine</p>

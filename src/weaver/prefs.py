@@ -1,8 +1,7 @@
 """User preferences store (Plan 15 slices 2 + 5; per device since Plan 030).
 
-One row per browser device id: the reader's current chapter, the spoiler
-knob, and the reading tier (awakened / ascended / transcendent). Never seen
-by tools, never a retrieval filter; the spoiler judge consumes the position
+One row per browser device id: the reader's current chapter and the spoiler
+knob. Never seen by tools, never a retrieval filter; the spoiler judge consumes the position
 at answer-framing time. Flavor prefs (best character, best scene, fun
 stuff) are reserved for later memory plans.
 
@@ -11,6 +10,10 @@ by every device, so one reader's save set another reader's spoiler cap.
 Owner decision (2026-10-28): start fresh. The old ``preferences`` row is
 left in the database untouched and nothing reads it; every device starts
 with no saved boundary until it saves one.
+
+Plan 030 slice 3 (owner decision 2026-10-29): the reader no longer picks an
+answer depth; Weaver decides how much to read per question. The ``tier``
+column stays so existing rows remain valid, but nothing reads or writes it.
 """
 
 from __future__ import annotations
@@ -23,21 +26,18 @@ from typing import Literal
 import aiosqlite
 
 SPOILER_MODES = ("protect", "none")
-TIERS = ("awakened", "ascended", "transcendent")
 # Plan v1 (2026-08-17): the reader-position ceiling. Keep in step with
 # the shelf (novels/shadow-slave, currently 3160); the web system prompt
 # derives its own count at runtime so it can never lie again.
 MAX_CHAPTER = 3160
 
 SpoilerMode = Literal["protect", "none"]
-Tier = Literal["awakened", "ascended", "transcendent"]
 
 
 @dataclass
 class UserPreferences:
     reader_chapter: int | None = None
     spoiler_mode: SpoilerMode = "protect"
-    tier: Tier = "ascended"
     flavor: dict = field(default_factory=dict)
 
 
@@ -68,7 +68,7 @@ class PreferencesStore:
         """This device's preferences, or the defaults if it saved none."""
         assert self._db is not None
         cur = await self._db.execute(
-            "SELECT reader_chapter, spoiler_mode, tier, flavor"
+            "SELECT reader_chapter, spoiler_mode, flavor"
             " FROM device_preferences WHERE device_id = ?",
             (device_id,),
         )
@@ -76,12 +76,10 @@ class PreferencesStore:
         if row is None:
             return UserPreferences()
         mode = row[1] if row[1] in SPOILER_MODES else "protect"
-        tier = row[2] if row[2] in TIERS else "ascended"
         return UserPreferences(
             reader_chapter=row[0],
             spoiler_mode=mode,
-            tier=tier,
-            flavor=json.loads(row[3] or "{}"),
+            flavor=json.loads(row[2] or "{}"),
         )
 
     async def set(self, device_id: str, prefs: UserPreferences) -> UserPreferences:
@@ -91,22 +89,18 @@ class PreferencesStore:
             raise ValueError(f"reader_chapter must be 1..{MAX_CHAPTER} or null")
         if prefs.spoiler_mode not in SPOILER_MODES:
             raise ValueError(f"spoiler_mode must be one of {SPOILER_MODES}")
-        if prefs.tier not in TIERS:
-            raise ValueError(f"tier must be one of {TIERS}")
         await self._db.execute(
             "INSERT INTO device_preferences"
-            " (device_id, reader_chapter, spoiler_mode, tier, flavor)"
-            " VALUES (?, ?, ?, ?, ?)"
+            " (device_id, reader_chapter, spoiler_mode, flavor)"
+            " VALUES (?, ?, ?, ?)"
             " ON CONFLICT(device_id) DO UPDATE SET"
             " reader_chapter = excluded.reader_chapter,"
             " spoiler_mode = excluded.spoiler_mode,"
-            " tier = excluded.tier,"
             " flavor = excluded.flavor",
             (
                 device_id,
                 prefs.reader_chapter,
                 prefs.spoiler_mode,
-                prefs.tier,
                 json.dumps(prefs.flavor),
             ),
         )

@@ -19,7 +19,7 @@ from .registry import (
     skill_by_id,
     skill_text,
 )
-from .router import plan_for_question, route_skill_id
+from .router import plan_for_question, plan_for_turn, route_skill_id
 
 __all__ = [
     "ALL_SKILLS",
@@ -34,6 +34,7 @@ __all__ = [
     "format_skill_brief",
     "plan_for_ids",
     "plan_for_question",
+    "plan_for_turn",
     "resolve_skills",
     "route_skill_id",
     "skill_by_id",

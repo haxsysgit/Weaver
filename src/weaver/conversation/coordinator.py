@@ -262,6 +262,7 @@ class RunCoordinator:
         final_text: str,
         *,
         final_item_already_persisted: bool = False,
+        reading: dict | None = None,
     ) -> None:
         """Mark run and turn completed with the final assistant item.
 
@@ -297,7 +298,7 @@ class RunCoordinator:
                     sequence=eseq,
                     run_id=run_id,
                     kind="run_completed",
-                    body="{}",
+                    body=json.dumps({"reading": reading}) if reading else "{}",
                     created_at=ts,
                 )
             )
@@ -312,6 +313,7 @@ class RunCoordinator:
         message: str,
         error_category: str = "",
         raw_stop_reason: str = "",
+        reading: dict | None = None,
     ) -> None:
         """Record a run_failed event so a broken turn is diagnosable from
         the local state DB without the server's stderr."""
@@ -332,6 +334,7 @@ class RunCoordinator:
                             "message": message,
                             "error_category": error_category,
                             "raw_stop_reason": raw_stop_reason,
+                            **({"reading": reading} if reading else {}),
                         }
                     ),
                     created_at=ts,

@@ -18,7 +18,7 @@ import {
   shouldOpenFirstNightmare,
 } from "../lib/firstNightmare";
 import { getApiKey, isApiKeyDisabled } from "../lib/identity";
-import { Composer, type ReadingTier } from "./Composer";
+import { Composer } from "./Composer";
 import { FirstNightmareSetup, type SharedAccessStatus } from "./FirstNightmareSetup";
 import { Message } from "./Message";
 import { RecoveryPanel } from "./RecoveryPanel";
@@ -56,7 +56,6 @@ const INITIAL_PREFERENCES: LabPreferences = {
   spoilerMode: "protect",
   starIntensity: "balanced",
   theme: "void",
-  tier: "ascended",
   volume: 5,
 };
 
@@ -176,7 +175,6 @@ function toApiPreferences(preferences: LabPreferences): UserPreferences {
   return {
     reader_chapter: preferences.chapter,
     spoiler_mode: preferences.spoilerMode,
-    tier: preferences.tier,
   };
 }
 
@@ -402,7 +400,6 @@ function SpellSurfaceChatSurface({
         ...current,
         chapter,
         spoilerMode: stored.spoiler_mode,
-        tier: stored.tier,
         volume: volumeForChapter(chapter),
       }));
     } catch {
@@ -559,7 +556,7 @@ function SpellSurfaceChatSurface({
     chat.regenerateReply();
   }
 
-  const readerStatus = `Vol ${preferences.volume} · ch ${preferences.chapter} · ${preferences.tier}`;
+  const readerStatus = `Vol ${preferences.volume} · ch ${preferences.chapter}`;
   const activeThread = threads.find((thread) => thread.id === chat.conversationId);
   const sharedStatus = sharedStatusFor(access, accessFailed);
   const sharedExhausted = (
@@ -825,20 +822,13 @@ function SpellSurfaceChatSurface({
               setNewMenuSignal((n) => n + 1);
             }}
             onSubmit={sendMessage}
-            onTierChange={(tier: ReadingTier) => {
-              const nextPreferences = { ...preferences, tier };
-              setPreferences(nextPreferences);
-              void api.savePreferences(toApiPreferences(nextPreferences));
-            }}
             placeholder={weaverProduct.composerPlaceholder}
             sendDisabled={sharedExhausted || sharedAwaitingConsent || sharedUnavailable}
-            showTierControl={false}
             sendLabel={weaverProduct.sendLabel}
             stopLabel={weaverProduct.stopLabel}
             stoppingLabel={weaverProduct.stoppingLabel}
             statusText={accessMessage}
             textareaRef={composerRef}
-            tier={preferences.tier}
             turnActive={chat.turnActive}
             voiceBound={voiceBound}
           />

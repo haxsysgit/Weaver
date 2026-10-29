@@ -13,7 +13,6 @@ const LEGACY_PREFERENCES: LabPreferences = {
   spoilerMode: "protect",
   starIntensity: "balanced",
   theme: "crimson",
-  tier: "ascended",
   volume: 5,
 };
 
@@ -38,6 +37,19 @@ describe("Reader Appraisal settings", () => {
 
     expect(onClose).toHaveBeenCalledOnce();
     expect(screen.queryByText("Discard unsaved changes?")).not.toBeInTheDocument();
+  });
+
+  it("leaves reading depth to Weaver instead of offering a setting", () => {
+    render(
+      <SpellSurfaceSettings
+        initial={LEGACY_PREFERENCES}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: /Answer depth/ })).toBeNull();
+    expect(screen.queryByText(/Transcendent/)).toBeNull();
   });
 
   it("offers three lore-grounded Soul Seas and saves the selected realm", () => {
@@ -188,7 +200,6 @@ describe("Reader Appraisal settings", () => {
     const savedPreferences: LabPreferences = {
       ...LEGACY_PREFERENCES,
       chapter: 1200,
-      tier: "transcendent",
       volume: 6,
     };
     const { rerender } = render(

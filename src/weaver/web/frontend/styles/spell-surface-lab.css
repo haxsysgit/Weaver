@@ -610,7 +610,6 @@
 .lab-composer > button { display: grid; width: 33px; height: 33px; place-items: center; color: #09090c; border: 0; border-radius: 50%; background: var(--lab-silver); cursor: pointer; }
 .lab-composer > button:disabled { opacity: 0.28; cursor: default; }
 .lab-composer > button svg { width: 11px; }
-.lab-tier-pill { align-self: center; padding: 4px 8px; color: var(--lab-gold); border: 1px solid rgba(224, 189, 120, 0.19); border-radius: 999px; font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase; }
 .lab-composer-dock > p { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 7px 0 0; color: rgba(166, 168, 181, 0.48); font-size: 8px; letter-spacing: 0.08em; }
 .lab-composer-dock > p span { width: 4px; height: 4px; border-radius: 50%; background: #739e80; box-shadow: 0 0 6px rgba(115, 158, 128, 0.6); }
 .lab-composer-dock > p a { display: inline-flex; align-items: center; min-height: 24px; padding: 0 2px; color: inherit; text-decoration: underline; text-underline-offset: 2px; }
@@ -705,7 +704,6 @@
   .lab-message-body { max-width: 86%; padding: 14px 15px; }
   .lab-message-owner .lab-message-body { max-width: 84%; }
   .lab-composer-dock { padding: 8px 10px 10px; }
-  .lab-tier-pill { display: none; }
   .lab-composer { grid-template-columns: minmax(0, 1fr) auto; }
   .lab-rune-event { bottom: 196px; width: 88vw; }
   .lab-soul-sea { left: 0; height: 31%; }
@@ -2111,12 +2109,6 @@
   box-shadow: 0 18px 52px rgba(25, 0, 4, 0.3), 0 0 0 2px rgba(147, 38, 42, 0.08);
 }
 
-.spell-surface-live .tier-pill,
-.spell-surface-live .tier-menu {
-  border-color: rgba(174, 67, 70, 0.22);
-  background: rgba(31, 7, 12, 0.92);
-}
-
 .spell-surface-live .lab-settings-panel {
   border-color: rgba(184, 75, 77, 0.3);
   background:
@@ -2217,8 +2209,7 @@
   background: linear-gradient(90deg, var(--surface-accent), transparent);
 }
 
-.spell-surface-lab[data-theme] .lab-grouping-menu,
-.spell-surface-lab[data-theme] .tier-menu {
+.spell-surface-lab[data-theme] .lab-grouping-menu {
   border-color: var(--surface-edge);
   background: var(--surface-panel-a);
 }

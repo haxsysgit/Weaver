@@ -8,9 +8,10 @@ the budget rises when it does.
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 
 from .models import CANON, FANFIC, SkillPlan
-from .registry import skill_by_id
+from .registry import plan_for_ids, skill_by_id
 
 
 CHAPTER_RANGE_RE = re.compile(
@@ -32,6 +33,25 @@ RANKING_MARKERS = (
     "best to worst",
     "power scaling",
     "scaling ",
+)
+# A fight told as a story ("explain the fight between...") is a scene, not
+# a who-wins question. These markers only mean versus with a who-wins ask.
+NARRATIVE_FIGHT_MARKERS = (
+    "fight between",
+    "went against",
+    "up against",
+)
+SCENE_ASK_MARKERS = (
+    "explain",
+    "walk me through",
+    "what happened",
+    "describe",
+    "break down",
+    "visualise",
+    "visualize",
+    "picture",
+    "help me see",
+    "confus",
 )
 VERSUS_MARKERS = (
     " vs ",
@@ -237,6 +257,125 @@ def plan_for_question(question: str, *, domain: str = CANON) -> SkillPlan:
     return SkillPlan(skills=(resolved,))
 
 
+# Follow-ups: a short message that only makes sense against the earlier
+# question. "huh" and "why" carry the earlier read forward; "prove it" and
+# "are you sure" ask for more evidence than the earlier answer gave.
+CARRY_FOLLOW_UPS = (
+    "huh",
+    "why",
+    "how so",
+    "how come",
+    "wdym",
+    "what do you mean",
+    "tell me more",
+    "say more",
+    "go on",
+    "and then",
+    "then what",
+    "what then",
+    "what next",
+    "elaborate",
+    "like what",
+    "such as",
+    "wait what",
+    "which chapter",
+    "what chapter",
+    "source",
+    "i don't get it",
+    "i dont get it",
+    "confused",
+    "lost me",
+)
+PUSH_FOLLOW_UPS = (
+    "prove it",
+    "proof",
+    "receipts",
+    "are you sure",
+    "you sure",
+    "sure about that",
+    "that's wrong",
+    "thats wrong",
+    "that is wrong",
+    "you're wrong",
+    "youre wrong",
+    "you are wrong",
+    "not true",
+    "i don't believe",
+    "i dont believe",
+    "doubt it",
+    "go deeper",
+    "dig deeper",
+    "deeper",
+    "more detail",
+    "in detail",
+    "be specific",
+)
+# Only a message that routes to a general skill can be a follow-up. A
+# message that names its own scope ("who wins", "recap the arc") is a new
+# question, however short.
+_FOLLOW_UP_ROUTES = frozenset({"companion", "quick_recall", "correction", "discussion"})
+_FOLLOW_UP_MAX_WORDS = 6
+_EARLIER_ASKS_SEEN = 6
+_WORD_RE = re.compile(r"[a-z0-9']+")
+
+
+def plan_for_turn(
+    question: str,
+    *,
+    earlier_asks: Sequence[str] = (),
+    domain: str = CANON,
+) -> SkillPlan:
+    """Plan one turn from the question and the reader's earlier messages.
+
+    A new question is routed on its own. A short follow-up keeps the read of
+    the question it follows, and a push for proof or depth adds the
+    discussion skill on top: more lookups, thinking on, and a final reread.
+    ``earlier_asks`` is oldest first and excludes ``question``.
+    """
+    own = route_skill_id(question, domain=domain)
+    kind = _follow_up_kind(question, own)
+    if kind is None:
+        return plan_for_question(question, domain=domain)
+    base = _earlier_skill(earlier_asks, domain=domain)
+    if base is None:
+        return plan_for_question(question, domain=domain)
+    ids = [base, own]
+    if kind == "push":
+        ids.append("discussion")
+    # Company has no evidence and no tools, so it never shapes a follow-up
+    # that is asking about the story.
+    ids = [skill for skill in ids if skill != "companion"] or ["companion"]
+    return plan_for_ids(ids)
+
+
+def _follow_up_kind(question: str, own_route: str) -> str | None:
+    if own_route not in _FOLLOW_UP_ROUTES:
+        return None
+    normalized = _normalize(question)
+    if _has_any(normalized, BOOK_NOUNS):
+        return None
+    words = _WORD_RE.findall(normalized)
+    if not words or len(words) > _FOLLOW_UP_MAX_WORDS:
+        return None
+    padded = " " + " ".join(words) + " "
+    if any(f" {marker} " in padded for marker in PUSH_FOLLOW_UPS):
+        return "push"
+    if any(f" {marker} " in padded for marker in CARRY_FOLLOW_UPS):
+        return "carry"
+    return None
+
+
+def _earlier_skill(earlier_asks: Sequence[str], *, domain: str) -> str | None:
+    """The skill of the newest earlier message that was its own question."""
+    for ask in list(earlier_asks)[::-1][:_EARLIER_ASKS_SEEN]:
+        if not ask.strip():
+            continue
+        route = route_skill_id(ask, domain=domain)
+        if _follow_up_kind(ask, route) is None:
+            return route
+    return None
+
+
 def route_skill_id(question: str, *, domain: str = CANON) -> str:
     normalized = _normalize(question)
     if _asks_for_fanfic(normalized):
@@ -247,6 +386,8 @@ def route_skill_id(question: str, *, domain: str = CANON) -> str:
         return "ranking"
     if domain == FANFIC:
         return _fanfic_skill(normalized)
+    if _tells_a_fight(normalized):
+        return "scene_explanation"
     if _has_any(normalized, VERSUS_MARKERS):
         return "versus"
     if _has_any(normalized, THEORY_MARKERS):
@@ -271,6 +412,18 @@ def route_skill_id(question: str, *, domain: str = CANON) -> str:
     if _looks_like_company(normalized):
         return "companion"
     return "quick_recall"
+
+
+def _tells_a_fight(normalized: str) -> bool:
+    """'Explain the fight between A and B' asks for the scene, not a winner."""
+    if not _has_any(normalized, NARRATIVE_FIGHT_MARKERS):
+        return False
+    if not _has_any(normalized, SCENE_ASK_MARKERS):
+        return False
+    who_wins = tuple(
+        marker for marker in VERSUS_MARKERS if marker not in NARRATIVE_FIGHT_MARKERS
+    )
+    return not _has_any(normalized, who_wins)
 
 
 def _asks_for_fanfic(normalized: str) -> bool:

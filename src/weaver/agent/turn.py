@@ -53,7 +53,7 @@ from ..skills import (
     MAX_TOOL_BUDGET,
     format_skill_brief,
     plan_for_ids,
-    plan_for_question,
+    plan_for_turn,
 )
 from ..model_layer.layer import ModelProtocolError
 from ..model_layer.types import ReasoningEffort
@@ -77,19 +77,10 @@ class _TurnBudget:
             return
         self.limit = max(self.limit, floor)
 
-# Plan 15 tiers: the model is trusted to find the answer without burning
-# the budget; the cap exists so a runaway tool loop cannot run forever.
-# Owner decision 2026-08-07: awakened 50 / ascended 70 / transcendent 90.
-TOOL_BUDGET_TIERS: dict[str, int] = {
-    "awakened": 50,
-    "ascended": 70,
-    "transcendent": 90,
-}
 
-# Plan 15 (2026-08-07, owner decision): thinking is ALWAYS on for every
-# tier. Only the tool budget and the reasoning effort differ. DeepSeek's
-# API only supports high and max (low/medium clamp up to high), so
-# awakened and ascended share high and transcendent gets max.
+# Each skill names a thinking tier; Weaver picks it per question, the reader
+# never does. DeepSeek's API only supports high and max for answers
+# (low/medium clamp up to high), so ascended gets high and transcendent max.
 # Plan 15 (owner 2026-08-08): search/locate steps do not need the tier's
 # full reasoning effort. Thinking stays on for every call, but tool-call
 # steps (and a no-packet final answer) drop to low so the search loop is
@@ -98,10 +89,18 @@ TOOL_BUDGET_TIERS: dict[str, int] = {
 LOCATE_REASONING_EFFORT: ReasoningEffort = "low"
 
 REASONING_TIERS: dict[str, ReasoningEffort] = {
-    "awakened": "high",
     "ascended": "high",
     "transcendent": "max",
 }
+_EFFORT_RANK: dict[str | None, int] = {None: 0, "low": 1, "medium": 2, "high": 3, "max": 4}
+
+
+def _deeper_effort(
+    first: ReasoningEffort | None,
+    second: ReasoningEffort | None,
+) -> ReasoningEffort | None:
+    """The deeper of two thinking efforts; None means thinking off."""
+    return first if _EFFORT_RANK[first] >= _EFFORT_RANK[second] else second
 
 # Per-step countdown reminders are noise at 50-90 step budgets; they only
 # appear when the budget is running low or on the forced answer call.
@@ -138,6 +137,9 @@ class TurnBrief:
     needs_prior_context: bool
     version_signals: tuple[str, ...]
     reader_challenges_prior_answer: bool
+    # The reader's earlier messages, oldest first, so a short follow-up
+    # ("huh", "prove it") is read against the question it follows.
+    earlier_asks: tuple[str, ...] = ()
 
 
 VERSION_SIGNAL_RE = re.compile(
@@ -151,6 +153,7 @@ FOLLOW_UP_PREFIXES = (
     "what about ",
     "why then ",
 )
+EARLIER_ASKS_KEPT = 6
 DISAGREEMENT_MARKERS = (
     "you're wrong",
     "you are wrong",
@@ -207,6 +210,10 @@ def _build_turn_brief(history: list[ConversationMessage]) -> TurnBrief:
         ),
         version_signals=version_signals,
         reader_challenges_prior_answer=reader_challenges,
+        earlier_asks=tuple(
+            _compact_position(message.content)
+            for message in user_messages[:-1][-EARLIER_ASKS_KEPT:]
+        ),
     )
 
 
@@ -477,6 +484,21 @@ class TurnResult:
     # (0 = no snapshot; token_budget 0 = unbounded).
     token_count: int = 0
     token_budget: int = 0
+    # How deep the turn read: the routed and loaded skills, the lookups it
+    # made, its lookup limit, and the deepest thinking effort it asked for.
+    # Recorded on the run so under- and over-reading show up in real use.
+    skill_ids: tuple[str, ...] = ()
+    tool_steps: int = 0
+    tool_limit: int | None = None
+    thinking: str | None = None
+
+    def reading(self) -> dict:
+        return {
+            "skills": list(self.skill_ids),
+            "lookups": self.tool_steps,
+            "lookup_limit": self.tool_limit,
+            "thinking": self.thinking,
+        }
 
 
 def _message_id() -> str:
@@ -642,6 +664,21 @@ async def run_turn(
                 loaded_skills.append(skill_id)
         budget.raise_to(plan_for_ids(loaded_skills).tool_budget)
 
+    # Stepping up mid-turn: a loaded skill raises the reading budget, and it
+    # also raises the thinking effort and turns the final reread on, so a
+    # turn that started as small talk can become a real read.
+    def turn_reasoning() -> ReasoningEffort | None:
+        if not loaded_skills:
+            return reasoning
+        tier = plan_for_ids(loaded_skills).reasoning_tier
+        loaded_effort = REASONING_TIERS[tier] if tier is not None else None
+        return _deeper_effort(reasoning, loaded_effort)
+
+    def turn_final_pass() -> bool:
+        if final_pass or not loaded_skills:
+            return final_pass
+        return plan_for_ids(loaded_skills).final_pass
+
     final_text = ""
     safe_failure = ""
     error_category = ""
@@ -665,6 +702,7 @@ async def run_turn(
     strip_tools_next = False
     last_stop_reason = ""
     zero_evidence_reprompted = False
+    deepest_thinking: ReasoningEffort | None = None
 
     try:
         tool_schemas = tool_registry.active_schemas(active_tools)
@@ -681,6 +719,11 @@ async def run_turn(
         history=history,
     )
     turn_brief = _build_turn_brief(history)
+    routed_plan = plan_for_turn(
+        turn_brief.actual_ask,
+        earlier_asks=turn_brief.earlier_asks,
+        domain=domain,
+    )
     input_characters = _input_characters(initial_messages)
     known_call_ids = _known_call_ids(history)
 
@@ -727,10 +770,7 @@ async def run_turn(
         )
         turn_system_prompt = system_prompt
         if not in_final_phase:
-            turn_plan = plan_for_question(
-                turn_brief.actual_ask,
-                domain=domain,
-            )
+            turn_plan = routed_plan
             if loaded_skills:
                 turn_plan = plan_for_ids([*turn_plan.ids, *loaded_skills])
             skill_brief = format_skill_brief(turn_plan)
@@ -767,6 +807,7 @@ async def run_turn(
                     evidence_packet=final_packet,
                     extra_skill_ids=tuple(loaded_skills),
                     domain=domain,
+                    earlier_asks=turn_brief.earlier_asks,
                 )
             final_history: list[ConversationMessage] = []
             if current_owner is not None:
@@ -821,6 +862,8 @@ async def run_turn(
             else tuple(tool_schemas)
         )
         strip_tools_next = False
+        step_reasoning = turn_reasoning()
+        deepest_thinking = _deeper_effort(deepest_thinking, step_reasoning)
         request = ModelRequest(
             messages=tuple(request_messages),
             # Plan 15: on the forced call the tools are stripped from the
@@ -849,12 +892,12 @@ async def run_turn(
                 ModelReasoning(
                     enabled=True,
                     effort=(
-                        reasoning
+                        step_reasoning
                         if (in_final_phase or forced_answer)
                         else LOCATE_REASONING_EFFORT
                     ),
                 )
-                if reasoning is not None
+                if step_reasoning is not None
                 else ModelReasoning()
             ),
         )
@@ -1252,7 +1295,7 @@ async def run_turn(
                 validated_candidate = assistant
                 validated_candidate_deltas = response_deltas
                 final_packet = packet
-                if not final_pass and answer_blueprint is None:
+                if not turn_final_pass() and answer_blueprint is None:
                     answer_blueprint = build_answer_blueprint(
                         question=turn_brief.actual_ask,
                         prior_weaver_position=turn_brief.prior_weaver_position,
@@ -1262,8 +1305,9 @@ async def run_turn(
                         evidence_packet=packet,
                         extra_skill_ids=tuple(loaded_skills),
                         domain=domain,
+                        earlier_asks=turn_brief.earlier_asks,
                     )
-                if not final_pass and answer_blueprint is not None:
+                if not turn_final_pass() and answer_blueprint is not None:
                     findings = inspect_publication(
                         assistant.content,
                         answer_blueprint,
@@ -1308,7 +1352,7 @@ async def run_turn(
                 validated_candidate = assistant
                 validated_candidate_deltas = response_deltas
                 final_packet = packet
-                if not final_pass and answer_blueprint is None:
+                if not turn_final_pass() and answer_blueprint is None:
                     answer_blueprint = build_answer_blueprint(
                         question=turn_brief.actual_ask,
                         prior_weaver_position=turn_brief.prior_weaver_position,
@@ -1318,8 +1362,9 @@ async def run_turn(
                         evidence_packet=packet,
                         extra_skill_ids=tuple(loaded_skills),
                         domain=domain,
+                        earlier_asks=turn_brief.earlier_asks,
                     )
-                if not final_pass and answer_blueprint is not None:
+                if not turn_final_pass() and answer_blueprint is not None:
                     findings = inspect_publication(
                         assistant.content,
                         answer_blueprint,
@@ -1521,4 +1566,8 @@ async def run_turn(
         input_characters=input_characters,
         error_category=error_category,
         raw_stop_reason=raw_stop_reason,
+        skill_ids=tuple(dict.fromkeys([*routed_plan.ids, *loaded_skills])),
+        tool_steps=tool_steps_used,
+        tool_limit=budget.limit,
+        thinking=deepest_thinking,
     )

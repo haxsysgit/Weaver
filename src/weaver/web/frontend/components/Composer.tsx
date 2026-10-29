@@ -1,10 +1,6 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, type KeyboardEvent } from "react";
 
-import { ArrowUpIcon, ChevronDownIcon, PlusIcon, StopIcon } from "./Icons";
-
-export type ReadingTier = "awakened" | "ascended" | "transcendent";
-
-const TIERS: ReadingTier[] = ["awakened", "ascended", "transcendent"];
+import { ArrowUpIcon, PlusIcon, StopIcon } from "./Icons";
 
 interface ComposerProps {
   cancelling: boolean;
@@ -15,16 +11,13 @@ interface ComposerProps {
   menuButtonRef?: React.RefObject<HTMLButtonElement | null>;
   onOpenMenu?: () => void;
   onSubmit: (value: string) => void;
-  onTierChange: (tier: ReadingTier) => void;
   placeholder?: string;
   sendDisabled?: boolean;
-  showTierControl?: boolean;
   sendLabel?: string;
   stopLabel?: string;
   stoppingLabel?: string;
   statusText?: string;
   textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
-  tier: ReadingTier;
   turnActive: boolean;
   voiceBound?: boolean;
 }
@@ -38,23 +31,18 @@ export function Composer({
   onDraftChange,
   onOpenMenu,
   onSubmit,
-  onTierChange,
   placeholder = "Write a message...",
   sendDisabled = false,
   sendLabel = "Send message",
-  showTierControl = true,
   stopLabel = "Stop assistant",
   stoppingLabel = "Stopping assistant",
   statusText,
   textareaRef,
-  tier,
   turnActive,
   voiceBound = true,
 }: ComposerProps) {
   const innerRef = useRef<HTMLTextAreaElement>(null);
   const resolvedRef = textareaRef ?? innerRef;
-  const tierRef = useRef<HTMLDivElement>(null);
-  const [tierOpen, setTierOpen] = useState(false);
 
   useEffect(() => {
     const textarea = resolvedRef.current;
@@ -64,29 +52,6 @@ export function Composer({
     textarea.style.height = "auto";
     textarea.style.height = `${Math.min(textarea.scrollHeight, 160)}px`;
   }, [draft, resolvedRef]);
-
-  // close the tier menu on outside click or Escape
-  useEffect(() => {
-    if (!tierOpen) {
-      return;
-    }
-    function onPointerDown(event: PointerEvent) {
-      if (tierRef.current && !tierRef.current.contains(event.target as Node)) {
-        setTierOpen(false);
-      }
-    }
-    function onKeyDown(event: globalThis.KeyboardEvent) {
-      if (event.key === "Escape") {
-        setTierOpen(false);
-      }
-    }
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [tierOpen]);
 
   function submitDraft() {
     const message = draft.trim();
@@ -130,44 +95,6 @@ export function Composer({
           rows={1}
           value={draft}
         />
-        {showTierControl && (
-        <div className="composer-tier" ref={tierRef}>
-          <button
-            aria-expanded={tierOpen}
-            aria-haspopup="listbox"
-            aria-label={`Reading tier: ${tier}`}
-            className="tier-pill"
-            disabled={turnActive}
-            onClick={() => setTierOpen((open) => !open)}
-            type="button"
-          >
-            <span className="tier-pill-name">{tier}</span>
-            <ChevronDownIcon />
-          </button>
-          {tierOpen && (
-            <ul aria-label="Reading tier" className="tier-menu" role="listbox">
-              {TIERS.map((candidate) => (
-                <li key={candidate}>
-                  <button
-                    aria-selected={candidate === tier}
-                    onClick={() => {
-                      onTierChange(candidate);
-                      setTierOpen(false);
-                    }}
-                    role="option"
-                    type="button"
-                  >
-                    <span className="tier-menu-check">
-                      {candidate === tier ? "✦" : ""}
-                    </span>
-                    {candidate}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        )}
         {turnActive ? (
           <button
             aria-label={cancelling ? stoppingLabel : stopLabel}

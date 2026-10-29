@@ -22,6 +22,7 @@ from weaver.skills import (
     catalogue_text,
     plan_for_ids,
     plan_for_question,
+    plan_for_turn,
     route_skill_id,
 )
 from weaver.skills.loader import LoadSkillInput, register_skill_tool
@@ -49,6 +50,13 @@ direct sources: chapter 650 lines 1-3
         ("explain the tomb scene, I could not follow it", "canon", "scene_explanation"),
         ("what if the hollow king was Sunny's father", "canon", "theory"),
         ("current Sunny vs prime Azarax", "canon", "versus"),
+        (
+            "explain the fight between Sunny and Mordret in the Tomb",
+            "canon",
+            "scene_explanation",
+        ),
+        ("I'm confused about the fight between Sunny and Mordret", "canon", "scene_explanation"),
+        ("who would win the fight between Sunny and Mordret", "canon", "versus"),
         ("didn't Weaver die at the tomb?", "canon", "correction"),
         ("honestly the tomb arc is overrated", "canon", "discussion"),
         ("tell me something I missed on my first read", "canon", "discovery"),
@@ -265,3 +273,92 @@ def test_load_skill_is_an_active_web_tool() -> None:
 
 def test_the_biggest_skill_budget_is_the_arc_budget() -> None:
     assert max(skill.tool_budget for skill in ALL_SKILLS) == 20
+
+
+VERSUS_ASK = "who would win, Sunny or Nephis?"
+
+
+@pytest.mark.parametrize("follow_up", ["huh", "why?", "wait what", "tell me more", "why did he do that?"])
+def test_a_short_follow_up_keeps_the_earlier_read(follow_up: str) -> None:
+    plan = plan_for_turn(follow_up, earlier_asks=[VERSUS_ASK])
+
+    assert plan.ids[0] == "versus"
+    assert plan.tool_budget == plan_for_question(VERSUS_ASK).tool_budget
+    assert plan.reasoning_tier == "transcendent"
+
+
+@pytest.mark.parametrize(
+    "push", ["prove it", "are you sure?", "that is wrong", "you're wrong", "go deeper"]
+)
+def test_a_push_reads_at_least_as_deep_and_turns_thinking_on(push: str) -> None:
+    after_a_fact = plan_for_turn(push, earlier_asks=["who killed the hollow king"])
+
+    assert "quick_recall" in after_a_fact.ids
+    assert "discussion" in after_a_fact.ids
+    assert after_a_fact.tool_budget > plan_for_question("who killed the hollow king").tool_budget
+    assert after_a_fact.reasoning_tier is not None
+    assert after_a_fact.final_pass
+    assert after_a_fact.needs_evidence
+
+
+def test_a_push_after_a_big_question_keeps_its_shape() -> None:
+    plan = plan_for_turn("prove it", earlier_asks=[VERSUS_ASK])
+
+    assert plan.ids[0] == "versus"
+    assert plan.shape == plan_for_question(VERSUS_ASK).shape
+    assert plan.tool_budget == plan_for_question(VERSUS_ASK).tool_budget
+
+
+def test_follow_ups_chain_back_to_the_real_question() -> None:
+    plan = plan_for_turn("prove it", earlier_asks=[VERSUS_ASK, "huh", "why?"])
+
+    assert plan.ids[0] == "versus"
+
+
+def test_a_follow_up_after_small_talk_does_not_stay_small_talk() -> None:
+    plan = plan_for_turn("why?", earlier_asks=["hey"])
+
+    assert plan.ids == ("quick_recall",)
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "hey",
+        "lol yeah",
+        "why did Sunny go back to the tomb",
+        "recap the domain war",
+        "what if Nephis had stayed",
+    ],
+)
+def test_a_new_question_is_routed_on_its_own(question: str) -> None:
+    plan = plan_for_turn(question, earlier_asks=[VERSUS_ASK])
+
+    assert plan.ids == plan_for_question(question).ids
+
+
+def test_a_follow_up_with_nothing_before_it_is_routed_on_its_own() -> None:
+    assert plan_for_turn("prove it").ids == plan_for_question("prove it").ids
+    assert plan_for_turn("why?", earlier_asks=["huh"]).ids == ("quick_recall",)
+
+
+def test_fanfic_threads_keep_their_own_routing() -> None:
+    plan = plan_for_turn(
+        "go on",
+        earlier_asks=["continue the story after the last chapter"],
+        domain="fanfic",
+    )
+
+    assert plan.ids == plan_for_question("go on", domain="fanfic").ids
+
+
+def test_the_blueprint_follows_the_earlier_question() -> None:
+    blueprint = build_answer_blueprint(
+        question="prove it",
+        prior_weaver_position="Nephis wins on reach.",
+        reader_challenges_prior_answer=True,
+        evidence_packet=PACKET,
+        earlier_asks=(VERSUS_ASK,),
+    )
+
+    assert blueprint.shape == plan_for_question(VERSUS_ASK).shape

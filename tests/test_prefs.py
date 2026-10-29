@@ -61,13 +61,13 @@ async def test_devices_keep_separate_preferences(tmp_path: Path) -> None:
         await store.set("device-a", UserPreferences(reader_chapter=200))
         await store.set(
             "device-b",
-            UserPreferences(reader_chapter=2500, spoiler_mode="none", tier="transcendent"),
+            UserPreferences(reader_chapter=2500, spoiler_mode="none"),
         )
         a = await store.get("device-a")
         b = await store.get("device-b")
         fresh = await store.get("device-c")
-        assert (a.reader_chapter, a.spoiler_mode, a.tier) == (200, "protect", "ascended")
-        assert (b.reader_chapter, b.spoiler_mode, b.tier) == (2500, "none", "transcendent")
+        assert (a.reader_chapter, a.spoiler_mode) == (200, "protect")
+        assert (b.reader_chapter, b.spoiler_mode) == (2500, "none")
         assert fresh.reader_chapter is None
     finally:
         await store.close()
@@ -100,7 +100,6 @@ async def test_old_shared_row_is_not_inherited(tmp_path: Path) -> None:
         prefs = await store.get(DEVICE)
         assert prefs.reader_chapter is None
         assert prefs.spoiler_mode == "protect"
-        assert prefs.tier == "ascended"
     finally:
         await store.close()
 
@@ -149,5 +148,32 @@ async def test_persists_across_reopen(tmp_path: Path) -> None:
         prefs = await store.get(DEVICE)
         assert prefs.reader_chapter == 3127
         assert prefs.spoiler_mode == "none"
+    finally:
+        await store.close()
+
+
+@pytest.mark.asyncio
+async def test_rows_saved_with_a_reading_tier_still_load(tmp_path: Path) -> None:
+    """Slice 3 removed Answer depth; rows written before it keep their tier
+    column and still load and save."""
+    db = tmp_path / "weaver.sqlite3"
+    store = PreferencesStore(db)
+    await store.open()
+    await store.close()
+    old = sqlite3.connect(db)
+    old.execute(
+        "INSERT INTO device_preferences (device_id, reader_chapter, spoiler_mode, tier)"
+        " VALUES (?, 900, 'protect', 'transcendent')",
+        (DEVICE,),
+    )
+    old.commit()
+    old.close()
+
+    store = PreferencesStore(db)
+    await store.open()
+    try:
+        assert (await store.get(DEVICE)).reader_chapter == 900
+        await store.set(DEVICE, UserPreferences(reader_chapter=950))
+        assert (await store.get(DEVICE)).reader_chapter == 950
     finally:
         await store.close()

@@ -117,8 +117,8 @@ describe("Spell Surface v2 lab", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Open Soul Sea settings" }));
     const dialog = screen.getByRole("dialog", { name: "Reader Appraisal settings" });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Answer depth" }));
-    fireEvent.click(within(dialog).getByRole("button", { name: "transcendent" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Appearance" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Compact text" }));
     fireEvent.click(within(dialog).getByRole("button", { name: "Close settings" }));
 
     expect(within(dialog).getByText("Discard unsaved changes?")).toBeVisible();

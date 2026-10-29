@@ -6,7 +6,7 @@ import re
 from dataclasses import dataclass
 from enum import Enum
 
-from ..skills import plan_for_ids, plan_for_question
+from ..skills import plan_for_ids, plan_for_turn
 
 
 class ResponseMode(str, Enum):
@@ -336,9 +336,10 @@ def build_answer_blueprint(
     evidence_packet: str,
     extra_skill_ids: tuple[str, ...] = (),
     domain: str = "canon",
+    earlier_asks: tuple[str, ...] = (),
 ) -> AnswerBlueprint:
     mode = _response_mode(question)
-    plan = plan_for_question(question, domain=domain)
+    plan = plan_for_turn(question, earlier_asks=earlier_asks, domain=domain)
     if extra_skill_ids:
         plan = plan_for_ids([*plan.ids, *extra_skill_ids])
     needs_evidence = plan.needs_evidence and mode != ResponseMode.PROSE

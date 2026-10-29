@@ -1121,16 +1121,50 @@ class TestReasoningTiers:
         assert provider.calls[0].request.reasoning.enabled is False
         assert provider.calls[0].request.reasoning.effort is None
 
-    def test_tiers_keep_thinking_on_and_only_vary_effort(self) -> None:
+    def test_every_skill_thinking_tier_has_an_effort(self) -> None:
         from weaver.agent.turn import REASONING_TIERS
+        from weaver.skills import ALL_SKILLS
 
-        # Owner decision 2026-08-07: thinking is always on for all three
-        # tiers; only the tool budget and the reasoning effort differ.
-        assert REASONING_TIERS == {
-            "awakened": "high",
-            "ascended": "high",
-            "transcendent": "max",
-        }
+        assert REASONING_TIERS == {"ascended": "high", "transcendent": "max"}
+        for skill in ALL_SKILLS:
+            assert skill.reasoning_tier is None or skill.reasoning_tier in REASONING_TIERS
+
+    async def test_loading_a_bigger_skill_turns_thinking_on_and_rereads(
+        self,
+    ) -> None:
+        # A turn routed as small talk starts with thinking off and no final
+        # reread. When the model loads a big skill mid-turn, the answer gets
+        # that skill's thinking effort and its final reading pass.
+        from weaver.skills.loader import register_skill_tool
+
+        registry = make_registry()
+        register_skill_tool(registry)
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "load_skill", '{"names": ["versus"]}')),
+            tool_response(tool_call("c2", "echo", '{"message": "a"}')),
+            stop_response("Draft: Nephis wins on reach."),
+            stop_response("Final: Nephis wins on reach (ch. 104)."),
+        )
+
+        async def packet_builder(results, draft):
+            return _direct_packet("PACKET: chapter 104 prose")
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=registry,
+            active_tools=("load_skill", "echo"),
+            reasoning=None,
+            final_pass=False,
+            packet_builder=packet_builder,
+        )
+
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert result.final_text == "Final: Nephis wins on reach (ch. 104)."
+        assert provider.calls[0].request.reasoning.enabled is False
+        final = provider.calls[-1].request.reasoning
+        assert final.enabled is True
+        assert final.effort == "max"
 
 
 class TestFinalReadingPhase:

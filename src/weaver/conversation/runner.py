@@ -207,6 +207,7 @@ class ConversationRunner:
                 turn_id,
                 result.final_text,
                 final_item_already_persisted=True,
+                reading=result.reading(),
             )
         else:
             await self._coordinator.record_run_failed(
@@ -216,6 +217,7 @@ class ConversationRunner:
                 message=result.safe_failure,
                 error_category=result.error_category,
                 raw_stop_reason=result.raw_stop_reason,
+                reading=result.reading(),
             )
             if result.exit_reason == TurnExitReason.INTERRUPTED:
                 await self._coordinator.mark_interrupted(run_id)

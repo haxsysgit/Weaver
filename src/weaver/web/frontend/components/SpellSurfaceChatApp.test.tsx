@@ -60,7 +60,6 @@ function createApi(): ChatApi {
     getPreferences: vi.fn().mockResolvedValue({
       reader_chapter: 1000,
       spoiler_mode: "protect",
-      tier: "ascended",
     }),
     getAccess: vi.fn().mockResolvedValue({
       consented: true,
@@ -458,10 +457,14 @@ describe("first Nightmare setup", () => {
       },
       { timeout: 3000 },
     );
-    expect(api.savePreferences).toHaveBeenLastCalledWith(
-      expect.objectContaining({ reader_chapter: 1200 }),
-    );
+    // Weaver picks its own reading depth: the save carries no tier, and
+    // the reader line shows none.
+    expect(api.savePreferences).toHaveBeenLastCalledWith({
+      reader_chapter: 1200,
+      spoiler_mode: "protect",
+    });
     expect(screen.getAllByText(/ch 1200/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/ascended|awakened|transcendent/i)).toBeNull();
   });
 
   it("opens settings with the model section from the rail footer", async () => {
@@ -1088,7 +1091,6 @@ describe("mobile thread drawer", () => {
     const storedPreferences = deferred<{
       reader_chapter: number;
       spoiler_mode: "protect";
-      tier: "awakened" | "ascended" | "transcendent";
     }>();
     const api = createApi();
     api.getPreferences = vi.fn(() => storedPreferences.promise);
@@ -1112,7 +1114,6 @@ describe("mobile thread drawer", () => {
       storedPreferences.resolve({
         reader_chapter: 1200,
         spoiler_mode: "protect",
-        tier: "transcendent",
       });
     });
     await waitFor(() => {

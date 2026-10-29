@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type ComponentType } from "react";
 
 import { useChatController } from "../hooks/useChatController";
-import type { ChatApi } from "../lib/chatApi";
+import type { ChatApi, UserPreferences } from "../lib/chatApi";
 import { weaverProduct, type ChatProduct } from "../lib/product";
-import { Composer, type ReadingTier } from "./Composer";
+import { Composer } from "./Composer";
 import { ConversationRail } from "./ConversationRail";
 import { RailOpenIcon } from "./Icons";
 import { SettingsModal } from "./SettingsModal";
@@ -32,11 +32,11 @@ export function ChatApp({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [mobileLayout, setMobileLayout] = useState(() => window.innerWidth < 768);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsPrefs, setSettingsPrefs] = useState<{
-    reader_chapter: number | null;
-    spoiler_mode: "protect" | "none";
-    tier: "awakened" | "ascended" | "transcendent";
-  }>({ reader_chapter: null, spoiler_mode: "protect", tier: "ascended" });
+  const [settingsPrefs, setSettingsPrefs] = useState<UserPreferences>({
+    reader_chapter: null,
+    spoiler_mode: "protect",
+    tier: "ascended",
+  });
   const returnFocusToRailToggle = useRef(false);
   const railToggleRef = useRef<HTMLButtonElement>(null);
   const transcriptRef = useRef<HTMLDivElement>(null);
@@ -152,7 +152,7 @@ export function ChatApp({
         product={product}
         readerChapter={settingsPrefs.reader_chapter}
         spoilerMode={settingsPrefs.spoiler_mode}
-        tier={settingsPrefs.tier}
+        tier={settingsPrefs.tier ?? "ascended"}
       />
 
       <main
@@ -234,15 +234,10 @@ export function ChatApp({
             onCancel={() => void chat.cancelTurn()}
             onDraftChange={chat.setDraft}
             onSubmit={(message) => void chat.sendMessage(message)}
-            onTierChange={(tier: ReadingTier) => {
-              setSettingsPrefs((current) => ({ ...current, tier }));
-              void api.savePreferences({ ...settingsPrefs, tier });
-            }}
             placeholder={product.composerPlaceholder}
             sendLabel={product.sendLabel}
             stopLabel={product.stopLabel}
             stoppingLabel={product.stoppingLabel}
-            tier={settingsPrefs.tier}
             turnActive={chat.turnActive}
             textareaRef={composerRef}
           />

@@ -40,7 +40,9 @@ export type StreamEvent =
 export interface UserPreferences {
   reader_chapter: number | null;
   spoiler_mode: "protect" | "none";
-  tier: "awakened" | "ascended" | "transcendent";
+  /** Unused since slice 3: Weaver picks its reading depth per question and
+   * the server ignores this. Only the unmounted legacy ChatApp still sets it. */
+  tier?: "awakened" | "ascended" | "transcendent";
 }
 
 export interface AccessStatus {
