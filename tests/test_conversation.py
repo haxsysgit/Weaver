@@ -22,6 +22,7 @@ from weaver import (
     ModelStreamEventType,
     ModelToolCall,
 )
+from tests.platform_support import assert_no_group_or_other_access
 from weaver.agent.tools import ToolRegistry
 from weaver.conversation import SessionWeave
 
@@ -53,18 +54,9 @@ async def test_subprocess_restart():
         # Process A: start conversation, emit tool call, settle, crash
         _run("a", state_dir)
 
-        # Verify directory permissions
-        stat = state_dir.stat()
-        assert stat.st_mode & 0o077 == 0, (
-            f"state dir has group/other access: {stat.st_mode:o}"
-        )
-
-        # Verify DB file permissions
-        db_path = state_dir / "weaver.sqlite3"
-        db_stat = db_path.stat()
-        assert db_stat.st_mode & 0o077 == 0, (
-            f"db file has group/other access: {db_stat.st_mode:o}"
-        )
+        # Verify directory and DB file permissions (Unix hosts)
+        assert_no_group_or_other_access(state_dir)
+        assert_no_group_or_other_access(state_dir / "weaver.sqlite3")
 
         # Process B: open same state, continue, verify
         _run("b", state_dir)

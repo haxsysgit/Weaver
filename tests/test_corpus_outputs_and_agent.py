@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import stat
 from pathlib import Path
 
 import ebooklib
@@ -10,6 +9,7 @@ import pytest
 from ebooklib import epub
 
 from tests.corpus_support import make_project, write_chapter
+from tests.platform_support import assert_mode, symlink_or_skip
 from weaver.agent.tools import (
     ToolExecutionContext,
     ToolExecutionPolicy,
@@ -65,7 +65,7 @@ async def test_packet_is_ordered_idempotent_and_records_source_hashes(
     assert len(first.source_hashes) == 3
     manifest = json.loads((tmp_path / first.manifest_path).read_text())
     assert [item["chapter"] for item in manifest["source_hashes"]] == [1, 2, 3]
-    assert stat.S_IMODE((tmp_path / first.packet_path).stat().st_mode) == 0o600
+    assert_mode((tmp_path / first.packet_path), 0o600)
 
 
 @pytest.mark.asyncio
@@ -274,7 +274,7 @@ async def test_symlinked_private_state_and_path_escape_are_refused(
     outside = tmp_path / "outside"
     outside.mkdir()
     state_link = tmp_path / "linked-state"
-    state_link.symlink_to(outside, target_is_directory=True)
+    symlink_or_skip(state_link, outside, target_is_directory=True)
     service = CorpusService(
         project_root=tmp_path,
         state_root=state_link,

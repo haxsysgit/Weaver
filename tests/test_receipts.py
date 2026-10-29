@@ -1,7 +1,8 @@
 import json
-import stat
 
 import pytest
+
+from tests.platform_support import assert_mode, posix_modes_only
 
 from weaver.experiment import (
     provider_tool_contract_fake_responses,
@@ -44,6 +45,7 @@ def test_sensitive_values_and_reasoning_are_redacted(tmp_path) -> None:
     assert bearer_only["message"] == f"Bearer {REDACTED}"
 
 
+@posix_modes_only
 def test_receipt_directory_and_files_are_owner_only(tmp_path) -> None:
     private_root = tmp_path / ".weaver"
     writer = ReceiptWriter.create(private_root / "runs", experiment="test")
@@ -51,11 +53,11 @@ def test_receipt_directory_and_files_are_owner_only(tmp_path) -> None:
     writer.append_event({"event": "done"})
     writer.write_review("# Review\n")
 
-    assert stat.S_IMODE(private_root.stat().st_mode) == 0o700
-    assert stat.S_IMODE((private_root / "runs").stat().st_mode) == 0o700
-    assert stat.S_IMODE(writer.run_dir.stat().st_mode) == 0o700
+    assert_mode(private_root, 0o700)
+    assert_mode((private_root / "runs"), 0o700)
+    assert_mode(writer.run_dir, 0o700)
     for path in writer.run_dir.iterdir():
-        assert stat.S_IMODE(path.stat().st_mode) == 0o600
+        assert_mode(path, 0o600)
 
     # Per-run dirs are unique (timestamp + uuid12 scheme).
     second = ReceiptWriter.create(private_root / "runs", experiment="test")
@@ -155,9 +157,9 @@ async def test_provider_contract_receipt_is_private_and_metadata_only(
     )
 
     assert result.outcome == "passed"
-    assert stat.S_IMODE(result.run_dir.stat().st_mode) == 0o700
+    assert_mode(result.run_dir, 0o700)
     for path in result.run_dir.iterdir():
-        assert stat.S_IMODE(path.stat().st_mode) == 0o600
+        assert_mode(path, 0o600)
 
     manifest = json.loads((result.run_dir / "manifest.json").read_text())
     request_receipt = json.loads((result.run_dir / "request.json").read_text())
