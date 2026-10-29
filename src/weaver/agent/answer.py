@@ -32,6 +32,8 @@ class AnswerBlueprint:
     quote_rule: str = ""
     needs_evidence: bool = True
     label_invention: bool = True
+    # The reader's message: Weaver may quote the reader back.
+    question: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -198,6 +200,109 @@ def _extract_chapter_citations(text: str) -> tuple[int, ...]:
 
 def _extract_answer_chapter_citations(text: str) -> tuple[int, ...]:
     return _extract_chapter_citations(text)
+
+
+def cited_chapters(text: str) -> tuple[int, ...]:
+    """Chapters an answer cites, e.g. (ch. 900) or (chs. 900-901)."""
+    return _extract_answer_chapter_citations(text)
+
+
+# Claims about the exact text need the text in front of the model this turn.
+# A quote or a "the chapter opens on..." line written from memory is how
+# Weaver invented a first line for chapter 1 in the slice 3 live check.
+INLINE_QUOTE_RE = re.compile("[\"\u201c]([^\"\u201c\u201d\n]{3,400})[\"\u201d]")
+PASSAGE_HEADER_RE = re.compile(
+    r"^--- chapter (\d+),? lines (\d+)-(\d+) ---$", re.MULTILINE
+)
+ELISION_RE = re.compile("\\.\\.\\.|\u2026")
+QUOTE_MIN_WORDS = 6
+FRAGMENT_MIN_WORDS = 3
+OPENING_LINES = 5
+OPENING_MARKERS = (
+    "first line",
+    "opening line",
+    "first sentence",
+    "first paragraph",
+    "first words",
+    "opens on",
+    "opens with",
+    "chapter opens",
+    "book opens",
+    "begins with",
+)
+
+
+def _plain(text: str) -> str:
+    text = (
+        text.replace("\u2019", "'")
+        .replace("\u2018", "'")
+        .replace("\u201c", '"')
+        .replace("\u201d", '"')
+        .casefold()
+    )
+    return " ".join(re.sub(r"[^\w' ]+", " ", text).split())
+
+
+def _opened_passages(evidence_packet: str | None) -> tuple[str, ...]:
+    if not evidence_packet:
+        return ()
+    return tuple(_plain(passage) for passage in _direct_passages(evidence_packet))
+
+
+def _opened_chapter_starts(evidence_packet: str | None) -> set[int]:
+    """Chapters whose opening lines were opened this turn."""
+    if not evidence_packet:
+        return set()
+    return {
+        int(match.group(1))
+        for match in PASSAGE_HEADER_RE.finditer(evidence_packet)
+        if int(match.group(2)) <= OPENING_LINES
+    }
+
+
+def unopened_text_claims(
+    answer: str,
+    evidence_packet: str | None,
+    *,
+    reader_text: str = "",
+) -> tuple[str, ...]:
+    """Finding codes for exact-text claims no passage opened this turn shows.
+
+    ``unopened_quote``: an inline quote of six or more words that is not in
+    an opened passage (or the reader's own message). ``unopened_opening``: a
+    claim about how a chapter opens without that chapter's first lines open.
+    """
+    codes: list[str] = []
+    passages = _opened_passages(evidence_packet)
+    reader = _plain(reader_text)
+    for match in INLINE_QUOTE_RE.finditer(answer):
+        quoted = match.group(1)
+        if len(quoted.split()) < QUOTE_MIN_WORDS:
+            continue
+        fragments = [
+            _plain(fragment)
+            for fragment in ELISION_RE.split(quoted)
+            if len(fragment.split()) >= FRAGMENT_MIN_WORDS
+        ]
+        if not fragments:
+            continue
+        if all(
+            any(fragment in passage for passage in passages) or fragment in reader
+            for fragment in fragments
+        ):
+            continue
+        codes.append("unopened_quote")
+        break
+    starts = _opened_chapter_starts(evidence_packet)
+    for paragraph in re.split(r"\n\s*\n", answer):
+        folded = paragraph.casefold()
+        if not any(marker in folded for marker in OPENING_MARKERS):
+            continue
+        cited = set(_extract_answer_chapter_citations(paragraph))
+        if not cited or not cited <= starts:
+            codes.append("unopened_opening")
+            break
+    return tuple(codes)
 
 
 def _invalid_chapter_ranges(text: str) -> tuple[str, ...]:
@@ -429,6 +534,7 @@ def build_answer_blueprint(
         quote_rule=plan.quote_rule,
         needs_evidence=needs_evidence,
         label_invention=label_invention,
+        question=question,
     )
 
 
@@ -533,6 +639,8 @@ def inspect_publication(
     answer: str,
     blueprint: AnswerBlueprint,
     evidence_packet: str,
+    *,
+    reader_text: str = "",
 ) -> tuple[PublicationFinding, ...]:
     findings: list[PublicationFinding] = []
     weaver_text = "\n".join(_weaver_lines(answer))
@@ -636,6 +744,16 @@ def inspect_publication(
         )
         break
 
+    # Invented prose quotes its own dialogue; the exact-text checks are for
+    # claims about the novel.
+    if blueprint.mode != ResponseMode.PROSE:
+        for code in unopened_text_claims(
+            weaver_text,
+            evidence_packet,
+            reader_text=reader_text or blueprint.question,
+        ):
+            findings.append(PublicationFinding(code, UNOPENED_TEXT_DETAILS[code]))
+
     if blueprint.label_invention and blueprint.mode in (
         ResponseMode.THEORY,
         ResponseMode.VERSUS,
@@ -671,8 +789,19 @@ NO_QUOTE_RULE = (
     "Do not include any direct quotation in the repaired answer; paraphrase "
     "the source instead."
 )
-QUOTE_CODES = {"long_quote", "changed_quote"}
+QUOTE_CODES = {"long_quote", "changed_quote", "unopened_quote"}
+UNOPENED_TEXT_DETAILS = {
+    "unopened_quote": "A quotation is not in any passage opened this turn.",
+    "unopened_opening": (
+        "The answer says how a chapter opens without that chapter's first "
+        "lines opened this turn."
+    ),
+}
 REPAIR_RULES = {
+    "unopened_opening": (
+        "Remove every claim about how a chapter opens or what its first line "
+        "says; its first lines were not opened."
+    ),
     "ai_opening": "Remove the generic assistant opening and begin with the answer.",
     "ai_phrase": "Remove generic AI phrasing and support language.",
     "changed_quote": (
@@ -721,7 +850,9 @@ def build_repair_instruction(findings: tuple[PublicationFinding, ...]) -> str:
     return (
         "The proposed answer failed publication checks. Make one rewrite that "
         "fixes only the listed problems while preserving supported facts, "
-        "chapter citations, uncertainty, and exact source quotations. Return "
+        "chapter citations, uncertainty, and exact source quotations. The "
+        "reader never saw the proposed answer: do not mention it or what you "
+        "changed. Return "
         f"only the repaired answer.{rule_block}\nFindings:\n{details}"
     )
 

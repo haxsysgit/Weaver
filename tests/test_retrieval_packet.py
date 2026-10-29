@@ -1,5 +1,6 @@
 """Reading-packet assembly (Plan 15 slice 3)."""
 
+import re
 from pathlib import Path
 
 import pytest
@@ -361,3 +362,35 @@ async def test_packet_never_frames_an_unsaved_position_as_chapter_none(
     assert "has not said how far they have read" in unknown.text
     assert "ask how far they have read" in unknown.text
     assert "whole novel" in finished.text
+
+
+@pytest.mark.asyncio
+async def test_a_passage_bigger_than_the_cap_is_shortened_not_dropped(
+    tmp_path: Path,
+) -> None:
+    """Trial 10 live check: a small-talk turn (6,000 character cap) read 80
+    lines of a chapter; the expanded passage did not fit, so it was dropped
+    whole, the packet said "direct sources: none", and the forced answer
+    failed. The newest passage must be shortened to fit instead."""
+    novel = tmp_path / "novel"
+    nb = tmp_path / "nb"
+    (nb / "reading").mkdir(parents=True)
+    long_line = "Sunny watched the shadow move across the stone wall. " * 3
+    _write_chapter(
+        novel, 55, ["Chapter 55"] + [f"{i} {long_line}" for i in range(2, 161)]
+    )
+    service = LibraryService(novel, nb)
+
+    packet = build_packet(service, [_read_result(55, 2, 80)], cap_override=6000)
+
+    assert packet is not None
+    assert len(packet.text) <= 6000
+    assert "direct sources: none" not in packet.text
+    header = re.search(r"^--- chapter 55, lines (\d+)-(\d+) ---$", packet.text, re.M)
+    assert header is not None
+    start, end = int(header.group(1)), int(header.group(2))
+    assert 2 <= start < end <= 80
+    body = packet.text[header.end() + 1 :].split("\n\n", 1)[0].splitlines()
+    assert body[0].startswith(f"{start} ")
+    assert body[-1].startswith(f"{end} ")
+    assert f"chapter 55 lines {start}-{end}" in packet.text

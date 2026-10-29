@@ -1699,8 +1699,15 @@ class TestFinalReadingPhase:
             if m.role == "assistant":
                 assert not m.tool_calls, "orphaned tool_calls in final request"
                 assert m.content, "empty assistant message in final request"
+        # The draft rides in the private instructions, not as something
+        # Weaver already said to the reader.
         candidates = [m for m in final_messages if m.role == "assistant"]
-        assert [m.content for m in candidates] == ["Draft: found it."]
+        assert candidates == []
+        assert any(
+            m.role == "system" and "private draft" in (m.content or "")
+            and "Draft: found it." in (m.content or "")
+            for m in final_messages
+        )
 
     async def test_final_window_drops_previous_tool_use_assistants(self) -> None:
         # Multi-turn thread-broke (2026-08-09): the recent window kept the
@@ -2306,3 +2313,136 @@ def test_the_turn_brief_forbids_withdrawing_a_claim_for_absence() -> None:
     brief = _format_turn_brief(_build_turn_brief([UserMessage(content="fine, one more test.")]))
 
     assert "withdraw it only when an opened passage contradicts it" in brief
+
+
+async def test_a_search_only_answer_may_not_invent_a_first_line() -> None:
+    """Slice 3 live check: a turn that only searched said chapter 1 opens on
+    shoes. With no opened lines, the answer goes back once to open the
+    chapter or drop the claim."""
+    from weaver.agent.turn import UNOPENED_TEXT_CORRECTION
+
+    layer, model, provider = scripted_layer(
+        tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+        stop_response("The very first line is dirt on brand-new shoes (ch. 1)."),
+        stop_response("I'd have to open chapter 1 to tell you how it starts."),
+    )
+
+    async def dry_packet(results, draft):
+        return None
+
+    result = await execute_turn(
+        layer,
+        model,
+        registry=make_registry(),
+        active_tools=("echo",),
+        packet_builder=dry_packet,
+    )
+
+    assert result.exit_reason == TurnExitReason.COMPLETED
+    assert result.final_text == "I'd have to open chapter 1 to tell you how it starts."
+    assert any(
+        message.content == UNOPENED_TEXT_CORRECTION
+        for message in provider.calls[-1].request.messages
+    )
+
+
+async def test_an_answer_that_opened_nothing_may_not_cite_from_memory() -> None:
+    """Slice 3 re-run: with no tools at all, the opener cited invented
+    chapter 1 details. A citation needs an opened chapter."""
+    from weaver.agent.turn import UNOPENED_TEXT_CORRECTION
+
+    layer, model, provider = scripted_layer(
+        stop_response("Ask me anything. The runes appear on his school wall (ch. 1)."),
+        stop_response("Still from memory: the runes are on his school wall (ch. 1)."),
+        tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+        stop_response("Pick a scene and I'll open it."),
+    )
+
+    async def dry_packet(results, draft):
+        return None
+
+    result = await execute_turn(
+        layer,
+        model,
+        registry=make_registry(),
+        active_tools=("echo",),
+        packet_builder=dry_packet,
+    )
+
+    assert result.exit_reason == TurnExitReason.COMPLETED
+    assert result.final_text == "Pick a scene and I'll open it."
+    assert any(
+        message.content == UNOPENED_TEXT_CORRECTION
+        for call in provider.calls
+        for message in call.request.messages
+    )
+
+
+async def test_a_dry_answer_may_cite_a_chapter_the_thread_already_opened() -> None:
+    history = [
+        UserMessage(content="what happens in ch 116?"),
+        ToolResultMessage(
+            call_id="old",
+            tool_name="read_chapters",
+            ok=True,
+            result={"durable_evidence": {"source_kind": "novel", "chapter": 116}},
+        ),
+        AssistantMessage(content="The grate scene (ch. 116)."),
+        UserMessage(content="huh"),
+    ]
+    layer, model, provider = scripted_layer(
+        tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+        stop_response("The grate is the whole joke (ch. 116)."),
+    )
+
+    async def dry_packet(results, draft):
+        return None
+
+    result = await execute_turn(
+        layer,
+        model,
+        registry=make_registry(),
+        active_tools=("echo",),
+        packet_builder=dry_packet,
+        history=history,
+    )
+
+    assert result.final_text == "The grate is the whole joke (ch. 116)."
+    assert len(provider.calls) == 2
+
+
+async def test_the_final_pass_treats_the_draft_as_private() -> None:
+    """Trial 10: the final answer announced "a small fix on my own phrasing"
+    for a draft the reader never saw. The final pass is told it is private."""
+    layer, model, provider = scripted_layer(
+        tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+        stop_response("Draft: the slave is still alive."),
+        stop_response("Final: the slave is already dead (ch. 6)."),
+    )
+
+    async def packet_builder(results, draft):
+        return _direct_packet("PACKET: chapter 6 prose")
+
+    result = await execute_turn(
+        layer,
+        model,
+        registry=make_registry(),
+        active_tools=("echo",),
+        packet_builder=packet_builder,
+    )
+
+    assert result.final_text == "Final: the slave is already dead (ch. 6)."
+    final_request = provider.calls[-1].request
+    system_text = "\n".join(
+        message.content or ""
+        for message in final_request.messages
+        if message.role == "system"
+    )
+    assert "private draft" in system_text
+    assert "never mention it" in system_text
+    assert "Draft: the slave is still alive." in system_text
+    assert not any(
+        message.role == "assistant"
+        and "Draft: the slave is still alive." in (message.content or "")
+        for message in final_request.messages
+    )

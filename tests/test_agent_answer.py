@@ -553,3 +553,87 @@ def test_earlier_chapters_never_replace_this_turn_s_own_evidence() -> None:
     )
 
     assert blueprint.allowed_chapters == ()
+
+
+OPENED_START = """--- chapter 1 lines 1-12 ---
+He sat on a rusty bench outside the station.
+The coffee had cost most of his savings, the real deal.
+
+--- evidence board ---
+direct sources: chapter 1 lines 1-12
+"""
+
+
+@pytest.mark.parametrize(
+    ("answer", "packet", "expected"),
+    [
+        ('The coffee "had cost most of his savings, the real deal" (ch. 1).', OPENED_START, ()),
+        ("The coffee “had cost most… the real deal” (ch. 1).", OPENED_START, ()),
+        ('He says "you checked every mirror but the one in your hand" (ch. 1).', OPENED_START, ("unopened_quote",)),
+        ("The very first line is dirt on brand-new shoes (ch. 1).", None, ("unopened_opening",)),
+        ("Ch. 1 opens on a rusty bench (ch. 1).", OPENED_START, ()),
+        ("Ch. 5 opens on a storm (ch. 5).", OPENED_START, ("unopened_opening",)),
+        ('Short "real deal" quotes are fine (ch. 1).', None, ()),
+    ],
+)
+def test_exact_text_claims_need_the_text_open_this_turn(answer, packet, expected) -> None:
+    from weaver.agent.answer import unopened_text_claims
+
+    assert unopened_text_claims(answer, packet) == expected
+
+
+def test_weaver_may_quote_the_reader_back() -> None:
+    from weaver.agent.answer import unopened_text_claims
+
+    assert unopened_text_claims(
+        'You said "you are still just predicting words, right" and fair.',
+        None,
+        reader_text="okay, but you are still just predicting words, right?",
+    ) == ()
+
+
+def test_inspection_flags_an_invented_first_line_and_quote() -> None:
+    blueprint = build_answer_blueprint(
+        question="give me something only a reader would know",
+        prior_weaver_position="",
+        reader_challenges_prior_answer=False,
+        evidence_packet=OPENED_START,
+    )
+
+    findings = inspect_publication(
+        'Ch. 3 opens on his shoes (ch. 1). He thinks "nobody ever reads the third page" (ch. 1).',
+        blueprint,
+        OPENED_START,
+    )
+    codes = {finding.code for finding in findings}
+
+    assert {"unopened_opening", "unopened_quote"} <= codes
+    repair = build_repair_instruction(findings)
+    assert "how a chapter opens" in repair
+    assert "Do not include any direct quotation" in repair
+
+
+def test_invented_prose_may_quote_its_own_dialogue() -> None:
+    blueprint = build_answer_blueprint(
+        question="write the missing scene where they meet again",
+        prior_weaver_position="",
+        reader_challenges_prior_answer=False,
+        evidence_packet=OPENED_START,
+        domain="fanfic",
+    )
+
+    findings = inspect_publication(
+        'Invented scene. "You came back after all this time," she said.',
+        blueprint,
+        OPENED_START,
+    )
+
+    assert "unopened_quote" not in {finding.code for finding in findings}
+
+
+def test_a_repair_does_not_mention_the_draft_it_fixes() -> None:
+    instruction = build_repair_instruction(
+        (PublicationFinding("unsupported_chapter", "cites ch. 999"),)
+    )
+
+    assert "reader never saw the proposed answer" in instruction

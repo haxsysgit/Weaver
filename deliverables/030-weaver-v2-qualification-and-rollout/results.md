@@ -702,6 +702,101 @@ have caught a content invention before the fix either, but the next build
 should require a passage opened this turn for any quoted or "first line"
 claim, or re-check claims against the opened text.
 
+### Trial 10 re-run after the exact-text fix (2026-10-29)
+
+Build: `e058a68` plus the uncommitted exact-text checks. Same settings and
+reader turns. Metered spend `$0.0200` (19 calls). Private transcript:
+`.weaver/evaluation/plan030/experience/transcripts/slice3-rerun2/`.
+
+The fix: a turn that only searched (exact-phrase and semantic search open no
+passage) was published with no checks at all. Now any inline quote of six or
+more words must match a passage opened this turn (or the reader's own
+words), and a claim about how a chapter opens needs that chapter's first
+lines opened this turn. Both run in the normal answer checks; on the
+search-only path the answer goes back once to open the chapter or drop the
+claim.
+
+**10 adversarial: fail on accuracy, a different turn.** 5 of 5 completed.
+Turns 1 to 4 are strong and check out against chapters 1, 2, 21, 33, and
+405: real receipts, the "predicting words" jab answered with a new detail,
+and a closing test that is a scene a casual reader would miss. But turn 0
+opened nothing and offered two chapter 1 details from memory (runes on a
+school wall, an F rank); neither is in the book. Turn 1 checked and said
+both were wrong. The exact-text checks did not fire because the claims were
+paraphrases, not quotes or opening-line claims.
+
+Follow-up fix in the working tree, not yet live-tested: on the no-passage
+path, an answer that cites a chapter the conversation never opened goes
+back once to open it or drop the claim. 754 backend tests pass. A re-run
+needs the owner's approval.
+
+### Trial 10 re-run after the memory-citation fix (2026-10-29)
+
+Owner-approved re-run. Build: `e058a68` plus the uncommitted exact-text and
+memory-citation checks (754 backend tests). Same settings and reader turns.
+Metered spend `$0.0165` (18 calls). Private transcript:
+`.weaver/evaluation/plan030/experience/transcripts/slice3-rerun3/`.
+
+**10 adversarial: pass, with one conversation wart.** 5 of 5 completed.
+
+- Turn 0 makes no factual claim; it invites a test instead of reciting
+  details from memory.
+- "prove it" opens chapters 2 and 6 and gives the Temple Slave status screen
+  (one short quote) and the Mountain King scene; "anyone can cite a chapter"
+  gets Kai's Flaw and the lonely-star prophecy (ch. 118); "predicting words"
+  is answered head on ("that's what reading is") with the centurion trap
+  (ch. 51), including the detail that the plan half fails; the last turn
+  stays in ch. 51 and ends on a joke at its own expense.
+- Every detail checked against chapters 2, 6, 51, and 118 is there; two are
+  paraphrases of the text's own wording.
+- Wart: turn 1 offers "a small fix on my own phrasing from before" for
+  something the reader never saw. The sent-back draft stays in the turn's
+  context and the final answer corrects it in public. Not an accuracy
+  failure, but confusing; the next build should keep a rejected draft out of
+  what the reader is told.
+
+Trial 10 now passes the evaluator on both axes. Owner acceptance is still
+the only acceptance.
+
+Wart fix (2026-10-29, not yet live-tested): the final reading pass shows the
+model its draft as an assistant message, so the model treated it as
+something the reader had seen. The final-answer instruction and the repair
+instruction now say the draft is private and must not be mentioned or
+compared against. 756 backend tests pass.
+
+### Trial 10 confirm run for the draft fix (2026-10-29)
+
+Owner-approved confirm run on the instruction-only draft fix. Metered spend
+`$0.0181` (24 calls). Private transcript:
+`.weaver/evaluation/plan030/experience/transcripts/slice3-rerun4/`.
+
+**10 adversarial: fail.** Turns 0 to 3 completed and check out against
+chapters 3, 5, and 26 (the first-kill notification, the poser line, the
+punch-machine sixteen, Bloodbane). Two problems:
+
+- Turn 4 ("fine, one more test.") failed twice with "The model returned an
+  unsafe response". Cause, traced from the stored turn: routed as company
+  (2 lookups, 6,000 character packet cap), it read 80 lines of chapter 55;
+  the packet adds 20 lines either side, the single passage was over the cap,
+  and the trimming loop dropped it whole. The packet said "direct sources:
+  none", and a forced answer with no packet fails as `model_protocol`. Any
+  small-cap turn (company 6,000, quick recall 8,000) that reads a long
+  passage can hit this.
+- Turn 3 said "earlier I told you I didn't remember the exact quote", which
+  the reader never saw. The instruction-only fix was not enough: a draft
+  that fails its checks goes to the final pass as an assistant message, so
+  the model takes it for something it already said.
+
+Fixes (757 backend tests pass, not yet live-tested):
+
+1. When even the newest passage is over the cap, it is shortened to fit:
+   the expansion goes first, then lines from the end, with the header and
+   the evidence board showing the true range. It is never dropped whole.
+2. The draft no longer appears in the final pass as an assistant message. It
+   rides in the private instructions under "private draft: written this
+   turn, never shown to the reader", and the instruction forbids mentioning
+   it ("small fix", "as I said", "earlier I told you").
+
 ## v2.0.0 rollout
 
 Pending tag, exact artifact, deployment, public health, safe launch metrics,

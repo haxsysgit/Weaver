@@ -22,7 +22,9 @@ from weaver.agent.answer import (
     format_answer_blueprint,
     has_spoiler_finding,
     strip_unsupported_citations,
+    cited_chapters,
     inspect_publication,
+    unopened_text_claims,
 )
 from weaver.agent.messages import (
     AssistantMessage,
@@ -362,6 +364,12 @@ WORKING_NOTE_CORRECTION = (
     "done. Call a tool now if you need evidence, or answer the user fully "
     "and directly."
 )
+UNOPENED_TEXT_CORRECTION = (
+    "Your answer cites, quotes, or describes chapters you have not opened, "
+    "so it is written from memory. Search results are not the text. Open "
+    "the chapter with read_chapters before you cite, quote, or describe it, "
+    "or remove those claims."
+)
 ZERO_EVIDENCE_CORRECTION = (
     "You answered without opening any evidence this turn. The library is the "
     "only source of truth: run at least one search or read, or say honestly "
@@ -375,7 +383,14 @@ FINAL_ANSWER_INSTRUCTION = (
     "passages and carry its supporting chapter citation beside it. A synthesis "
     "that needs several chapters must cite all of them. Remove or qualify claims "
     "with incomplete support. Keep interpretations and invented branches labelled. "
-    "Do not name or describe searches, tool calls, or work you plan to do."
+    "Do not name or describe searches, tool calls, or work you plan to do. "
+    "The private draft above was never shown to the reader, so never "
+    "mention it, compare against it, or announce what you changed in it (no "
+    "'small fix to my phrasing', no 'as I said', no 'earlier I told you'). "
+    "Only earlier turns of the conversation are things the reader saw."
+)
+PRIVATE_DRAFT_HEADER = (
+    "--- private draft: written this turn, never shown to the reader ---\n"
 )
 WORKING_NOTE_MARKERS = (
     "one moment",
@@ -725,6 +740,7 @@ async def run_turn(
     strip_tools_next = False
     last_stop_reason = ""
     zero_evidence_reprompted = False
+    unopened_text_reprompted = False
     deepest_thinking: ReasoningEffort | None = None
 
     try:
@@ -834,10 +850,14 @@ async def run_turn(
                     earlier_asks=turn_brief.earlier_asks,
                     earlier_opened_chapters=earlier_opened,
                 )
+            # The draft is not part of the conversation: shown as an
+            # assistant message, the model took it for something the reader
+            # had seen and corrected it out loud. It rides in the private
+            # instructions instead, labelled as never shown.
             final_history: list[ConversationMessage] = []
             if current_owner is not None:
                 final_history.append(current_owner)
-            final_history.append(publication_draft or validated_candidate)
+            draft = publication_draft or validated_candidate
             request_messages = project_messages(
                 system_prompt=system_prompt,
                 history=final_history,
@@ -848,6 +868,9 @@ async def run_turn(
                 + final_packet
                 + "\n\n"
                 + format_answer_blueprint(answer_blueprint)
+                + "\n\n"
+                + PRIVATE_DRAFT_HEADER
+                + (draft.content or "")
                 + "\n\n"
                 + FINAL_ANSWER_INSTRUCTION
             )
@@ -1421,7 +1444,31 @@ async def run_turn(
                 break
             # Tools were used but produced nothing citable. Failing the turn
             # would punish the reader for a dry search, so the answer stands
-            # with its own honesty about the gap.
+            # with its own honesty about the gap. A quote or an opening-line
+            # claim is not honesty about a gap: send it back once to open the
+            # lines or drop the claim.
+            # A chapter citation with nothing opened (this turn or earlier in
+            # the conversation) is memory dressed as evidence.
+            memory_citations = [
+                chapter
+                for chapter in cited_chapters(assistant.content)
+                if chapter not in earlier_opened
+            ]
+            if (
+                domain != "fanfic"
+                and not unopened_text_reprompted
+                and (
+                    memory_citations
+                    or unopened_text_claims(
+                        assistant.content,
+                        None,
+                        reader_text=turn_brief.actual_ask,
+                    )
+                )
+            ):
+                unopened_text_reprompted = True
+                candidate_note = UNOPENED_TEXT_CORRECTION
+                continue
             
 
             persisted, published = await persist_answer(

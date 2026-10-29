@@ -355,6 +355,41 @@ def _board_with_kept_sources(
     )
 
 
+def _shortened_to_fit(
+    source: EvidenceSource,
+    raw: tuple[int, int, int, int, list[str], str],
+    board: EvidenceBoard,
+    framing_text: str,
+    cap: int,
+) -> tuple[EvidenceSource, str] | None:
+    """The newest passage cut down to fit the cap, with an honest range."""
+    chapter, asked_start, asked_end, opened_start, lines, beat = raw
+    # Drop the expansion first: keep only the lines the model asked for.
+    low = max(0, asked_start - opened_start)
+    high = min(len(lines), asked_end - opened_start + 1)
+    kept = lines[low:high]
+    first = opened_start + low
+    while kept:
+        last = first + len(kept) - 1
+        trimmed_source = replace(
+            source,
+            line_start=first,
+            line_end=last,
+            chapter_end_reached=(
+                source.chapter_end_reached if last == source.line_end else False
+            ),
+        )
+        text = f"--- chapter {chapter}, lines {first}-{last} ---\n" + beat + "\n".join(kept)
+        trimmed_board = _board_with_kept_sources(board, (trimmed_source,))
+        size = len(
+            "\n\n".join([text, _format_evidence_board(trimmed_board), framing_text])
+        )
+        if size <= cap:
+            return trimmed_source, text
+        kept = kept[: len(kept) - max(1, len(kept) // 10)]
+    return None
+
+
 def build_packet(
     service,
     tool_results: list,
@@ -388,6 +423,9 @@ def build_packet(
         for source in board.direct_sources
     }
     opened: list[tuple[EvidenceSource, str]] = []
+    # The raw lines behind each opened block, so a block too big for the cap
+    # can be shortened instead of dropped.
+    opened_lines: list[tuple[int, int, int, int, list[str], str]] = []
     for chapter, start, end in handles[:MAX_OPENED_PASSAGES]:
         passage = service.index.open_lines(
             chapter,
@@ -400,12 +438,16 @@ def build_packet(
             line_start=passage.line_start,
             line_end=passage.line_end,
         )
+        beat = _beat_lines(judge, chapter)
         opened.append(
             (
                 expanded_source,
                 f"--- chapter {chapter}, lines {passage.line_start}-{passage.line_end} ---\n"
-                f"{_beat_lines(judge, chapter)}{passage.text}",
+                f"{beat}{passage.text}",
             )
+        )
+        opened_lines.append(
+            (chapter, start, end, passage.line_start, passage.text.splitlines(), beat)
         )
         citations.append(Citation(chapter=chapter))
     # 2. Top notebook statements surfaced by the searches.
@@ -461,6 +503,16 @@ def build_packet(
         if len("\n\n".join(candidate_parts)) > cap:
             continue
         kept_opened = candidate_opened
+
+    if not kept_opened and opened:
+        # Even the newest passage alone is over the cap. Dropping it leaves
+        # "direct sources: none" and a turn that read the book fails, so keep
+        # the lines the model asked for, cut from the end until they fit.
+        shortened = _shortened_to_fit(
+            opened[-1][0], opened_lines[-1], board, framing_text, cap
+        )
+        if shortened is not None:
+            kept_opened = [shortened]
 
     board = _board_with_kept_sources(
         board,
