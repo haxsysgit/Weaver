@@ -560,8 +560,67 @@ describe("first Nightmare setup", () => {
     );
     fireEvent.change(composer, { target: { value: "Keep my question" } });
     expect(composer).toHaveValue("Keep my question");
-    expect(screen.getByRole("button", { name: "Send message" })).toBeDisabled();
+    const checks = vi.mocked(api.getAccess!).mock.calls.length;
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    // Still unavailable after a fresh check: nothing is sent and the draft stays.
+    await waitFor(() => {
+      expect(vi.mocked(api.getAccess!).mock.calls.length).toBeGreaterThan(checks);
+    });
+    await act(async () => {});
+    expect(api.streamTurn).not.toHaveBeenCalled();
+    expect(composer).toHaveValue("Keep my question");
     await waitFor(() => expect(composer).toHaveFocus());
+  });
+
+  it("sends when a stale unavailable status has since opened", async () => {
+    localStorage.setItem(FIRST_NIGHTMARE_STORAGE_KEY, "completed");
+    const api = createApi();
+    api.getAccess = vi
+      .fn()
+      .mockResolvedValueOnce({
+        consented: false,
+        development: false,
+        enabled: false,
+        remaining_questions: 0,
+        reset_at: null,
+        source: "unavailable",
+      })
+      .mockResolvedValue({
+        consented: false,
+        development: true,
+        enabled: false,
+        remaining_questions: 0,
+        reset_at: null,
+        source: "owner_key",
+      });
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+    await waitForLiveApp();
+    await screen.findByText(/shared thread is unavailable/);
+
+    const composer = screen.getByRole("textbox", { name: "Message Weaver" });
+    fireEvent.change(composer, { target: { value: "you sure?" } });
+    fireEvent.keyDown(composer, { key: "Enter" });
+
+    await waitFor(() => expect(api.streamTurn).toHaveBeenCalled());
+    expect(screen.queryByText(/shared thread is unavailable/)).toBeNull();
+    expect(screen.queryByText(/voice remains unbound/)).toBeNull();
+  });
+
+  it("re-checks access when the reader comes back to the tab", async () => {
+    localStorage.setItem(FIRST_NIGHTMARE_STORAGE_KEY, "completed");
+    const api = createApi();
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+    await waitForLiveApp();
+    const checks = vi.mocked(api.getAccess!).mock.calls.length;
+
+    act(() => {
+      window.dispatchEvent(new Event("focus"));
+    });
+
+    await waitFor(() => {
+      expect(vi.mocked(api.getAccess!).mock.calls.length).toBeGreaterThan(checks);
+    });
   });
 
   it("restores a saved Soul Sea beneath the live Spellweave", async () => {

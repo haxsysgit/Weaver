@@ -85,6 +85,28 @@ function savedSoulSeaMode(value: unknown): SoulSeaMode {
   return savedChoice(value, ["sunny", "awakened", "nephis"], "sunny");
 }
 
+/** Whether the shared allowance blocks a send right now. A reader with a
+ * bound key, or local development / owner-key access, is never blocked. */
+export function sendBlockedBy(
+  access: AccessStatus | null,
+  accessFailed: boolean,
+  voiceBound: boolean,
+): boolean {
+  if (voiceBound) {
+    return false;
+  }
+  if (accessFailed) {
+    return true;
+  }
+  if (access === null || access.development) {
+    return false;
+  }
+  if (!access.enabled) {
+    return true;
+  }
+  return !access.consented || access.remaining_questions === 0;
+}
+
 function sharedStatusFor(
   access: AccessStatus | null,
   accessFailed: boolean,
@@ -255,6 +277,22 @@ function SpellSurfaceChatSurface({
     void loadStoredBoundary();
   }, []);
 
+  // Access can change while the page stays open (a server restart, the
+  // owner switch, the daily reset), so re-check whenever the reader returns.
+  useEffect(() => {
+    function onReturn() {
+      if (document.visibilityState !== "hidden") {
+        void refreshAccess();
+      }
+    }
+    window.addEventListener("focus", onReturn);
+    document.addEventListener("visibilitychange", onReturn);
+    return () => {
+      window.removeEventListener("focus", onReturn);
+      document.removeEventListener("visibilitychange", onReturn);
+    };
+  }, []);
+
   useEffect(() => {
     const media = window.matchMedia("(min-width: 900px)");
     function sync(event: MediaQueryListEvent) {
@@ -387,17 +425,22 @@ function SpellSurfaceChatSurface({
     setAnnouncementKey((current) => current + 1);
   }
 
-  async function refreshAccess() {
+  async function refreshAccess(): Promise<{
+    access: AccessStatus | null;
+    failed: boolean;
+  }> {
     if (!api.getAccess) {
-      return;
+      return { access, failed: accessFailed };
     }
     try {
       const status = await api.getAccess();
       setAccess(status);
       setAccessFailed(false);
+      return { access: status, failed: false };
     } catch {
       // A temporary status failure must not hide local conversations.
       setAccessFailed(true);
+      return { access, failed: true };
     }
   }
 
@@ -589,7 +632,16 @@ function SpellSurfaceChatSurface({
     return updated;
   }
 
-  function sendMessage(message: string) {
+  async function sendMessage(message: string) {
+    // A blocked status may be stale: check again before refusing, and keep
+    // the reader's draft when it really is blocked.
+    if (sendBlockedBy(access, accessFailed, voiceBound)) {
+      const fresh = await refreshAccess();
+      if (sendBlockedBy(fresh.access, fresh.failed, voiceBound)) {
+        announce("[The thread is not open yet.] Your message is still here.");
+        return;
+      }
+    }
     // "I'm at chapter 742": offer to make that the boundary, unless it
     // already is. Weaver never changes the boundary without a tap.
     const chapter = mentionedChapter(message);
@@ -911,16 +963,17 @@ function SpellSurfaceChatSurface({
               }
               setNewMenuSignal((n) => n + 1);
             }}
-            onSubmit={sendMessage}
+            onSubmit={(message) => void sendMessage(message)}
             placeholder={weaverProduct.composerPlaceholder}
-            sendDisabled={sharedExhausted || sharedAwaitingConsent || sharedUnavailable}
+            sendDisabled={false}
             sendLabel={weaverProduct.sendLabel}
             stopLabel={weaverProduct.stopLabel}
             stoppingLabel={weaverProduct.stoppingLabel}
             statusText={accessMessage}
             textareaRef={composerRef}
             turnActive={chat.turnActive}
-            voiceBound={voiceBound}
+            // The owner switch answers on this machine's own key: not unbound.
+            voiceBound={voiceBound || access?.source === "owner_key"}
           />
           <p><span /> {privacyLabel} <a href="/privacy">Privacy</a></p>
         </footer>
