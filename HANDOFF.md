@@ -94,14 +94,15 @@ readers, not a harness of settings).
    conversation: short follow-ups keep the earlier read, pushes ("prove it")
    read deeper, a loaded skill raises thinking and the final reread, and each
    run records its skills, lookups, and thinking.
-4. **Explicit boundary.** Done (slice 4 commit). No saved chapter now reads
+4. **Explicit boundary.** Done (`5ce8ff2`). No saved chapter now reads
    "No spoiler boundary" in the header and "No boundary saved" in Settings;
    the model is told it does not know the reader's position and asks before a
    major beat; the packet never says "chapter None". Saying "I'm at chapter N"
    in chat offers a one-tap boundary. Also fixed: `GET /api/preferences`
    required an Origin header, which browsers do not send on a same-origin
    GET, so every real read had failed silently since it shipped.
-5. **Reader additions, re-scoped.** Export a thread as a Markdown file. Dropped
+5. **Reader additions, re-scoped.** Done (slice 5 commit): a save button in
+   the thread header downloads the thread as a Markdown file. Dropped
    from the old list: default thread kind (another setting), clear local
    library index (admin work), per-thread boundary (more settings; the chapter
    offer covers moving forward). Deferred: usage and spend for readers with

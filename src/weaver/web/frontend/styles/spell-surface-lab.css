@@ -3358,3 +3358,30 @@
   .lab-boundary-offer { padding: 10px 12px; }
   .lab-boundary-offer button { flex: 1 1 auto; }
 }
+
+/* Plan 030 slice 5: save a thread as a Markdown file. */
+.lab-thread-head > span { margin-left: auto; }
+.lab-thread-export {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  margin-left: 14px;
+  place-items: center;
+  color: #a9abb8;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.lab-thread-export:hover,
+.lab-thread-export:focus-visible {
+  color: var(--lab-gold);
+  border-color: rgba(224, 189, 120, 0.28);
+  background: rgba(224, 189, 120, 0.06);
+}
+.lab-thread-export:disabled { cursor: default; opacity: 0.35; }
+.lab-thread-export svg { width: 14px; height: 14px; }
+@media (max-width: 767px) {
+  .lab-thread-export { width: 40px; height: 40px; margin-left: 8px; }
+}

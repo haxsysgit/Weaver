@@ -18,8 +18,10 @@ import {
   shouldOpenFirstNightmare,
 } from "../lib/firstNightmare";
 import { getApiKey, isApiKeyDisabled } from "../lib/identity";
+import { downloadThread } from "../lib/exportThread";
 import { mentionedChapter } from "../lib/readerPosition";
 import { Composer } from "./Composer";
+import { DownloadIcon } from "./Icons";
 import { FirstNightmareSetup, type SharedAccessStatus } from "./FirstNightmareSetup";
 import { Message } from "./Message";
 import { RecoveryPanel } from "./RecoveryPanel";
@@ -813,6 +815,26 @@ function SpellSurfaceChatSurface({
             <strong>{activeThread?.title ?? "New thread"}</strong>
           </div>
           <span>{readerStatus}</span>
+          {chat.messages.length > 0 && (
+            <button
+              aria-label="Save this thread"
+              className="lab-thread-export"
+              disabled={chat.turnActive}
+              onClick={() => {
+                downloadThread({
+                  domain: activeThread?.domain ?? "canon",
+                  exportedAt: new Date(),
+                  messages: chat.messages,
+                  title: activeThread?.title ?? "Weaver thread",
+                });
+                announce("[The thread is yours to keep.]");
+              }}
+              title="Save this thread as a Markdown file"
+              type="button"
+            >
+              <DownloadIcon />
+            </button>
+          )}
         </header>
 
         <div

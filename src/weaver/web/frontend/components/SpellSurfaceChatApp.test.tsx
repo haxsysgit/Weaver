@@ -1542,3 +1542,56 @@ describe("spoiler boundary", () => {
     expect(api.savePreferences).not.toHaveBeenCalled();
   });
 });
+
+describe("saving a thread", () => {
+  beforeEach(() => {
+    setDesktopMedia();
+    localStorage.clear();
+    localStorage.setItem(FIRST_NIGHTMARE_STORAGE_KEY, "completed");
+  });
+
+  it("hands the reader the conversation as a Markdown file", async () => {
+    const api = createApi();
+    api.streamTurn = vi.fn().mockImplementation(() => {
+      return (async function* () {
+        yield { type: "completed" as const, text: "Nephis, on reach (ch. 104)." };
+      })();
+    });
+    const blobs: Blob[] = [];
+    const createObjectURL = vi.fn((blob: Blob) => {
+      blobs.push(blob);
+      return "blob:weaver-thread";
+    });
+    const revokeObjectURL = vi.fn();
+    Object.assign(URL, { createObjectURL, revokeObjectURL });
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => {});
+
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+    await waitForLiveApp();
+    expect(screen.queryByRole("button", { name: "Save this thread" })).toBeNull();
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Message Weaver" }), {
+      target: { value: "who would win, Sunny or Nephis?" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+    const save = await screen.findByRole("button", { name: "Save this thread" });
+    await waitFor(() => expect(save).toBeEnabled());
+    fireEvent.click(save);
+
+    expect(click).toHaveBeenCalledOnce();
+    const link = click.mock.contexts[0] as HTMLAnchorElement;
+    expect(link.download).toMatch(/\.md$/);
+    expect(blobs).toHaveLength(1);
+    // jsdom's Blob has no text(); FileReader reads it the old way.
+    const text = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.readAsText(blobs[0]);
+    });
+    expect(text).toContain("**You**\n\nwho would win, Sunny or Nephis?");
+    expect(text).toContain("**Weaver**\n\nNephis, on reach (ch. 104).");
+    click.mockRestore();
+  });
+});
