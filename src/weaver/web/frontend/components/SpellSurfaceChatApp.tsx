@@ -858,12 +858,13 @@ function SpellSurfaceChatSurface({
           }}
           onClose={closeSettings}
           onReplayFirstNightmare={replayFirstNightmare}
-          onSave={(nextPreferences) => {
+          onSave={async (nextPreferences) => {
+            // Settings waits on this: nothing applies until the server has
+            // the reader state, and Settings closes itself after "Saved".
+            await api.savePreferences(toApiPreferences(nextPreferences));
             setPreferences(nextPreferences);
             saveVisualPreferences(nextPreferences);
-            closeSettings();
             announce("[Reader state remembered.]");
-            void api.savePreferences(toApiPreferences(nextPreferences));
           }}
         />
       )}

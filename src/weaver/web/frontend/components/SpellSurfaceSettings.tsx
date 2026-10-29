@@ -54,8 +54,15 @@ interface SpellSurfaceSettingsProps {
   onApiKeyChange?: (hasApiKey: boolean) => void;
   onClose: () => void;
   onReplayFirstNightmare?: () => void;
-  onSave: (preferences: LabPreferences) => void;
+  /** May return a promise: Settings shows Saving, then Saved, and closes
+   * only once it resolves; a rejection keeps the edits open with a retry. */
+  onSave: (preferences: LabPreferences) => void | Promise<void>;
 }
+
+type SaveState = "idle" | "saving" | "saved" | "failed";
+
+/** How long the Saved confirmation stays up before the panel closes. */
+export const SAVED_HOLD_MS = 900;
 
 const MAX_CHAPTER = 3160;
 const VOLUMES = [
@@ -133,6 +140,9 @@ export function SpellSurfaceSettings({
   const [activeSection, setActiveSection] = useState<SettingsSection>(initialSection);
   const [mobileDetailOpen, setMobileDetailOpen] = useState(initialSection !== "reader");
   const [discardPromptOpen, setDiscardPromptOpen] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+  const mounted = useRef(true);
+  const closeTimer = useRef<number | undefined>(undefined);
   const panelRef = useRef<HTMLElement>(null);
   const backButtonRef = useRef<HTMLButtonElement>(null);
   const sectionButtonRefs = useRef(new Map<SettingsSection, HTMLButtonElement>());
@@ -154,6 +164,19 @@ export function SpellSurfaceSettings({
   useEffect(() => {
     panelRef.current?.querySelector<HTMLElement>(".lab-settings-nav button.on")?.focus();
   }, []);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      window.clearTimeout(closeTimer.current);
+    };
+  }, []);
+
+  // A failed save stays on screen until the reader edits again.
+  useEffect(() => {
+    setSaveState((current) => (current === "failed" ? "idle" : current));
+  }, [preferences, apiKey, apiKeyDisabled, modelId]);
 
   useEffect(() => {
     if (isDirty) {
@@ -193,6 +216,14 @@ export function SpellSurfaceSettings({
   }
 
   function requestClose() {
+    if (saveState === "saving") {
+      return;
+    }
+    if (saveState === "saved") {
+      window.clearTimeout(closeTimer.current);
+      onClose();
+      return;
+    }
     if (isDirty) {
       setDiscardPromptOpen(true);
       return;
@@ -200,12 +231,34 @@ export function SpellSurfaceSettings({
     onClose();
   }
 
-  function saveSettings() {
+  async function saveSettings() {
+    if (saveState === "saving" || saveState === "saved") {
+      return;
+    }
+    setSaveState("saving");
+    try {
+      await onSave(fixedPreferences);
+    } catch {
+      if (mounted.current) {
+        setSaveState("failed");
+      }
+      return;
+    }
+    // All or nothing: the key and model are stored only once the reader
+    // settings are, so a failed save leaves every setting as it was.
     setApiKey(apiKey);
     setApiKeyDisabled(apiKeyDisabled);
     setModelId(modelId);
     onApiKeyChange?.(apiKey.trim() !== "" && !apiKeyDisabled);
-    onSave(fixedPreferences);
+    if (!mounted.current) {
+      return;
+    }
+    initialPreferences.current = fixedPreferences;
+    initialApiKey.current = apiKey;
+    initialApiKeyDisabled.current = apiKeyDisabled;
+    initialModelId.current = modelId;
+    setSaveState("saved");
+    closeTimer.current = window.setTimeout(onClose, SAVED_HOLD_MS);
   }
 
   function keepFocusInside(event: KeyboardEvent<HTMLElement>) {
@@ -580,8 +633,34 @@ export function SpellSurfaceSettings({
             </div>
           ) : (
             <>
-              <button onClick={requestClose} type="button">Discard</button>
-              <button className="primary" disabled={!isDirty} onClick={saveSettings} type="button">Apply changes</button>
+              {saveState === "failed" && (
+                <p className="lab-save-failed" role="alert">
+                  [The thread slipped. Your changes were not saved.]
+                </p>
+              )}
+              <button
+                disabled={saveState === "saving" || saveState === "saved"}
+                onClick={requestClose}
+                type="button"
+              >
+                Discard
+              </button>
+              <button
+                aria-busy={saveState === "saving"}
+                className={`primary${saveState === "saved" ? " is-saved" : ""}`}
+                disabled={saveState === "saving" || saveState === "saved" || !isDirty}
+                onClick={() => void saveSettings()}
+                type="button"
+              >
+                {saveState === "saving" && "Saving..."}
+                {saveState === "saved" && (
+                  <>
+                    <span aria-hidden="true" className="lab-save-check">✓</span> Saved
+                  </>
+                )}
+                {saveState === "failed" && "Try again"}
+                {saveState === "idle" && "Apply changes"}
+              </button>
             </>
           )}
         </footer>

@@ -387,11 +387,12 @@ describe("first Nightmare setup", () => {
     ).toBeVisible();
   });
 
-  it("updates the unbound inscription when settings enable a stored key", async () => {
+  it("enables a stored key and re-reads access once settings save", async () => {
     localStorage.setItem(FIRST_NIGHTMARE_STORAGE_KEY, "completed");
     localStorage.setItem("weaver_api_key", "owner-test-key");
     localStorage.setItem("weaver_api_key_disabled", "1");
-    render(<SpellSurfaceChatApp api={createApi()} privacyLabel="Private" />);
+    const api = createApi();
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
 
     await waitFor(() => {
       expect(screen.getByTestId("spell-surface-live")).toHaveAttribute(
@@ -407,9 +408,60 @@ describe("first Nightmare setup", () => {
     const settings = await screen.findByRole("dialog", { name: "Reader Appraisal settings" });
     fireEvent.click(within(settings).getByRole("button", { name: "Advanced" }));
     fireEvent.click(within(settings).getByRole("checkbox", { name: /Disable this key/ }));
+    const accessChecks = vi.mocked(api.getAccess!).mock.calls.length;
     fireEvent.click(within(settings).getByRole("button", { name: "Apply changes" }));
 
-    expect(screen.queryByText("[The voice remains unbound.]")).toBeNull();
+    // The composer shows the shared allowance here, so the unbound line is
+    // never on screen; check the effect instead: the stored key is enabled
+    // and access is re-read with it.
+    await waitFor(() => {
+      expect(localStorage.getItem("weaver_api_key_disabled")).toBeNull();
+    });
+    await waitFor(() => {
+      expect(vi.mocked(api.getAccess!).mock.calls.length).toBeGreaterThan(accessChecks);
+    });
+  });
+
+  it("keeps settings open and unapplied when the server refuses the save", async () => {
+    localStorage.setItem(FIRST_NIGHTMARE_STORAGE_KEY, "completed");
+    const api = createApi();
+    api.savePreferences = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("Saving preferences failed (503)"))
+      .mockImplementation(async (preferences) => preferences);
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+
+    await waitForLiveApp();
+    await openThreadSheet();
+    fireEvent.click(screen.getByRole("button", { name: "Open Soul Sea settings" }));
+    const settings = await screen.findByRole("dialog", { name: "Reader Appraisal settings" });
+    // Let the saved preferences Settings fetches on open land first, as a
+    // reader would before typing.
+    await act(async () => {});
+    fireEvent.change(within(settings).getByLabelText("Current chapter"), {
+      target: { value: "1200" },
+    });
+    fireEvent.click(within(settings).getByRole("button", { name: "Apply changes" }));
+
+    expect(await within(settings).findByRole("alert")).toHaveTextContent(
+      "[The thread slipped. Your changes were not saved.]",
+    );
+    expect(screen.getByRole("dialog", { name: "Reader Appraisal settings" })).toBeInTheDocument();
+    // The app's reader position is untouched by the failed save.
+    expect(screen.getAllByText(/ch 1000/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/ch 1200/)).toBeNull();
+
+    fireEvent.click(within(settings).getByRole("button", { name: "Try again" }));
+    await waitFor(
+      () => {
+        expect(screen.queryByRole("dialog", { name: "Reader Appraisal settings" })).toBeNull();
+      },
+      { timeout: 3000 },
+    );
+    expect(api.savePreferences).toHaveBeenLastCalledWith(
+      expect.objectContaining({ reader_chapter: 1200 }),
+    );
+    expect(screen.getAllByText(/ch 1200/).length).toBeGreaterThan(0);
   });
 
   it("opens settings with the model section from the rail footer", async () => {

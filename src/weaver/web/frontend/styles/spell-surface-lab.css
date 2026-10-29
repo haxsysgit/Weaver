@@ -3273,3 +3273,34 @@
 
 /* Settings is a modal: the conversation is not a backdrop for it. */
 .lab-settings-open .lab-chat-main { visibility: hidden; }
+
+/* Plan 030 slice 2: visible save state in the settings footer. */
+.lab-settings-actions .lab-save-failed {
+  flex: 1 1 220px;
+  align-self: center;
+  margin: 0 auto 0 0;
+  /* A lighter tint of the edition crimson: the token itself (#74302d) is a
+     border colour and reads at about 2:1 as text; this is about 6.5:1. */
+  color: #d8746e;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+@media (max-width: 767px) {
+  .lab-settings-actions .lab-save-failed { flex-basis: 100%; }
+}
+
+.lab-settings-actions button:disabled {
+  cursor: default;
+  opacity: 0.42;
+}
+
+.lab-settings-actions button.primary[aria-busy="true"],
+.lab-settings-actions button.primary.is-saved {
+  opacity: 1;
+}
+
+.lab-settings-actions .lab-save-check {
+  margin-right: 2px;
+  font-weight: 700;
+}
