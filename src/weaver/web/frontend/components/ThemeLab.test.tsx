@@ -14,7 +14,6 @@ describe("Spell Surface v2 lab", () => {
     const surface = screen.getByTestId("spell-surface-lab");
     expect(surface).toHaveAttribute("data-theme", "void");
     expect(surface).toHaveAttribute("data-glass", "immersive");
-    expect(surface).toHaveAttribute("data-runes", "particles");
     expect(surface).toHaveAttribute("data-font-size", "small");
   });
 
@@ -32,7 +31,6 @@ describe("Spell Surface v2 lab", () => {
     expect(surface).toHaveAttribute("data-glass", "immersive");
     expect(surface).toHaveAttribute("data-theme", "void");
     expect(surface).toHaveAttribute("data-star-intensity", "vivid");
-    expect(surface).toHaveAttribute("data-runes", "particles");
   }, 20_000);
 
   it("keeps the drawer to Chats and Fanfic with thread actions on hover", async () => {

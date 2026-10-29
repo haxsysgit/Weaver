@@ -11,7 +11,6 @@ import {
 } from "../lib/identity";
 import { MAX_CHAPTER } from "../lib/readerPosition";
 import { EyeIcon, EyeSlashIcon } from "./Icons";
-import { type RuneMode } from "./SpellSurfaceRunes";
 import {
   SOUL_SEA_DESCRIPTIONS,
   SOUL_SEA_LABELS,
@@ -30,7 +29,6 @@ export interface LabPreferences {
   density: Density;
   fontSize: FontSize;
   glass: GlassMode;
-  runeMode: RuneMode;
   soulMode: SoulSeaMode;
   spoilerMode: "protect" | "none";
   starIntensity: StarIntensity;
@@ -114,7 +112,6 @@ function preferencesMatch(left: LabPreferences, right: LabPreferences) {
     left.density === right.density &&
     left.fontSize === right.fontSize &&
     left.glass === right.glass &&
-    left.runeMode === right.runeMode &&
     left.soulMode === right.soulMode &&
     left.spoilerMode === right.spoilerMode &&
     left.starIntensity === right.starIntensity &&

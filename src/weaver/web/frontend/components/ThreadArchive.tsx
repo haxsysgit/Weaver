@@ -532,7 +532,7 @@ export function ThreadArchive({
       <footer className="lab-rail-footer">
         <button aria-label="Open Soul Sea settings" onClick={onOpenSettings} type="button">
           <SettingsIcon />
-          <span><strong>Settings</strong><small>{readerStatus} · runes · appearance</small></span>
+          <span><strong>Settings</strong><small>{readerStatus || "Reader position and appearance"}</small></span>
         </button>
       </footer>
     </aside>

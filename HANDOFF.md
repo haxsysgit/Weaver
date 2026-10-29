@@ -1,7 +1,7 @@
 # Weaver handoff
 
-Date: 2026-10-25. Branch: `plan-030`. Latest commits: `1509d52`, then the
-rail/chooser/settings pass (this commit).
+Date: 2026-10-29. Branch: `plan-030`. The approved settings slices 1 to 6
+are done (see "Approved next steps"); nothing is pushed.
 
 ## What Weaver is
 
@@ -29,8 +29,8 @@ PWA. DeepSeek only. Do not push `main`, deploy, or tag without the owner.
 ```bash
 uv run weaver web --port 8016 --fake            # UI
 npm --prefix src/weaver/web/frontend run build  # rebuild served bundle
-npx --prefix src/weaver/web/frontend vitest run # 143 frontend tests
-uv run pytest tests/test_web.py -q              # 66 web tests
+npx vitest run                                  # 164 frontend tests (repo root)
+uv run pytest tests/test_web.py -q              # 75 web tests
 ```
 
 Screenshot harness: `.weaver/tools/shoot.mjs` (Chrome CDP, no deps).
@@ -101,13 +101,13 @@ readers, not a harness of settings).
    in chat offers a one-tap boundary. Also fixed: `GET /api/preferences`
    required an Origin header, which browsers do not send on a same-origin
    GET, so every real read had failed silently since it shipped.
-5. **Reader additions, re-scoped.** Done (slice 5 commit): a save button in
+5. **Reader additions, re-scoped.** Done (`114b907`): a save button in
    the thread header downloads the thread as a Markdown file. Dropped
    from the old list: default thread kind (another setting), clear local
    library index (admin work), per-thread boundary (more settings; the chapter
    offer covers moving forward). Deferred: usage and spend for readers with
    their own key, until usage is captured per device.
-6. **Dead code cleanup.** Remove the rune preference from the live app
+6. **Dead code cleanup.** Done (slice 6 commit). Removed the rune preference from the live app
    (`LabPreferences`, storage, `data-runes`, the "runes" rail label), delete
    the unmounted legacy `ChatApp`, `SettingsModal`, and `ConversationRail`,
    and fix the stray `}` in the rune styles.
@@ -127,7 +127,14 @@ will want screenshots and tests per slice.
 - **The rail row title truncates early** (84px reserved for hover actions).
   A `...` row menu would be cleaner than four inline icons.
 - **Fake mode** replies contain "Development fixture" text. That is expected.
-- **Preference store** is still global; see above.
+- **Dead legacy CSS.** About 100 rules in `styles/app.css` served only the
+  deleted `ChatApp`, `ConversationRail`, and `SettingsModal` (`conversation-*`,
+  `soul-sphere*`, `settings-button*`, and more). Prune them selector by
+  selector with screenshots; `Composer` still uses some `app.css` classes.
+- **Slice 3 is not verified live.** Follow-up routing and step-up need paid
+  runs of Reader Trials 8, 10, and 12 before claiming better answers.
+- **Windows dev setup.** Every `uv` command needs
+  `UV_PYTHON_INSTALL_DIR=$USERPROFILE/.uv/python` (MSIX `%APPDATA%`).
 - Live spend is about $5 of a $20 cap, not reconciled to the cent.
 
 ## Session log (condensed, latest stretch)
@@ -159,14 +166,13 @@ screenshots before claims.
 
 > Work in `/home/hax/weaver`, branch `plan-030`. Weaver is a Shadow Slave
 > reading companion. Read `HANDOFF.md`, `plans/030-...md`, and
-> `deliverables/030-.../settings-audit.md` first. Owner-approved work: make
-> reader preferences per device (backend), add visible save state, wire or
-> remove Answer depth, delete the dead rune preference, and make an unset
-> spoiler boundary explicit. Then the additions list (default thread kind,
-> export, clear index, usage/spend, per-thread boundary). Constraints: every
+> `deliverables/030-.../settings-audit.md` first. The approved settings
+> slices 1 to 6 are done. Open items, none started: prune the dead legacy CSS,
+> verify slice 3 live with Reader Trials 8, 10, and 12 (paid; needs the
+> owner's OK), and close the chapter coverage launch blocker. Constraints: every
 > commit starts with `Plan 030: `; no deploy/push/tag without the owner; no
 > secrets or private chapters in commits; one server at a time because of the
 > Qdrant lock. For every UI change, run the fake server on port 8016, rebuild
 > the frontend, and take desktop + mobile screenshots with
-> `.weaver/tools/shoot.mjs` before reporting. The frontend floor is 143
-> tests + tsc + production build; backend floor is 694 tests.
+> `.weaver/tools/shoot.mjs` before reporting. The frontend floor is 164
+> tests + tsc + production build; backend floor is 729 tests.

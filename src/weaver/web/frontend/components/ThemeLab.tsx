@@ -93,7 +93,6 @@ const INITIAL_PREFERENCES: LabPreferences = {
   density: "comfortable",
   fontSize: "small",
   glass: "immersive",
-  runeMode: "particles",
   soulMode: "sunny",
   spoilerMode: "protect",
   starIntensity: "balanced",
@@ -296,7 +295,6 @@ export function ThemeLab() {
       data-density={preferences.density}
       data-font-size={preferences.fontSize}
       data-glass={preferences.glass}
-      data-runes={preferences.runeMode}
       data-soul={preferences.soulMode}
       data-star-intensity={preferences.starIntensity}
       data-theme={preferences.theme}
@@ -379,7 +377,7 @@ export function ThemeLab() {
           </div>
         </div>
 
-        <SpellSurfaceRunes announcement={announcement} eventKey={announcementKey} mode={preferences.runeMode} />
+        <SpellSurfaceRunes announcement={announcement} eventKey={announcementKey} mode="particles" />
 
         <footer className="lab-composer-dock">
           <form className="lab-composer" onSubmit={sendMessage}>

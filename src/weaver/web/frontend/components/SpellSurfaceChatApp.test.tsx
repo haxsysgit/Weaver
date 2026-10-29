@@ -1595,3 +1595,35 @@ describe("saving a thread", () => {
     click.mockRestore();
   });
 });
+
+describe("settings shortcut", () => {
+  beforeEach(() => {
+    setDesktopMedia();
+    localStorage.clear();
+    localStorage.setItem(FIRST_NIGHTMARE_STORAGE_KEY, "completed");
+  });
+
+  it("names only what Settings holds, and stores no rune preference", async () => {
+    const api = createApi();
+    render(<SpellSurfaceChatApp api={api} privacyLabel="Private" />);
+    await waitForLiveApp();
+    await openThreadSheet();
+
+    const shortcut = screen.getByRole("button", { name: "Open Soul Sea settings" });
+    await waitFor(() => expect(shortcut).toHaveTextContent("ch 1000"));
+    expect(shortcut).not.toHaveTextContent(/runes/i);
+
+    fireEvent.click(shortcut);
+    const settings = await screen.findByRole("dialog", { name: "Reader Appraisal settings" });
+    await act(async () => {});
+    fireEvent.click(within(settings).getByRole("button", { name: "Appearance" }));
+    fireEvent.click(within(settings).getByRole("button", { name: "Nephis' Soul Sea" }));
+    fireEvent.click(within(settings).getByRole("button", { name: "Apply changes" }));
+    await waitFor(() => expect(api.savePreferences).toHaveBeenCalled());
+
+    const stored = JSON.parse(localStorage.getItem("weaver.spell-surface") ?? "{}");
+    expect(stored.soulMode).toBe("nephis");
+    expect(stored).not.toHaveProperty("runeMode");
+    expect(screen.getByTestId("spell-surface-live")).not.toHaveAttribute("data-runes");
+  });
+});

@@ -54,7 +54,6 @@ const INITIAL_PREFERENCES: LabPreferences = {
   density: "comfortable",
   fontSize: "small",
   glass: "immersive",
-  runeMode: "particles",
   soulMode: "sunny",
   spoilerMode: "protect",
   starIntensity: "balanced",
@@ -133,11 +132,6 @@ function loadInitialPreferences(): LabPreferences {
         ["subtle", "immersive"],
         INITIAL_PREFERENCES.glass,
       ),
-      runeMode: savedChoice(
-        saved.runeMode,
-        ["particles", "voice", "threads"],
-        INITIAL_PREFERENCES.runeMode,
-      ),
       soulMode: savedSoulSeaMode(saved.soulMode),
       starIntensity: savedChoice(
         saved.starIntensity,
@@ -160,7 +154,6 @@ function saveVisualPreferences(preferences: LabPreferences) {
     density: preferences.density,
     fontSize: preferences.fontSize,
     glass: preferences.glass,
-    runeMode: preferences.runeMode,
     soulMode: preferences.soulMode,
     starIntensity: preferences.starIntensity,
     theme: preferences.theme,
@@ -683,7 +676,6 @@ function SpellSurfaceChatSurface({
       data-density={preferences.density}
       data-font-size={preferences.fontSize}
       data-glass={preferences.glass}
-      data-runes={preferences.runeMode}
       data-soul={preferences.soulMode}
       data-startup={chat.booting ? "waiting" : "ready"}
       data-star-intensity={preferences.starIntensity}

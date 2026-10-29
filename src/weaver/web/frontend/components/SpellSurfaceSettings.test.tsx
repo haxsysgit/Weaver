@@ -8,7 +8,6 @@ const LEGACY_PREFERENCES: LabPreferences = {
   density: "comfortable",
   fontSize: "small",
   glass: "subtle",
-  runeMode: "particles",
   soulMode: "sunny",
   spoilerMode: "protect",
   starIntensity: "balanced",
