@@ -585,6 +585,123 @@ accept the suite yet.
   fanfic entry yet. The continuation ledger is the thread history, not a
   separate durable store; a long fanfic thread will need one.
 
+### Slice 3 live check: Trials 8, 10, and 12 (2026-10-29)
+
+Build `8fd7335` (Answer depth removed, follow-up routing, explicit boundary).
+Voice `buddy`, reader position chapter 3160, spoiler mode protect, a fresh
+device and conversation per trial. The run went through the real web app
+in-process, so the server-side turn profile, per-device preferences, and the
+reader note were exercised, unlike the run 7 harness, which called the
+session directly. The owner's own key was sent the way the browser sends a
+bound key; the shared allowance is off on this machine. Trial 12's fight was
+the owner's pick at trial time: Sunny against the Flesh of Kanakht in the
+Eternal City. Private transcripts:
+`.weaver/evaluation/plan030/experience/transcripts/slice3/`.
+
+Routing, the thing under test, behaved as designed:
+
+- 8: "huh" after the who-wins question kept the versus read (12 lookups, max
+  thinking); run 7 routed it as company with one lookup. "why" kept it too.
+- 10: "prove it" got the discussion skill with thinking on; run 7 routed it
+  as company with no lookups. The answer opened chapter 1 and quoted it.
+- 12: contextual follow-ups ("who actually won?", "what was the turning
+  point?") stayed quick recall and still answered well from the thread, so
+  not every follow-up needs the earlier read.
+
+Evaluator verdicts (evidence, not the owner's acceptance):
+
+- **8 low effort: fail.** 4 of 5 turns completed. Turn 3 ("what if mordret
+  gets prep?", routed to theory on its own) failed publication twice
+  (`unsupported_chapter`, `unlabelled_invention`), with the retry. The
+  verdict-first opener is good. "why" ran about 330 words and repeated the
+  opener, because carrying the versus skill also carries its long verdict
+  shape. "tldr" answered the failed question instead of summarising.
+- **10 adversarial: fail on accuracy and honesty.** Composure is right and
+  "prove it" is the strongest turn. Turn 3 ignored the "you're just
+  predicting words" jab. Turn 4 told the reader that three quotes from turn 3
+  were not in the text and withdrew them. All three are verbatim in chapter
+  116 (checked against the chapter files), so the retraction was false: the
+  turn's opened window did not include them and the model treated absence as
+  disproof.
+- **12 confusing fight: pass on both axes.** Six of six completed. The
+  opener reconstructs the fight in three beats with stakes, scale, and the
+  turning mechanism, labels its own framing, and the arena turn makes the
+  place easy to picture. Quotes match chapters 2708 and 2713 (two differ only
+  by capitalisation or a source line break). Notes: the opener is long, it
+  starts with a contradictory tic ("nah, hard agree"), and versus vocabulary
+  ("extreme difficulty, high confidence") leaks into a scene explanation.
+
+Build changes these point to, not made yet (a re-run needs the owner's
+approval):
+
+1. A carried follow-up keeps the earlier lookup budget and thinking but takes
+   the short answer shape of its own route, so "why" stays snappy.
+2. "tldr", "tl;dr", and "short version" join the carry follow-ups.
+3. A turn must not withdraw an earlier claim only because the current window
+   lacks it; it re-opens the cited lines first or keeps the claim.
+4. The what-if path needs a look: a hypothetical that cites an unopened
+   chapter and leaves invention unlabelled fails twice.
+
+Spend: the DeepSeek balance still read the starting `$101.12` after the run
+and on two later checks, so the balance lags and the run's `$1.50` stop could
+not have triggered. The real cost is not yet visible; from turn sizes it is
+well under `$1`. Use per-call token usage, not the balance, as the meter for
+the next capped run.
+
+### Slice 3 re-run: Trials 8 and 10 (2026-10-29)
+
+The owner approved the four fixes and a re-run under the same `$1.50` cap.
+Build: `8fd7335` plus the uncommitted fix (router, plan, answer checks, turn
+brief, system prompt; 741 backend tests pass). Same settings and the same
+reader turns as the first live check. Private transcripts:
+`.weaver/evaluation/plan030/experience/transcripts/slice3-rerun/`.
+
+Fixes in the build:
+
+1. A carried follow-up keeps the earlier read's lookups and thinking, but
+   answers in two to four sentences and is told not to repeat its verdict.
+   A push is told to show its evidence and change a claim only where an
+   opened passage contradicts it.
+2. "tldr", "tl;dr", "short version", and "sum it up" are carry follow-ups.
+3. Chapters opened earlier in the conversation count as read, for citation
+   (within the reader's cap) and in the prompt. The turn brief and the system
+   prompt say an earlier claim missing from this turn's passages is not wrong.
+4. The what-if label check accepts Weaver's own labels ("my read", "not
+   canon", "what if", "hypothetical"). Hypothesis, not observed: the first
+   run's failed candidate was not saved, so this is inferred from the
+   neighbouring turn's labelling.
+
+Result: 10 of 10 turns completed, none retried. Metered spend from per-call
+token usage: `$0.0687` (41 calls; 423k cache-hit, 148k cache-miss, 18k
+output tokens, at the repo price schedule). The DeepSeek balance still read
+`$101.12`, so the first run's cost is estimated, not measured: about `$0.10`.
+
+Evaluator verdicts (evidence, not the owner's acceptance):
+
+- **8 low effort: pass, length noted.** Verdict first. "why" is 701
+  characters (was 1680) and builds on the opener instead of repeating it;
+  "huh" simplifies with one quoted line; the what-if prep turn completes,
+  separates canon from a labelled invented beat, and commits to a call;
+  "tldr" is a real short version. Quotes and chapter claims checked against
+  chapters 577, 590, 711, 3105, and 3151. The opener is still about 330
+  words with bold headers; the first live check gave the opposite overall
+  verdict on the same question in a fresh session.
+- **10 adversarial: fail on accuracy.** The conversation axis is fixed:
+  composure, real receipts from chapters 1 and 37, an honest strike of a pick
+  it could not support, and turn 3 now answers the "predicting words" jab.
+  But turn 2 said chapter 1 opens on dirt on brand-new shoes; the chapter has
+  no shoes in it. Turn 3 caught and owned the invention, which is the fix
+  working in the right direction (it withdrew a false claim, not true ones),
+  yet the reader was shown invented canon with a citation first. Turn 2
+  opened no passage of chapter 1 that turn (search and exact-phrase only).
+
+Open risk from fix 3: a chapter opened earlier now passes the citation check
+in a later turn, and the check verifies chapter numbers, not content. Turn 2's
+invention cited chapter 1, opened in turn 1. The citation check would not
+have caught a content invention before the fix either, but the next build
+should require a passage opened this turn for any quoted or "first line"
+claim, or re-check claims against the opened text.
+
 ## v2.0.0 rollout
 
 Pending tag, exact artifact, deployment, public health, safe launch metrics,

@@ -278,6 +278,11 @@ CARRY_FOLLOW_UPS = (
     "like what",
     "such as",
     "wait what",
+    "tldr",
+    "tl dr",
+    "short version",
+    "sum it up",
+    "sum that up",
     "which chapter",
     "what chapter",
     "source",
@@ -345,7 +350,8 @@ def plan_for_turn(
     # Company has no evidence and no tools, so it never shapes a follow-up
     # that is asking about the story.
     ids = [skill for skill in ids if skill != "companion"] or ["companion"]
-    return plan_for_ids(ids)
+    plan = plan_for_ids(ids)
+    return SkillPlan(skills=plan.skills, follow_up=kind)
 
 
 def _follow_up_kind(question: str, own_route: str) -> str | None:

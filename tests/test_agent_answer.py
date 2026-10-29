@@ -497,3 +497,59 @@ def test_an_unopened_citation_is_dropped_but_the_claim_stays() -> None:
     )
     assert "(ch. 900)" in stripped
     assert "ch. 12" not in stripped
+
+
+def test_a_what_if_labelled_in_weaver_voice_passes() -> None:
+    """Weaver labels speculation "my read ... not canon"; that is a label."""
+    blueprint = build_answer_blueprint(
+        question="okay but what if mordret gets prep?",
+        prior_weaver_position="",
+        reader_challenges_prior_answer=False,
+        evidence_packet=PACKET,
+    )
+
+    findings = inspect_publication(
+        "With prep the convoy splits early (chs. 900-901). My read of the "
+        "beats, not canon: it never reaches the pass.",
+        blueprint,
+        PACKET,
+    )
+
+    assert findings == ()
+
+
+def test_a_follow_up_may_cite_a_chapter_the_thread_already_opened() -> None:
+    blueprint = build_answer_blueprint(
+        question="okay but what if verne waits?",
+        prior_weaver_position="",
+        reader_challenges_prior_answer=False,
+        evidence_packet=PACKET,
+        earlier_opened_chapters=(577,),
+    )
+
+    earlier = inspect_publication(
+        "My read, not canon: he waits because of the mirror (chs. 577, 900).",
+        blueprint,
+        PACKET,
+    )
+    never_opened = inspect_publication(
+        "My read, not canon: he waits because of the mirror (ch. 999).",
+        blueprint,
+        PACKET,
+    )
+
+    assert earlier == ()
+    assert {finding.code for finding in never_opened} == {"unsupported_chapter"}
+    assert "577" in format_answer_blueprint(blueprint)
+
+
+def test_earlier_chapters_never_replace_this_turn_s_own_evidence() -> None:
+    blueprint = build_answer_blueprint(
+        question="who wins?",
+        prior_weaver_position="",
+        reader_challenges_prior_answer=False,
+        evidence_packet="--- evidence board ---\ndirect sources: none\n",
+        earlier_opened_chapters=(577,),
+    )
+
+    assert blueprint.allowed_chapters == ()

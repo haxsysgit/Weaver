@@ -81,6 +81,18 @@ def format_skill_brief(plan: SkillPlan) -> str:
     lines.extend(f"- {instruction}" for instruction in plan.obligations)
     lines.append(f"answer shape: {plan.shape}")
     lines.append(f"quotation rule: {plan.quote_rule}")
+    if plan.follow_up == "carry":
+        lines.append(
+            "This is a short follow-up to your last answer. Build on it; do "
+            "not repeat its verdict, scenes, or quotes. A request for a "
+            "summary gets one or two sentences."
+        )
+    elif plan.follow_up == "push":
+        lines.append(
+            "The reader is pushing back on your last answer. Show the "
+            "evidence for it. Change a claim only where an opened passage "
+            "contradicts it."
+        )
     if not plan.needs_evidence:
         lines.append(
             "This turn needs no reading and no chapter citation. Answer from "

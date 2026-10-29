@@ -68,6 +68,12 @@ VERSUS_MARKERS = (
     "i think",
 )
 THEORY_MARKERS = (
+    # Weaver's own voice labels a what-if as "my read ... not canon"; the
+    # check must accept the labels the voice actually uses.
+    "my read",
+    "not canon",
+    "what if",
+    "hypothetical",
     "imagined",
     "imagining",
     "fan fiction",
@@ -224,6 +230,21 @@ def _allowed_chapters(evidence_packet: str) -> tuple[int, ...]:
     return _extract_chapter_citations(match.group(1))
 
 
+def _with_earlier_chapters(
+    allowed: tuple[int, ...],
+    earlier_opened: tuple[int, ...],
+) -> tuple[int, ...]:
+    """Chapters opened earlier in this conversation stay read.
+
+    A follow-up may cite a chapter the thread already opened without
+    re-opening it. With no opened passage this turn, nothing is added: the
+    turn still needs its own evidence.
+    """
+    if not allowed or not earlier_opened:
+        return allowed
+    return tuple(sorted(set(allowed) | set(earlier_opened)))
+
+
 def _spoiler_boundary(evidence_packet: str) -> tuple[str, int | None]:
     normalized = evidence_packet.casefold()
     if "ask whether they want the spoil" in normalized:
@@ -337,6 +358,7 @@ def build_answer_blueprint(
     extra_skill_ids: tuple[str, ...] = (),
     domain: str = "canon",
     earlier_asks: tuple[str, ...] = (),
+    earlier_opened_chapters: tuple[int, ...] = (),
 ) -> AnswerBlueprint:
     mode = _response_mode(question)
     plan = plan_for_turn(question, earlier_asks=earlier_asks, domain=domain)
@@ -396,7 +418,9 @@ def build_answer_blueprint(
     return AnswerBlueprint(
         mode=mode,
         obligations=tuple(obligations),
-        allowed_chapters=_allowed_chapters(evidence_packet),
+        allowed_chapters=_with_earlier_chapters(
+            _allowed_chapters(evidence_packet), earlier_opened_chapters
+        ),
         prior_point=prior_weaver_position.strip(),
         spoiler_mode=spoiler_mode,
         reader_chapter=reader_chapter,

@@ -217,6 +217,27 @@ def _build_turn_brief(history: list[ConversationMessage]) -> TurnBrief:
     )
 
 
+def _earlier_opened_chapters(
+    history: list[ConversationMessage],
+    max_chapter: int | None,
+) -> tuple[int, ...]:
+    """Novel chapters this conversation already opened, within the cap."""
+    chapters: set[int] = set()
+    for message in history:
+        if not isinstance(message, ToolResultMessage) or not message.ok:
+            continue
+        evidence = (message.result or {}).get("durable_evidence")
+        if not isinstance(evidence, dict) or evidence.get("source_kind") != "novel":
+            continue
+        try:
+            chapter = int(evidence["chapter"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if max_chapter is None or chapter <= max_chapter:
+            chapters.add(chapter)
+    return tuple(sorted(chapters))
+
+
 def _may_use_spoiler_boundary(
     blueprint: AnswerBlueprint,
     findings: tuple[PublicationFinding, ...],
@@ -241,7 +262,9 @@ def _format_turn_brief(brief: TurnBrief) -> str:
         "reader challenges prior answer: "
         f"{'yes' if brief.reader_challenges_prior_answer else 'no'}\n"
         "answer obligation: answer the actual ask and address any visible "
-        "challenge without silently changing the earlier position."
+        "challenge without silently changing the earlier position. An earlier "
+        "claim missing from this turn's passages is not wrong: withdraw it "
+        "only when an opened passage contradicts it."
     )
 
 
@@ -719,6 +742,7 @@ async def run_turn(
         history=history,
     )
     turn_brief = _build_turn_brief(history)
+    earlier_opened = _earlier_opened_chapters(history, max_chapter)
     routed_plan = plan_for_turn(
         turn_brief.actual_ask,
         earlier_asks=turn_brief.earlier_asks,
@@ -808,6 +832,7 @@ async def run_turn(
                     extra_skill_ids=tuple(loaded_skills),
                     domain=domain,
                     earlier_asks=turn_brief.earlier_asks,
+                    earlier_opened_chapters=earlier_opened,
                 )
             final_history: list[ConversationMessage] = []
             if current_owner is not None:
@@ -1306,6 +1331,7 @@ async def run_turn(
                         extra_skill_ids=tuple(loaded_skills),
                         domain=domain,
                         earlier_asks=turn_brief.earlier_asks,
+                        earlier_opened_chapters=earlier_opened,
                     )
                 if not turn_final_pass() and answer_blueprint is not None:
                     findings = inspect_publication(
@@ -1363,6 +1389,7 @@ async def run_turn(
                         extra_skill_ids=tuple(loaded_skills),
                         domain=domain,
                         earlier_asks=turn_brief.earlier_asks,
+                        earlier_opened_chapters=earlier_opened,
                     )
                 if not turn_final_pass() and answer_blueprint is not None:
                     findings = inspect_publication(

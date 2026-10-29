@@ -362,3 +362,41 @@ def test_the_blueprint_follows_the_earlier_question() -> None:
     )
 
     assert blueprint.shape == plan_for_question(VERSUS_ASK).shape
+
+
+
+def test_a_carried_follow_up_answers_short_instead_of_a_second_verdict() -> None:
+    from weaver.skills import format_skill_brief
+
+    plan = plan_for_turn("why", earlier_asks=[VERSUS_ASK])
+    brief = format_skill_brief(plan)
+
+    assert plan.follow_up == "carry"
+    assert plan.tool_budget == plan_for_question(VERSUS_ASK).tool_budget
+    assert plan.shape != plan_for_question(VERSUS_ASK).shape
+    assert "Two to four sentences" in brief
+    assert "do not repeat its verdict" in brief
+
+
+@pytest.mark.parametrize("ask", ["tldr", "tl;dr", "short version pls", "sum it up"])
+def test_a_summary_request_is_a_follow_up(ask: str) -> None:
+    plan = plan_for_turn(ask, earlier_asks=[VERSUS_ASK, "why"])
+
+    assert plan.follow_up == "carry"
+    assert plan.ids[0] == "versus"
+
+
+def test_a_push_shows_evidence_and_keeps_its_shape() -> None:
+    from weaver.skills import format_skill_brief
+
+    plan = plan_for_turn("prove it", earlier_asks=[VERSUS_ASK])
+
+    assert plan.follow_up == "push"
+    assert plan.shape == plan_for_question(VERSUS_ASK).shape
+    assert "Change a claim only where an opened passage contradicts it" in (
+        format_skill_brief(plan)
+    )
+
+
+def test_a_new_question_is_not_marked_as_a_follow_up() -> None:
+    assert plan_for_turn("recap the domain war", earlier_asks=[VERSUS_ASK]).follow_up is None

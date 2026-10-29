@@ -13,6 +13,11 @@ from dataclasses import dataclass
 CANON = "canon"
 FANFIC = "fanfic"
 
+CARRY_SHAPE = (
+    "Two to four sentences that answer only what the reader just asked. Do "
+    "not restate or repeat the previous answer."
+)
+
 # Higher rank wins when several skills are loaded together.
 REASONING_RANKS = {
     None: 0,
@@ -59,6 +64,9 @@ class SkillPlan:
     """
 
     skills: tuple[Skill, ...]
+    # Set when the turn is a short follow-up to the previous answer:
+    # "carry" ("why", "huh", "tldr") or "push" ("prove it", "you're wrong").
+    follow_up: str | None = None
 
     @property
     def ids(self) -> tuple[str, ...]:
@@ -95,6 +103,11 @@ class SkillPlan:
 
     @property
     def shape(self) -> str:
+        # A carried follow-up keeps the earlier read's budget and thinking,
+        # but not its long answer shape: "why" after a verdict is not a
+        # second verdict.
+        if self.follow_up == "carry":
+            return CARRY_SHAPE
         return self._widest().shape
 
     @property

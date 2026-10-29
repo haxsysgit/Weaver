@@ -2273,3 +2273,36 @@ class TestTextToolCallSlips:
         # text tool call there is a refusal, not an answer
         assert result.exit_reason == TurnExitReason.LIMIT_REACHED
         assert result.model_steps == 2
+
+
+
+def test_earlier_opened_chapters_stay_read_within_the_reader_cap() -> None:
+    from weaver.agent.messages import ToolResultMessage
+    from weaver.agent.turn import _earlier_opened_chapters
+
+    def opened(chapter: int, *, ok: bool = True, kind: str = "novel") -> ToolResultMessage:
+        return ToolResultMessage(
+            call_id=f"c{chapter}",
+            tool_name="read_chapters",
+            ok=ok,
+            result={"durable_evidence": {"source_kind": kind, "chapter": chapter}},
+        )
+
+    history = [
+        opened(116),
+        opened(592),
+        opened(2487),
+        opened(700, ok=False),
+        opened(800, kind="notebook"),
+    ]
+
+    assert _earlier_opened_chapters(history, None) == (116, 592, 2487)
+    assert _earlier_opened_chapters(history, 1000) == (116, 592)
+
+
+def test_the_turn_brief_forbids_withdrawing_a_claim_for_absence() -> None:
+    from weaver.agent.turn import _build_turn_brief, _format_turn_brief
+
+    brief = _format_turn_brief(_build_turn_brief([UserMessage(content="fine, one more test.")]))
+
+    assert "withdraw it only when an opened passage contradicts it" in brief
