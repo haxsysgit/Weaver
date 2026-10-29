@@ -330,7 +330,7 @@ class ConversationRepository:
                 ) AS last_owner
             FROM conversation c
             WHERE c.device_id = ?
-            ORDER BY c.created_at DESC
+            ORDER BY c.created_at DESC, c.rowid DESC
         """
         parameters: tuple[str | int, ...] = (device_id,)
         if limit is not None:

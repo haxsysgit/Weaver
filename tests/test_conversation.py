@@ -1208,6 +1208,26 @@ async def test_list_conversations_newest_first_with_preview(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_list_conversations_breaks_timestamp_ties_by_insert_order(
+    tmp_path, monkeypatch
+):
+    """Two conversations created in the same clock tick (common on Windows,
+    whose clock is coarse) still list newest first."""
+    import weaver.conversation.coordinator as coordinator
+
+    monkeypatch.setattr(coordinator, "now", lambda: "2026-10-28T00:00:00+00:00")
+    layer, model, provider = _fake_layer(_stop_response("ok"))
+    sw = _open_woven(Path(tmp_path), layer, model, _echo_registry())
+    await sw.open()
+    try:
+        ids = [await sw.start_conversation(f"hello {n}") for n in range(5)]
+        convs = await sw.list_conversations()
+        assert [c["conversation_id"] for c in convs] == list(reversed(ids))
+    finally:
+        await sw.close()
+
+
+@pytest.mark.asyncio
 async def test_conversation_metadata_survives_restart_and_manual_titles_win(tmp_path):
     """Conversation-owned metadata stays durable and beats late naming."""
     state_dir = Path(tmp_path) / ".weaver" / "state"
