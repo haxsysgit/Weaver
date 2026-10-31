@@ -38,6 +38,24 @@ createRoot(rootElement).render(
   ),
 );
 
+// A page opened before a rebuild asks for script chunks the server no
+// longer has. Reload once to pick up the new build instead of half-working;
+// the guard stops a loop if the chunk is truly missing.
+window.addEventListener("vite:preloadError", (event) => {
+  const key = "weaver.reloaded-for-build";
+  try {
+    const last = Number(sessionStorage.getItem(key) ?? "0");
+    if (Date.now() - last < 60_000) {
+      return;
+    }
+    sessionStorage.setItem(key, String(Date.now()));
+  } catch {
+    return;
+  }
+  event.preventDefault();
+  window.location.reload();
+});
+
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     void navigator.serviceWorker.register("/sw.js");

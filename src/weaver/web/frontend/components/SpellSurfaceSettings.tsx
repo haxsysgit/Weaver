@@ -244,6 +244,9 @@ export function SpellSurfaceSettings({
     try {
       await onSave(fixedPreferences, { boundaryChosen });
     } catch (error) {
+      // The reason stays in the console for diagnosis; the reader sees the
+      // rune-voice line. Never logs the key: only the save error.
+      console.warn("Weaver settings save failed:", error);
       if (mounted.current) {
         setSaveUnreachable(error instanceof TypeError);
         setSaveState("failed");
