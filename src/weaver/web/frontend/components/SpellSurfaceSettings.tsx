@@ -139,6 +139,9 @@ export function SpellSurfaceSettings({
   const [discardPromptOpen, setDiscardPromptOpen] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [chapterTouched, setChapterTouched] = useState(false);
+  // A save that never reached Weaver (fetch threw) reads differently from
+  // one Weaver refused: the first means the server is out of reach.
+  const [saveUnreachable, setSaveUnreachable] = useState(false);
   const mounted = useRef(true);
   const closeTimer = useRef<number | undefined>(undefined);
   const panelRef = useRef<HTMLElement>(null);
@@ -240,8 +243,9 @@ export function SpellSurfaceSettings({
     setSaveState("saving");
     try {
       await onSave(fixedPreferences, { boundaryChosen });
-    } catch {
+    } catch (error) {
       if (mounted.current) {
+        setSaveUnreachable(error instanceof TypeError);
         setSaveState("failed");
       }
       return;
@@ -622,7 +626,9 @@ export function SpellSurfaceSettings({
             <>
               {saveState === "failed" && (
                 <p className="lab-save-failed" role="alert">
-                  [The thread slipped. Your changes were not saved.]
+                  {saveUnreachable
+                    ? "[Weaver is out of reach.] Your changes were not saved. Try again in a moment."
+                    : "[The thread slipped. Your changes were not saved.]"}
                 </p>
               )}
               <button

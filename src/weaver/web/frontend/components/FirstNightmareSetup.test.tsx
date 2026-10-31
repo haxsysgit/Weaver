@@ -78,7 +78,9 @@ describe("Hidden Thread initiation rite", () => {
     expect(mask?.tagName).toBe("IMG");
     expect(mask).toHaveAttribute("draggable", "false");
     expect(within(dialog).queryByText("First Nightmare")).toBeNull();
-    expect(within(dialog).getByText("[The hidden thread has found you.]")).toBeVisible();
+    // The opening is the title alone: no rune line, no explainer paragraph.
+    expect(within(dialog).queryByText("[The hidden thread has found you.]")).toBeNull();
+    expect(within(dialog).queryByText(/taken root in this browser/)).toBeNull();
     expect(within(dialog).getByText("The Spell has found you")).toBeVisible();
   });
 

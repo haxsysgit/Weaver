@@ -194,7 +194,8 @@ describe("first Nightmare setup", () => {
       name: "First Nightmare setup",
     });
     expect(within(dialog).getByText("The Spell has found you")).toBeVisible();
-    expect(dialog.querySelector(".first-nightmare-particles")).not.toBeNull();
+    // The opening step has no rune line; later steps keep theirs.
+    expect(dialog.querySelector(".first-nightmare-particles")).toBeNull();
     expect(screen.queryByTestId("spell-background")).toBeNull();
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Enter later" }));

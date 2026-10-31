@@ -304,4 +304,25 @@ describe("Reader Appraisal settings", () => {
       );
     });
   });
+
+  it("says Weaver is out of reach when the save never arrives", async () => {
+    const onSave = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
+    render(
+      <SpellSurfaceSettings
+        initial={LEGACY_PREFERENCES}
+        onClose={vi.fn()}
+        onSave={onSave}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Current chapter"), {
+      target: { value: "1200" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Apply changes" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "[Weaver is out of reach.] Your changes were not saved.",
+    );
+    expect(screen.getByRole("button", { name: "Try again" })).toBeEnabled();
+  });
 });

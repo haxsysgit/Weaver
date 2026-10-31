@@ -187,13 +187,12 @@ export function FirstNightmareSetup({
 
   const appraisal = APPRAISAL_TIERS[appraisalIndex];
   const appraisalComplete = appraisal === "Glorious";
-  const announcement = step === 1
-    ? "[The hidden thread has found you.]"
-    : step === 2
-      ? "[A buried knowledge answers.]"
-      : step === 3
-        ? "[The shared thread waits for your assent.]"
-        : `[Appraisal: ${appraisal}.]`;
+  // Step 1 has no rune line: the title alone opens the rite (owner, 2026-10-31).
+  const announcement = step === 2
+    ? "[A buried knowledge answers.]"
+    : step === 3
+      ? "[The shared thread waits for your assent.]"
+      : `[Appraisal: ${appraisal}.]`;
 
   return (
     <section
@@ -212,18 +211,19 @@ export function FirstNightmareSetup({
         <small>{step} / 4</small>
       </header>
 
+      {/* The mask sits beside the scene, not inside it: inside, it could only
+          blend with the scene's own empty layer, so its black ground showed
+          as a darker column instead of melting into the void. */}
+      <HiddenThreadMask />
       <div className="hidden-thread-scene">
-        <HiddenThreadMask />
-        <FirstNightmareRunes announcement={announcement} eventKey={step} />
+        {step !== 1 && (
+          <FirstNightmareRunes announcement={announcement} eventKey={step} />
+        )}
 
         <div className="hidden-thread-copy" key={step}>
           {step === 1 && (
             <>
               <h1>The Spell has found you</h1>
-              <p>
-                A thread has taken root in this browser. Before Weaver can read
-                with you, there is one small trial.
-              </p>
               <div className="hidden-thread-actions">
                 <button data-autofocus onClick={() => setStep(2)} type="button">
                   <span>Enter the First Nightmare</span>
