@@ -187,12 +187,13 @@ export function FirstNightmareSetup({
 
   const appraisal = APPRAISAL_TIERS[appraisalIndex];
   const appraisalComplete = appraisal === "Glorious";
-  // Step 1 has no rune line: the title alone opens the rite (owner, 2026-10-31).
-  const announcement = step === 2
-    ? "[A buried knowledge answers.]"
-    : step === 3
-      ? "[The shared thread waits for your assent.]"
-      : `[Appraisal: ${appraisal}.]`;
+  const announcement = step === 1
+    ? "[The hidden thread has found you.]"
+    : step === 2
+      ? "[A buried knowledge answers.]"
+      : step === 3
+        ? "[The shared thread waits for your assent.]"
+        : `[Appraisal: ${appraisal}.]`;
 
   return (
     <section
@@ -216,9 +217,7 @@ export function FirstNightmareSetup({
           as a darker column instead of melting into the void. */}
       <HiddenThreadMask />
       <div className="hidden-thread-scene">
-        {step !== 1 && (
-          <FirstNightmareRunes announcement={announcement} eventKey={step} />
-        )}
+        <FirstNightmareRunes announcement={announcement} eventKey={step} />
 
         <div className="hidden-thread-copy" key={step}>
           {step === 1 && (

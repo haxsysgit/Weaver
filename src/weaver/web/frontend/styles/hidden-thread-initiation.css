@@ -590,7 +590,7 @@
   100% { transform: translateX(104%); }
 }
 
-@media (min-width: 900px) {
+@media (min-width: 900px), (orientation: landscape) and (min-width: 600px) {
   .hidden-thread-scene {
     grid-template-columns: minmax(220px, 0.72fr) minmax(420px, 1.28fr);
     column-gap: clamp(30px, 6vw, 90px);
@@ -643,11 +643,6 @@
     padding-bottom: 18px;
   }
 
-  .hidden-thread-mask {
-    width: 100vw;
-    height: 100dvh;
-  }
-
   .hidden-thread-rite .first-nightmare-rune-event {
     min-height: 68px;
   }
@@ -665,6 +660,29 @@
   .hidden-thread-actions > button {
     width: 100%;
     min-height: 52px;
+  }
+}
+
+/* Upright phones and narrow tablets stack the mask above the words. The
+   mask keeps to the top of the screen and is capped so its bottom ornament
+   (the bright web at about 86% of the image) ends above the rune line and
+   the title, whatever the screen height. --rite-copy-room is the height the
+   words and actions need at the bottom. */
+@media (max-width: 899px) and (orientation: portrait) {
+  .hidden-thread-rite {
+    --rite-copy-room: 440px;
+  }
+
+  .hidden-thread-rite[data-rite-act="awakening"] .hidden-thread-mask {
+    bottom: auto;
+    height: min(100dvh, calc((100dvh - var(--rite-copy-room)) / 0.9));
+    object-position: center top;
+  }
+}
+
+@media (max-width: 767px) and (orientation: portrait) {
+  .hidden-thread-rite {
+    --rite-copy-room: 330px;
   }
 }
 
