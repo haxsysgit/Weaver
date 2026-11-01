@@ -734,25 +734,51 @@ def _cap_to_reader(handler):
     return capped
 
 
+def _novel_only(handler):
+    """Plan 032 arm C: meaning search over novel passages, never notebook."""
+
+    async def novel(arguments: dict[str, Any], context: ToolExecutionContext) -> dict[str, Any]:
+        return await handler({**arguments, "surface": "novel"}, context)
+
+    return novel
+
+
 def register_reading_tools(
     registry: ToolRegistry,
     service: LibraryService,
+    *,
+    novel_only_search: bool = False,
 ) -> None:
-    """Register the reading tools (Plan 15 tool design, 2026-08-07)."""
+    """Register the reading tools (Plan 15 tool design, 2026-08-07).
+
+    ``novel_only_search`` is the Plan 032 evaluation arm without the
+    notebook; the product never sets it.
+    """
+    search_description = (
+        "Meaning search across the whole story (the novel and the story notebook). "
+        "Use to LOCATE where something happens when you do not know the exact words. "
+        "Returns grouped hits: notebook statements first (short summaries with chapter "
+        "evidence, read these first, they often carry the answer) and novel passages "
+        "(chapter + line handles to open with read_chapters). Scores run 0-1; close "
+        "scores are not proof of the right chapter. The whole novel is always "
+        "automatically and can only be narrowed."
+    )
+    search_handler = service.semantic_search
+    if novel_only_search:
+        search_description = (
+            "Meaning search across the novel's text. Use to LOCATE where something "
+            "happens when you do not know the exact words. Returns novel passages "
+            "(chapter + line handles to open with read_chapters). Scores run 0-1; close "
+            "scores are not proof of the right chapter. The whole novel is always "
+            "searched and can only be narrowed."
+        )
+        search_handler = _novel_only(service.semantic_search)
     registry.register(
         ToolDefinition(
             name="semantic_search",
-            description=(
-                "Meaning search across the whole story (the novel and the story notebook). "
-                "Use to LOCATE where something happens when you do not know the exact words. "
-                "Returns grouped hits: notebook statements first (short summaries with chapter "
-                "evidence, read these first, they often carry the answer) and novel passages "
-                "(chapter + line handles to open with read_chapters). Scores run 0-1; close "
-                "scores are not proof of the right chapter. The whole novel is always "
-                "automatically and can only be narrowed."
-            ),
+            description=search_description,
             parameters=SearchStoryInput.model_json_schema(),
-            handler=_cap_to_reader(service.semantic_search),
+            handler=_cap_to_reader(search_handler),
             max_result_chars=24_000,
             effect_kind=EffectKind.READ,
             retry_safe=True,

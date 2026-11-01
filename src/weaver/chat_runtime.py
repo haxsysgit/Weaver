@@ -26,6 +26,7 @@ from .conversation.session import SessionWeave
 from .prefs import PreferencesStore
 from .shelf import ShelfEdge, search_coverage
 from .prompts import load_personality
+from .reading_arms import ReadingArm, arm_prompt
 from .skills import catalogue_text
 from .skills.loader import register_skill_tool
 from .sponsored import (
@@ -231,12 +232,20 @@ def web_system_prompt(
     skill_catalog: str | None = None,
     *,
     search_through: int | None = None,
+    arm: ReadingArm | None = None,
 ) -> str:
-    """Assemble the web prompt from a voice pack, the shelf, and the skills."""
-    return personality + "\n\n" + WEB_SYSTEM_PROMPT.format(
+    """Assemble the web prompt from a voice pack, the shelf, and the skills.
+
+    ``arm`` is the Plan 032 evaluation switch: the prompt then names only
+    that arm's tools. None (the product) leaves it unchanged.
+    """
+    if arm is not None and "semantic_search" not in arm.tools:
+        search_through = None  # no meaning search, so no coverage line
+    prompt = WEB_SYSTEM_PROMPT.format(
         SHELF_LINE=shelf_line(last_chapter, search_through),
         SKILL_CATALOG=catalogue_text() if skill_catalog is None else skill_catalog,
     )
+    return personality + "\n\n" + arm_prompt(prompt, arm)
 
 
 WEB_ACTIVE_TOOLS: tuple[str, ...] = (
@@ -524,6 +533,7 @@ async def open_chat_runtime(
     surface: Surface,
     fake_delay_seconds: float = 0,
     voice: str | None = None,
+    arm: ReadingArm | None = None,
 ) -> ChatRuntime:
     """Build the exact chat session for a surface (test seam).
 
@@ -595,11 +605,16 @@ async def open_chat_runtime(
         library = _web_library_service() if live else None
         registry = ToolRegistry()
         if live and library is not None:
-            register_reading_tools(registry, library)
+            register_reading_tools(
+                registry,
+                library,
+                novel_only_search=arm is not None and arm.novel_only_search,
+            )
             register_skill_tool(registry)
         elif not live:
             registry = _fake_web_tool_registry(fake_delay_seconds)
-        active_tools = WEB_ACTIVE_TOOLS
+        # Plan 032: an evaluation arm narrows the tools; the product passes none.
+        active_tools = WEB_ACTIVE_TOOLS if arm is None else ("load_skill", *arm.tools)
         # Plan 031: the prompt names the live shelf edge and what meaning
         # search covers. The edge is rescanned on a short cache, so a
         # running server follows a refresh without a restart. The prompt
@@ -612,7 +627,7 @@ async def open_chat_runtime(
             edge = shelf.last_chapter()
             if edge not in prompts_by_edge:
                 prompts_by_edge[edge] = web_system_prompt(
-                    personality, edge, search_through=search_through
+                    personality, edge, search_through=search_through, arm=arm
                 )
             return prompts_by_edge[edge]
 
