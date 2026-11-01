@@ -50,3 +50,42 @@ four arms, the 40-question set (20 reused and re-checked, 20 new with at
 least 8 after chapter 3127), one run per arm plus pass^3 on contested
 questions, blind judging with an owner spot-check of 10, the decision
 rule fixed before the first run, and the $5.00 live cap.
+
+## Slice 3: the question set (2026-11-01)
+
+The answer key was written and frozen before any live run. Question text
+and keys stay private in `.weaver/evaluation/plan032/questions.json`; this
+note records counts only.
+
+- **Owner gate:** five samples with keys were shown first; the owner
+  approved the style ("Yes, write the rest").
+- **Set:** 40 questions, 20 reused and 20 new, plus the three Foundational
+  Reader Trials (43 runs per arm).
+- **Kinds:** scene from a paraphrase 13, exact name or quote 7, who is 7,
+  connection 7, time-aware 6.
+- **Coverage:** every volume from 1 to 14 has at least one question; 8 sit
+  after chapter 3127, past the vector index.
+- **Keys:** each lists its expected chapters and the facts a correct
+  answer must contain, checked against the chapter text. The notebook was
+  used only to point at candidate chapters, never as the key.
+
+### Changes to the reused questions (recorded, not silent)
+
+- Two reused picks (q22, q28) overlap Foundational Reader Trial 1 and were
+  swapped for q08 and q18.
+- q11 was dropped: its chapter shows the prison but not the reason asked
+  for. Replaced by q16.
+- q38 was reworded: its premise was wrong. In the chapter, Azarax's undead
+  army travels with the Shadow Legion; the Deathless are the hunters.
+
+### Observations (not fixed here)
+
+- **The reused questions are not fully held out.** Plan 029 used this
+  question set for retrieval development. Results are therefore reported
+  separately for the reused and the new questions, and the new 20 carry
+  more weight in the verdict.
+- **Volume 14 exists.** Chapter 3160 ends with the Spell announcing the end
+  of volume thirteen, so chapters 3161 and later belong to volume 14.
+  Weaver's volume table (`spoilers/judge.py`, `lib/volumes.ts`) ends
+  volume 12 at 3127 and calls everything after it volume 13. A small fix
+  for a later plan: volume 13 is 3128 to 3160.
