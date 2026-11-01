@@ -87,7 +87,7 @@ accepted public release is v3.0.0 at Plan 040.
    (normal, no vector search, no notebook, chapters and exact search only),
    judged on accuracy and citations. Decide what the pipeline keeps. Absorbs
    the three Foundational Reader Trials as a retrieval regression.
-   Drafted 2026-11-01 (`plans/032-the-retrieval-verdict.md`).
+   Admitted 2026-11-01 (`plans/032-the-retrieval-verdict.md`).
 3. **033 The knowledge pipeline**: chain what survives 032 into the updater
    (notebook pages, incremental embeddings, reload); retire what does not.
    Measured at Plan 031: semantic search reaches 3127, index notebook

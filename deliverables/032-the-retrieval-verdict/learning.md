@@ -2,8 +2,9 @@
 
 ## Gate status
 
-**Drafted 2026-11-01, awaiting admission.** Items 5 to 9 in the plan doc
-are proposals until the owner confirms or changes them.
+**Admitted 2026-11-01.** The owner chose "Admit as drafted", which
+confirms items 5 to 9 in the plan doc as written. Slice 3 shows the owner
+five sample questions with their keys before the rest are written.
 
 ## Observations (2026-11-01, before admission)
 
@@ -44,4 +45,8 @@ are proposals until the owner confirms or changes them.
 
 ## Owner-confirmed direction
 
-None yet beyond items 1 to 4 in the plan doc.
+Items 5 to 9 in the plan doc, confirmed as drafted on 2026-11-01: the
+four arms, the 40-question set (20 reused and re-checked, 20 new with at
+least 8 after chapter 3127), one run per arm plus pass^3 on contested
+questions, blind judging with an owner spot-check of 10, the decision
+rule fixed before the first run, and the $5.00 live cap.

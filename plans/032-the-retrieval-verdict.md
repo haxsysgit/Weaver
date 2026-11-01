@@ -12,7 +12,7 @@
 - **Tooling:** repo commands via `uv` (pytest, ruff), `npx vitest`, the
   root production build. Every `uv` command on this Windows checkout needs
   `UV_PYTHON_INSTALL_DIR=$USERPROFILE/.uv/python`.
-- **State:** drafted (awaiting owner admission).
+- **State:** admitted 2026-11-01 (owner: "Admit as drafted").
 - **Depends on:** Plan 031 closed (2026-11-01, accepted): the shelf reaches
   3232, so the question set can include the newest chapters.
 - **Priority:** P1 (second plan of the owner's 031-040 roadmap; Plan 033
@@ -51,7 +51,7 @@
    baselines; no agent may claim they are sufficient without evidence.
    This plan produces that evidence, either way.
 
-Proposed for the owner to confirm at admission:
+Confirmed by the owner at admission (2026-11-01, "Admit as drafted"):
 
 5. **The four arms**, defined by the tools the model gets:
    - **A, normal:** all six reading tools plus skills, as shipped.
@@ -163,8 +163,9 @@ Proposed for the owner to confirm at admission:
 
 ## Slices
 
-1. **Plan and admit.** This doc, items 5 to 9 confirmed or changed, the
-   index rows, the deliverable scaffold, and the admission commit.
+1. **Plan and admit.** Done 2026-11-01: this doc, items 5 to 9 confirmed
+   as drafted, the index rows, the deliverable scaffold, and the admission
+   commit.
 2. **The arm switch.** Test-first: one function builds each arm's tool
    registry, prompt, and skill text; private to the harness; the web
    route tests prove it unreachable.
