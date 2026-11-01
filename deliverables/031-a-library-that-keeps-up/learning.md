@@ -2,9 +2,9 @@
 
 ## Gate status
 
-**Drafted 2026-11-01, unadmitted.** No work on the plan has started. The
-owner's answers on proposals 5 to 9 in the plan doc are the admission
-questions.
+**Admitted 2026-11-01.** The owner chose "Admit as drafted", which
+confirms items 5 to 9 in the plan doc as written. Slice 2 (the catch-up
+fetch) still waits for the owner's go after a fresh preview.
 
 ## Observations (2026-11-01, before admission)
 
@@ -49,12 +49,15 @@ questions.
 4. Filtering the footer at read time removes noise from answers and
    quotes without changing any chapter file.
 
-## Owner questions for admission
+## Owner-confirmed direction (2026-11-01, at admission)
 
-Proposals 5 to 9 in the plan doc:
-
-5. Should scheduled runs append on their own?
-6. Where do alerts go?
-7. How often should the schedule run?
-8. Should Volume 13 stay open-ended?
-9. Filter the footer on read, or cut it from the files?
+5. Scheduled runs append new validated chapters on their own. Anything
+   other than an append waits for the owner's manual `--apply`.
+6. Alerts go to a library status in Settings and a Windows notification.
+   A hosted channel waits for Plan 039.
+7. The schedule runs daily through Windows Task Scheduler and moves to the
+   server host in Plan 039.
+8. Volume 13 stays open-ended until the owner confirms where a new volume
+   starts.
+9. Scraper footers are filtered when chapters are read. Chapter files stay
+   byte-identical.

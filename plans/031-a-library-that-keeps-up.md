@@ -13,7 +13,7 @@
 - **Tooling:** repo commands via `uv` (pytest, ruff, pip check), `npx vitest`,
   the root production build. Every `uv` command on this Windows checkout
   needs `UV_PYTHON_INSTALL_DIR=$USERPROFILE/.uv/python`.
-- **State:** drafted (awaiting owner admission).
+- **State:** admitted 2026-11-01 (owner: "Admit as drafted").
 - **Depends on:** Plan 030 closed (2026-11-01, v2.0.0 released offline);
   checkpoint 021-030 done (2026-11-01). Builds on Plan 002 (shelf rules)
   and Plan 016 (`weaver refresh`).
@@ -48,11 +48,11 @@
    tools: append a validated missing chapter, or atomically replace a
    proven-invalid placeholder. Never overwrite a valid chapter.
 
-Proposed for the owner to confirm at admission (not yet locked):
+Confirmed by the owner at admission (2026-11-01, "Admit as drafted"):
 
 5. **Scheduled runs apply appends on their own.** Plan 016 kept
-   `--apply` as a manual gate and put scheduling out of scope. This plan
-   proposes that a scheduled run may append new validated chapters
+   `--apply` as a manual gate and put scheduling out of scope. A
+   scheduled run may now append new validated chapters
    without a person present, because appends cannot overwrite anything.
    Replacing a placeholder, or any other non-append action, still waits
    for the owner's manual `--apply`.
@@ -150,13 +150,12 @@ Proposed for the owner to confirm at admission (not yet locked):
   duplicated, or renamed chapter).
 - A refresh becomes reachable from chat or from a model tool.
 - Chapter text appears in a receipt, status record, alert, log, or commit.
-- The owner has not confirmed proposals 5 to 9 by the time a slice needs
-  them.
+- A slice needs a decision that items 1 to 9 do not cover.
 
 ## Slices
 
-1. **Plan and admit.** This doc, owner answers on proposals 5 to 9, index
-   rows, the deliverable scaffold, and the admission commit.
+1. **Plan and admit.** Done 2026-11-01: this doc, items 5 to 9 confirmed,
+   index rows, the deliverable scaffold, and the admission commit.
 2. **Catch-up.** Run the preview, get the owner's go, apply through the
    source's latest, then the gap and validation checks. Record counts,
    sizes, and timing in `results.md` (no text).

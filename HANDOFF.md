@@ -4,8 +4,9 @@ Date: 2026-11-01. Plan 030 is closed: the owner accepted the build and
 v2.0.0 is released offline (merged to `main` and tagged, not deployed). The
 deploy workflow stays disabled and the EC2 box stays stopped; going public is
 Plan 039. The 021-030 checkpoint ran on 2026-11-01
-(`docs/checkpoints/021-030.md`). Next: draft Plan 031 (see the roadmap in
-`TODO_future.md`).
+(`docs/checkpoints/021-030.md`). Plan 031 (A library that keeps up) was admitted
+the same day; slice 2, the catch-up fetch, waits for the owner's go. See
+`plans/031-a-library-that-keeps-up.md`.
 
 ## What Weaver is
 
@@ -178,8 +179,8 @@ screenshots before claims.
 > reading companion. Plan 030 is closed and v2.0.0 is released offline. Read
 > `HANDOFF.md`, `TODO_future.md` (roadmap 031 to 040), and the Plan 030
 > deliverables first, and `docs/checkpoints/021-030.md` for the methods
-> codified at the last checkpoint. Next: draft Plan 031 with the
-> `arinze-plans` skill and wait for the owner's admission. Constraints: every commit starts with `Plan NNN: `;
+> codified at the last checkpoint. Plan 031 is admitted: follow its slices
+> in `plans/031-a-library-that-keeps-up.md` with the `arinze-plans` skill. Constraints: every commit starts with `Plan NNN: `;
 > no Claude attribution in commits or PRs; no deploy, push, or tag without
 > the owner; no secrets or private chapters in commits; one server at a time
 > because of the Qdrant lock. UI changes need real desktop and mobile

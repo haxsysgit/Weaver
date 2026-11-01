@@ -205,7 +205,7 @@ accepted public release is v3.0.0 at Plan 040.
   finished system, measured sponsored allowance, release candidate,
   Foundational Reader Trials, Cloudflare launch, and public v2.0.0 release.
 - Plan 030 closed 2026-11-01 (v2.0.0 released offline). The 021-030
-  checkpoint ran the same day; Plan 031 is next to draft.
+  checkpoint ran the same day; Plan 031 was admitted the same day.
 - Privacy-light analytics (umami-style) if the public launch is real enough
   to need it.
 
