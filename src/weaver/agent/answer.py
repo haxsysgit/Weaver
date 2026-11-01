@@ -454,6 +454,9 @@ def classify_response_mode(question: str) -> ResponseMode:
     return _response_mode(question)
 
 
+FANFIC_PROSE_SKILLS = frozenset({"fanfic_continuation", "fanfic_missing_scene"})
+
+
 def build_answer_blueprint(
     *,
     question: str,
@@ -469,6 +472,11 @@ def build_answer_blueprint(
     plan = plan_for_turn(question, earlier_asks=earlier_asks, domain=domain)
     if extra_skill_ids:
         plan = plan_for_ids([*plan.ids, *extra_skill_ids])
+    # In a fanfic thread, "make it darker" or "more show" continues the
+    # scene: it is prose whatever its wording, so invented dialogue is not
+    # held to the novel's quotes and the prose may use a dash.
+    if domain == "fanfic" and plan.ids and plan.ids[0] in FANFIC_PROSE_SKILLS:
+        mode = ResponseMode.PROSE
     needs_evidence = plan.needs_evidence and mode != ResponseMode.PROSE
     # A fanfic thread is labelled as a thread. The first invented scene still
     # says so; a continuation of that scene does not have to relabel.
@@ -628,11 +636,50 @@ def strip_unsupported_citations(
         return ""
 
     cleaned = CHAPTER_CITATION_RE.sub(replace, text)
+    # "(ch. 590, 593)" with 590 removed reads "(, 593)": keep it a citation.
+    cleaned = re.sub(r"\(\s*[,;]\s*(?=\d)", "(ch. ", cleaned)
+    cleaned = re.sub(r"\s*[,;]\s*\)", ")", cleaned)
+    # A citation that ended a clause ("is ch. 44.", ", not ch. 12.") leaves a
+    # dangling word: drop that clause, or the sentence when the clause is the
+    # whole sentence, rather than print "is." on its own.
+    cleaned = _drop_dangling_clauses(cleaned)
     # Collapse the space a removed citation leaves before punctuation.
     cleaned = re.sub(r"[ \t]+\(\s*\)", "", cleaned)
     cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
     cleaned = re.sub(r"[ \t]+([.,;:!?])", r"\1", cleaned)
     return cleaned
+
+
+_DANGLING_WORDS = (
+    "is", "was", "are", "were", "in", "at", "from", "of", "see", "not",
+    "to", "by", "and", "or", "chapter", "chapters",
+)
+_DANGLING_TAIL_RE = re.compile(
+    r"\b(?:" + "|".join(_DANGLING_WORDS) + r")[ \t]*$",
+    re.IGNORECASE,
+)
+_SENTENCE_RE = re.compile(r"[^.!?\n]*[.!?]+[ \t]*|[^.!?\n]+")
+
+
+def _drop_dangling_clauses(text: str) -> str:
+    lines = []
+    for line in text.split("\n"):
+        sentences = []
+        for sentence in _SENTENCE_RE.findall(line):
+            body = sentence.rstrip()
+            end = len(body)
+            while end and body[end - 1] in ".!?":
+                end -= 1
+            core, stop = body[:end], body[end:]
+            if not _DANGLING_TAIL_RE.search(core):
+                sentences.append(sentence)
+                continue
+            # Drop the last comma clause if there is one, else the sentence.
+            if "," in core:
+                kept = core[: core.rfind(",")]
+                sentences.append(kept + stop + sentence[len(body):])
+        lines.append("".join(sentences).rstrip() if sentences else "")
+    return "\n".join(lines)
 
 
 def inspect_publication(

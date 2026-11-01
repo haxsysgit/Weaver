@@ -320,6 +320,27 @@ PUSH_FOLLOW_UPS = (
 # question, however short.
 _FOLLOW_UP_ROUTES = frozenset({"companion", "quick_recall", "correction", "discussion"})
 _FOLLOW_UP_MAX_WORDS = 6
+# Challenges and repeats point at Weaver's own last answer, so they keep its
+# read whatever names they mention.
+CHALLENGE_FOLLOW_UPS = (
+    "defend it",
+    "defend that",
+    "defend this",
+    "you put",
+    "you ranked",
+    "you placed",
+    "you said",
+    "you claimed",
+    "your list",
+    "your ranking",
+    "your verdict",
+)
+REPEAT_FOLLOW_UPS = (
+    "no changes",
+    "same list",
+    "final answer",
+)
+_CHALLENGE_MAX_WORDS = 18
 _EARLIER_ASKS_SEEN = 6
 _WORD_RE = re.compile(r"[a-z0-9']+")
 
@@ -358,12 +379,20 @@ def _follow_up_kind(question: str, own_route: str) -> str | None:
     if own_route not in _FOLLOW_UP_ROUTES:
         return None
     normalized = _normalize(question)
+    words = _WORD_RE.findall(normalized)
+    padded = " " + " ".join(words) + " "
+    # A message aimed at Weaver's own earlier answer ("you put mordret third?",
+    # "changing star over lost from light? defend it.") is a follow-up even
+    # when it names characters or runs longer than a "huh".
+    if words and len(words) <= _CHALLENGE_MAX_WORDS:
+        if any(f" {marker} " in padded for marker in CHALLENGE_FOLLOW_UPS):
+            return "push"
+        if any(f" {marker} " in padded for marker in REPEAT_FOLLOW_UPS):
+            return "carry"
     if _has_any(normalized, BOOK_NOUNS):
         return None
-    words = _WORD_RE.findall(normalized)
     if not words or len(words) > _FOLLOW_UP_MAX_WORDS:
         return None
-    padded = " " + " ".join(words) + " "
     if any(f" {marker} " in padded for marker in PUSH_FOLLOW_UPS):
         return "push"
     if any(f" {marker} " in padded for marker in CARRY_FOLLOW_UPS):

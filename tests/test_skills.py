@@ -400,3 +400,39 @@ def test_a_push_shows_evidence_and_keeps_its_shape() -> None:
 
 def test_a_new_question_is_not_marked_as_a_follow_up() -> None:
     assert plan_for_turn("recap the domain war", earlier_asks=[VERSUS_ASK]).follow_up is None
+
+
+RANK_ASK = "rank the top ten strongest supremes at their peak."
+
+
+@pytest.mark.parametrize(
+    "challenge",
+    [
+        "changing star over lost from light? defend it.",
+        "wait, you put mordret third? he lost to sunny.",
+        "you said cassie could steal a domain in minutes. does that move her up?",
+    ],
+)
+def test_a_challenge_to_weavers_own_ranking_keeps_the_ranking_read(challenge: str) -> None:
+    """v2 Trial 9: "defend it" was routed as a quick fact with 4 lookups, so
+    Weaver dropped its own ranking instead of defending it."""
+    plan = plan_for_turn(challenge, earlier_asks=[RANK_ASK])
+
+    assert plan.ids[0] == "ranking"
+    assert plan.follow_up == "push"
+    assert plan.tool_budget == plan_for_question(RANK_ASK).tool_budget
+
+
+def test_a_final_answer_repeats_the_earlier_read() -> None:
+    plan = plan_for_turn("final answer, no changes.", earlier_asks=[RANK_ASK, "why"])
+
+    assert plan.ids[0] == "ranking"
+    assert plan.follow_up == "carry"
+
+
+def test_the_web_prompt_guards_weavers_own_words() -> None:
+    prompt = web_system_prompt("You are Weaver.", 3160)
+
+    assert "never own a claim you never made" in prompt
+    assert "give it exactly" in prompt
+    assert "re-open them instead" in prompt

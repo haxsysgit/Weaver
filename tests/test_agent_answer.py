@@ -637,3 +637,74 @@ def test_a_repair_does_not_mention_the_draft_it_fixes() -> None:
     )
 
     assert "reader never saw the proposed answer" in instruction
+
+
+
+@pytest.mark.parametrize(
+    "follow_up",
+    ["make it darker, keep it canon.", "no, keep sunny in character.", "more show, less summary."],
+)
+def test_a_fanfic_follow_up_is_prose_and_may_quote_its_own_dialogue(follow_up) -> None:
+    """v2 trials: fanfic follow-ups were read as canon answers, so invented
+    dialogue failed the quote check and every follow-up turn failed."""
+    blueprint = build_answer_blueprint(
+        question=follow_up,
+        prior_weaver_position="",
+        reader_challenges_prior_answer=False,
+        evidence_packet=OPENED_START,
+        domain="fanfic",
+        earlier_asks=("write the missing scene where nephis comes back to sunny after the academy.",),
+    )
+
+    findings = inspect_publication(
+        '"You came back after all of it," he said — and she did not answer.',
+        blueprint,
+        OPENED_START,
+    )
+
+    assert blueprint.mode == ResponseMode.PROSE
+    assert not {f.code for f in findings} & {"unopened_quote", "em_dash"}
+
+
+def test_a_fanfic_canon_fit_question_still_checks_quotes() -> None:
+    blueprint = build_answer_blueprint(
+        question="would this actually fit before chapter 400?",
+        prior_weaver_position="",
+        reader_challenges_prior_answer=False,
+        evidence_packet=OPENED_START,
+        domain="fanfic",
+    )
+
+    findings = inspect_publication(
+        'It fits: she says "the tower was never empty after all" (ch. 1).',
+        blueprint,
+        OPENED_START,
+    )
+
+    assert blueprint.mode != ResponseMode.PROSE
+    assert "unopened_quote" in {f.code for f in findings}
+
+
+@pytest.mark.parametrize(
+    ("text", "allowed", "expected"),
+    [
+        (
+            "Right after that, Sunny notices (ch. 39). The burning version is ch. 44. That one has the throne.",
+            (39,),
+            "Right after that, Sunny notices (ch. 39). That one has the throne.",
+        ),
+        (
+            "Two-thirds of the defenders died first (ch. 590, 593).",
+            (593,),
+            "Two-thirds of the defenders died first (ch. 593).",
+        ),
+        (
+            "Sunny wins because the shadow answers (ch. 900), not ch. 12.",
+            (900,),
+            "Sunny wins because the shadow answers (ch. 900).",
+        ),
+    ],
+)
+def test_stripping_a_citation_never_leaves_a_broken_sentence(text, allowed, expected) -> None:
+    """v2 Trials 6 and 8 showed "The burning version is." and "(, 593)"."""
+    assert strip_unsupported_citations(text, allowed_chapters=allowed) == expected

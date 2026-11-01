@@ -654,6 +654,8 @@ RANKING = Skill(
     ),
     instructions=(
         "Commit to the list. Best to worst, numbered, no hedging on every slot.",
+        "Rank from passages that compare the candidates directly, such as who "
+        "is said to match or surpass whom, not from one scene they all share.",
         "Name the criteria in one line, then stay consistent with them for the whole list.",
         "Give each slot a one-line defense, and a chapter where the ranking is paid off.",
         "Say which slot is the closest call and what would move it.",
