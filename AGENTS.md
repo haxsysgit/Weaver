@@ -157,7 +157,10 @@ not a convenience. See `docs/reading-finders.md`.
   through the last 10 plans, update method knowledge from the web, codify
   what changed in the process docs, and prove it with one real slice.
 - This is a standing ritual, not a numbered plan. It does not consume a
-  plan number or a decision gate.
+  plan number or a decision gate. It is listed in every close-out or
+  roadmap sequence that crosses the boundary.
+- Record it in `docs/checkpoints/NNN-MMM.md`; commits use the prefix
+  `Checkpoint MMM: ` (the last closed plan).
 - The workflow discipline is codified in the `arinze-plans` skill and
   the repo's plan records: roles and isolation for subagent fleets,
   test-first red/green loops, and the numbered-plan gates. Code work
@@ -214,6 +217,29 @@ not a convenience. See `docs/reading-finders.md`.
   them.
 - Keep raw `reasoning_content` ephemeral and out of reports, receipts, logs,
   reviews, and explanations.
+
+## Testing realism
+
+Lessons from Plans 021-030, each from a bug that tests let through:
+
+- Tests send what the real client sends. Browsers omit `Origin` on a
+  same-origin `GET` or `HEAD` and send it on writes. A test that always
+  adds `Origin` hid a broken `GET /api/preferences` for weeks.
+- Tests are hermetic. They never read the real `.env` or inherit owner
+  switches; an autouse fixture clears them.
+- Delete a test together with the behaviour it pinned. Do not rewrite it
+  to keep passing.
+- Test stubs keep the real signature, so a changed call fails loudly
+  instead of hanging.
+- jsdom is not layout evidence. Layout claims need real browser
+  screenshots at desktop and mobile.
+- Probe the environment before a batch: the interpreter (`uv run python`),
+  path shapes (zero-padded, sharded chapters), locks (one server at a
+  time), and whether a background server is still alive.
+- Take a "before" baseline from `git show HEAD:path` or a separate
+  worktree, never by stashing the owner's uncommitted work. On this
+  Windows checkout `core.filemode` makes a stash pop fail on executable
+  bits, and `uv run` can rewrite `uv.lock`.
 
 ## Completion
 

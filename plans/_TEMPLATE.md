@@ -38,4 +38,9 @@
 
 1. **Plan and admit** — this doc, learning gate, index rows, deliverable
    scaffold, admission commit.
-2. ... one slice per execution step, in order.
+2. ... one slice per execution step, in order. Voice, visual, and motion
+   slices show the owner a small sample before the full build.
+3. **Close** — measured budget in results.md, owner decision in
+   decision.md, plan status and deploy state read before any merge, tag,
+   or deploy, HANDOFF and TODO_future updated. If the next plan crosses a
+   10-plan boundary, the checkpoint comes next.
