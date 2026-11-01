@@ -73,10 +73,18 @@ class ShadowSlaveSpec:
     # The source's page for a chapter that does not exist yet (served
     # with HTTP 200, so it needs its own not-found signal).
     missing_chapter_titles: tuple[str, ...] = ("page chapter not found",)
-    # Whole lines a scrape can leave inside a chapter (an ad blocker's
-    # notice was found in chapter 3150). Dropped on fetch and on read.
+    # Whole lines a scrape can leave inside a chapter, found by counting
+    # lines repeated word for word across the shelf (Plan 031): an ad
+    # blocker's notice (chapters 3047-3151, sometimes mid-chapter) and the
+    # site's report-errors footer (3047 onward, still served by the new
+    # host). Dropped on fetch; blanked on read so line numbers hold.
+    # Compared casefolded, without a trailing full stop.
     debris_lines: tuple[str, ...] = (
         "this page has been blocked by an extension",
+        (
+            "if you find any errors (non-standard content, ads redirect, broken "
+            "links, etc..), please let us know so we can fix it as soon as possible"
+        ),
     )
     unwanted_markers: tuple[str, ...] = (
         "please disable your ad blocker",

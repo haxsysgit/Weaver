@@ -26,6 +26,14 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from weaver.corpus.spec import SHADOW_SLAVE
+from weaver.corpus.text import is_debris_line
+
+# Chapter text as Weaver sees it, keyed by path and checked against the
+# file's mtime and size, so a changed or new file is read again. The whole
+# shelf is about 35 MB of text; chapter files never change once written.
+_CHAPTER_TEXT_CACHE: dict[str, tuple[tuple[str, int, int], str]] = {}
+
 ENTITY_MARKER = re.compile(r"<!--\s*entity-id:\s*([^\s]+)\s*-->")
 ALIAS_MARKER = re.compile(r"<!--\s*alias:\s*([^<\s]+(?:\s+[^<\s]+)*)\s*-->")
 FIRST_KNOWN_RE = re.compile(r"first known:\s*chapter\s*(\d+)", re.IGNORECASE)
@@ -161,15 +169,44 @@ class ChapterIndex:
             self._hash_cache[chapter] = hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
         return self._hash_cache[chapter]
 
+    def read(self, chapter: int) -> str:
+        """One chapter's text as Weaver sees it (debris lines blanked)."""
+        return self._read_path(self._path(chapter))
+
+    @staticmethod
+    def _read_path(path: Path) -> str:
+        """Read a chapter file and blank known scrape debris (Plan 031).
+
+        Debris lines become empty lines, so every line number, and every
+        citation built on one, matches the raw file. The file is never
+        changed; source_hash still identifies the raw bytes.
+        """
+        stat = path.stat()
+        key = (str(path), stat.st_mtime_ns, stat.st_size)
+        cached = _CHAPTER_TEXT_CACHE.get(key[0])
+        if cached is not None and cached[0] == key:
+            return cached[1]
+        text = path.read_text(encoding="utf-8")
+        # Fast gate: most chapters hold no debris, so skip the per-line
+        # check unless a debris phrase occurs somewhere in the text.
+        lowered = text.casefold()
+        if any(marker in lowered for marker in SHADOW_SLAVE.debris_lines):
+            text = "\n".join(
+                "" if is_debris_line(line, SHADOW_SLAVE) else line
+                for line in text.split("\n")
+            )
+        _CHAPTER_TEXT_CACHE[key[0]] = (key, text)
+        return text
+
     def line_count(self, chapter: int) -> int:
         """Number of lines in one chapter, including its title line."""
-        text = self._path(chapter).read_text(encoding="utf-8")
+        text = self.read(chapter)
         return len(text.splitlines())
 
     def open_lines(self, chapter: int, line_start: int, line_end: int) -> Passage:
         """Open a passage by line range. Line 1 is the title heading and
         is never story text; ranges are clamped to the file."""
-        text = self._path(chapter).read_text(encoding="utf-8")
+        text = self.read(chapter)
         lines = text.splitlines()
         if line_start < 1:
             raise ValueError("line_start must be >= 1")
@@ -206,7 +243,7 @@ class ChapterIndex:
                 continue
             for path in sorted(sub.glob("chapter-*.txt")):
                 try:
-                    yield int(path.stem.split("-")[1]), path.read_text(encoding="utf-8")
+                    yield int(path.stem.split("-")[1]), self._read_path(path)
                 except (ValueError, OSError):
                     continue
 
@@ -399,7 +436,7 @@ class ChapterIndex:
             path = self._path(chapter)
             if not path.exists():
                 continue
-            lines = path.read_text(encoding="utf-8").splitlines()
+            lines = self._read_path(path).splitlines()
             heading = lines[0] if lines else ""
             title = heading.split(":", 1)[1].strip() if ":" in heading else heading
             if titles_only:
@@ -683,7 +720,7 @@ def build_library_index(
     for n in range(1, ceiling + 1):
         lo = ((n - 1) // 100) * 100 + 1
         path = novel_dir / f"{lo:04d}-{lo + 99:04d}" / f"chapter-{n:04d}.txt"
-        text = path.read_text(encoding="utf-8")
+        text = ChapterIndex._read_path(path)
         chunks.extend(chunk_chapter(n, text, target_lines=chunk_target, overlap_lines=chunk_overlap))
 
     statements = []
