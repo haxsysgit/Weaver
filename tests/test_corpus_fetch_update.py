@@ -502,3 +502,24 @@ async def test_mutating_tool_hardens_corpus_and_receipts_are_metadata_only(
     assert "FIRECRAWL_API_KEY" not in rendered
     assert "reasoning_content" not in rendered
     assert json.loads(rendered)["metadata_only"] is True
+
+
+@pytest.mark.asyncio
+async def test_appends_only_refuses_to_replace_a_broken_file(tmp_path) -> None:
+    """Plan 031: the unattended run may only add files. A broken file past
+    the ledger's end (a crash between commit and ledger) waits for the owner."""
+    make_project(tmp_path, [1])
+    write_chapter(tmp_path, 1)
+    broken = write_chapter(tmp_path, 2, value=b"[Chapter not available]\n")
+    before = broken.read_bytes()
+    source = FakeChapterSource({2: fetched_page(2), 3: fetched_page(3, status_code=404, html="")})
+    service = CorpusService(project_root=tmp_path, source=source)
+
+    result = await service.update_novel_corpus(
+        UpdateNovelCorpusInput(novel_id="shadow-slave", preview=False, appends_only=True)
+    )
+
+    assert source.calls == []
+    assert broken.read_bytes() == before
+    assert result.actions[0].status.value in {"failed", "conflict"}
+    assert result.actions[0].error_code == "appends_only"

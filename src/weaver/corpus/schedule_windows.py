@@ -27,9 +27,15 @@ TOAST_APP_ID = r"{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\p
 Runner = Callable[..., object]
 
 
+# PowerShell reads the curly single quotes as quotes too.
+_SINGLE_QUOTES = ("'", "\u2018", "\u2019", "\u201a", "\u201b")
+
+
 def _quote(value: str) -> str:
     """A PowerShell single-quoted string (no expansion)."""
-    return "'" + value.replace("'", "''") + "'"
+    for mark in _SINGLE_QUOTES:
+        value = value.replace(mark, mark * 2)
+    return "'" + value + "'"
 
 
 def _run(script: str, runner: Runner = subprocess.run):

@@ -79,6 +79,9 @@ class UpdateNovelCorpusInput(StrictModel):
     novel_id: NovelId
     through_chapter: int | None = Field(default=None, ge=1)
     preview: bool = True
+    # Plan 031: the unattended weekly run may only add files; replacing a
+    # broken chapter waits for the owner.
+    appends_only: bool = False
 
 
 class BuildNovelPacketInput(StrictModel):

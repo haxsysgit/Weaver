@@ -60,3 +60,13 @@ def test_the_notification_escapes_its_text() -> None:
     assert "Weaver &lt;library&gt;" in script
     assert "Chapter 3233 &amp; ''more''" in script
     assert "ToastNotificationManager" in script
+
+
+def test_a_curly_apostrophe_in_the_path_cannot_end_the_string(tmp_path) -> None:
+    runner = Runner()
+    root = tmp_path / "O’Brien's books"
+
+    install_weekly_task(root, pythonw=Path("pythonw.exe"), runner=runner)
+
+    script = runner.scripts[0]
+    assert "O’’Brien''s books" in script

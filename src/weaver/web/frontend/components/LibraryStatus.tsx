@@ -55,7 +55,7 @@ function warning(refresh: RefreshStatus): { title: string; text: ReactNode } | n
   }
   if (refresh.stale) {
     return {
-      text: <>No check since {when(refresh.last_check_at)}. Leave this PC on on Saturdays, or run <code>weaver schedule status</code>.</>,
+      text: <>No check since {when(refresh.last_check_at)}. Keep this PC running on Saturdays, or run <code>weaver schedule status</code>.</>,
       title: "[The weekly check has stopped.]",
     };
   }

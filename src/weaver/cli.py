@@ -3,6 +3,7 @@ import asyncio
 import dataclasses
 import json
 import os
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Sequence
 
@@ -365,6 +366,12 @@ def _run_refresh(
                 )
                 return 2
             os.environ.setdefault("FIRECRAWL_API_KEY", key)
+    from .corpus.schedule import record_manual_apply, release_lock, take_lock
+
+    # Plan 031: an apply shares the weekly run's lock, so the two never overlap.
+    if apply and not take_lock(_project_root(), datetime.now(UTC)):
+        print("ERROR another refresh is running (the weekly check?); try again in a few minutes")
+        return 1
     try:
         result = asyncio.run(
             update_novel_corpus(
@@ -377,6 +384,12 @@ def _run_refresh(
     except CorpusError as exc:
         print(f"ERROR {exc.category.value}: {safe_error_message(exc.category)}")
         return 1
+    finally:
+        if apply:
+            release_lock(_project_root())
+    if apply:
+        # Settings shows this run, not last Saturday's note.
+        record_manual_apply(_project_root(), result)
     counts = result.get("action_counts", {})
     if result.get("preview"):
         print(

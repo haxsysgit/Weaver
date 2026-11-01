@@ -13,7 +13,8 @@
 - **Tooling:** repo commands via `uv` (pytest, ruff, pip check), `npx vitest`,
   the root production build. Every `uv` command on this Windows checkout
   needs `UV_PYTHON_INSTALL_DIR=$USERPROFILE/.uv/python`.
-- **State:** admitted 2026-11-01 (owner: "Admit as drafted").
+- **State:** admitted 2026-11-01 (owner: "Admit as drafted"). Slices 2 to 7
+  ran 2026-11-01; waits for the owner's accept or reject.
 - **Depends on:** Plan 030 closed (2026-11-01, v2.0.0 released offline);
   checkpoint 021-030 done (2026-11-01). Builds on Plan 002 (shelf rules)
   and Plan 016 (`weaver refresh`).
@@ -158,24 +159,25 @@ Confirmed by the owner at admission (2026-11-01, "Admit as drafted"):
 
 1. **Plan and admit.** Done 2026-11-01: this doc, items 5 to 9 confirmed,
    index rows, the deliverable scaffold, and the admission commit.
-2. **Catch-up.** Run the preview, get the owner's go, apply through the
+2. **Catch-up.** Done 2026-11-01 (`c631473`; the source moved, see
+   `learning.md`). Run the preview, get the owner's go, apply through the
    source's latest, then the gap and validation checks. Record counts,
    sizes, and timing in `results.md` (no text).
-3. **One shelf edge.** Test-first:
+3. **One shelf edge.** Done 2026-11-01 (`0c86871`). Test-first:
    - an edge endpoint, called the browser way;
    - the server and frontend ceilings removed;
    - the open-ended last volume;
    - the running server following the shelf;
    - the coverage line in the prompt.
    Show the owner one Settings screenshot before the UI is finished.
-4. **Footer filter.** A bounded read of a few late chapters to pin the
+4. **Footer filter.** Done 2026-11-01 (`3ec8edd`). A bounded read of a few late chapters to pin the
    footer's exact shape, then a test-first filter in the reading path.
-5. **Scheduled refresh.** The appends-only mode, the lock, the status
+5. **Scheduled refresh.** Done 2026-11-01 (`8f7b9d7`). The appends-only mode, the lock, the status
    record, the Task Scheduler registration, and its removal command.
-6. **Failure alerts.** The triggers, the Windows notification, and the
+6. **Failure alerts.** Done 2026-11-01 (`8f7b9d7`). The triggers, the Windows notification, and the
    Settings status. Proven with stubbed failures, then with one real
    scheduled run.
-7. **Close.** The live smoke turn, the full floor, screenshots, an
+7. **Close.** Done 2026-11-01 except the owner's decision. The live smoke turn, the full floor, screenshots, an
    independent review, the measured budget in `results.md`, and the
    owner's decision in `decision.md`. Read the plan status and deploy
    state before any merge, tag, or deploy. Update HANDOFF and

@@ -87,11 +87,14 @@ async def update_novel_corpus(
     through_chapter: int | None = None,
     preview: bool = True,
     source: str = "direct",
+    *,
+    appends_only: bool = False,
 ) -> dict[str, Any]:
     request = UpdateNovelCorpusInput(
         novel_id=novel_id,
         through_chapter=through_chapter,
         preview=preview,
+        appends_only=appends_only,
     )
     result = await service_from_environment(
         live_source=not preview,

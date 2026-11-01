@@ -9,6 +9,7 @@ a notification when it fails, needs the owner, or the source goes quiet.
 from __future__ import annotations
 
 import json
+import os
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -17,8 +18,11 @@ from weaver.corpus.errors import CorpusError
 from weaver.corpus.models import ErrorCategory
 from weaver.corpus.schedule import (
     library_status,
+    record_manual_apply,
+    release_lock,
     run_scheduled_refresh,
     status_path,
+    take_lock,
 )
 
 NOW = datetime(2026, 11, 7, 10, 0, tzinfo=UTC)  # a Saturday
@@ -52,9 +56,12 @@ class FakeUpdate:
         self.apply_result = apply_result
         self.error = error
         self.calls: list[bool] = []
+        self.appends_only: list[bool] = []
 
-    async def __call__(self, novel_id, *, preview, source, **_):
+    # The real signature (weaver.corpus.tools.update_novel_corpus).
+    async def __call__(self, novel_id, through_chapter=None, preview=True, source="direct", *, appends_only=False):
         self.calls.append(preview)
+        self.appends_only.append(appends_only)
         if self.error is not None and not preview:
             raise self.error
         return self.preview_result if preview else self.apply_result
@@ -85,6 +92,7 @@ async def test_new_chapters_are_appended_and_recorded(tmp_path) -> None:
     status = await run_scheduled_refresh(tmp_path, update=update, notify=notes, now=NOW)
 
     assert update.calls == [True, False]
+    assert update.appends_only == [True, True]  # refused at the write layer too
     assert status["outcome"] == "added"
     assert status["added"] == 5
     assert status["last_chapter"] == 3237
@@ -194,3 +202,83 @@ def test_status_reports_a_schedule_that_stopped_running(tmp_path) -> None:
         encoding="utf-8",
     )
     assert library_status(tmp_path, now=NOW)["stale"] is False
+
+
+@pytest.mark.asyncio
+async def test_an_unexpected_error_is_recorded_and_alerted(tmp_path) -> None:
+    update = FakeUpdate(preview(PROBE), error=PermissionError("receipt locked"))
+    notes = Notes()
+
+    status = await run_scheduled_refresh(tmp_path, update=update, notify=notes, now=NOW)
+
+    assert status["outcome"] == "failed"
+    assert status["last_failure"]["category"] == "unexpected"
+    assert status["last_failure"]["code"] == "PermissionError"
+    assert "receipt locked" not in json.dumps(status)  # type name only
+    assert len(notes.sent) == 1
+    assert json.loads(status_path(tmp_path).read_text(encoding="utf-8"))["outcome"] == "failed"
+    assert not (status_path(tmp_path).parent / "refresh.lock").exists()
+
+
+def _empty_lock(root, age: timedelta):
+    lock = status_path(root).parent / "refresh.lock"
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    lock.write_text("", encoding="utf-8")  # a crash before the time was written
+    stamp = (NOW - age).timestamp()
+    os.utime(lock, (stamp, stamp))
+    return lock
+
+
+@pytest.mark.asyncio
+async def test_an_unreadable_stale_lock_is_cleared_by_its_age(tmp_path) -> None:
+    _empty_lock(tmp_path, timedelta(hours=3))
+    update = FakeUpdate(preview(PROBE), applied(1, stopped=3234))
+
+    status = await run_scheduled_refresh(tmp_path, update=update, notify=Notes(), now=NOW)
+
+    assert status["outcome"] == "added"
+
+
+@pytest.mark.asyncio
+async def test_an_unreadable_fresh_lock_is_still_honoured(tmp_path) -> None:
+    _empty_lock(tmp_path, timedelta(minutes=5))
+    update = FakeUpdate(preview(PROBE), applied(1, stopped=3234))
+
+    status = await run_scheduled_refresh(tmp_path, update=update, notify=Notes(), now=NOW)
+
+    assert status["outcome"] == "skipped_locked"
+    assert update.calls == []
+
+
+def test_the_lock_is_shared_with_a_manual_apply(tmp_path) -> None:
+    assert take_lock(tmp_path, NOW) is True
+    assert take_lock(tmp_path, NOW) is False
+    release_lock(tmp_path)
+    assert take_lock(tmp_path, NOW) is True
+
+
+def test_a_manual_apply_clears_a_waiting_note(tmp_path) -> None:
+    status_path(tmp_path).parent.mkdir(parents=True)
+    status_path(tmp_path).write_text(
+        json.dumps({"outcome": "needs_owner", "last_check_at": (NOW - timedelta(days=2)).isoformat()}),
+        encoding="utf-8",
+    )
+
+    status = record_manual_apply(tmp_path, applied(2, stopped=3235), now=NOW)
+
+    assert status["outcome"] == "added"
+    assert status["last_chapter"] == 3234
+    assert status["last_new_chapter_at"] == NOW.isoformat()
+    assert library_status(tmp_path, now=NOW)["outcome"] == "added"
+
+
+def test_a_failed_run_that_saved_chapters_still_moves_the_edge(tmp_path) -> None:
+    failed = {"chapter": 3235, "error_category": "provider", "error_code": "http_503"}
+
+    status = record_manual_apply(
+        tmp_path, applied(2, stopped=3235, reason="provider", failed=failed), now=NOW
+    )
+
+    assert status["outcome"] == "failed"
+    assert status["added"] == 2
+    assert status["last_new_chapter_at"] == NOW.isoformat()

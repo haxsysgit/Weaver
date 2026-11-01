@@ -4,8 +4,11 @@ Date: 2026-11-01. Plan 030 is closed: the owner accepted the build and
 v2.0.0 is released offline (merged to `main` and tagged, not deployed). The
 deploy workflow stays disabled and the EC2 box stays stopped; going public is
 Plan 039. The 021-030 checkpoint ran on 2026-11-01
-(`docs/checkpoints/021-030.md`). Plan 031 (A library that keeps up) was admitted
-the same day; slice 2, the catch-up fetch, waits for the owner's go. See
+(`docs/checkpoints/021-030.md`). Plan 031 (A library that keeps up) ran all
+seven slices the same day and waits for the owner's accept or reject in
+`deliverables/031-a-library-that-keeps-up/decision.md`. The shelf now ends at
+3232, the source moved to `novelphoenix.com`, and a weekly Task Scheduler
+check (Saturday 10:00) appends new chapters. See
 `plans/031-a-library-that-keeps-up.md`.
 
 ## What Weaver is
@@ -34,9 +37,18 @@ PWA. DeepSeek only. Do not push `main`, deploy, or tag without the owner.
 ```bash
 uv run weaver web --port 8016 --fake            # UI
 npm --prefix src/weaver/web/frontend run build  # rebuild served bundle
-npx vitest run                                  # 167 frontend tests (repo root)
-uv run pytest tests/test_web.py -q              # 80 web tests
+npx vitest run                                  # 183 frontend tests (repo root)
+uv run pytest tests/test_web.py -q              # web tests
+weaver refresh                                  # preview what the source has
+weaver refresh --scheduled                      # what the weekly task runs
+weaver schedule status                          # or install / remove
 ```
+
+The weekly task "Weaver library refresh" runs `pythonw -m weaver refresh
+--scheduled` every Saturday at 10:00 local time, as the signed-in user, and
+catches up on the next start if the PC was off. It appends only; any other
+action is recorded as `needs_owner`. Status lives in
+`.weaver/corpus/shadow-slave/library-status.json` and shows in Settings.
 
 Screenshot harness: `.weaver/tools/shoot.mjs` (Chrome CDP, no deps).
 `node .weaver/tools/shoot.mjs http://127.0.0.1:8016 .weaver/visual`.
@@ -122,8 +134,12 @@ will want screenshots and tests per slice.
 
 ## Known gaps and risks
 
-- **Chapter coverage**: the library ends at 3160; r/ShadowSlave discusses 3215.
-  A launch blocker recorded in the plan.
+- **Search reach**: the shelf ends at 3232 (Plan 031), but semantic search
+  covers 1 to 3127 and notebook statements in the index stop at 1000.
+  Later chapters are reachable by direct reading and exact find. Plans
+  032/033.
+- **Mobile Settings**: the threads sheet text shows through the Settings
+  panel on mobile.
 - **Desktop rail is verified by screenshots, not unit tests.** jsdom tests
   deliberately report mobile media so they exercise the sheet path.
 - **Settings hides the whole chat with `visibility: hidden`.** This fixed chat
@@ -179,10 +195,11 @@ screenshots before claims.
 > reading companion. Plan 030 is closed and v2.0.0 is released offline. Read
 > `HANDOFF.md`, `TODO_future.md` (roadmap 031 to 040), and the Plan 030
 > deliverables first, and `docs/checkpoints/021-030.md` for the methods
-> codified at the last checkpoint. Plan 031 is admitted: follow its slices
-> in `plans/031-a-library-that-keeps-up.md` with the `arinze-plans` skill. Constraints: every commit starts with `Plan NNN: `;
+> codified at the last checkpoint. Plan 031 ran all slices and waits for
+> the owner's decision; after it closes, draft Plan 032 with the
+> `arinze-plans` skill. Constraints: every commit starts with `Plan NNN: `;
 > no Claude attribution in commits or PRs; no deploy, push, or tag without
 > the owner; no secrets or private chapters in commits; one server at a time
 > because of the Qdrant lock. UI changes need real desktop and mobile
 > screenshots (`.weaver/tools/shoot.mjs`). Floors: 167 frontend tests + tsc +
-> build; 779 backend tests.
+> build; 815 backend tests.

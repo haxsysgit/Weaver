@@ -261,7 +261,11 @@ class CorpusService:
                 actions.append(self._preview_action(chapter, inventory))
             else:
                 try:
-                    actions.append(await self._fetch_one(chapter, inventory))
+                    actions.append(
+                        await self._fetch_one(
+                            chapter, inventory, appends_only=request.appends_only
+                        )
+                    )
                 except CorpusError as exc:
                     actions.append(self._failed_action(chapter, exc))
                     receipt_path = self._finish_update(
@@ -323,7 +327,9 @@ class CorpusService:
         next_chapter = known_last + 1
         while limit is None or next_chapter <= limit:
             try:
-                action = await self._fetch_one(next_chapter, inventory)
+                action = await self._fetch_one(
+                    next_chapter, inventory, appends_only=request.appends_only
+                )
             except CorpusError as exc:
                 if exc.category is ErrorCategory.NOT_FOUND:
                     actions.append(self._failed_action(next_chapter, exc))
@@ -826,6 +832,8 @@ class CorpusService:
         self,
         chapter: int,
         inventory: Inventory,
+        *,
+        appends_only: bool = False,
     ) -> ChapterAction:
         items = inventory.files.get(chapter, ())
         if len(items) > 1:
@@ -843,6 +851,12 @@ class CorpusService:
                 path=items[0].path,
                 project_root=self.layout.project_root,
                 validation=items[0].validation,
+            )
+        if appends_only and items:
+            raise CorpusError(
+                "A broken local chapter waits for the owner's manual refresh.",
+                ErrorCategory.CONFLICT,
+                detail_code="appends_only",
             )
         if self.source is None:
             raise CorpusError(

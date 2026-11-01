@@ -81,13 +81,16 @@ accepted public release is v3.0.0 at Plan 040.
    novel's latest chapter (about 3230), scheduled checks for new chapters,
    validation, failure alerts. Only raw chapters are needed: Weaver opens
    chapters far more than it searches (1,378 chapter reads to 414 vector
-   searches across 554 turns, measured 2026-10-31).
+   searches across 554 turns, measured 2026-10-31). Slices done
+   2026-11-01: shelf at 3232, weekly Saturday check; waits for the owner.
 2. **032 The retrieval verdict**: the same questions answered four ways
    (normal, no vector search, no notebook, chapters and exact search only),
    judged on accuracy and citations. Decide what the pipeline keeps. Absorbs
    the three Foundational Reader Trials as a retrieval regression.
 3. **033 The knowledge pipeline**: chain what survives 032 into the updater
    (notebook pages, incremental embeddings, reload); retire what does not.
+   Measured at Plan 031: semantic search reaches 3127, index notebook
+   statements 1000, notebook files 3160, shelf 3232.
 4. **034 Weaver's mind**: the reader card in every turn (chapter, spoiler
    mode, library edge, what Weaver can and cannot see), a lookup tool, an arc
    map with chapter ranges built from the chapters, and the system prompt
