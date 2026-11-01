@@ -10,6 +10,7 @@ import type {
   AccessStatus,
   ChatApi,
   ConversationSummary,
+  LibraryStatus,
   UserPreferences,
 } from "../lib/chatApi";
 import { weaverProduct } from "../lib/product";
@@ -223,6 +224,7 @@ function SpellSurfaceChatSurface({
   const [chapterOfferFailed, setChapterOfferFailed] = useState(false);
   // The shelf edge from /api/library (Plan 031); a placeholder until it answers.
   const [lastChapter, setLastChapter] = useState(UNKNOWN_EDGE);
+  const [library, setLibrary] = useState<LibraryStatus | null>(null);
   const [desktop, setDesktop] = useState(() => {
     return typeof window !== "undefined"
       && window.matchMedia("(min-width: 900px)").matches;
@@ -278,9 +280,10 @@ function SpellSurfaceChatSurface({
       return;
     }
     try {
-      const library = await api.getLibrary();
-      if (library.last_chapter) {
-        setLastChapter(library.last_chapter);
+      const status = await api.getLibrary();
+      setLibrary(status);
+      if (status.last_chapter) {
+        setLastChapter(status.last_chapter);
       }
     } catch {
       // The boundary stays usable on the placeholder edge if this read fails.
@@ -998,6 +1001,7 @@ function SpellSurfaceChatSurface({
           initial={preferences}
           initialSection={settingsInitialSection}
           lastChapter={lastChapter}
+          library={library}
           onApiKeyChange={(hasApiKey) => {
             setVoiceBound(hasApiKey);
             window.setTimeout(() => void refreshAccess(), 0);

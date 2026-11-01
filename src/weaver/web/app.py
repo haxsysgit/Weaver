@@ -560,9 +560,17 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
     # Plan 031: the one shelf edge the frontend reads (no hard-coded 3160).
     @app.get("/api/library", dependencies=[Depends(_check_local_hostname)])
     async def get_library() -> dict:
+        from weaver.corpus.schedule import library_status
+
         return {
             "last_chapter": runtime.shelf.last_chapter(),
             "search_through": runtime.search_through,
+            # The weekly refresh's last record (metadata only), or None.
+            "refresh": (
+                library_status(runtime.project_root)
+                if runtime.project_root is not None
+                else None
+            ),
         }
 
     @app.get("/api/access", dependencies=[Depends(_check_local_hostname)])

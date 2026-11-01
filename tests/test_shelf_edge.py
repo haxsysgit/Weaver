@@ -103,6 +103,26 @@ async def test_library_endpoint_reports_the_edge_to_a_browser(shelf_app) -> None
 
 
 @pytest.mark.asyncio
+async def test_library_endpoint_carries_the_weekly_refresh_status(shelf_app) -> None:
+    _runtime, client, project = shelf_app
+    headers = {"Sec-Fetch-Site": "same-origin"}
+
+    never = (await client.get("/api/library", headers=headers)).json()["refresh"]
+    assert never["outcome"] is None
+    assert never["stale"] is True
+
+    status = project / ".weaver" / "corpus" / "shadow-slave" / "library-status.json"
+    status.parent.mkdir(parents=True)
+    status.write_text(
+        json.dumps({"last_check_at": "2999-01-01T10:00:00+00:00", "outcome": "added", "added": 5}),
+        encoding="utf-8",
+    )
+    recorded = (await client.get("/api/library", headers=headers)).json()["refresh"]
+    assert recorded["outcome"] == "added"
+    assert recorded["added"] == 5
+
+
+@pytest.mark.asyncio
 async def test_a_boundary_past_3160_saves_and_one_past_the_edge_is_refused(
     shelf_app,
 ) -> None:

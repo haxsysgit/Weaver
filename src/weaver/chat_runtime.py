@@ -489,11 +489,14 @@ class ChatRuntime:
         fake_delta_delay_seconds: float = 0,
         shelf: ShelfEdge | None = None,
         search_through: int | None = None,
+        project_root: Path | None = None,
     ) -> None:
         self.session = session
-        # Plan 031: the shelf edge every surface reads (None: no shelf).
+        # Plan 031: the shelf edge every surface reads (None: no shelf),
+        # and the project root whose weekly refresh status Settings shows.
         self.shelf = shelf or ShelfEdge(Path("__no_shelf__"))
         self.search_through = search_through
+        self.project_root = project_root
         self.surface = surface
         self.mode_label = mode_label
         self.live = live
@@ -680,4 +683,5 @@ async def open_chat_runtime(
         ),
         shelf=shelf,
         search_through=search_coverage(project_root),
+        project_root=project_root,
     )

@@ -105,6 +105,25 @@ def _parser() -> argparse.ArgumentParser:
         help="Perform the refresh; the default is a preview.",
     )
     refresh.add_argument(
+        "--scheduled",
+        action="store_true",
+        help="The unattended weekly run (Plan 031): apply appends only, "
+        "record the library status, and notify on failure. Anything that "
+        "is not an append waits for a manual --apply.",
+    )
+
+    schedule = subcommands.add_parser(
+        "schedule",
+        help="Manage the weekly library refresh in Windows Task Scheduler "
+        "(Saturdays 10:00, catches up after the PC was off).",
+    )
+    schedule.add_argument(
+        "schedule_command",
+        choices=("install", "remove", "status"),
+        help="install (or replace) the weekly task, remove it, or show it "
+        "with the last run's library status.",
+    )
+    refresh.add_argument(
         "--source",
         choices=("direct", "firecrawl"),
         default="direct",
@@ -258,6 +277,67 @@ def _firecrawl_api_key() -> str | None:
         return None
 
 
+def _project_root() -> Path:
+    return Path(os.environ.get("WEAVER_PROJECT_ROOT", Path.cwd()))
+
+
+def _notifier():
+    if os.name == "nt":
+        from .corpus.schedule_windows import windows_toast
+
+        return windows_toast
+    return lambda title, body: print(f"ALERT {title}: {body}")
+
+
+def _run_scheduled_refresh() -> int:
+    """The weekly unattended run (Plan 031). Exit 1 when it needs a person."""
+    from .corpus.schedule import run_scheduled_refresh
+
+    status = asyncio.run(
+        run_scheduled_refresh(
+            _project_root(), update=update_novel_corpus, notify=_notifier()
+        )
+    )
+    print(
+        f"scheduled refresh: {status.get('outcome')}, added "
+        f"{status.get('added', 0)}, last chapter {status.get('last_chapter')}"
+    )
+    return 1 if status.get("outcome") in {"failed", "needs_owner"} else 0
+
+
+def _run_schedule(command: str) -> int:
+    from .corpus.schedule import library_status
+
+    if os.name != "nt":
+        print("ERROR the weekly task uses Windows Task Scheduler; on a server use cron (Plan 039)")
+        return 2
+    from .corpus.schedule_windows import (
+        describe_weekly_task,
+        install_weekly_task,
+        remove_weekly_task,
+    )
+
+    if command == "install":
+        result = install_weekly_task(_project_root())
+    elif command == "remove":
+        result = remove_weekly_task()
+    else:
+        result = describe_weekly_task()
+        print(json.dumps(library_status(_project_root()), indent=2))
+    output = (getattr(result, "stdout", "") or "").strip()
+    error = (getattr(result, "stderr", "") or "").strip()
+    if output:
+        print(output)
+    if getattr(result, "returncode", 1) != 0:
+        print(f"ERROR {error.splitlines()[0] if error else 'PowerShell failed'}")
+        return 1
+    if command == "install":
+        print("installed: weekly on Saturday at 10:00 (remove with `weaver schedule remove`)")
+    elif command == "remove":
+        print("removed the weekly library refresh")
+    return 0
+
+
 def _run_refresh(
     *,
     apply: bool,
@@ -384,6 +464,15 @@ def run(argv: Sequence[str] | None = None) -> int:
 
         print(json.dumps(asyncio.run(inspect_allowance()), indent=2, sort_keys=True))
         return 0
+
+    if args.command == "refresh" and args.scheduled:
+        if args.apply or args.through_chapter is not None:
+            print("ERROR --scheduled runs on its own (no --apply or --through)")
+            return 2
+        return _run_scheduled_refresh()
+
+    if args.command == "schedule":
+        return _run_schedule(args.schedule_command)
 
     if args.command == "refresh":
         return _run_refresh(

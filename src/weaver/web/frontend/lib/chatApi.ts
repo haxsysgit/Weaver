@@ -48,6 +48,24 @@ export interface LibraryStatus {
   last_chapter: number | null;
   /** The last chapter meaning search covers, when recorded. */
   search_through: number | null;
+  /** The weekly refresh's last record; absent on older servers. */
+  refresh?: RefreshStatus | null;
+}
+
+export interface RefreshStatus {
+  last_check_at: string | null;
+  last_success_at: string | null;
+  last_new_chapter_at: string | null;
+  outcome: "added" | "up_to_date" | "failed" | "needs_owner" | "skipped_locked" | null;
+  added: number;
+  last_failure: {
+    chapter: number | null;
+    category: string | null;
+    code: string | null;
+    observed_url: string | null;
+  } | null;
+  /** True when no weekly run has been recorded for more than eight days. */
+  stale: boolean;
 }
 
 export interface AccessStatus {

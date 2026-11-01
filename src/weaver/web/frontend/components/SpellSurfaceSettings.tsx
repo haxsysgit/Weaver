@@ -11,6 +11,8 @@ import {
 } from "../lib/identity";
 import { UNKNOWN_EDGE } from "../lib/readerPosition";
 import { volumeForChapter } from "../lib/volumes";
+import type { LibraryStatus as Library } from "../lib/chatApi";
+import { LibraryStatus } from "./LibraryStatus";
 import { EyeIcon, EyeSlashIcon } from "./Icons";
 import {
   SOUL_SEA_DESCRIPTIONS,
@@ -59,6 +61,8 @@ interface SpellSurfaceSettingsProps {
   initial: LabPreferences;
   /** The shelf edge from /api/library: the highest chapter a boundary may name. */
   lastChapter?: number;
+  /** The library and its weekly refresh status, from /api/library. */
+  library?: Library | null;
   onApiKeyChange?: (hasApiKey: boolean) => void;
   onClose: () => void;
   onReplayFirstNightmare?: () => void;
@@ -110,6 +114,7 @@ export function SpellSurfaceSettings({
   initial,
   initialSection = "reader",
   lastChapter = UNKNOWN_EDGE,
+  library,
   onApiKeyChange,
   onClose,
   onReplayFirstNightmare,
@@ -433,6 +438,7 @@ export function SpellSurfaceSettings({
                       <span><strong>Allow knowledge from the complete novel</strong><small>Use this after you have finished the story.</small></span>
                     </label>
                   </fieldset>
+                  <LibraryStatus library={library ?? null} />
                 </section>
               )}
 

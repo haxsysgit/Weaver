@@ -3173,6 +3173,12 @@
 .lab-spoiler-boundary strong { color: var(--lab-ink); font-size: 12px; font-weight: 500; }
 .lab-spoiler-boundary small { color: #8f909d; font-size: 10.5px; line-height: 1.45; }
 
+/* Plan 031: the library edge and the weekly refresh, under the boundary. */
+.lab-library-status { display: grid; gap: 4px; max-width: 560px; margin-top: 20px; }
+.lab-library-status h4 { margin: 0 0 2px; color: #9a9ba7; font-family: inherit; font-size: 11px; font-weight: 400; letter-spacing: 0.05em; text-transform: uppercase; }
+.lab-library-status p { margin: 0; color: #8f909d; font-size: 12px; line-height: 1.5; }
+.lab-library-status .lab-boundary-unset { margin: 8px 0 0; color: #cfcbc2; font-size: 13px; }
+
 /* One New button, two kinds of thread. */
 .lab-new-wrap { position: relative; }
 .lab-new-menu {
