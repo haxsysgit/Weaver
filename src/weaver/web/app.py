@@ -23,12 +23,18 @@ from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
+from weaver.skills import plan_for_turn
 from weaver.agent.errors import safe_error
-from weaver.agent.turn import REASONING_TIERS, TOOL_BUDGET_TIERS, TurnExitReason
+from weaver.agent.turn import REASONING_TIERS, TurnExitReason
 from weaver.chat_runtime import ChatRuntime
-from weaver.model_layer.deepseek import current_api_key, current_model_id
+from weaver.model_layer.deepseek import (
+    current_api_key,
+    current_model_id,
+    current_sponsored_turn,
+)
 from weaver.model_layer.fake_chat import current_fake_retry
 from weaver.prefs import MAX_CHAPTER
+from weaver.sponsored import SponsoredTurn, SponsoredUnavailable
 
 MAX_MESSAGE_CHARS = 32_000
 
@@ -38,6 +44,7 @@ MAX_MESSAGE_CHARS = 32_000
 KEY_HEADER = "x-weaver-key"
 DEVICE_HEADER = "x-device-id"
 MODEL_HEADER = "x-weaver-model"
+SPONSORED_PASS_COOKIE = "weaver_sponsored_pass"
 
 
 def _device_id(request: Request) -> str:
@@ -58,6 +65,55 @@ def _request_model(request: Request) -> str | None:
     """The per-request model id (None when absent/blank)."""
     model = (request.headers.get(MODEL_HEADER) or "").strip()
     return model or None
+
+
+OWNER_KEY_SWITCH = "WEAVER_LOCAL_OWNER_KEY"
+LOOPBACK_CLIENTS = frozenset({"127.0.0.1", "::1", "localhost"})
+FORWARDING_HEADERS = (
+    "x-forwarded-for",
+    "x-forwarded-host",
+    "x-real-ip",
+    "forwarded",
+    "tailscale-user-login",
+    "tailscale-funnel-request",
+)
+
+
+def _owner_key_applies(request: Request) -> bool:
+    """The local owner switch: a request made directly on this machine uses
+    the server's own DeepSeek key, with no shared-allowance limits.
+
+    Off unless WEAVER_LOCAL_OWNER_KEY=1. Only a loopback client with no
+    forwarding header qualifies, so a request that came through a proxy or
+    Tailscale Funnel never spends the owner's key this way.
+    """
+    if os.environ.get(OWNER_KEY_SWITCH) != "1":
+        return False
+    if not os.environ.get("DEEPSEEK_KEY"):
+        return False
+    client = request.client.host if request.client is not None else ""
+    if client not in LOOPBACK_CLIENTS:
+        return False
+    extra_header = os.environ.get("WEAVER_ORIGINAL_ADDRESS_HEADER", "").strip().lower()
+    headers = (*FORWARDING_HEADERS, *((extra_header,) if extra_header else ()))
+    return not any(request.headers.get(name) for name in headers)
+
+
+def _client_address(request: Request) -> str:
+    """Use a forwarded address only from an explicitly trusted proxy."""
+    direct_address = request.client.host if request.client is not None else "unknown"
+    trusted_proxies = {
+        address.strip()
+        for address in os.environ.get(
+            "WEAVER_TRUSTED_PROXY_ADDRESSES", ""
+        ).split(",")
+        if address.strip()
+    }
+    header_name = os.environ.get("WEAVER_ORIGINAL_ADDRESS_HEADER", "").strip()
+    if direct_address not in trusted_proxies or not header_name:
+        return direct_address
+    forwarded = request.headers.get(header_name, "").split(",", 1)[0].strip()
+    return forwarded or direct_address
 
 FRONTEND_DIST = Path(__file__).with_name("dist")
 
@@ -90,7 +146,6 @@ class TurnBody(BaseModel):
 class PreferencesBody(BaseModel):
     reader_chapter: int | None = Field(default=None, ge=1, le=MAX_CHAPTER)
     spoiler_mode: str = Field(default="protect", pattern="^(protect|none)$")
-    tier: str = Field(default="ascended", pattern="^(awakened|ascended|transcendent)$")
 
 
 class ConversationMetadataBody(BaseModel):
@@ -99,6 +154,13 @@ class ConversationMetadataBody(BaseModel):
     title: str | None = Field(default=None, max_length=80)
     archived: bool = False
     pinned: bool = False
+
+
+class CreateConversationBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    domain: str = Field(default="canon", pattern="^(canon|fanfic)$")
+    fanfic_kind: str | None = Field(default=None, max_length=40)
 
 
 def _reject_blank(message: str) -> None:
@@ -226,6 +288,51 @@ NAMING_SYSTEM_PROMPT = (
 )
 
 
+def _turn_profile(
+    question: str,
+    domain: str = "canon",
+    earlier_asks: tuple[str, ...] = (),
+) -> tuple[int, str | None, int, bool]:
+    """Suggested skill profile: tool budget, reasoning tier, packet cap, final pass.
+
+    Weaver decides this per question; the reader never picks a depth. A short
+    follow-up ("huh", "prove it") is read against the earlier question. This
+    is a starting point, not a lock: the model may load more skills with
+    load_skill, and doing so raises its budget and thinking to match.
+    """
+    plan = plan_for_turn(question, earlier_asks=earlier_asks, domain=domain)
+    return plan.tool_budget, plan.reasoning_tier, plan.packet_cap, plan.final_pass
+
+
+def _reader_note(prefs) -> str:
+    """The spoiler position the model must see before it writes anything.
+
+    The reading packet carries this too, but the packet is only built after
+    the candidate answer, so the answer itself needs the boundary up front.
+    """
+    if prefs is None or prefs.spoiler_mode != "protect":
+        return ""
+    if prefs.reader_chapter is None:
+        # No boundary saved yet: talk like a friend who does not know how
+        # far you are, instead of spoiling blindly or refusing everything.
+        return (
+            "You do not know how far the reader has read; they have not saved "
+            "a chapter. If they mention where they are in this conversation, "
+            "treat that chapter as their boundary. Before you reveal a major "
+            "story beat (a death, a hidden identity, a twist, an ending, who "
+            "someone turns out to be), ask once, casually, how far they have "
+            "read, unless they already told you. Early setup and general "
+            "questions need no check."
+        )
+    return (
+        f"The reader is at chapter {prefs.reader_chapter}. Protect the story: "
+        "never reveal, confirm, deny, or hint at anything past that chapter. "
+        "A question about whether a character survives, dies, or appears later "
+        "gets no yes or no, not even a hint. Say it is past their chapter. "
+        "Never open a refusal with yes or no: a bare no reads as an answer."
+    )
+
+
 def _derived_title(first_message: str) -> str:
     """Fallback title from the first owner message (fake mode / failure)."""
     words = [w for w in first_message.split() if len(w) > 2][:5]
@@ -297,6 +404,121 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
     )
     app.state.runtime = runtime
 
+    def _set_sponsored_pass(response: Response, pass_token: str) -> None:
+        response.set_cookie(
+            SPONSORED_PASS_COOKIE,
+            pass_token,
+            httponly=True,
+            max_age=365 * 24 * 60 * 60,
+            samesite="strict",
+            secure=True,
+        )
+
+    async def _access_status(
+        request: Request,
+        response: Response,
+        pass_token_override: str | None = None,
+    ) -> dict:
+        if runtime.live and not _request_key(request) and _owner_key_applies(request):
+            return {
+                "enabled": False,
+                "development": True,
+                "remaining_questions": 0,
+                "reset_at": None,
+                "consented": False,
+                "source": "owner_key",
+            }
+        if runtime.sponsored is None or runtime.sponsored_balance is None:
+            return {
+                "enabled": False,
+                "development": not runtime.live,
+                "remaining_questions": 0,
+                "reset_at": None,
+                "consented": False,
+                "source": "reader_byok" if _request_key(request) else "unavailable",
+            }
+
+        pass_token = pass_token_override
+        if pass_token is None:
+            pass_token = request.cookies.get(SPONSORED_PASS_COOKIE, "")
+        try:
+            status = await runtime.sponsored.status(pass_token)
+        except SponsoredUnavailable:
+            pass_token = runtime.sponsored.issue_pass()
+            _set_sponsored_pass(response, pass_token)
+            status = await runtime.sponsored.status(pass_token)
+
+        balance = await runtime.sponsored_balance.available_microdollars()
+        enough_balance = (
+            balance is not None
+            and balance >= runtime.sponsored.config.reservation_microdollars
+        )
+        summary = await runtime.sponsored.summary()
+        enough_capacity = (
+            summary.remaining_microdollars
+            >= runtime.sponsored.config.reservation_microdollars
+        )
+        enabled = status.enabled and enough_balance and enough_capacity
+        return {
+            "enabled": enabled,
+            "development": False,
+            "remaining_questions": status.remaining_questions,
+            "reset_at": status.reset_at,
+            "consented": status.consented,
+            "source": (
+                "reader_byok"
+                if _request_key(request)
+                else ("sponsored" if enabled else "unavailable")
+            ),
+        }
+
+    def _raise_sponsored_error(error: SponsoredUnavailable) -> None:
+        status_codes = {
+            "active_turn": 409,
+            "consent_required": 428,
+            "global_exhausted": 429,
+            "reader_exhausted": 429,
+            "network_busy": 429,
+            "invalid_pass": 401,
+            "insufficient_balance": 503,
+            "disabled": 503,
+            "stale_price": 503,
+        }
+        raise HTTPException(
+            status_code=status_codes.get(error.code, 503),
+            detail={"code": error.code},
+        ) from None
+
+    async def _prepare_turn_access(
+        request: Request,
+    ) -> tuple[str | None, str | None, SponsoredTurn | None]:
+        request_key = _request_key(request)
+        if request_key is not None:
+            return request_key, _request_model(request), None
+        if runtime.live and _owner_key_applies(request):
+            # No per-request key: the runner falls back to the server key.
+            return None, _request_model(request), None
+        if not runtime.live and runtime.sponsored is None:
+            return None, _request_model(request), None
+        if runtime.sponsored is None or runtime.sponsored_balance is None:
+            _raise_sponsored_error(SponsoredUnavailable("disabled"))
+
+        pass_token = request.cookies.get(SPONSORED_PASS_COOKIE, "")
+        available_balance = (
+            await runtime.sponsored_balance.available_microdollars()
+        )
+        if available_balance is None:
+            _raise_sponsored_error(SponsoredUnavailable("insufficient_balance"))
+        try:
+            reservation = await runtime.sponsored.reserve(
+                pass_token,
+                network_address=_client_address(request),
+                available_balance_microdollars=available_balance,
+            )
+        except SponsoredUnavailable as error:
+            _raise_sponsored_error(error)
+        return None, None, SponsoredTurn(runtime.sponsored, reservation)
+
     async def _own_conversation(conversation_id: str, request: Request) -> None:
         """404 unless the conversation exists AND belongs to this device.
 
@@ -322,34 +544,58 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         else SpoilerJudge()
     )
 
-    @app.get("/api/preferences", dependencies=[Depends(_check_local)])
-    async def get_preferences() -> dict:
+    # A read: browsers send no Origin on a same-origin GET, so requiring one
+    # made every real read fail (Plan 030 slice 4). Writes keep the check.
+    @app.get("/api/preferences", dependencies=[Depends(_check_local_hostname)])
+    async def get_preferences(request: Request) -> dict:
         if runtime.prefs is None:
-            return {"reader_chapter": None, "spoiler_mode": "protect", "tier": "ascended"}
-        prefs = await runtime.prefs.get()
+            return {"reader_chapter": None, "spoiler_mode": "protect"}
+        prefs = await runtime.prefs.get(_device_id(request))
         return {
             "reader_chapter": prefs.reader_chapter,
             "spoiler_mode": prefs.spoiler_mode,
-            "tier": prefs.tier,
         }
 
+    @app.get("/api/access", dependencies=[Depends(_check_local_hostname)])
+    async def get_access(request: Request, response: Response) -> dict:
+        return await _access_status(request, response)
+
+    @app.post("/api/access/consent", dependencies=[Depends(_check_local)])
+    async def consent_to_sponsored_access(
+        request: Request,
+        response: Response,
+    ) -> dict:
+        if runtime.sponsored is None:
+            _raise_sponsored_error(SponsoredUnavailable("disabled"))
+        pass_token = request.cookies.get(SPONSORED_PASS_COOKIE, "")
+        try:
+            await runtime.sponsored.record_consent(pass_token)
+        except SponsoredUnavailable:
+            pass_token = runtime.sponsored.issue_pass()
+            _set_sponsored_pass(response, pass_token)
+            await runtime.sponsored.record_consent(pass_token)
+        return await _access_status(
+            request,
+            response,
+            pass_token_override=pass_token,
+        )
+
     @app.put("/api/preferences", dependencies=[Depends(_check_local)])
-    async def put_preferences(body: PreferencesBody) -> dict:
+    async def put_preferences(request: Request, body: PreferencesBody) -> dict:
         if runtime.prefs is None:
             raise HTTPException(status_code=404, detail="preferences store unavailable")
         from weaver.prefs import UserPreferences
 
         await runtime.prefs.set(
+            _device_id(request),
             UserPreferences(
                 reader_chapter=body.reader_chapter,
                 spoiler_mode=body.spoiler_mode,
-                tier=body.tier,
             )
         )
         return {
             "reader_chapter": body.reader_chapter,
             "spoiler_mode": body.spoiler_mode,
-            "tier": body.tier,
         }
 
     @app.get("/api/conversations")
@@ -402,10 +648,24 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
     @app.post(
         "/api/conversations", status_code=201, dependencies=[Depends(_check_local)]
     )
-    async def create_conversation(request: Request) -> dict:
+    async def create_conversation(
+        request: Request,
+        body: CreateConversationBody | None = None,
+    ) -> dict:
         device = _device_id(request)
-        conversation_id = await runtime.session.start_conversation("", device)
-        return {"conversation_id": conversation_id}
+        domain = body.domain if body is not None else "canon"
+        fanfic_kind = body.fanfic_kind if body is not None else None
+        conversation_id = await runtime.session.start_conversation(
+            "",
+            device,
+            domain=domain,
+            fanfic_kind=fanfic_kind,
+        )
+        return {
+            "conversation_id": conversation_id,
+            "domain": domain,
+            "fanfic_kind": fanfic_kind,
+        }
 
     @app.delete(
         "/api/conversations/{conversation_id}",
@@ -452,6 +712,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         regenerate: bool = False,
         request_key: str | None = None,
         request_model: str | None = None,
+        sponsored_turn: SponsoredTurn | None = None,
     ) -> None:
         """Run the send (or the last-turn retry/regenerate), then emit
         only the validated terminal answer."""
@@ -472,6 +733,19 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         fake_retry_token = (
             current_fake_retry.set(retry) if not runtime.live else None
         )
+        sponsored_token = (
+            current_sponsored_turn.set(sponsored_turn)
+            if sponsored_turn is not None
+            else None
+        )
+        sponsored_finished = False
+
+        async def finish_sponsored(failure_category: str | None) -> None:
+            nonlocal sponsored_finished
+            if sponsored_turn is None or sponsored_finished:
+                return
+            await sponsored_turn.finish(failure_category=failure_category)
+            sponsored_finished = True
 
         # Tool activity crosses the browser boundary as phase metadata only.
         # Arguments, results, chapter text, passage handles, and raw detail stay
@@ -486,43 +760,115 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
             if runtime.fake_delta_delay_seconds > 0:
                 await asyncio.sleep(runtime.fake_delta_delay_seconds)
 
-        delta_callback = on_delta if not runtime.live else None
+        delta_callback = on_delta
+        # The spoiler boundary belongs to the device that owns this
+        # conversation, read once so the answer and its reading packet
+        # agree even if that device saves new settings mid-turn.
+        owner_device = await runtime.session.conversation_device(conversation_id)
+        turn_prefs = (
+            await runtime.prefs.get(owner_device)
+            if runtime.prefs is not None and owner_device is not None
+            else None
+        )
+        reader_note = _reader_note(turn_prefs)
+        max_chapter = (
+            turn_prefs.reader_chapter
+            if turn_prefs is not None
+            and turn_prefs.spoiler_mode == "protect"
+            else None
+        )
+        conversation_domain, _ = await runtime.session.conversation_domain(
+            conversation_id
+        )
 
         # Plan 15 final reading phase: after a candidate passes the
         # mechanical checks, the packet builder re-reads the turn's
         # opened passages with expanded windows plus the notebook
         # statements and spoiler framing. One toolless call may improve
         # the answer; the candidate and packet stay ephemeral.
-        async def on_packet(tool_results, _candidate: str):
+        async def on_packet(tool_results, candidate: str):
             if runtime.library is None:
-                return None
-            prefs = await runtime.prefs.get() if runtime.prefs is not None else None
+                return (
+                    "--- chapter 184, lines 1-12 ---\n"
+                    "Synthetic passage for development only. The character makes "
+                    "a choice, then learns that its consequence reaches further "
+                    "than intended.\n\n"
+                    "--- evidence board ---\n"
+                    "direct sources: chapter 184 lines 1-12\n"
+                    "notebook leads: none\n"
+                    "citation gaps: none\n\n"
+                    "--- spoiler framing ---\n"
+                    "The synthetic development fixture may be answered completely."
+                )
             packet = build_packet(
                 runtime.library,
                 tool_results,
-                user_chapter=prefs.reader_chapter if prefs is not None else None,
-                spoiler_mode=prefs.spoiler_mode if prefs is not None else "protect",
-                tier="ascended",
+                candidate=candidate,
+                user_chapter=(
+                    turn_prefs.reader_chapter if turn_prefs is not None else None
+                ),
+                spoiler_mode=(
+                    turn_prefs.spoiler_mode if turn_prefs is not None else "protect"
+                ),
                 judge=spoiler_judge,
+                cap_override=profile_packet_cap,
             )
-            return packet.text if packet is not None else None
+            if packet is None or "direct sources: none" in packet.text:
+                # Notebook leads without a page of prose are not evidence:
+                # forcing the final pass here only produces a failed repair.
+                return None
+            return packet.text
 
         try:
-            prefs = await runtime.prefs.get() if runtime.prefs is not None else None
-            tier = prefs.tier if prefs is not None else "ascended"
-            # the naming call runs once, after the very first turn
-            is_first_turn = (
-                len(await runtime.session.load_transcript(conversation_id)) == 0
+            # Inside the try, so a failure here ends the turn with a visible
+            # failure instead of a stream that never finishes.
+            # A retry or regenerate arrives without a message: route the stored
+            # question it re-answers, not the empty string, or a retried hard
+            # question is read as small talk.
+            transcript = await runtime.session.load_transcript(conversation_id)
+            owner_asks = tuple(
+                item["content"] for item in transcript if item["role"] == "owner"
             )
+            if retry or regenerate:
+                routed_ask = owner_asks[-1] if owner_asks else message
+                earlier_asks = owner_asks[:-1]
+            else:
+                routed_ask = message
+                earlier_asks = owner_asks
+            (
+                profile_budget,
+                profile_reasoning_tier,
+                profile_packet_cap,
+                profile_final_pass,
+            ) = _turn_profile(
+                routed_ask,
+                domain=conversation_domain,
+                earlier_asks=earlier_asks,
+            )
+            tool_budget = (
+                min(profile_budget, 4)
+                if sponsored_turn is not None
+                else profile_budget
+            )
+            reasoning = (
+                REASONING_TIERS[profile_reasoning_tier]
+                if profile_reasoning_tier is not None
+                else None
+            )
+            # the naming call runs once, after the very first turn
+            is_first_turn = len(transcript) == 0
             if regenerate:
                 regenerated = await runtime.session.regenerate_last_turn(
                     conversation_id,
                     cancel_event=stream.cancel_event,
                     on_delta=delta_callback,
                     on_tool_event=on_tool_event,
-                    tool_budget=TOOL_BUDGET_TIERS[tier],
-                    reasoning=REASONING_TIERS[tier],
+                    tool_budget=tool_budget,
+                    reasoning=reasoning,
                     packet_builder=on_packet,
+                    final_pass=profile_final_pass,
+                    reader_note=reader_note,
+                    max_chapter=max_chapter,
                 )
                 if regenerated is None:
                     stream.emit(
@@ -540,9 +886,12 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                     cancel_event=stream.cancel_event,
                     on_delta=delta_callback,
                     on_tool_event=on_tool_event,
-                    tool_budget=TOOL_BUDGET_TIERS[tier],
-                    reasoning=REASONING_TIERS[tier],
+                    tool_budget=tool_budget,
+                    reasoning=reasoning,
                     packet_builder=on_packet,
+                    final_pass=profile_final_pass,
+                    reader_note=reader_note,
+                    max_chapter=max_chapter,
                 )
                 if retried is None:
                     stream.emit(
@@ -558,26 +907,28 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                     cancel_event=stream.cancel_event,
                     on_delta=delta_callback,
                     on_tool_event=on_tool_event,
-                    # Plan 15: the tier is a user preference (the mode
-                    # selector). Tool calls are capped at 50/70/90; the final
-                    # answer call is always guaranteed. Thinking is always on;
-                    # the tier picks the reasoning effort.
-                    tool_budget=TOOL_BUDGET_TIERS[tier],
-                    reasoning=REASONING_TIERS[tier],
+                    # Plan 030 CP4.5: the question shape picks the tool
+                    # budget, reasoning, packet cap, and whether the final
+                    # reading pass is needed.
+                    tool_budget=tool_budget,
+                    reasoning=reasoning,
                     packet_builder=on_packet,
+                    final_pass=profile_final_pass,
+                    reader_note=reader_note,
+                    max_chapter=max_chapter,
                 )
             reason = result.exit_reason
             if reason == TurnExitReason.COMPLETED:
+                await finish_sponsored(None)
                 if is_first_turn:
-                    asyncio.create_task(
-                        _name_thread(
-                            runtime,
-                            conversation_id,
-                            regenerated_message
-                            if regenerate
-                            else (retried_message if retry else message),
-                            result.final_text,
-                        )
+                    first_message = (
+                        regenerated_message
+                        if regenerate
+                        else (retried_message if retry else message)
+                    )
+                    await runtime.session.set_generated_title(
+                        conversation_id,
+                        _derived_title(first_message),
                     )
                 stream.emit(
                     "completed",
@@ -588,6 +939,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                     },
                 )
             elif reason == TurnExitReason.INTERRUPTED:
+                await finish_sponsored("cancelled")
                 stream.emit(
                     "interrupted",
                     {
@@ -600,6 +952,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 failure_code = reason.value
                 if getattr(result, "error_category", "") == "simulated_model":
                     failure_code = "simulated_model"
+                await finish_sponsored(failure_code)
                 stream.emit(
                     "failed",
                     {
@@ -609,8 +962,12 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 )
         except asyncio.CancelledError:
             # Caller-side disconnect during startup; nothing was sent.
-            pass
+            await finish_sponsored("cancelled")
         except Exception:
+            try:
+                await finish_sponsored("turn")
+            except Exception:
+                pass
             stream.emit(
                 "failed",
                 {"code": "turn", "message": safe_error("turn")},
@@ -622,12 +979,19 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
             # terminal has been served. A size cap bounds streams whose
             # client never came back.
             stream.finished = True
+            if sponsored_turn is not None and not sponsored_finished:
+                try:
+                    await finish_sponsored("turn")
+                except Exception:
+                    pass
             if key_token is not None:
                 current_api_key.reset(key_token)
             if model_token is not None:
                 current_model_id.reset(model_token)
             if fake_retry_token is not None:
                 current_fake_retry.reset(fake_retry_token)
+            if sponsored_token is not None:
+                current_sponsored_turn.reset(sponsored_token)
 
     @app.post(
         "/api/conversations/{conversation_id}/turns",
@@ -651,13 +1015,22 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 if stale.finished:
                     active.pop(stale_id, None)
                     break
+        try:
+            request_key, request_model, sponsored_turn = (
+                await _prepare_turn_access(request)
+            )
+        except Exception:
+            if active.get(conversation_id) is stream:
+                active.pop(conversation_id, None)
+            raise
         stream.task = asyncio.create_task(
             _run_turn(
                 conversation_id,
                 body.message,
                 stream,
-                request_key=_request_key(request),
-                request_model=_request_model(request),
+                request_key=request_key,
+                request_model=request_model,
+                sponsored_turn=sponsored_turn,
             )
         )
         # The turn runs server-side; the reply is streamed over the GET
@@ -693,14 +1066,23 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 if stale.finished:
                     active.pop(stale_id, None)
                     break
+        try:
+            request_key, request_model, sponsored_turn = (
+                await _prepare_turn_access(request)
+            )
+        except Exception:
+            if active.get(conversation_id) is stream:
+                active.pop(conversation_id, None)
+            raise
         stream.task = asyncio.create_task(
             _run_turn(
                 conversation_id,
                 "",
                 stream,
                 retry=True,
-                request_key=_request_key(request),
-                request_model=_request_model(request),
+                request_key=request_key,
+                request_model=request_model,
+                sponsored_turn=sponsored_turn,
             )
         )
         return Response(
@@ -734,14 +1116,23 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                 if stale.finished:
                     active.pop(stale_id, None)
                     break
+        try:
+            request_key, request_model, sponsored_turn = (
+                await _prepare_turn_access(request)
+            )
+        except Exception:
+            if active.get(conversation_id) is stream:
+                active.pop(conversation_id, None)
+            raise
         stream.task = asyncio.create_task(
             _run_turn(
                 conversation_id,
                 "",
                 stream,
                 regenerate=True,
-                request_key=_request_key(request),
-                request_model=_request_model(request),
+                request_key=request_key,
+                request_model=request_model,
+                sponsored_turn=sponsored_turn,
             )
         )
         return Response(
@@ -885,7 +1276,8 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
         html = html.replace("{{MODE_LABEL}}", runtime.mode_label)
         if runtime.live:
             privacy_label = (
-                "Weaver runs locally. Messages are sent to DeepSeek for replies."
+                "Weaver runs on a private server. Your question and the "
+                "passages it opens are sent to DeepSeek for a reply."
             )
         else:
             privacy_label = "Fake mode stays on this machine. No model request is sent."
@@ -900,6 +1292,25 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                     "connect-src 'self'; manifest-src 'self'; worker-src 'self'"
                 ),
             },
+        )
+
+    @app.get("/privacy")
+    async def privacy() -> FileResponse:
+        return FileResponse(
+            FRONTEND_DIST / "privacy.html",
+            media_type="text/html",
+            headers={
+                "Content-Security-Policy": (
+                    "default-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+                ),
+            },
+        )
+
+    @app.get("/robots.txt")
+    async def robots() -> FileResponse:
+        return FileResponse(
+            FRONTEND_DIST / "robots.txt",
+            media_type="text/plain",
         )
 
     app.mount(

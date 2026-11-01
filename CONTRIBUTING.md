@@ -26,21 +26,22 @@ cp .env.example .env          # keys (fake mode needs none)
 ## Verification floor (must pass before any commit)
 
 ```bash
-uv run pytest                 # 501 tests, synthetic data only
+uv run pytest                 # 700+ tests, synthetic data only
 npm run test                  # frontend vitest suite
 npm run build                 # frontend production build
+uv run ruff check src/weaver tests
 ```
 
 Tests never use live models or real novel content. Fake mode is explicit:
-`uv run weaver --fake`; a missing key exits before any call, never a
+`uv run weaver web --fake`; a missing key exits before any call, never a
 silent fallback.
 
 ## What is private, forever
 
-- `novels/` — immutable private source material. Never committed, copied,
+- `novels/`: immutable private source material. Never committed, copied,
   or exposed.
-- `.weaver/` — generated private state (index, notebook, receipts).
-- `private/`, `runs/`, `receipts/` — private by .gitignore.
+- `.weaver/`: generated private state (index, notebook, receipts).
+- `private/`, `runs/`, `receipts/`: private by .gitignore.
 - Raw `reasoning_content` never goes into reports, logs, or commits.
 
 Audit staged files for credentials and private source text before every
@@ -51,7 +52,7 @@ commit.
 - Python: black-compatible formatting, type hints on public functions,
   docstrings explaining why. Run `uv run ruff check` on changed files.
 - Frontend: TypeScript strict, plain CSS tokens (no Tailwind), markdown
-  parsed locally — model text never becomes raw HTML.
+  parsed locally; model text never becomes raw HTML.
 - Tests: test-first (write the failing test, then implement). One test
   that fails if the logic breaks beats ten that don't.
 

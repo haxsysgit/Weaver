@@ -14,6 +14,7 @@ import uvicorn
 
 from weaver import cli
 from weaver.chat_runtime import open_chat_runtime
+from weaver.model_layer.fake_chat import _content_chunks, _long_answer
 from weaver.web.app import create_app
 
 
@@ -82,7 +83,14 @@ def test_web_fake_never_constructs_a_live_provider_or_opens_network(
     def reject_live_provider(*_args, **_kwargs):
         raise AssertionError("fake web mode must not construct DeepSeekProvider")
 
-    def reject_outbound_connect(_socket, _address):
+    real_connect = socket.socket.connect
+
+    def reject_outbound_connect(sock, address):
+        # Loopback is not outbound: on Windows asyncio wires its event loop
+        # with a 127.0.0.1 socket pair. Anything else is a network call.
+        host = address[0] if isinstance(address, tuple) else address
+        if host in ("127.0.0.1", "::1"):
+            return real_connect(sock, address)
         raise AssertionError("fake web mode must not open an outbound connection")
 
     async def fake_serve_web(_runtime, *, host, port):
@@ -302,7 +310,12 @@ async def test_fake_stream_can_be_stopped_after_the_first_visible_delta(
                         assert stopped.status_code == 202
 
             assert cancelled
-            assert 1 <= events.count("delta") < 10
+            # Stop must land early, not just before the end. The bound is a
+            # share of the real answer rather than a fixed count, because
+            # how many chunks slip out before the cancel lands depends on the
+            # OS timer (about 5 on Linux, 12 to 15 of 86 on Windows).
+            total_chunks = len(_content_chunks(_long_answer("/fake long")))
+            assert 1 <= events.count("delta") < total_chunks // 4
             assert events[-1] == "interrupted"
             assert "completed" not in events
 
@@ -315,3 +328,32 @@ async def test_fake_stream_can_be_stopped_after_the_first_visible_delta(
         await asyncio.wait_for(server_task, timeout=10)
         server_socket.close()
         await runtime.close()
+
+
+@pytest.mark.parametrize(("switch", "warned"), [("1", True), (None, False)])
+def test_live_web_warns_when_the_owner_key_switch_is_on(
+    monkeypatch, tmp_path, capsys, switch, warned
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("DEEPSEEK_KEY", "sk-test-owner-key")
+    if switch is None:
+        monkeypatch.delenv("WEAVER_LOCAL_OWNER_KEY", raising=False)
+    else:
+        monkeypatch.setenv("WEAVER_LOCAL_OWNER_KEY", switch)
+
+    class Runtime:
+        async def close(self):
+            return None
+
+    async def fake_open(*_args, **_kwargs):
+        return Runtime()
+
+    async def fake_serve_web(_runtime, *, host, port):
+        return 0
+
+    monkeypatch.setattr(cli, "open_chat_runtime", fake_open)
+    monkeypatch.setattr(cli, "serve_web", fake_serve_web)
+
+    assert cli.run(["web", "--port", "8125"]) == 0
+    out = capsys.readouterr().out
+    assert ("WEAVER_LOCAL_OWNER_KEY is on" in out) is warned

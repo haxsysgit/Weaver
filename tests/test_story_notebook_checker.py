@@ -17,6 +17,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.platform_support import posix_modes_only
+
 CHECKER = Path(__file__).resolve().parents[1] / "scripts" / "check_story_notebook.py"
 
 ALLOWED_KINDS = {
@@ -518,6 +520,7 @@ def test_short_novel_lines_allowed_in_chapter_notes(notebook: Path) -> None:
     assert result.returncode == 0
 
 
+@posix_modes_only
 def test_unsafe_permissions(notebook: Path) -> None:
     (notebook / "reading" / "0001.json").chmod(0o644)
     result = check(notebook)

@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import json
 import os
-import stat
 from pathlib import Path
 
 import pytest
 
+from tests.platform_support import assert_mode
 from tests.corpus_support import (
     FakeChapterSource,
     chapter_text,
@@ -492,11 +492,11 @@ async def test_mutating_tool_hardens_corpus_and_receipts_are_metadata_only(
         )
     )
 
-    assert stat.S_IMODE(novel_root.stat().st_mode) == 0o700
-    assert stat.S_IMODE(path.stat().st_mode) == 0o600
+    assert_mode(novel_root, 0o700)
+    assert_mode(path, 0o600)
     receipt = tmp_path / result.receipt_path
-    assert stat.S_IMODE(receipt.parent.stat().st_mode) == 0o700
-    assert stat.S_IMODE(receipt.stat().st_mode) == 0o600
+    assert_mode(receipt.parent, 0o700)
+    assert_mode(receipt, 0o600)
     rendered = receipt.read_text()
     assert "Synthetic chapter" not in rendered
     assert "FIRECRAWL_API_KEY" not in rendered

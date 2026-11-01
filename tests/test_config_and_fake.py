@@ -42,4 +42,4 @@ async def test_fake_provider_is_deterministic_for_deepseek_catalogue() -> None:
     second = await layer.complete(DEEPSEEK_FLASH, request, asyncio.Event())
 
     assert first == second
-    assert first.model_id == "deepseek-v4-flash"
+    assert first.model_id == "deepseek-flash"

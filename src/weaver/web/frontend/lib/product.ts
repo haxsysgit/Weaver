@@ -16,6 +16,8 @@ export interface ChatProduct {
   navigationLabel: string;
   newConversationLabel: string;
   newConversationTitle: string;
+  newFanficLabel: string;
+  newFanficTitle: string;
   openRailLabel: string;
   recentConversationsLabel: string;
   recoveryChooseLabel: string;
@@ -36,7 +38,7 @@ export const weaverProduct: ChatProduct = {
   cancelFailedMessage: "The cut did not reach Weaver.",
   closeRailLabel: "Close conversation rail",
   conversationNoun: "thread",
-  composerPlaceholder: "Ask Weaver about Shadow Slave...",
+  composerPlaceholder: "Ask about Shadow Slave...",
   connectionLostMessage: "The connection was lost. This turn cannot resume.",
   currentConversationLabel: "current weave",
   emptyEyebrow: "Shadow Slave, remembered",
@@ -49,6 +51,8 @@ export const weaverProduct: ChatProduct = {
   navigationLabel: "Conversation threads",
   newConversationLabel: "New weave",
   newConversationTitle: "A new thread",
+  newFanficLabel: "New fanfic",
+  newFanficTitle: "A thread where the story keeps going",
   openRailLabel: "Open conversation rail",
   recentConversationsLabel: "Recent threads",
   recoveryChooseLabel: "Choose another thread",

@@ -1,12 +1,13 @@
 """Reading-packet assembly (Plan 15 slice 3)."""
 
+import re
 from pathlib import Path
 
 import pytest
 
 from weaver.agent.tools import ToolResult
 from weaver.retrieval.library import make_passage_handle
-from weaver.retrieval.packet import EXPAND_LINES, build_packet
+from weaver.retrieval.packet import EXPAND_LINES, PACKET_CHAR_CAP, build_packet
 from weaver.retrieval.tools import LibraryService
 from weaver.spoilers.judge import SpoilerJudge
 
@@ -64,6 +65,18 @@ def _read_result(chapter: int, start: int, end: int) -> ToolResult:
     )
 
 
+def _completed_read_result(chapter: int, start: int, end: int) -> ToolResult:
+    result = _read_result(chapter, start, end)
+    assert result.result is not None
+    result.result["result"] = {
+        "chapter": chapter,
+        "line_start": start,
+        "line_end": end,
+        "end_of_chapter": True,
+    }
+    return result
+
+
 @pytest.mark.asyncio
 async def test_packet_opens_expanded_windows_and_cites(tmp_path: Path) -> None:
     svc = _service(tmp_path)
@@ -99,6 +112,81 @@ async def test_packet_includes_notebook_statements(tmp_path: Path) -> None:
     assert "statement:chapter-0104:01" in packet.text
     assert "Saint was created by Lost From Light" in packet.text
     assert packet.verdict.mode == "full"  # at the user's position
+
+
+@pytest.mark.asyncio
+async def test_packet_marks_citations_covered_by_an_opened_chapter(
+    tmp_path: Path,
+) -> None:
+    svc = _service(tmp_path)
+    packet = build_packet(
+        svc,
+        [_completed_read_result(104, 10, 40)],
+        candidate="Saint came from the stone knight (ch. 104).",
+        user_chapter=104,
+    )
+
+    assert packet is not None
+    assert packet.board.cited_chapters == (104,)
+    assert packet.board.unsupported_chapters == ()
+    assert packet.board.claims[0].citation_coverage == "citation_covered"
+    assert packet.board.direct_sources[0].chapter == 104
+    assert packet.board.direct_sources[0].chapter_end_reached is True
+    assert "chapter boundary is not proof" in packet.text
+    assert "citation gaps: none" in packet.text
+
+
+@pytest.mark.asyncio
+async def test_packet_keeps_missing_candidate_citations_visible(
+    tmp_path: Path,
+) -> None:
+    svc = _service(tmp_path)
+    packet = build_packet(
+        svc,
+        [_read_result(98, 5, 8)],
+        candidate="The answer happened much later (chapter 999).",
+        user_chapter=999,
+    )
+
+    assert packet is not None
+    assert packet.board.cited_chapters == (999,)
+    assert packet.board.unsupported_chapters == (999,)
+    assert "citation gaps: chapter 999 was not opened" in packet.text
+
+
+@pytest.mark.asyncio
+async def test_packet_marks_an_uncited_candidate_as_a_gap(tmp_path: Path) -> None:
+    svc = _service(tmp_path)
+    packet = build_packet(
+        svc,
+        [_read_result(98, 5, 8)],
+        candidate="The hunting party leader died there.",
+        user_chapter=98,
+    )
+
+    assert packet is not None
+    assert packet.board.uncited_claims == (1,)
+    assert packet.board.claims[0].citation_coverage == "missing_citation"
+    assert "citation gaps: claim 1 has no chapter citation" in packet.text
+
+
+@pytest.mark.asyncio
+async def test_packet_maps_each_candidate_claim_separately(tmp_path: Path) -> None:
+    svc = _service(tmp_path)
+    packet = build_packet(
+        svc,
+        [_read_result(98, 5, 8)],
+        candidate="The leader died there (ch. 98). The weapon came from chapter 999.",
+        user_chapter=999,
+    )
+
+    assert packet is not None
+    assert [claim.citation_coverage for claim in packet.board.claims] == [
+        "citation_covered",
+        "unopened_chapter",
+    ]
+    assert packet.board.claims[0].cited_chapters == (98,)
+    assert packet.board.claims[1].unsupported_chapters == (999,)
 
 
 @pytest.mark.asyncio
@@ -152,7 +240,7 @@ async def test_packet_skips_errors_and_dedupes(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_packet_size_cap_keeps_framing_and_statements(tmp_path: Path) -> None:
+async def test_packet_size_cap_keeps_board_and_framing(tmp_path: Path) -> None:
     svc = _service(tmp_path)
     hit = {
         "statement_id": "statement:chapter-0104:01",
@@ -169,12 +257,39 @@ async def test_packet_size_cap_keeps_framing_and_statements(tmp_path: Path) -> N
         svc,
         [result, _read_result(98, 5, 8)],
         user_chapter=100,
-        tier="awakened",
-        cap_override=100,  # tiny cap for the test
+        cap_override=700,
     )
     assert packet is not None
+    assert len(packet.text) <= 700
+    assert "evidence board" in packet.text
     assert "spoiler framing" in packet.text
-    assert "statement:chapter-0104:01" in packet.text
+
+
+@pytest.mark.asyncio
+async def test_packet_board_lists_only_passages_that_survive_trimming(
+    tmp_path: Path,
+) -> None:
+    svc = _service(tmp_path)
+    packet = build_packet(
+        svc,
+        [_read_result(98, 5, 8), _read_result(104, 10, 12)],
+        candidate="The answer spans ch. 98 and ch. 104.",
+        user_chapter=104,
+        cap_override=900,
+    )
+
+    assert packet is not None
+    packet_chapters = {
+        source.chapter for source in packet.board.direct_sources
+    }
+    for chapter in packet_chapters:
+        assert f"--- chapter {chapter}, lines" in packet.text
+    assert "direct sources: chapter 98" not in packet.text
+    assert packet.board.unsupported_chapters == (98,)
+
+
+def test_packet_uses_one_shared_request_safe_cap() -> None:
+    assert PACKET_CHAR_CAP == 24_000
 
 
 @pytest.mark.asyncio
@@ -230,3 +345,52 @@ async def test_packet_beat_context_only_for_matching_chapters(tmp_path: Path) ->
     assert packet is not None
     assert "beat:" not in packet.text
     assert packet.verdict.mode == "full"  # ch98 not in any beat
+
+
+@pytest.mark.asyncio
+async def test_packet_never_frames_an_unsaved_position_as_chapter_none(
+    tmp_path: Path,
+) -> None:
+    svc = _service(tmp_path)
+    unknown = build_packet(svc, [_read_result(98, 5, 8)], user_chapter=None)
+    finished = build_packet(
+        svc, [_read_result(98, 5, 8)], user_chapter=None, spoiler_mode="none"
+    )
+    assert unknown is not None and finished is not None
+    assert "chapter None" not in unknown.text
+    assert "chapter None" not in finished.text
+    assert "has not said how far they have read" in unknown.text
+    assert "ask how far they have read" in unknown.text
+    assert "whole novel" in finished.text
+
+
+@pytest.mark.asyncio
+async def test_a_passage_bigger_than_the_cap_is_shortened_not_dropped(
+    tmp_path: Path,
+) -> None:
+    """Trial 10 live check: a small-talk turn (6,000 character cap) read 80
+    lines of a chapter; the expanded passage did not fit, so it was dropped
+    whole, the packet said "direct sources: none", and the forced answer
+    failed. The newest passage must be shortened to fit instead."""
+    novel = tmp_path / "novel"
+    nb = tmp_path / "nb"
+    (nb / "reading").mkdir(parents=True)
+    long_line = "Sunny watched the shadow move across the stone wall. " * 3
+    _write_chapter(
+        novel, 55, ["Chapter 55"] + [f"{i} {long_line}" for i in range(2, 161)]
+    )
+    service = LibraryService(novel, nb)
+
+    packet = build_packet(service, [_read_result(55, 2, 80)], cap_override=6000)
+
+    assert packet is not None
+    assert len(packet.text) <= 6000
+    assert "direct sources: none" not in packet.text
+    header = re.search(r"^--- chapter 55, lines (\d+)-(\d+) ---$", packet.text, re.M)
+    assert header is not None
+    start, end = int(header.group(1)), int(header.group(2))
+    assert 2 <= start < end <= 80
+    body = packet.text[header.end() + 1 :].split("\n\n", 1)[0].splitlines()
+    assert body[0].startswith(f"{start} ")
+    assert body[-1].startswith(f"{end} ")
+    assert f"chapter 55 lines {start}-{end}" in packet.text

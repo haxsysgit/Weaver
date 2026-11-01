@@ -6,6 +6,7 @@ import os
 import pytest
 
 from tests.corpus_support import chapter_text, make_project, write_chapter
+from tests.platform_support import POSIX_MODES, symlink_or_skip
 from weaver.corpus.models import InspectNovelCorpusInput
 from weaver.corpus.service import CorpusService
 
@@ -42,7 +43,8 @@ async def test_inspection_reports_url_and_file_structure_without_prose(
     assert result.counts["broken"] == 1
     assert result.counts["duplicated"] == 1
     assert result.counts["wrongly_placed"] == 0
-    assert result.counts["overly_public"] >= 1
+    if POSIX_MODES:  # a 0o644 file only exists on Unix
+        assert result.counts["overly_public"] >= 1
     assert result.url_list.duplicates == [3]
     assert [(item.start, item.end) for item in result.url_list.out_of_order_lines] == [
         (4, 4)
@@ -93,7 +95,8 @@ async def test_inspection_refuses_symlinked_corpus_root(tmp_path) -> None:
     make_project(real, [1])
     project = tmp_path / "project"
     (project / "novels").mkdir(parents=True)
-    (project / "novels" / "shadow-slave").symlink_to(
+    symlink_or_skip(
+        project / "novels" / "shadow-slave",
         real / "novels" / "shadow-slave",
         target_is_directory=True,
     )

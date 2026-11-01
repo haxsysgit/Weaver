@@ -76,7 +76,7 @@
 
 .hidden-thread-scene {
   position: relative;
-  z-index: 2;
+  z-index: 3;
   display: grid;
   width: min(100%, 720px);
   min-height: calc(100dvh - 40px);
@@ -87,7 +87,8 @@
 
 .hidden-thread-mask {
   position: fixed;
-  z-index: 0;
+  /* Above the darkening gradient (::after, z 1), below the scene (z 3). */
+  z-index: 2;
   inset: 0;
   display: block;
   width: 100vw;
@@ -99,7 +100,12 @@
   -webkit-user-drag: none;
   object-fit: contain;
   object-position: center;
-  filter: drop-shadow(0 22px 35px rgba(0, 0, 0, 0.8));
+  /* The portrait has an opaque pure-black ground, letterboxed into a
+     central column on wide screens. Screen blending drops that black onto
+     the void, so the glow and the star field run behind the mask instead of
+     a darker rectangle down the middle. No drop shadow: on an opaque image
+     it only outlined the rectangle. */
+  mix-blend-mode: screen;
   animation: hidden-thread-mask-gathers calc(var(--motion-smooth) * 5) var(--ease-weave) both;
 }
 
@@ -509,8 +515,8 @@
 }
 
 @keyframes hidden-thread-mask-gathers {
-  from { opacity: 0; filter: blur(8px) drop-shadow(0 22px 35px rgba(0, 0, 0, 0.72)); transform: scale(0.92); }
-  to { opacity: 0.92; filter: blur(0) drop-shadow(0 22px 35px rgba(0, 0, 0, 0.72)); transform: scale(1); }
+  from { opacity: 0; filter: blur(8px); transform: scale(0.92); }
+  to { opacity: 0.92; filter: blur(0); transform: scale(1); }
 }
 
 @keyframes hidden-thread-mask-recedes {
@@ -584,7 +590,7 @@
   100% { transform: translateX(104%); }
 }
 
-@media (min-width: 900px) {
+@media (min-width: 900px), (orientation: landscape) and (min-width: 600px) {
   .hidden-thread-scene {
     grid-template-columns: minmax(220px, 0.72fr) minmax(420px, 1.28fr);
     column-gap: clamp(30px, 6vw, 90px);
@@ -637,11 +643,6 @@
     padding-bottom: 18px;
   }
 
-  .hidden-thread-mask {
-    width: 100vw;
-    height: 100dvh;
-  }
-
   .hidden-thread-rite .first-nightmare-rune-event {
     min-height: 68px;
   }
@@ -659,6 +660,29 @@
   .hidden-thread-actions > button {
     width: 100%;
     min-height: 52px;
+  }
+}
+
+/* Upright phones and narrow tablets stack the mask above the words. The
+   mask keeps to the top of the screen and is capped so its bottom ornament
+   (the bright web at about 86% of the image) ends above the rune line and
+   the title, whatever the screen height. --rite-copy-room is the height the
+   words and actions need at the bottom. */
+@media (max-width: 899px) and (orientation: portrait) {
+  .hidden-thread-rite {
+    --rite-copy-room: 440px;
+  }
+
+  .hidden-thread-rite[data-rite-act="awakening"] .hidden-thread-mask {
+    bottom: auto;
+    height: min(100dvh, calc((100dvh - var(--rite-copy-room)) / 0.9));
+    object-position: center top;
+  }
+}
+
+@media (max-width: 767px) and (orientation: portrait) {
+  .hidden-thread-rite {
+    --rite-copy-room: 330px;
   }
 }
 

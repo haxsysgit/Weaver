@@ -11,18 +11,19 @@ an arc, whether a theory holds up. Weaver remembers, connects callbacks,
 labels speculation, and changes its mind when the evidence says so.
 
 Weaver is not a reader. Users do not read the novel inside Weaver. If they
-want to read, Weaver gives them a link. Reading lives outside the product.
+want to read, Weaver gives them a chapter reference. Reading lives outside
+the product.
 
 ## Product rules (owner-confirmed)
 
-1. Public surface: chat, memory, and links. Nothing else.
+1. Public surface: chat, memory, and chapter references. Nothing else.
 2. Never serve chapter text from the web app. No reader UI, no text
    exports to users, no offline chapter sync.
 3. The private library stays private. The API never exposes
    `novels/` content, receipts, or raw reasoning.
 4. Short quotes in conversation are fine at discussion scale. Bulk
    reproduction of the novel is not.
-5. Reading links point out to wherever the user reads.
+5. No outbound reading links in v2. Weaver gives chapter references only.
 
 ## Why the pivot
 

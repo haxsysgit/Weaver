@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from .context import relative_path
@@ -29,5 +30,7 @@ def check_private_permissions(root: Path, result: CheckResult) -> None:
         display_path = relative_path(path, root)
         if path.is_symlink():
             result.add(display_path, "unsafe permissions: symlink is not allowed")
-        elif path_stat.st_mode & 0o077:
+        elif os.name != "nt" and path_stat.st_mode & 0o077:
+            # Windows has no group/other mode bits (every file reports
+            # 0o666 or 0o777); access there is governed by profile ACLs.
             result.add(display_path, "unsafe permissions")

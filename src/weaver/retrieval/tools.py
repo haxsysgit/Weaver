@@ -1,5 +1,5 @@
-"""The five reading tools: semantic_search, read_chapters, find_text,
-find speaker clusters, browse_chapters and who_is.
+"""The six reading tools: semantic_search, read_chapters, find_text,
+browse_chapters, who_is, and lore_path.
 
 Thin surfaces over deterministic machinery (library.py). The tools
 contain no logic of their own beyond validation and formatting:
@@ -21,6 +21,8 @@ contain no logic of their own beyond validation and formatting:
 - who_is: resolve any name to its canonical entity page in the story
   map (person, place, power, item, group), with aliases and first
   known chapter.
+- lore_path: trace the shortest evidence-backed connection between two
+  entities in the story map.
 
 All are EffectKind.READ: they never write, never touch the library.
 Novel prose is ephemeral model material: every tool that returns it
@@ -73,12 +75,29 @@ class SearchStoryInput(BaseModel):
 
 class ReadChaptersInput(BaseModel):
     handle: str = Field(min_length=1, max_length=64, description="Passage handle like novel:0098:101-123.")
+    direction: str = Field(
+        default="handle",
+        description=(
+            "Read the handle itself, or continue immediately before or after it."
+        ),
+    )
     lines: int | None = Field(
         default=None,
         ge=1,
         le=MAX_PASSAGE_LINES,
-        description="Optional line count to open (default: the whole handle range).",
+        description=(
+            "Optional line count. Required for before or after; with handle, "
+            "it limits the opened range."
+        ),
     )
+
+    @model_validator(mode="after")
+    def _check_direction(self) -> "ReadChaptersInput":
+        if self.direction not in ("handle", "before", "after"):
+            raise ValueError("direction must be one of: handle, before, after")
+        if self.direction != "handle" and self.lines is None:
+            raise ValueError("before and after need a line count")
+        return self
 
 
 class FindTextInput(BaseModel):
@@ -383,9 +402,22 @@ class LibraryService:
             }
         chapter, start, end = parsed
         try:
-            passage = self.index.open_lines(chapter, start, end)
-            if inp.lines is not None and inp.lines < (passage.line_end - passage.line_start + 1):
-                passage = self.index.open_lines(chapter, start, start + inp.lines - 1)
+            chapter_line_count = self.index.line_count(chapter)
+            if inp.direction == "before":
+                read_end = start - 1
+                read_start = max(2, start - (inp.lines or 0))
+            elif inp.direction == "after":
+                read_start = end + 1
+                read_end = min(chapter_line_count, end + (inp.lines or 0))
+            else:
+                read_start = start
+                read_end = end
+                if inp.lines is not None:
+                    read_end = min(end, start + inp.lines - 1)
+            if read_start > read_end:
+                edge = "start" if inp.direction == "before" else "end"
+                raise ValueError(f"passage is already at the chapter {edge}")
+            passage = self.index.open_lines(chapter, read_start, read_end)
         except ValueError as exc:
             return {"ok": False, "error_category": "validation", "error": str(exc)}
         except Exception:
@@ -399,13 +431,20 @@ class LibraryService:
                 "line_start": passage.line_start,
                 "line_end": passage.line_end,
                 "source_hash": passage.source_hash,
-                "passage_handle": inp.handle,
+                "passage_handle": lib.make_passage_handle(
+                    passage.chapter,
+                    passage.line_start,
+                    passage.line_end,
+                ),
             },
             "result": {
                 "chapter": passage.chapter,
                 "line_start": passage.line_start,
                 "line_end": passage.line_end,
                 "source_hash": passage.source_hash,
+                "start_of_chapter": passage.line_start == 2,
+                "end_of_chapter": passage.line_end == chapter_line_count,
+                "proof_status": "direct_source",
                 "text": passage.text,
             },
         }
@@ -650,6 +689,51 @@ class LibraryService:
         }
 
 
+def _chapter_of(item: dict) -> int | None:
+    chapter = item.get("chapter")
+    return chapter if isinstance(chapter, int) else None
+
+
+def _trim_to_chapter(value, max_chapter: int):
+    """Drop novel hits that sit past the reader's chapter."""
+    if isinstance(value, dict):
+        return {key: _trim_to_chapter(item, max_chapter) for key, item in value.items()}
+    if isinstance(value, list):
+        kept = []
+        for item in value:
+            chapter = _chapter_of(item) if isinstance(item, dict) else None
+            if chapter is not None and chapter > max_chapter:
+                continue
+            kept.append(_trim_to_chapter(item, max_chapter))
+        return kept
+    return value
+
+
+def _cap_to_reader(handler):
+    """Wrap a reading tool so protect mode cannot read ahead."""
+
+    async def capped(arguments: dict[str, Any], context: ToolExecutionContext) -> dict[str, Any]:
+        max_chapter = context.max_chapter
+        if max_chapter is None:
+            return await handler(arguments, context)
+        handle = arguments.get("handle")
+        if isinstance(handle, str):
+            parsed = lib.parse_passage_handle(handle)
+            if parsed is not None and parsed[0] > max_chapter:
+                return {
+                    "ok": False,
+                    "error_category": "spoiler_boundary",
+                    "error": (
+                        "That passage is past the reader's chapter. "
+                        "Answer within what they have read."
+                    ),
+                }
+        result = await handler(arguments, context)
+        return _trim_to_chapter(result, max_chapter)
+
+    return capped
+
+
 def register_reading_tools(
     registry: ToolRegistry,
     service: LibraryService,
@@ -668,7 +752,7 @@ def register_reading_tools(
                 "automatically and can only be narrowed."
             ),
             parameters=SearchStoryInput.model_json_schema(),
-            handler=service.semantic_search,
+            handler=_cap_to_reader(service.semantic_search),
             max_result_chars=24_000,
             effect_kind=EffectKind.READ,
             retry_safe=True,
@@ -681,10 +765,12 @@ def register_reading_tools(
                 "Read real novel text by passage handle (novel:NNNN:start-end) from "
                 "semantic_search, find_text or browse_chapters hits. Novel only, read-only. "
                 "Use whenever the answer needs the actual prose: verify, quote, or follow "
-                "a scene to its end."
+                "a scene to its end. Use direction 'before' or 'after' with lines to "
+                "continue from a hit. Keep reading until the outcome is supported; "
+                "end_of_chapter tells you when to inspect the next chapter."
             ),
             parameters=ReadChaptersInput.model_json_schema(),
-            handler=service.read_chapters,
+            handler=_cap_to_reader(service.read_chapters),
             max_result_chars=24_000,
             effect_kind=EffectKind.READ,
             retry_safe=True,
@@ -710,7 +796,7 @@ def register_reading_tools(
                 "applied automatically and can only be narrowed."
             ),
             parameters=FindTextInput.model_json_schema(),
-            handler=service.find_text,
+            handler=_cap_to_reader(service.find_text),
             max_result_chars=24_000,
             effect_kind=EffectKind.READ,
             retry_safe=True,
@@ -728,7 +814,7 @@ def register_reading_tools(
                 "always searchable."
             ),
             parameters=BrowseChaptersInput.model_json_schema(),
-            handler=service.browse_chapters,
+            handler=_cap_to_reader(service.browse_chapters),
             max_result_chars=24_000,
             effect_kind=EffectKind.READ,
             retry_safe=True,

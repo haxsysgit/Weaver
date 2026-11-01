@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 
+
 export type RuneMode = "particles" | "voice" | "threads";
 
 export const RUNE_OPTIONS: Array<{
@@ -28,6 +29,7 @@ interface SpellSurfaceRunesProps {
   announcement: string;
   eventKey: number;
   mode: RuneMode;
+  gathering?: boolean;
 }
 
 const PARTICLES = Array.from({ length: 20 }, (_, index) => index);
@@ -40,21 +42,22 @@ export function SpellSurfaceRunes({
   announcement,
   eventKey,
   mode,
+  gathering = false,
 }: SpellSurfaceRunesProps) {
   return (
     <div
       aria-live="polite"
-      className={`lab-rune-event rune-${mode}`}
-      key={`${mode}-${eventKey}`}
+      className={`lab-rune-event rune-${mode}${gathering ? " rune-gathering" : ""}`}
+      key={`${mode}-${eventKey}-${gathering}`}
     >
-      {mode === "particles" && (
+      {!gathering && mode === "particles" && (
         <div aria-hidden="true" className="rune-particles">
           {PARTICLES.map((particle) => (
             <span key={particle} style={particleStyle(particle)} />
           ))}
         </div>
       )}
-      {mode === "threads" && (
+      {!gathering && mode === "threads" && (
         <svg aria-hidden="true" className="rune-thread-weave" viewBox="0 0 420 72">
           <path d="M4 36 C60 4 95 65 150 25 S250 7 302 43 S375 64 416 20" />
           <path d="M12 55 C74 28 105 12 166 48 S264 63 318 25 S382 10 408 44" />

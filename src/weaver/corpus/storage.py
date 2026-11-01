@@ -108,6 +108,10 @@ def collapse_ranges(numbers: Iterable[int]) -> list[ChapterRange]:
 
 
 def mode_is_public(path: Path) -> bool:
+    # Windows has no group/other mode bits (every file reports 0o666 or
+    # 0o777); access there is governed by the user profile's ACLs.
+    if os.name == "nt":
+        return False
     return bool(stat.S_IMODE(path.stat().st_mode) & 0o077)
 
 
@@ -643,6 +647,10 @@ class CorpusStore:
 
     @staticmethod
     def _fsync_directory(path: Path) -> None:
+        # Windows cannot open a directory as a file (PermissionError), and
+        # NTFS journals the rename itself, so there is nothing to flush.
+        if os.name == "nt":
+            return
         descriptor = os.open(path, os.O_RDONLY)
         try:
             os.fsync(descriptor)

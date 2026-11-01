@@ -182,6 +182,11 @@ def _async_append(target: list):
     return append
 
 
+def _direct_packet(label: str) -> str:
+    """Minimal direct-reading packet for tests unrelated to source validation."""
+    return f"--- chapter 104, lines 1-2 ---\n{label}"
+
+
 async def execute_turn(
     layer: ModelLayer,
     model: ModelSpec,
@@ -198,6 +203,7 @@ async def execute_turn(
     reasoning: str | None = None,
     execution_policy: ToolExecutionPolicy | None = None,
     packet_builder=None,
+    final_pass: bool = True,
 ):
     return await run_turn(
         session_id=session_id,
@@ -215,7 +221,35 @@ async def execute_turn(
         tool_budget=tool_budget,
         reasoning=reasoning,
         packet_builder=packet_builder,
+        final_pass=final_pass,
     )
+
+
+async def test_reader_boundary_note_reaches_every_model_call() -> None:
+    layer, model, provider = scripted_layer(
+        tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+        stop_response("Done."),
+    )
+
+    result = await run_turn(
+        session_id="s",
+        turn_id="t",
+        model_layer=layer,
+        model=model,
+        system_prompt="You are Weaver.",
+        history=[],
+        tool_registry=make_registry(),
+        active_tools=("echo",),
+        execution_policy=ToolExecutionPolicy.read_only(),
+        cancel_event=asyncio.Event(),
+        tool_budget=2,
+        reader_note="The reader is at chapter 300. Protect the story.",
+    )
+
+    assert result.exit_reason == TurnExitReason.COMPLETED
+    for call in provider.calls:
+        system = call.request.messages[0]
+        assert "chapter 300" in (system.content or "")
 
 
 def tool_context() -> ToolExecutionContext:
@@ -755,14 +789,18 @@ class TestUnsafeModelResponses:
         assert result.tool_starts == 0
         assert starts == {}
 
-    async def test_stop_with_tool_calls_fails_safely(self) -> None:
-        call = tool_call("call-1", "echo", "{}")
-        response = model_response(
-            stop_reason=ModelStopReason.STOP,
-            tool_calls=(call,),
-            raw_stop_reason="stop",
+    async def test_stop_with_tool_calls_runs_the_tools(self) -> None:
+        # DeepSeek sometimes labels a tool-call turn as STOP. Failing the
+        # reader's turn on the label is worse than running the call.
+        call = tool_call("call-1", "echo", '{"message": "a"}')
+        layer, model, provider = scripted_layer(
+            model_response(
+                stop_reason=ModelStopReason.STOP,
+                tool_calls=(call,),
+                raw_stop_reason="stop",
+            ),
+            stop_response("Done."),
         )
-        layer, model, _ = scripted_layer(response)
 
         result = await execute_turn(
             layer,
@@ -770,8 +808,9 @@ class TestUnsafeModelResponses:
             active_tools=("echo",),
         )
 
-        assert result.exit_reason == TurnExitReason.MODEL_FAILED
-        assert result.tool_starts == 0
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert result.tool_starts == 1
+        assert result.final_text == "Done."
 
     async def test_tool_use_without_calls_fails_safely(self) -> None:
         layer, model, _ = scripted_layer(
@@ -1082,16 +1121,50 @@ class TestReasoningTiers:
         assert provider.calls[0].request.reasoning.enabled is False
         assert provider.calls[0].request.reasoning.effort is None
 
-    def test_tiers_keep_thinking_on_and_only_vary_effort(self) -> None:
+    def test_every_skill_thinking_tier_has_an_effort(self) -> None:
         from weaver.agent.turn import REASONING_TIERS
+        from weaver.skills import ALL_SKILLS
 
-        # Owner decision 2026-08-07: thinking is always on for all three
-        # tiers; only the tool budget and the reasoning effort differ.
-        assert REASONING_TIERS == {
-            "awakened": "high",
-            "ascended": "high",
-            "transcendent": "max",
-        }
+        assert REASONING_TIERS == {"ascended": "high", "transcendent": "max"}
+        for skill in ALL_SKILLS:
+            assert skill.reasoning_tier is None or skill.reasoning_tier in REASONING_TIERS
+
+    async def test_loading_a_bigger_skill_turns_thinking_on_and_rereads(
+        self,
+    ) -> None:
+        # A turn routed as small talk starts with thinking off and no final
+        # reread. When the model loads a big skill mid-turn, the answer gets
+        # that skill's thinking effort and its final reading pass.
+        from weaver.skills.loader import register_skill_tool
+
+        registry = make_registry()
+        register_skill_tool(registry)
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "load_skill", '{"names": ["versus"]}')),
+            tool_response(tool_call("c2", "echo", '{"message": "a"}')),
+            stop_response("Draft: Nephis wins on reach."),
+            stop_response("Final: Nephis wins on reach (ch. 104)."),
+        )
+
+        async def packet_builder(results, draft):
+            return _direct_packet("PACKET: chapter 104 prose")
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=registry,
+            active_tools=("load_skill", "echo"),
+            reasoning=None,
+            final_pass=False,
+            packet_builder=packet_builder,
+        )
+
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert result.final_text == "Final: Nephis wins on reach (ch. 104)."
+        assert provider.calls[0].request.reasoning.enabled is False
+        final = provider.calls[-1].request.reasoning
+        assert final.enabled is True
+        assert final.effort == "max"
 
 
 class TestFinalReadingPhase:
@@ -1108,7 +1181,7 @@ class TestFinalReadingPhase:
 
         async def packet_builder(results, draft):
             calls.append((len(results), draft))
-            return "PACKET: chapter 104 prose"
+            return _direct_packet("PACKET: chapter 104 prose")
 
         result = await execute_turn(
             layer,
@@ -1138,6 +1211,184 @@ class TestFinalReadingPhase:
             for message in final_request.messages
         )
 
+    def test_answer_without_blockquotes_strips_only_quotes(self) -> None:
+        from weaver.agent.turn import _answer_without_blockquotes
+
+        answer = (
+            "ok so this happened (ch. 1).\n"
+            "> a long quoted passage that should not kill the turn\n"
+            "and then this happened (ch. 2)."
+        )
+        stripped = _answer_without_blockquotes(answer)
+        assert "long quoted passage" not in stripped
+        assert "ok so this happened" in stripped
+        assert "and then this happened" in stripped
+
+    async def test_quick_turn_can_skip_the_final_reading_pass(self) -> None:
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response("the passage says it happened (ch. 104)."),
+        )
+        persisted = []
+
+        async def packet_builder(results, draft):
+            return _direct_packet("PACKET: chapter 104 prose")
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            persist_message=_async_append(persisted),
+            packet_builder=packet_builder,
+            final_pass=False,
+        )
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert result.final_text == "the passage says it happened (ch. 104)."
+        assert len(provider.calls) == 2
+        assert persisted[-1].content == "the passage says it happened (ch. 104)."
+
+    async def test_final_reading_call_includes_the_answer_blueprint(self) -> None:
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response("Draft: LO49 vanished (ch. 900)."),
+            stop_response("No. LO49 vanished after Sunny left (chs. 900-901)."),
+        )
+        history = [
+            UserMessage(
+                message_id="reader-current",
+                turn_id="turn-current",
+                content="LO49 evacuated after Sunny left, right?",
+            )
+        ]
+
+        async def packet_builder(results, draft):
+            return (
+                "--- chapter 900 lines 185-217 ---\nSource prose.\n\n"
+                "--- evidence board ---\n"
+                "direct sources: chapter 900 lines 185-217, "
+                "chapter 901 lines 3-13"
+            )
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            history=history,
+            packet_builder=packet_builder,
+        )
+
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        final_request = provider.calls[-1].request
+        joined = "\n".join(message.content or "" for message in final_request.messages)
+        assert "--- answer blueprint ---" in joined
+        assert "response mode: correction" in joined
+        assert "allowed source chapters: 900, 901" in joined
+        assert "preserve the part of the reader's memory" in joined
+
+    async def test_final_reading_repairs_one_failed_publication(self) -> None:
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response("Draft: LO49 vanished (ch. 900)."),
+            stop_response("Great question! LO49 vanished — completely (ch. 900)."),
+            stop_response("LO49 vanished completely (ch. 900)."),
+        )
+        persisted = []
+
+        async def packet_builder(results, draft):
+            return (
+                "--- chapter 900 lines 185-217 ---\nSource prose.\n\n"
+                "--- evidence board ---\n"
+                "direct sources: chapter 900 lines 185-217"
+            )
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            persist_message=_async_append(persisted),
+            packet_builder=packet_builder,
+        )
+
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert result.final_text == "LO49 vanished completely (ch. 900)."
+        assert len(provider.calls) == 4
+        repair_request = provider.calls[-1].request
+        repair_prompt = "\n".join(
+            message.content or "" for message in repair_request.messages
+        )
+        assert "Make one rewrite" in repair_prompt
+        assert "ai_opening" in repair_prompt
+        assert "em_dash" in repair_prompt
+        assert [message.content for message in persisted if message.kind == "assistant"] == [
+            "",
+            "LO49 vanished completely (ch. 900).",
+        ]
+
+    async def test_failed_publication_repair_falls_back_to_clean_candidate(
+        self,
+    ) -> None:
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response("LO49 vanished after Sunny left (ch. 900)."),
+            stop_response("Great question! LO49 vanished — completely (ch. 900)."),
+            stop_response("In summary, LO49 vanished — completely (ch. 900)."),
+        )
+
+        async def packet_builder(results, draft):
+            return (
+                "--- chapter 900 lines 185-217 ---\nSource prose.\n\n"
+                "--- evidence board ---\n"
+                "direct sources: chapter 900 lines 185-217"
+            )
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            packet_builder=packet_builder,
+        )
+
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert result.final_text == "LO49 vanished after Sunny left (ch. 900)."
+        assert len(provider.calls) == 4
+
+    async def test_failed_spoiler_repair_returns_a_safe_boundary(self) -> None:
+        later_answer = "LO49 vanished after Sunny left (ch. 900)."
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response(later_answer),
+            stop_response(later_answer),
+            stop_response(later_answer),
+        )
+
+        async def packet_builder(results, draft):
+            return (
+                "--- chapter 900 lines 185-217 ---\nSource prose.\n\n"
+                "--- evidence board ---\n"
+                "direct sources: chapter 900 lines 185-217\n\n"
+                "The reader is at chapter 850. Answer the question but protect "
+                "the story beats."
+            )
+
+        result = await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            packet_builder=packet_builder,
+        )
+
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert "chapter 850" in result.final_text
+        assert "lift the boundary" in result.final_text
+        assert "LO49" not in result.final_text
+        assert "ch. 900" not in result.final_text
+        assert len(provider.calls) == 4
+
     async def test_final_reading_call_keeps_the_tier_effort(self) -> None:
         # The tier effort (high / max) belongs to the heavy final reading
         # answer call; locate steps drop to low (thinking still on).
@@ -1148,7 +1399,7 @@ class TestFinalReadingPhase:
         )
 
         async def packet_builder(results, draft):
-            return "PACKET: prose"
+            return _direct_packet("PACKET: prose")
 
         result = await execute_turn(
             layer,
@@ -1168,12 +1419,10 @@ class TestFinalReadingPhase:
         for call in provider.calls:
             assert call.request.reasoning.enabled is True
 
-    async def test_final_reading_keeps_recent_exchanges_drops_old_ones(self) -> None:
-        # The "7 daemons" bug: the WHOLE conversation history dominated
-        # the final reading call, so the model answered the previous question
-        # instead of the one just asked. The window keeps the last few
-        # exchanges (continuity: follow-ups must know the previous Q&A)
-        # and drops everything older than that.
+    async def test_final_reading_projects_current_positions_drops_old_ones(self) -> None:
+        # The "7 daemons" bug: full conversation history dominated the final
+        # reading call. The compact brief keeps the current positions and drops
+        # older exchanges.
         layer, model, provider = scripted_layer(
             tool_response(tool_call("c1", "echo", '{"message": "a"}')),
             stop_response("Draft: located daemon statements."),
@@ -1204,7 +1453,7 @@ class TestFinalReadingPhase:
         ]
 
         async def packet_builder(results, draft):
-            return "PACKET: daemon statements"
+            return _direct_packet("PACKET: daemon statements")
 
         await execute_turn(
             layer,
@@ -1218,11 +1467,59 @@ class TestFinalReadingPhase:
         joined = " ".join((m.content or "") for m in final_request.messages)
         assert "PACKET: daemon statements" in joined
         assert "list the 7 daemons" in joined
-        # continuity: the previous exchange stays in the window
+        # continuity: the previous Weaver position stays in the brief
         assert "Anvil gets cooked" in joined
-        # the exchange before that is beyond the window and must not leak
+        # the older exchange is outside the brief and must not leak
         assert "dark sea swallowed Nephis" not in joined
         assert final_request.tools == ()
+
+    async def test_final_reading_builds_a_compact_turn_brief_from_history(
+        self,
+    ) -> None:
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response("Draft: the comparison needs both versions."),
+            stop_response("Final: the later version wins."),
+        )
+        history = [
+            UserMessage(
+                message_id="reader-old",
+                turn_id="turn-old",
+                content="I think the earlier version wins.",
+            ),
+            AssistantMessage(
+                message_id="weaver-old",
+                turn_id="turn-old",
+                content="My take is that the earlier version lacks the later counter.",
+            ),
+            UserMessage(
+                message_id="reader-current",
+                turn_id="turn-current",
+                content="No, you're wrong. What about current Sunny after chapter 3120?",
+            ),
+        ]
+
+        async def packet_builder(results, draft):
+            return _direct_packet("PACKET: version evidence")
+
+        await execute_turn(
+            layer,
+            model,
+            registry=make_registry(),
+            active_tools=("echo",),
+            history=history,
+            packet_builder=packet_builder,
+        )
+
+        final_request = provider.calls[-1].request
+        joined = "\n".join(message.content or "" for message in final_request.messages)
+        assert "--- turn brief ---" in joined
+        assert "actual ask: No, you're wrong" in joined
+        assert "prior reader position: I think the earlier version wins." in joined
+        assert "prior Weaver position: My take is that the earlier version" in joined
+        assert "version signals: current; after; chapter 3120" in joined
+        assert "needs prior context: yes" in joined
+        assert "reader challenges prior answer: yes" in joined
 
     async def test_final_reading_request_carries_the_answer_token_cap(self) -> None:
         # The daemons answer was cut mid-sentence at finish_reason=
@@ -1237,7 +1534,7 @@ class TestFinalReadingPhase:
         )
 
         async def packet_builder(results, draft):
-            return "PACKET: daemon statements"
+            return _direct_packet("PACKET: daemon statements")
 
         await execute_turn(
             layer,
@@ -1259,7 +1556,11 @@ class TestFinalReadingPhase:
             == ANSWER_MAX_OUTPUT_TOKENS
         )
 
-    async def test_builder_none_keeps_the_candidate(self) -> None:
+    async def test_builder_none_after_a_dry_search_lets_the_answer_stand(
+        self,
+    ) -> None:
+        # A search that turns up nothing citable must not brick the turn:
+        # the reader gets the answer with its own gap, not an error.
         layer, model, provider = scripted_layer(
             tool_response(tool_call("c1", "echo", '{"message": "a"}')),
             stop_response("Draft answer."),
@@ -1277,9 +1578,15 @@ class TestFinalReadingPhase:
             persist_message=_async_append(persisted),
             packet_builder=packet_builder,
         )
+        assert result.exit_reason == TurnExitReason.COMPLETED
         assert result.final_text == "Draft answer."
         assert len(provider.calls) == 2
-        assert [m.kind for m in persisted][-1] == "assistant"
+        assert [m.kind for m in persisted] == [
+            "assistant",
+            "tool_call",
+            "tool_result",
+            "assistant",
+        ]
 
     async def test_zero_evidence_candidate_gets_one_reprompt_then_publishes(
         self,
@@ -1310,16 +1617,21 @@ class TestFinalReadingPhase:
             for message in provider.calls[1].request.messages
         )
 
-    async def test_no_final_reading_after_forced_answer(self) -> None:
+    async def test_forced_answer_still_gets_a_safe_final_reading(self) -> None:
         layer, model, provider = scripted_layer(
             tool_response(tool_call("c1", "echo", '{"message": "a"}')),
-            stop_response("Forced answer."),
+            stop_response("Forced draft (ch. 900)."),
+            stop_response("Checked final (ch. 900)."),
         )
         called = []
 
         async def packet_builder(results, draft):
             called.append(draft)
-            return "PACKET"
+            return (
+                "--- chapter 900 lines 1-4 ---\nSource prose.\n\n"
+                "--- evidence board ---\n"
+                "direct sources: chapter 900 lines 1-4"
+            )
 
         result = await execute_turn(
             layer,
@@ -1329,9 +1641,10 @@ class TestFinalReadingPhase:
             tool_budget=1,
             packet_builder=packet_builder,
         )
-        assert result.final_text == "Forced answer."
-        assert called == []
-        assert len(provider.calls) == 2
+        assert result.final_text == "Checked final (ch. 900)."
+        assert called == ["Forced draft (ch. 900)."]
+        assert len(provider.calls) == 3
+        assert provider.calls[-1].request.tools == ()
 
     async def test_tool_use_in_final_phase_falls_back_to_candidate(self) -> None:
         layer, model, provider = scripted_layer(
@@ -1341,7 +1654,7 @@ class TestFinalReadingPhase:
         )
 
         async def packet_builder(results, draft):
-            return "PACKET"
+            return _direct_packet("PACKET")
 
         result = await execute_turn(
             layer,
@@ -1370,7 +1683,7 @@ class TestFinalReadingPhase:
         )
 
         async def packet_builder(results, draft):
-            return "PACKET: prose"
+            return _direct_packet("PACKET: prose")
 
         result = await execute_turn(
             layer,
@@ -1386,8 +1699,15 @@ class TestFinalReadingPhase:
             if m.role == "assistant":
                 assert not m.tool_calls, "orphaned tool_calls in final request"
                 assert m.content, "empty assistant message in final request"
+        # The draft rides in the private instructions, not as something
+        # Weaver already said to the reader.
         candidates = [m for m in final_messages if m.role == "assistant"]
-        assert [m.content for m in candidates] == ["Draft: found it."]
+        assert candidates == []
+        assert any(
+            m.role == "system" and "private draft" in (m.content or "")
+            and "Draft: found it." in (m.content or "")
+            for m in final_messages
+        )
 
     async def test_final_window_drops_previous_tool_use_assistants(self) -> None:
         # Multi-turn thread-broke (2026-08-09): the recent window kept the
@@ -1419,7 +1739,7 @@ class TestFinalReadingPhase:
         ]
 
         async def packet_builder(results, draft):
-            return "PACKET: ch2729"
+            return _direct_packet("PACKET: ch2729")
 
         await execute_turn(
             layer,
@@ -1463,7 +1783,7 @@ class TestFinalReadingPhase:
         persisted: list = []
 
         async def packet_builder(results, draft):
-            return "PACKET: chapter 104"
+            return _direct_packet("PACKET: chapter 104")
 
         result = await execute_turn(
             layer,
@@ -1479,7 +1799,7 @@ class TestFinalReadingPhase:
         assert persisted[-1].content == "Candidate grounded in chapter 104."
         assert len(provider.calls) == 3
 
-    async def test_packet_builder_failure_publishes_validated_candidate(
+    async def test_packet_builder_failure_rejects_unchecked_candidate(
         self,
     ) -> None:
         layer, model, provider = scripted_layer(
@@ -1498,8 +1818,8 @@ class TestFinalReadingPhase:
             packet_builder=packet_builder,
         )
 
-        assert result.exit_reason == TurnExitReason.COMPLETED
-        assert result.final_text == "Candidate grounded in chapter 104."
+        assert result.exit_reason == TurnExitReason.MODEL_FAILED
+        assert result.final_text == ""
         assert len(provider.calls) == 2
 
     async def test_final_phase_provider_exception_publishes_candidate(
@@ -1521,7 +1841,7 @@ class TestFinalReadingPhase:
         monkeypatch.setattr(provider, "stream", fail_final_call)
 
         async def packet_builder(results, draft):
-            return "PACKET: chapter 104"
+            return _direct_packet("PACKET: chapter 104")
 
         result = await execute_turn(
             layer,
@@ -1556,7 +1876,7 @@ class TestFinalReadingPhase:
         persisted: list = []
 
         async def packet_builder(results, draft):
-            return "PACKET: chapter 104"
+            return _direct_packet("PACKET: chapter 104")
 
         result = await execute_turn(
             layer,
@@ -1742,13 +2062,15 @@ class TestCandidateValidation:
             for message in result.new_messages
         )
 
-    async def test_working_note_rejection_limit_fails_without_persisting(
+    async def test_an_empty_candidate_gets_one_stripped_answer_attempt(
         self,
     ) -> None:
-        layer, model, _ = scripted_layer(
-            stop_response("Let me check."),
-            stop_response("I'll search."),
-            stop_response("One moment."),
+        layer, model, provider = scripted_layer(
+            tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+            stop_response(""),
+            stop_response(""),
+            stop_response(""),
+            stop_response("Here is the answer."),
         )
         persisted: list = []
 
@@ -1759,8 +2081,32 @@ class TestCandidateValidation:
             persist_message=_async_append(persisted),
         )
 
+        assert result.exit_reason == TurnExitReason.COMPLETED
+        assert result.final_text == "Here is the answer."
+        # the last attempt has no tools, so the model has to speak
+        assert provider.calls[-1].request.tools == ()
+
+    async def test_working_note_rejection_limit_fails_without_persisting(
+        self,
+    ) -> None:
+        layer, model, _ = scripted_layer(
+            stop_response("Let me check."),
+            stop_response("I'll search."),
+            stop_response("One moment."),
+            stop_response("Let me check that."),
+        )
+        persisted: list = []
+
+        result = await execute_turn(
+            layer,
+            model,
+            active_tools=("echo",),
+            persist_message=_async_append(persisted),
+        )
+
+        # two corrections, then one tools-stripped attempt, then failure
         assert result.exit_reason == TurnExitReason.MODEL_FAILED
-        assert result.model_steps == 3
+        assert result.model_steps == 4
         assert persisted == []
 
 
@@ -1828,7 +2174,7 @@ class TestTextToolCallSlips:
         persisted: list = []
 
         async def packet_builder(results, draft):
-            return "PACKET: prose"
+            return _direct_packet("PACKET: prose")
 
         result = await execute_turn(
             layer,
@@ -1867,7 +2213,7 @@ class TestTextToolCallSlips:
         persisted: list = []
 
         async def packet_builder(results, draft):
-            return "PACKET: evidence only"
+            return _direct_packet("PACKET: evidence only")
 
         result = await execute_turn(
             layer,
@@ -1893,19 +2239,20 @@ class TestTextToolCallSlips:
             stop_response(self.SLIP),
             stop_response(self.SLIP),
             stop_response(self.SLIP),
+            stop_response(self.SLIP),
         )
         persisted: list = []
 
         result = await execute_turn(
-            layer,
-            model,
+            layer, model,
             registry=make_registry(),
             active_tools=("echo",),
             persist_message=_async_append(persisted),
         )
-        # two corrections are allowed; the third slip fails the turn
+        # two corrections and one tools-stripped attempt; then the slip fails
         assert result.exit_reason == TurnExitReason.MODEL_FAILED
-        assert result.model_steps == 4
+        assert result.model_steps == 5
+        assert provider.calls[-1].request.tools == ()
         # no slip text ever reached the store
         assert all(
             "tool calls>" not in (getattr(m, "content", "") or "")
@@ -1933,3 +2280,169 @@ class TestTextToolCallSlips:
         # text tool call there is a refusal, not an answer
         assert result.exit_reason == TurnExitReason.LIMIT_REACHED
         assert result.model_steps == 2
+
+
+
+def test_earlier_opened_chapters_stay_read_within_the_reader_cap() -> None:
+    from weaver.agent.messages import ToolResultMessage
+    from weaver.agent.turn import _earlier_opened_chapters
+
+    def opened(chapter: int, *, ok: bool = True, kind: str = "novel") -> ToolResultMessage:
+        return ToolResultMessage(
+            call_id=f"c{chapter}",
+            tool_name="read_chapters",
+            ok=ok,
+            result={"durable_evidence": {"source_kind": kind, "chapter": chapter}},
+        )
+
+    history = [
+        opened(116),
+        opened(592),
+        opened(2487),
+        opened(700, ok=False),
+        opened(800, kind="notebook"),
+    ]
+
+    assert _earlier_opened_chapters(history, None) == (116, 592, 2487)
+    assert _earlier_opened_chapters(history, 1000) == (116, 592)
+
+
+def test_the_turn_brief_forbids_withdrawing_a_claim_for_absence() -> None:
+    from weaver.agent.turn import _build_turn_brief, _format_turn_brief
+
+    brief = _format_turn_brief(_build_turn_brief([UserMessage(content="fine, one more test.")]))
+
+    assert "withdraw it only when an opened passage contradicts it" in brief
+
+
+async def test_a_search_only_answer_may_not_invent_a_first_line() -> None:
+    """Slice 3 live check: a turn that only searched said chapter 1 opens on
+    shoes. With no opened lines, the answer goes back once to open the
+    chapter or drop the claim."""
+    from weaver.agent.turn import UNOPENED_TEXT_CORRECTION
+
+    layer, model, provider = scripted_layer(
+        tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+        stop_response("The very first line is dirt on brand-new shoes (ch. 1)."),
+        stop_response("I'd have to open chapter 1 to tell you how it starts."),
+    )
+
+    async def dry_packet(results, draft):
+        return None
+
+    result = await execute_turn(
+        layer,
+        model,
+        registry=make_registry(),
+        active_tools=("echo",),
+        packet_builder=dry_packet,
+    )
+
+    assert result.exit_reason == TurnExitReason.COMPLETED
+    assert result.final_text == "I'd have to open chapter 1 to tell you how it starts."
+    assert any(
+        message.content == UNOPENED_TEXT_CORRECTION
+        for message in provider.calls[-1].request.messages
+    )
+
+
+async def test_an_answer_that_opened_nothing_may_not_cite_from_memory() -> None:
+    """Slice 3 re-run: with no tools at all, the opener cited invented
+    chapter 1 details. A citation needs an opened chapter."""
+    from weaver.agent.turn import UNOPENED_TEXT_CORRECTION
+
+    layer, model, provider = scripted_layer(
+        stop_response("Ask me anything. The runes appear on his school wall (ch. 1)."),
+        stop_response("Still from memory: the runes are on his school wall (ch. 1)."),
+        tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+        stop_response("Pick a scene and I'll open it."),
+    )
+
+    async def dry_packet(results, draft):
+        return None
+
+    result = await execute_turn(
+        layer,
+        model,
+        registry=make_registry(),
+        active_tools=("echo",),
+        packet_builder=dry_packet,
+    )
+
+    assert result.exit_reason == TurnExitReason.COMPLETED
+    assert result.final_text == "Pick a scene and I'll open it."
+    assert any(
+        message.content == UNOPENED_TEXT_CORRECTION
+        for call in provider.calls
+        for message in call.request.messages
+    )
+
+
+async def test_a_dry_answer_may_cite_a_chapter_the_thread_already_opened() -> None:
+    history = [
+        UserMessage(content="what happens in ch 116?"),
+        ToolResultMessage(
+            call_id="old",
+            tool_name="read_chapters",
+            ok=True,
+            result={"durable_evidence": {"source_kind": "novel", "chapter": 116}},
+        ),
+        AssistantMessage(content="The grate scene (ch. 116)."),
+        UserMessage(content="huh"),
+    ]
+    layer, model, provider = scripted_layer(
+        tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+        stop_response("The grate is the whole joke (ch. 116)."),
+    )
+
+    async def dry_packet(results, draft):
+        return None
+
+    result = await execute_turn(
+        layer,
+        model,
+        registry=make_registry(),
+        active_tools=("echo",),
+        packet_builder=dry_packet,
+        history=history,
+    )
+
+    assert result.final_text == "The grate is the whole joke (ch. 116)."
+    assert len(provider.calls) == 2
+
+
+async def test_the_final_pass_treats_the_draft_as_private() -> None:
+    """Trial 10: the final answer announced "a small fix on my own phrasing"
+    for a draft the reader never saw. The final pass is told it is private."""
+    layer, model, provider = scripted_layer(
+        tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+        stop_response("Draft: the slave is still alive."),
+        stop_response("Final: the slave is already dead (ch. 6)."),
+    )
+
+    async def packet_builder(results, draft):
+        return _direct_packet("PACKET: chapter 6 prose")
+
+    result = await execute_turn(
+        layer,
+        model,
+        registry=make_registry(),
+        active_tools=("echo",),
+        packet_builder=packet_builder,
+    )
+
+    assert result.final_text == "Final: the slave is already dead (ch. 6)."
+    final_request = provider.calls[-1].request
+    system_text = "\n".join(
+        message.content or ""
+        for message in final_request.messages
+        if message.role == "system"
+    )
+    assert "private draft" in system_text
+    assert "never mention it" in system_text
+    assert "Draft: the slave is still alive." in system_text
+    assert not any(
+        message.role == "assistant"
+        and "Draft: the slave is still alive." in (message.content or "")
+        for message in final_request.messages
+    )

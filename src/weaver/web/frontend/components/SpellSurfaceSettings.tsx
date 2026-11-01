@@ -9,8 +9,8 @@ import {
   setApiKeyDisabled,
   setModelId,
 } from "../lib/identity";
+import { MAX_CHAPTER } from "../lib/readerPosition";
 import { EyeIcon, EyeSlashIcon } from "./Icons";
-import { RUNE_OPTIONS, type RuneMode } from "./SpellSurfaceRunes";
 import {
   SOUL_SEA_DESCRIPTIONS,
   SOUL_SEA_LABELS,
@@ -23,39 +23,52 @@ export type FontSize = "small" | "medium" | "large";
 export type GlassMode = "subtle" | "immersive";
 export type StarIntensity = "quiet" | "balanced" | "vivid";
 export type SurfaceTheme = "crimson" | "cosmos" | "starlight" | "void";
-export type Tier = "awakened" | "ascended" | "transcendent";
 
 export interface LabPreferences {
   chapter: number;
   density: Density;
   fontSize: FontSize;
   glass: GlassMode;
-  runeMode: RuneMode;
   soulMode: SoulSeaMode;
   spoilerMode: "protect" | "none";
   starIntensity: StarIntensity;
   theme: SurfaceTheme;
-  tier: Tier;
   volume: number;
 }
 
-type SettingsSection =
+export type SettingsSection =
   | "reader"
-  | "reading"
   | "model"
   | "appearance"
+  | "stars"
   | "privacy"
   | "rite";
 
+export interface SaveOptions {
+  /** False when the reader never set a chapter: save no boundary rather
+   * than the placeholder chapter. */
+  boundaryChosen: boolean;
+}
+
 interface SpellSurfaceSettingsProps {
+  /** Whether this device has a saved chapter. Without one, Settings says so
+   * instead of presenting the placeholder chapter as an active boundary. */
+  boundarySaved?: boolean;
+  initialSection?: SettingsSection;
   initial: LabPreferences;
   onApiKeyChange?: (hasApiKey: boolean) => void;
   onClose: () => void;
   onReplayFirstNightmare?: () => void;
-  onSave: (preferences: LabPreferences) => void;
+  /** May return a promise: Settings shows Saving, then Saved, and closes
+   * only once it resolves; a rejection keeps the edits open with a retry. */
+  onSave: (preferences: LabPreferences, options: SaveOptions) => void | Promise<void>;
 }
 
-const MAX_CHAPTER = 3160;
+type SaveState = "idle" | "saving" | "saved" | "failed";
+
+/** How long the Saved confirmation stays up before the panel closes. */
+export const SAVED_HOLD_MS = 900;
+
 const VOLUMES = [
   { end: 95, number: 1 },
   { end: 350, number: 2 },
@@ -72,14 +85,8 @@ const VOLUMES = [
   { end: MAX_CHAPTER, number: 13 },
 ];
 
-const TIER_COPY: Record<Tier, string> = {
-  awakened: "A quick reread for direct questions.",
-  ascended: "A balanced reread with connected evidence.",
-  transcendent: "The deepest reread for hard canon debates.",
-};
-
 const MODEL_DESCRIPTIONS: Record<string, string> = {
-  "deepseek-v4-flash": "Fast responses for everyday chapter questions.",
+  "deepseek-flash": "Fast responses for everyday chapter questions.",
   "deepseek-v4-pro": "More reasoning for hard canon debates and theories.",
 };
 
@@ -105,18 +112,18 @@ function preferencesMatch(left: LabPreferences, right: LabPreferences) {
     left.density === right.density &&
     left.fontSize === right.fontSize &&
     left.glass === right.glass &&
-    left.runeMode === right.runeMode &&
     left.soulMode === right.soulMode &&
     left.spoilerMode === right.spoilerMode &&
     left.starIntensity === right.starIntensity &&
     left.theme === right.theme &&
-    left.tier === right.tier &&
     left.volume === right.volume
   );
 }
 
 export function SpellSurfaceSettings({
+  boundarySaved = true,
   initial,
+  initialSection = "reader",
   onApiKeyChange,
   onClose,
   onReplayFirstNightmare,
@@ -127,9 +134,16 @@ export function SpellSurfaceSettings({
   const [showApiKey, setShowApiKey] = useState(false);
   const [apiKeyDisabled, setApiKeyDisabledValue] = useState(isApiKeyDisabled);
   const [modelId, setModelIdValue] = useState(getModelId);
-  const [activeSection, setActiveSection] = useState<SettingsSection>("reader");
-  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState<SettingsSection>(initialSection);
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(initialSection !== "reader");
   const [discardPromptOpen, setDiscardPromptOpen] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [chapterTouched, setChapterTouched] = useState(false);
+  // A save that never reached Weaver (fetch threw) reads differently from
+  // one Weaver refused: the first means the server is out of reach.
+  const [saveUnreachable, setSaveUnreachable] = useState(false);
+  const mounted = useRef(true);
+  const closeTimer = useRef<number | undefined>(undefined);
   const panelRef = useRef<HTMLElement>(null);
   const backButtonRef = useRef<HTMLButtonElement>(null);
   const sectionButtonRefs = useRef(new Map<SettingsSection, HTMLButtonElement>());
@@ -142,8 +156,11 @@ export function SpellSurfaceSettings({
     () => withHiddenThreadIdentity(preferences),
     [preferences],
   );
+  const boundaryChosen = boundarySaved || chapterTouched;
+  const boundaryPending = !boundaryChosen;
   const isDirty =
     !preferencesMatch(fixedPreferences, initialPreferences.current) ||
+    (!boundarySaved && chapterTouched) ||
     apiKey !== initialApiKey.current ||
     apiKeyDisabled !== initialApiKeyDisabled.current ||
     modelId !== initialModelId.current;
@@ -151,6 +168,19 @@ export function SpellSurfaceSettings({
   useEffect(() => {
     panelRef.current?.querySelector<HTMLElement>(".lab-settings-nav button.on")?.focus();
   }, []);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      window.clearTimeout(closeTimer.current);
+    };
+  }, []);
+
+  // A failed save stays on screen until the reader edits again.
+  useEffect(() => {
+    setSaveState((current) => (current === "failed" ? "idle" : current));
+  }, [preferences, apiKey, apiKeyDisabled, modelId, chapterTouched]);
 
   useEffect(() => {
     if (isDirty) {
@@ -170,6 +200,7 @@ export function SpellSurfaceSettings({
 
   function setChapter(nextChapter: number) {
     const chapter = Math.min(MAX_CHAPTER, Math.max(1, nextChapter || 1));
+    setChapterTouched(true);
     setPreferences((current) => ({
       ...current,
       chapter,
@@ -190,6 +221,14 @@ export function SpellSurfaceSettings({
   }
 
   function requestClose() {
+    if (saveState === "saving") {
+      return;
+    }
+    if (saveState === "saved") {
+      window.clearTimeout(closeTimer.current);
+      onClose();
+      return;
+    }
     if (isDirty) {
       setDiscardPromptOpen(true);
       return;
@@ -197,12 +236,38 @@ export function SpellSurfaceSettings({
     onClose();
   }
 
-  function saveSettings() {
+  async function saveSettings() {
+    if (saveState === "saving" || saveState === "saved") {
+      return;
+    }
+    setSaveState("saving");
+    try {
+      await onSave(fixedPreferences, { boundaryChosen });
+    } catch (error) {
+      // The reason stays in the console for diagnosis; the reader sees the
+      // rune-voice line. Never logs the key: only the save error.
+      console.warn("Weaver settings save failed:", error);
+      if (mounted.current) {
+        setSaveUnreachable(error instanceof TypeError);
+        setSaveState("failed");
+      }
+      return;
+    }
+    // All or nothing: the key and model are stored only once the reader
+    // settings are, so a failed save leaves every setting as it was.
     setApiKey(apiKey);
     setApiKeyDisabled(apiKeyDisabled);
     setModelId(modelId);
     onApiKeyChange?.(apiKey.trim() !== "" && !apiKeyDisabled);
-    onSave(fixedPreferences);
+    if (!mounted.current) {
+      return;
+    }
+    initialPreferences.current = fixedPreferences;
+    initialApiKey.current = apiKey;
+    initialApiKeyDisabled.current = apiKeyDisabled;
+    initialModelId.current = modelId;
+    setSaveState("saved");
+    closeTimer.current = window.setTimeout(onClose, SAVED_HOLD_MS);
   }
 
   function keepFocusInside(event: KeyboardEvent<HTMLElement>) {
@@ -233,20 +298,26 @@ export function SpellSurfaceSettings({
   const selectedModel = AVAILABLE_MODELS.find((model) => model.id === modelId);
   const sections: Array<{ hint: string; id: SettingsSection; label: string }> = [
     {
-      hint: `Chapter ${preferences.chapter} · Volume ${preferences.volume}`,
+      hint: boundaryPending
+        ? "No boundary saved"
+        : `Chapter ${preferences.chapter} · Volume ${preferences.volume}`,
       id: "reader",
       label: "Reader position",
     },
-    { hint: titleCase(preferences.tier), id: "reading", label: "Answer depth" },
     {
       hint: `${selectedModel?.label ?? "DeepSeek"} · ${apiKey.trim() && !apiKeyDisabled ? "bound" : "unbound"}`,
       id: "model",
-      label: "Bound voice",
+      label: "Advanced",
     },
     {
-      hint: `${titleCase(preferences.runeMode)} runes · ${titleCase(preferences.starIntensity)} stars`,
+      hint: `${titleCase(preferences.theme)} · ${titleCase(preferences.glass)}`,
       id: "appearance",
       label: "Appearance",
+    },
+    {
+      hint: `${titleCase(preferences.starIntensity)} stars`,
+      id: "stars",
+      label: "Star web",
     },
     { hint: "Local library and DeepSeek", id: "privacy", label: "Privacy and controls" },
     { hint: "Replay the initiation", id: "rite", label: "First Nightmare" },
@@ -263,9 +334,11 @@ export function SpellSurfaceSettings({
         ref={panelRef}
         role="dialog"
       >
-        <div className="lab-settings-atmosphere">
-          <SpellSurfaceSoulSea compact mode={preferences.soulMode} state="idle" />
-          <span>The Soul Sea holds your place.</span>
+        <header className="lab-settings-head">
+          <div>
+            <p>Reader appraisal</p>
+            <h2>Settings</h2>
+          </div>
           <button
             aria-label="Close settings"
             className="lab-settings-close"
@@ -274,7 +347,7 @@ export function SpellSurfaceSettings({
           >
             ×
           </button>
-        </div>
+        </header>
 
         <div className="lab-settings-layout">
           <aside className="lab-settings-nav">
@@ -318,6 +391,11 @@ export function SpellSurfaceSettings({
                     <h3>Reader position</h3>
                     <span>Chapter is the source of truth. Weaver derives the volume and protects everything beyond your reach.</span>
                   </div>
+                  {boundaryPending && (
+                    <p className="lab-boundary-unset" role="note">
+                      <strong>[No boundary saved.]</strong> Weaver does not know how far you have read, so it asks before revealing anything big. Enter your chapter to protect everything after it.
+                    </p>
+                  )}
                   <div className="lab-reader-position">
                     <label htmlFor="reader-chapter">Current chapter</label>
                     <div>
@@ -326,10 +404,11 @@ export function SpellSurfaceSettings({
                         max={MAX_CHAPTER}
                         min={1}
                         onChange={(event) => setChapter(Number(event.target.value))}
+                        placeholder="Chapter"
                         type="number"
-                        value={preferences.chapter}
+                        value={boundaryPending ? "" : preferences.chapter}
                       />
-                      <strong>Volume {preferences.volume}</strong>
+                      {!boundaryPending && <strong>Volume {preferences.volume}</strong>}
                     </div>
                     <div className="lab-chapter-steps">
                       {[-10, -1, 1, 10].map((step) => (
@@ -353,7 +432,10 @@ export function SpellSurfaceSettings({
                         onChange={() => update("spoilerMode", "protect")}
                         type="radio"
                       />
-                      <span><strong>Protect everything after Chapter {preferences.chapter}</strong><small>Weaver answers only from the story you have reached.</small></span>
+                      <span>
+                        <strong>{boundaryPending ? "Protect everything after your chapter" : `Protect everything after Chapter ${preferences.chapter}`}</strong>
+                        <small>{boundaryPending ? "Until you set a chapter, Weaver asks before revealing anything big." : "Weaver answers only from the story you have reached."}</small>
+                      </span>
                     </label>
                     <label className={preferences.spoilerMode === "none" ? "on" : ""}>
                       <input
@@ -368,37 +450,12 @@ export function SpellSurfaceSettings({
                 </section>
               )}
 
-              {activeSection === "reading" && (
-                <section className="lab-settings-section">
-                  <div className="lab-setting-title">
-                    <p>[Choose how deeply the thread is followed.]</p>
-                    <h3>Answer depth</h3>
-                    <span>This controls how much reading and connecting Weaver does before answering. It is separate from the model.</span>
-                  </div>
-                  <div className="lab-choice-grid three">
-                    {(["awakened", "ascended", "transcendent"] as Tier[]).map((tier) => (
-                      <button
-                        aria-label={tier}
-                        aria-pressed={preferences.tier === tier}
-                        className={preferences.tier === tier ? "on" : ""}
-                        key={tier}
-                        onClick={() => update("tier", tier)}
-                        type="button"
-                      >
-                        <strong>{titleCase(tier)}</strong>
-                        <span>{TIER_COPY[tier]}</span>
-                      </button>
-                    ))}
-                  </div>
-                </section>
-              )}
-
               {activeSection === "model" && (
                 <section className="lab-settings-section lab-model-settings">
                   <div className="lab-setting-title">
-                    <p>[Voice binding.]</p>
-                    <h3>Bound voice</h3>
-                    <span>Your DeepSeek key opens the channel. The selected model gives that channel a voice.</span>
+                    <p>[A private binding.]</p>
+                    <h3>Direct DeepSeek key</h3>
+                    <span>Optional controls for readers who want to use their own DeepSeek account instead of the shared daily allowance.</span>
                   </div>
                   <div className="lab-voice-binding-card">
                     <div className="lab-binding-status">
@@ -440,7 +497,7 @@ export function SpellSurfaceSettings({
                   </div>
                   <fieldset className="lab-model-picker">
                     <legend>Model</legend>
-                    <p>Choose which DeepSeek model answers through Weaver.</p>
+                    <p>This choice applies only while your own key is active.</p>
                     <div>
                       {AVAILABLE_MODELS.map((model) => (
                         <button
@@ -488,24 +545,6 @@ export function SpellSurfaceSettings({
                       ))}
                     </div>
                   </div>
-                  <div className="lab-customize-block">
-                    <h4>Rune appearance</h4>
-                    <div className="lab-choice-grid three">
-                      {RUNE_OPTIONS.map((option) => (
-                        <button aria-label={option.label} aria-pressed={preferences.runeMode === option.mode} className={preferences.runeMode === option.mode ? "on" : ""} key={option.mode} onClick={() => update("runeMode", option.mode)} type="button">
-                          <strong>{option.label}</strong><span>{option.description}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="lab-customize-block">
-                    <h4>Star web</h4>
-                    <div className="lab-segmented-control">
-                      {(["quiet", "balanced", "vivid"] as StarIntensity[]).map((intensity) => (
-                        <button aria-label={intensity} aria-pressed={preferences.starIntensity === intensity} className={preferences.starIntensity === intensity ? "on" : ""} key={intensity} onClick={() => update("starIntensity", intensity)} type="button">{intensity}</button>
-                      ))}
-                    </div>
-                  </div>
                   <div className="lab-customize-row">
                     <div>
                       <h4>Reading density</h4>
@@ -527,6 +566,21 @@ export function SpellSurfaceSettings({
                 </section>
               )}
 
+              {activeSection === "stars" && (
+                <section className="lab-settings-section">
+                  <div className="lab-setting-title">
+                    <p>[The web behind the thread.]</p>
+                    <h3>Star web</h3>
+                    <span>How much of the night sky shows behind the conversation. Quiet stays almost black; vivid draws the full web.</span>
+                  </div>
+                  <div className="lab-segmented-control lab-star-control">
+                    {(["quiet", "balanced", "vivid"] as StarIntensity[]).map((intensity) => (
+                      <button aria-label={intensity} aria-pressed={preferences.starIntensity === intensity} className={preferences.starIntensity === intensity ? "on" : ""} key={intensity} onClick={() => update("starIntensity", intensity)} type="button">{intensity}</button>
+                    ))}
+                  </div>
+                </section>
+              )}
+
               {activeSection === "privacy" && (
                 <section className="lab-settings-section">
                   <div className="lab-setting-title">
@@ -536,8 +590,9 @@ export function SpellSurfaceSettings({
                   </div>
                   <div className="lab-privacy-boundaries">
                     <p><strong>Local library</strong><span>Threads and reading preferences stay in Weaver&apos;s local library on this Weaver installation.</span></p>
-                    <p><strong>DeepSeek</strong><span>Messages are sent to DeepSeek when Weaver answers.</span></p>
-                    <p><strong>This browser</strong><span>Your API key stays in this browser and is attached to each request. Weaver does not save it on the server.</span></p>
+                    <p><strong>DeepSeek</strong><span>Your question and the story passages Weaver opens are sent to DeepSeek to generate a reply.</span></p>
+                    <p><strong>Shared allowance</strong><span>Weaver uses the owner-funded server connection after you accept the notice. The server records only anonymous allowance and cost totals.</span></p>
+                    <p><strong>Your own key</strong><span>An optional key stays in this browser and is attached to each request. Weaver does not save it on the server.</span></p>
                   </div>
                   <dl className="lab-shortcuts">
                     <div><dt><kbd>Ctrl</kbd><kbd>,</kbd></dt><dd>open settings</dd></div>
@@ -572,8 +627,36 @@ export function SpellSurfaceSettings({
             </div>
           ) : (
             <>
-              <button onClick={requestClose} type="button">Discard</button>
-              <button className="primary" disabled={!isDirty} onClick={saveSettings} type="button">Apply changes</button>
+              {saveState === "failed" && (
+                <p className="lab-save-failed" role="alert">
+                  {saveUnreachable
+                    ? "[Weaver is out of reach.] Your changes were not saved. Try again in a moment."
+                    : "[The thread slipped. Your changes were not saved.]"}
+                </p>
+              )}
+              <button
+                disabled={saveState === "saving" || saveState === "saved"}
+                onClick={requestClose}
+                type="button"
+              >
+                Discard
+              </button>
+              <button
+                aria-busy={saveState === "saving"}
+                className={`primary${saveState === "saved" ? " is-saved" : ""}`}
+                disabled={saveState === "saving" || saveState === "saved" || !isDirty}
+                onClick={() => void saveSettings()}
+                type="button"
+              >
+                {saveState === "saving" && "Saving..."}
+                {saveState === "saved" && (
+                  <>
+                    <span aria-hidden="true" className="lab-save-check">✓</span> Saved
+                  </>
+                )}
+                {saveState === "failed" && "Try again"}
+                {saveState === "idle" && "Apply changes"}
+              </button>
             </>
           )}
         </footer>

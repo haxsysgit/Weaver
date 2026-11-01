@@ -50,11 +50,26 @@ def test_production_frontend_assets_exist() -> None:
         "weaver-mark.svg",
         "weaver-mask-mark.webp",
         "sw.js",
+        "privacy.html",
+        "robots.txt",
     )
     for relative_path in expected_assets:
         assert (FRONTEND_DIST / relative_path).is_file(), relative_path
     assert list((FRONTEND_DIST / "assets").glob("weaver-*.js"))
     assert list((FRONTEND_DIST / "assets").glob("weaver-*.css"))
+
+
+@pytest.mark.asyncio
+async def test_privacy_page_and_robots_are_public(client) -> None:
+    privacy = await client.get("/privacy")
+    assert privacy.status_code == 200
+    assert "text/html" in privacy.headers["content-type"]
+    assert "DeepSeek" in privacy.text
+    assert "frame-ancestors 'none'" in privacy.headers["content-security-policy"]
+
+    robots = await client.get("/robots.txt")
+    assert robots.status_code == 200
+    assert "Disallow: /api/" in robots.text
 
 
 def test_production_icon_set_uses_the_first_nightmare_mask_at_real_sizes() -> None:
@@ -117,10 +132,122 @@ async def _no_canaries(text: str) -> None:
         assert canary not in text
 
 
+@pytest.fixture
+async def sponsored_client(tmp_path, monkeypatch):
+    monkeypatch.setenv("WEAVER_SPONSORED_ENABLED", "1")
+    monkeypatch.setenv(
+        "WEAVER_SPONSORED_PASS_SECRET",
+        "test-only-sponsored-secret-with-32-bytes",
+    )
+    monkeypatch.setenv(
+        "WEAVER_SPONSORED_PRICE_VALID_UNTIL",
+        "2099-01-01T00:00:00+00:00",
+    )
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    app = create_app(runtime)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(
+        transport=transport,
+        base_url="https://127.0.0.1",
+        headers={"Origin": "https://127.0.0.1"},
+    ) as client:
+        yield client
+    await runtime.close()
+
+
+async def test_sponsored_access_requires_notice_then_counts_fake_turn(
+    sponsored_client,
+) -> None:
+    access = await sponsored_client.get("/api/access")
+    assert access.status_code == 200
+    assert "Secure" in access.headers["set-cookie"]
+    assert access.json()["enabled"] is True
+    assert access.json()["remaining_questions"] == 3
+    assert access.json()["consented"] is False
+    cookie = access.headers["set-cookie"]
+    assert "HttpOnly" in cookie
+    assert "SameSite=strict" in cookie
+
+    conversation_id = (
+        await sponsored_client.post("/api/conversations")
+    ).json()["conversation_id"]
+    refused = await sponsored_client.post(
+        f"/api/conversations/{conversation_id}/turns",
+        json={"message": "before consent"},
+    )
+    assert refused.status_code == 428
+    assert refused.json()["detail"]["code"] == "consent_required"
+
+    consented = await sponsored_client.post("/api/access/consent")
+    assert consented.status_code == 200
+    assert consented.json()["consented"] is True
+
+    started = await sponsored_client.post(
+        f"/api/conversations/{conversation_id}/turns",
+        json={"message": "sponsored fake journey"},
+    )
+    assert started.status_code == 202
+    streamed = await sponsored_client.get(
+        f"/api/conversations/{conversation_id}/stream"
+    )
+    assert "event: completed" in streamed.text
+
+    status = await sponsored_client.get("/api/access")
+    assert status.json()["remaining_questions"] == 2
+
+
+async def test_byok_bypasses_sponsored_allowance(sponsored_client) -> None:
+    await sponsored_client.get("/api/access")
+    await sponsored_client.post("/api/access/consent")
+    conversation_id = (
+        await sponsored_client.post("/api/conversations")
+    ).json()["conversation_id"]
+    byok_headers = {"X-Weaver-Key": "test-reader-key"}
+
+    started = await sponsored_client.post(
+        f"/api/conversations/{conversation_id}/turns",
+        headers=byok_headers,
+        json={"message": "reader funded"},
+    )
+    assert started.status_code == 202
+    streamed = await sponsored_client.get(
+        f"/api/conversations/{conversation_id}/stream"
+    )
+    assert "event: completed" in streamed.text
+
+    status = await sponsored_client.get("/api/access")
+    assert status.json()["remaining_questions"] == 3
+
+
+async def test_live_source_never_falls_back_to_server_key(tmp_path) -> None:
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    runtime.live = True
+    app = create_app(runtime)
+    transport = ASGITransport(app=app)
+    try:
+        async with AsyncClient(
+            transport=transport,
+            base_url="http://127.0.0.1",
+            headers=SAME_ORIGIN_HEADERS,
+        ) as client:
+            conversation_id = (
+                await client.post("/api/conversations")
+            ).json()["conversation_id"]
+
+            refused = await client.post(
+                f"/api/conversations/{conversation_id}/turns",
+                json={"message": "must not use server fallback"},
+            )
+            assert refused.status_code == 503
+            assert refused.json()["detail"]["code"] == "disabled"
+    finally:
+        await runtime.close()
+
+
 async def test_preferences_defaults(client) -> None:
     resp = await client.get("/api/preferences")
     assert resp.status_code == 200
-    assert resp.json() == {"reader_chapter": None, "spoiler_mode": "protect", "tier": "ascended"}
+    assert resp.json() == {"reader_chapter": None, "spoiler_mode": "protect"}
 
 
 async def test_preferences_roundtrip(client) -> None:
@@ -129,9 +256,9 @@ async def test_preferences_roundtrip(client) -> None:
         json={"reader_chapter": 600, "spoiler_mode": "none"},
     )
     assert resp.status_code == 200
-    assert resp.json() == {"reader_chapter": 600, "spoiler_mode": "none", "tier": "ascended"}
+    assert resp.json() == {"reader_chapter": 600, "spoiler_mode": "none"}
     resp = await client.get("/api/preferences")
-    assert resp.json() == {"reader_chapter": 600, "spoiler_mode": "none", "tier": "ascended"}
+    assert resp.json() == {"reader_chapter": 600, "spoiler_mode": "none"}
 
 
 async def test_preferences_reject_invalid(client) -> None:
@@ -139,6 +266,185 @@ async def test_preferences_reject_invalid(client) -> None:
     assert (await client.put("/api/preferences", json={"reader_chapter": 3128})).status_code == 200
     assert (await client.put("/api/preferences", json={"reader_chapter": 3161})).status_code == 422
     assert (await client.put("/api/preferences", json={"spoiler_mode": "maybe"})).status_code == 422
+
+
+async def test_preferences_are_per_device(client) -> None:
+    """Audit finding 1: one device's boundary never reaches another."""
+    a = {"X-Device-Id": "device-a"}
+    b = {"X-Device-Id": "device-b"}
+    saved_a = await client.put(
+        "/api/preferences", headers=a, json={"reader_chapter": 200}
+    )
+    saved_b = await client.put(
+        "/api/preferences",
+        headers=b,
+        json={"reader_chapter": 2500, "spoiler_mode": "none"},
+    )
+    assert saved_a.status_code == 200
+    assert saved_b.status_code == 200
+
+    assert (await client.get("/api/preferences", headers=a)).json() == {
+        "reader_chapter": 200,
+        "spoiler_mode": "protect",
+    }
+    assert (await client.get("/api/preferences", headers=b)).json() == {
+        "reader_chapter": 2500,
+        "spoiler_mode": "none",
+    }
+    fresh = await client.get("/api/preferences", headers={"X-Device-Id": "device-c"})
+    assert fresh.json() == {
+        "reader_chapter": None,
+        "spoiler_mode": "protect",
+    }
+
+
+async def test_concurrent_turns_use_their_own_device_boundary(tmp_path) -> None:
+    """Two devices' turns in flight at once each get their own cap."""
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    gate = asyncio.Event()
+    both_entered = asyncio.Event()
+    seen: dict[str, tuple[int | None, str]] = {}
+
+    async def recording_send(
+        conversation_id,
+        text,
+        cancel_event=None,
+        on_delta=None,
+        on_tool_event=None,
+        tool_budget=None,
+        reasoning=None,
+        packet_builder=None,
+        final_pass=None,
+        reader_note="",
+        max_chapter=None,
+    ):
+        seen[conversation_id] = (max_chapter, reader_note)
+        if len(seen) == 2:
+            both_entered.set()
+        await gate.wait()
+        return TurnResult(
+            turn_id="t",
+            exit_reason=TurnExitReason.COMPLETED,
+            final_text="ok",
+        )
+
+    runtime.session.send = recording_send  # type: ignore[method-assign]
+    app = create_app(runtime)
+    transport = ASGITransport(app=app)
+    a = {"X-Device-Id": "device-a"}
+    b = {"X-Device-Id": "device-b"}
+    try:
+        async with AsyncClient(
+            transport=transport,
+            base_url="http://127.0.0.1",
+            headers=SAME_ORIGIN_HEADERS,
+        ) as client:
+            await client.put("/api/preferences", headers=a, json={"reader_chapter": 200})
+            await client.put("/api/preferences", headers=b, json={"reader_chapter": 2500})
+            conv_a = (await client.post("/api/conversations", headers=a)).json()[
+                "conversation_id"
+            ]
+            conv_b = (await client.post("/api/conversations", headers=b)).json()[
+                "conversation_id"
+            ]
+
+            started_a = await client.post(
+                f"/api/conversations/{conv_a}/turns", headers=a, json={"message": "hi"}
+            )
+            started_b = await client.post(
+                f"/api/conversations/{conv_b}/turns", headers=b, json={"message": "hi"}
+            )
+            assert started_a.status_code == 202
+            assert started_b.status_code == 202
+            await asyncio.wait_for(both_entered.wait(), timeout=5)
+            gate.set()
+            for conv, headers in ((conv_a, a), (conv_b, b)):
+                streamed = await client.get(
+                    f"/api/conversations/{conv}/stream", headers=headers
+                )
+                assert "event: completed" in streamed.text
+    finally:
+        await runtime.close()
+
+    cap_a, note_a = seen[conv_a]
+    cap_b, note_b = seen[conv_b]
+    assert cap_a == 200
+    assert cap_b == 2500
+    assert "chapter 200." in note_a
+    assert "chapter 2500." in note_b
+
+
+async def test_turn_without_saved_boundary_asks_before_spoiling(tmp_path) -> None:
+    """Start fresh: a device that saved nothing gets no cap, even when another
+    device has saved one. Slice 4: it is not answered blind either; the model
+    is told it does not know the reader's position and must ask first."""
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    seen: list[tuple[int | None, str]] = []
+
+    async def recording_send(conversation_id, text, reader_note="", max_chapter=None, **_):
+        seen.append((max_chapter, reader_note))
+        return TurnResult(
+            turn_id="t", exit_reason=TurnExitReason.COMPLETED, final_text="ok"
+        )
+
+    runtime.session.send = recording_send  # type: ignore[method-assign]
+    app = create_app(runtime)
+    transport = ASGITransport(app=app)
+    try:
+        async with AsyncClient(
+            transport=transport,
+            base_url="http://127.0.0.1",
+            headers=SAME_ORIGIN_HEADERS,
+        ) as client:
+            await client.put(
+                "/api/preferences",
+                headers={"X-Device-Id": "device-a"},
+                json={"reader_chapter": 200},
+            )
+            fresh = {"X-Device-Id": "device-fresh"}
+            conv = (await client.post("/api/conversations", headers=fresh)).json()[
+                "conversation_id"
+            ]
+            await client.post(
+                f"/api/conversations/{conv}/turns", headers=fresh, json={"message": "hi"}
+            )
+            await client.get(f"/api/conversations/{conv}/stream", headers=fresh)
+    finally:
+        await runtime.close()
+
+    assert len(seen) == 1
+    cap, note = seen[0]
+    assert cap is None
+    assert "do not know how far the reader has read" in note
+    assert "ask once" in note
+    assert "chapter 200" not in note
+
+
+async def test_a_reader_who_allows_spoilers_gets_no_note(tmp_path) -> None:
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    seen: list[tuple[int | None, str]] = []
+
+    async def recording_send(conversation_id, text, reader_note="", max_chapter=None, **_):
+        seen.append((max_chapter, reader_note))
+        return TurnResult(
+            turn_id="t", exit_reason=TurnExitReason.COMPLETED, final_text="ok"
+        )
+
+    runtime.session.send = recording_send  # type: ignore[method-assign]
+    app = create_app(runtime)
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://127.0.0.1",
+            headers=SAME_ORIGIN_HEADERS,
+        ) as client:
+            await client.put("/api/preferences", json={"spoiler_mode": "none"})
+            conv = (await client.post("/api/conversations")).json()["conversation_id"]
+            await _turn(client, conv, "turns", {"message": "hi"})
+    finally:
+        await runtime.close()
+
+    assert seen == [(None, "")]
 
 
 async def test_create_conversation_returns_201(client) -> None:
@@ -252,10 +558,13 @@ async def test_conversation_metadata_patch_returns_durable_summary(client) -> No
         {
             "conversation_id": conversation_id,
             "title": "New chat",
+            "preview": "",
             "created_at": listed.json()[0]["created_at"],
             "archived": False,
             "pinned": False,
             "edition_id": "shadow-slave",
+            "domain": "canon",
+            "fanfic_kind": None,
         }
     ]
 
@@ -268,10 +577,13 @@ async def test_conversation_metadata_patch_returns_durable_summary(client) -> No
     assert updated.json() == {
         "conversation_id": conversation_id,
         "title": "Ananke theory",
+        "preview": "",
         "created_at": listed.json()[0]["created_at"],
         "archived": True,
         "pinned": True,
         "edition_id": "shadow-slave",
+        "domain": "canon",
+        "fanfic_kind": None,
     }
 
     reset = await client.patch(
@@ -530,6 +842,9 @@ async def test_tool_stream_never_sends_private_reading_payload(tmp_path) -> None
         tool_budget=None,
         reasoning=None,
         packet_builder=None,
+        final_pass=None,
+        reader_note="",
+        max_chapter=None,
     ):
         assert on_tool_event is not None
         await on_tool_event(
@@ -587,20 +902,48 @@ async def test_tool_stream_never_sends_private_reading_payload(tmp_path) -> None
     assert b'"detail"' not in body
 
 
-async def test_stream_does_not_resend_events_already_seen(client) -> None:
+async def test_stream_does_not_resend_events_already_seen(tmp_path) -> None:
     # Last-Event-ID resume: a reconnecting client that already saw the
-    # whole turn gets nothing replayed (no duplicated deltas).
-    conv = (await client.post("/api/conversations")).json()["conversation_id"]
-    first = await client.post(
-        f"/api/conversations/{conv}/turns", json={"message": "hello"}
-    )
-    assert first.status_code == 202
-    async with client.stream(
-        "GET",
-        f"/api/conversations/{conv}/stream",
-        headers={"Last-Event-ID": "999999"},
-    ) as stream_resp:
-        body = await stream_resp.aread()
+    # whole turn gets nothing replayed (no duplicated deltas). The send
+    # is stubbed so this test never depends on a real turn or on the
+    # event loop state left by earlier tests.
+    from weaver.agent.turn import TurnExitReason
+
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+
+    async def completed_send(conversation_id, text, **kwargs):
+        return type(
+            "R",
+            (),
+            {
+                "turn_id": "resume-turn",
+                "exit_reason": TurnExitReason.COMPLETED,
+                "final_text": "ok",
+                "token_count": 0,
+                "token_budget": 0,
+            },
+        )()
+
+    runtime.session.send = completed_send  # type: ignore[method-assign]
+    app = create_app(runtime)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://127.0.0.1",
+        headers=SAME_ORIGIN_HEADERS,
+    ) as client:
+        conv = (await client.post("/api/conversations")).json()["conversation_id"]
+        first = await client.post(
+            f"/api/conversations/{conv}/turns", json={"message": "hello"}
+        )
+        assert first.status_code == 202
+        async with client.stream(
+            "GET",
+            f"/api/conversations/{conv}/stream",
+            headers={"Last-Event-ID": "999999"},
+        ) as stream_resp:
+            body = await stream_resp.aread()
+    await runtime.close()
     assert b"event:" not in body
 
 
@@ -630,7 +973,7 @@ async def test_concurrent_turn_409(tmp_path) -> None:
     entered = asyncio.Event()
 
     async def gated_send(
-        conversation_id, text, cancel_event=None, on_delta=None, on_tool_event=None, tool_budget=None, reasoning=None, packet_builder=None
+        conversation_id, text, cancel_event=None, on_delta=None, on_tool_event=None, tool_budget=None, reasoning=None, packet_builder=None, final_pass=None, reader_note="", max_chapter=None
     ):
         entered.set()
         await gate.wait()
@@ -694,6 +1037,9 @@ async def test_cannot_archive_the_active_weaving_thread(tmp_path) -> None:
         tool_budget=None,
         reasoning=None,
         packet_builder=None,
+        final_pass=None,
+        reader_note="",
+        max_chapter=None,
     ):
         entered.set()
         await gate.wait()
@@ -747,7 +1093,7 @@ async def test_cancel_active_turn_returns_202_and_interrupted_event(tmp_path) ->
     entered = asyncio.Event()
 
     async def cancel_aware_send(
-        conversation_id, text, cancel_event=None, on_delta=None, on_tool_event=None, tool_budget=None, reasoning=None, packet_builder=None
+        conversation_id, text, cancel_event=None, on_delta=None, on_tool_event=None, tool_budget=None, reasoning=None, packet_builder=None, final_pass=None, reader_note="", max_chapter=None
     ):
         from weaver.agent.errors import safe_error
         from weaver.agent.turn import TurnExitReason
@@ -810,7 +1156,7 @@ async def test_failed_exit_reason_emits_failed_event(tmp_path) -> None:
     runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
 
     async def failing_send(
-        conversation_id, text, cancel_event=None, on_delta=None, on_tool_event=None, tool_budget=None, reasoning=None, packet_builder=None
+        conversation_id, text, cancel_event=None, on_delta=None, on_tool_event=None, tool_budget=None, reasoning=None, packet_builder=None, final_pass=None, reader_note="", max_chapter=None
     ):
         from weaver.agent.turn import TurnExitReason
 
@@ -1106,6 +1452,9 @@ async def test_shutdown_waits_until_cooperative_turn_settles(
         tool_budget=None,
         reasoning=None,
         packet_builder=None,
+        final_pass=None,
+        reader_note="",
+        max_chapter=None,
     ):
         entered.set()
         assert cancel_event is not None
@@ -1184,7 +1533,7 @@ async def test_page_privacy_copy_matches_runtime_mode(tmp_path) -> None:
             headers=SAME_ORIGIN_HEADERS,
         ) as client:
             live_page = await client.get("/")
-            assert "Messages are sent to DeepSeek" in live_page.text
+            assert "passages it opens are sent to DeepSeek" in live_page.text
             assert "Nothing leaves this machine" not in live_page.text
     finally:
         await runtime.close()
@@ -1274,12 +1623,15 @@ async def test_delete_unknown_conversation_is_404(client) -> None:
     assert resp.status_code == 404
 
 
-async def test_tier_validation_rejects_unknown_mode(client) -> None:
-    resp = await client.put("/api/preferences", json={"tier": "supreme"})
-    assert resp.status_code == 422
-    resp = await client.put("/api/preferences", json={"tier": "transcendent"})
+async def test_an_old_client_sending_a_reading_tier_is_ignored(client) -> None:
+    """Slice 3: Weaver decides depth itself. A cached old client that still
+    sends a tier can save, and the tier goes nowhere."""
+    resp = await client.put(
+        "/api/preferences", json={"reader_chapter": 700, "tier": "transcendent"}
+    )
     assert resp.status_code == 200
-    assert resp.json()["tier"] == "transcendent"
+    assert resp.json() == {"reader_chapter": 700, "spoiler_mode": "protect"}
+    assert "tier" not in (await client.get("/api/preferences")).json()
 
 
 async def test_retry_route_reruns_and_streams(tmp_path) -> None:
@@ -1296,6 +1648,9 @@ async def test_retry_route_reruns_and_streams(tmp_path) -> None:
         tool_budget=None,
         reasoning=None,
         packet_builder=None,
+        final_pass=None,
+        reader_note="",
+        max_chapter=None,
     ):
         if on_delta:
             await on_delta("retried answer")
@@ -1350,6 +1705,9 @@ async def test_retry_route_reports_nothing_to_retry(tmp_path) -> None:
         tool_budget=None,
         reasoning=None,
         packet_builder=None,
+        final_pass=None,
+        reader_note="",
+        max_chapter=None,
     ):
         return None
 
@@ -1387,6 +1745,9 @@ async def test_regenerate_route_reanswers_in_place_and_streams(tmp_path) -> None
         tool_budget=None,
         reasoning=None,
         packet_builder=None,
+        final_pass=None,
+        reader_note="",
+        max_chapter=None,
     ):
         if on_delta:
             await on_delta("fresh answer")
@@ -1441,6 +1802,9 @@ async def test_regenerate_route_reports_nothing_to_regenerate(tmp_path) -> None:
         tool_budget=None,
         reasoning=None,
         packet_builder=None,
+        final_pass=None,
+        reader_note="",
+        max_chapter=None,
     ):
         return None
 
@@ -1462,3 +1826,262 @@ async def test_regenerate_route_reports_nothing_to_regenerate(tmp_path) -> None:
         assert "event: failed" in body
         assert "nothing to regenerate" in body
     await runtime.close()
+
+
+def _recording_turn(seen: list[dict]):
+    async def record(conversation_id, *args, tool_budget=None, reasoning=None, final_pass=None, **kwargs):
+        seen.append(
+            {"tool_budget": tool_budget, "reasoning": reasoning, "final_pass": final_pass}
+        )
+        return TurnResult(
+            turn_id="t", exit_reason=TurnExitReason.COMPLETED, final_text="ok"
+        )
+
+    return record
+
+
+async def _turn(client, conversation_id: str, path: str, body: dict | None = None) -> str:
+    started = await client.post(f"/api/conversations/{conversation_id}/{path}", json=body)
+    assert started.status_code == 202
+    return (await client.get(f"/api/conversations/{conversation_id}/stream")).text
+
+
+async def test_a_follow_up_is_read_as_deep_as_the_question_it_follows(tmp_path) -> None:
+    """Slice 3: Weaver decides depth itself. 'prove it' after a who-wins
+    question keeps the who-wins read instead of dropping to small talk."""
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    app = create_app(runtime)
+    seen: list[dict] = []
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://127.0.0.1",
+            headers=SAME_ORIGIN_HEADERS,
+        ) as client:
+            conv = (await client.post("/api/conversations")).json()["conversation_id"]
+            first = await _turn(
+                client, conv, "turns", {"message": "who would win, Sunny or Nephis?"}
+            )
+            assert "event: completed" in first
+
+            runtime.session.send = _recording_turn(seen)  # type: ignore[method-assign]
+            assert "event: completed" in await _turn(
+                client, conv, "turns", {"message": "prove it"}
+            )
+    finally:
+        await runtime.close()
+
+    assert seen == [{"tool_budget": 12, "reasoning": "max", "final_pass": True}]
+
+
+async def test_a_retry_reads_the_stored_question_not_an_empty_one(tmp_path) -> None:
+    """A retry arrives with no message. It must be routed by the question it
+    re-answers, or a retried who-wins question is read as small talk."""
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    app = create_app(runtime)
+    seen: list[dict] = []
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://127.0.0.1",
+            headers=SAME_ORIGIN_HEADERS,
+        ) as client:
+            conv = (await client.post("/api/conversations")).json()["conversation_id"]
+            failed = await _turn(
+                client,
+                conv,
+                "turns",
+                {"message": "/fake error model who would win, Sunny or Nephis?"},
+            )
+            assert "event: failed" in failed
+
+            async def record_retry(conversation_id, **kwargs):
+                result = await _recording_turn(seen)(conversation_id, **kwargs)
+                return result, "/fake error model who would win, Sunny or Nephis?"
+
+            runtime.session.retry_last_turn = record_retry  # type: ignore[method-assign]
+            assert "event: completed" in await _turn(client, conv, "retry")
+    finally:
+        await runtime.close()
+
+    assert seen == [{"tool_budget": 12, "reasoning": "max", "final_pass": True}]
+
+
+async def test_each_answer_records_how_deep_it_read(tmp_path) -> None:
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    app = create_app(runtime)
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://127.0.0.1",
+            headers=SAME_ORIGIN_HEADERS,
+        ) as client:
+            conv = (await client.post("/api/conversations")).json()["conversation_id"]
+            done = await _turn(
+                client, conv, "turns", {"message": "who would win, Sunny or Nephis?"}
+            )
+            assert "event: completed" in done
+        events = await runtime.session._repo.load_events(conv)
+    finally:
+        await runtime.close()
+
+    completed = [event for event in events if event.kind == "run_completed"]
+    assert len(completed) == 1
+    reading = json.loads(completed[0].body)["reading"]
+    assert reading["skills"][0] == "versus"
+    assert reading["lookup_limit"] >= 12
+    assert reading["lookups"] >= 1
+    assert reading["thinking"] == "max"
+
+
+async def test_a_failure_while_planning_the_read_ends_the_turn_visibly(
+    tmp_path, monkeypatch
+) -> None:
+    """A planning error must reach the reader as a failure, never as a
+    stream that waits forever."""
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    app = create_app(runtime)
+
+    def broken_profile(*_args, **_kwargs):
+        raise RuntimeError("planning broke")
+
+    monkeypatch.setattr(web_app, "_turn_profile", broken_profile)
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://127.0.0.1",
+            headers=SAME_ORIGIN_HEADERS,
+        ) as client:
+            conv = (await client.post("/api/conversations")).json()["conversation_id"]
+            streamed = await asyncio.wait_for(
+                _turn(client, conv, "turns", {"message": "who would win?"}), 10
+            )
+    finally:
+        await runtime.close()
+
+    assert "event: failed" in streamed
+    assert "planning broke" not in streamed
+
+
+async def test_a_browser_can_read_its_preferences_without_an_origin(tmp_path) -> None:
+    """Browsers send no Origin header on a same-origin GET. The read must
+    work without one, or the app never sees the saved boundary."""
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    app = create_app(runtime)
+    device = {"X-Device-Id": "browser-device"}
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://127.0.0.1"
+        ) as client:
+            saved = await client.put(
+                "/api/preferences",
+                headers={**device, **SAME_ORIGIN_HEADERS},
+                json={"reader_chapter": 742},
+            )
+            assert saved.status_code == 200
+            read = await client.get("/api/preferences", headers=device)
+            foreign = await client.put(
+                "/api/preferences",
+                headers={**device, "Origin": "https://evil.example"},
+                json={"reader_chapter": 1},
+            )
+    finally:
+        await runtime.close()
+
+    assert read.status_code == 200
+    assert read.json()["reader_chapter"] == 742
+    assert foreign.status_code == 403
+
+
+async def _owner_switch_client(tmp_path, monkeypatch, *, switch: str | None):
+    monkeypatch.setenv("DEEPSEEK_KEY", "sk-test-owner-key")
+    if switch is None:
+        monkeypatch.delenv("WEAVER_LOCAL_OWNER_KEY", raising=False)
+    else:
+        monkeypatch.setenv("WEAVER_LOCAL_OWNER_KEY", switch)
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    # Behave as a live server without a network: the turn itself is stubbed.
+    runtime.live = True
+    sent: list[str] = []
+
+    async def recording_send(conversation_id, text, **_):
+        sent.append(text)
+        return TurnResult(turn_id="t", exit_reason=TurnExitReason.COMPLETED, final_text="ok")
+
+    runtime.session.send = recording_send  # type: ignore[method-assign]
+    return runtime, sent
+
+
+async def test_the_owner_switch_lets_this_machine_chat_on_the_server_key(
+    tmp_path, monkeypatch
+) -> None:
+    runtime, sent = await _owner_switch_client(tmp_path, monkeypatch, switch="1")
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=create_app(runtime)),
+            base_url="http://127.0.0.1",
+            headers=SAME_ORIGIN_HEADERS,
+        ) as client:
+            access = (await client.get("/api/access")).json()
+            conv = (await client.post("/api/conversations")).json()["conversation_id"]
+            started = await client.post(
+                f"/api/conversations/{conv}/turns", json={"message": "hi"}
+            )
+            streamed = await client.get(f"/api/conversations/{conv}/stream")
+    finally:
+        await runtime.close()
+
+    assert access["development"] is True
+    assert access["source"] == "owner_key"
+    assert started.status_code == 202
+    assert "event: completed" in streamed.text
+    assert sent == ["hi"]
+
+
+async def test_the_owner_switch_never_covers_a_forwarded_request(
+    tmp_path, monkeypatch
+) -> None:
+    """Behind a proxy or Tailscale Funnel the client looks local; the
+    forwarding header is what gives it away."""
+    runtime, sent = await _owner_switch_client(tmp_path, monkeypatch, switch="1")
+    forwarded = {**SAME_ORIGIN_HEADERS, "X-Forwarded-For": "203.0.113.9"}
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=create_app(runtime)),
+            base_url="http://127.0.0.1",
+            headers=forwarded,
+        ) as client:
+            access = (await client.get("/api/access")).json()
+            conv = (await client.post("/api/conversations")).json()["conversation_id"]
+            started = await client.post(
+                f"/api/conversations/{conv}/turns", json={"message": "hi"}
+            )
+    finally:
+        await runtime.close()
+
+    assert access["source"] == "unavailable"
+    assert started.status_code == 503
+    assert sent == []
+
+
+@pytest.mark.parametrize("switch", [None, "0", "yes"])
+async def test_the_owner_switch_is_off_unless_set_to_1(
+    tmp_path, monkeypatch, switch
+) -> None:
+    runtime, sent = await _owner_switch_client(tmp_path, monkeypatch, switch=switch)
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=create_app(runtime)),
+            base_url="http://127.0.0.1",
+            headers=SAME_ORIGIN_HEADERS,
+        ) as client:
+            conv = (await client.post("/api/conversations")).json()["conversation_id"]
+            started = await client.post(
+                f"/api/conversations/{conv}/turns", json={"message": "hi"}
+            )
+    finally:
+        await runtime.close()
+
+    assert started.status_code == 503
+    assert started.json()["detail"] == {"code": "disabled"}
+    assert sent == []

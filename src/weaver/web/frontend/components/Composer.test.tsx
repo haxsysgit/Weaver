@@ -12,8 +12,6 @@ describe("Composer", () => {
         onCancel={vi.fn()}
         onDraftChange={vi.fn()}
         onSubmit={vi.fn()}
-        onTierChange={vi.fn()}
-        tier="ascended"
         turnActive={false}
       />,
     );
@@ -28,8 +26,6 @@ describe("Composer", () => {
         onCancel={vi.fn()}
         onDraftChange={vi.fn()}
         onSubmit={vi.fn()}
-        onTierChange={vi.fn()}
-        tier="ascended"
         turnActive
       />,
     );
@@ -46,8 +42,6 @@ describe("Composer", () => {
         onCancel={vi.fn()}
         onDraftChange={vi.fn()}
         onSubmit={vi.fn()}
-        onTierChange={vi.fn()}
-        tier="ascended"
         turnActive
       />,
     );
@@ -65,8 +59,6 @@ describe("Composer", () => {
         onCancel={vi.fn()}
         onDraftChange={onDraftChange}
         onSubmit={onSubmit}
-        onTierChange={vi.fn()}
-        tier="ascended"
         turnActive={false}
       />,
     );
@@ -79,6 +71,31 @@ describe("Composer", () => {
     expect(onSubmit).toHaveBeenCalledWith("Cassie had a plan");
   });
 
+  it("keeps drafting available when access blocks submission", () => {
+    const onDraftChange = vi.fn();
+    const onSubmit = vi.fn();
+    render(
+      <Composer
+        cancelling={false}
+        draft="A question can wait"
+        onCancel={vi.fn()}
+        onDraftChange={onDraftChange}
+        onSubmit={onSubmit}
+        sendDisabled
+        turnActive={false}
+      />,
+    );
+
+    const textbox = screen.getByRole("textbox", { name: "Message assistant" });
+    expect(textbox).not.toHaveAttribute("readonly");
+    fireEvent.change(textbox, { target: { value: "Keep this draft" } });
+    fireEvent.keyDown(textbox, { key: "Enter" });
+
+    expect(onDraftChange).toHaveBeenCalledWith("Keep this draft");
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Send message" })).toBeDisabled();
+  });
+
   it("shows the honest unbound inscription only when the voice is unavailable", () => {
     const { rerender } = render(
       <Composer
@@ -87,8 +104,6 @@ describe("Composer", () => {
         onCancel={vi.fn()}
         onDraftChange={vi.fn()}
         onSubmit={vi.fn()}
-        onTierChange={vi.fn()}
-        tier="ascended"
         turnActive={false}
         voiceBound={false}
       />,
@@ -103,8 +118,6 @@ describe("Composer", () => {
         onCancel={vi.fn()}
         onDraftChange={vi.fn()}
         onSubmit={vi.fn()}
-        onTierChange={vi.fn()}
-        tier="ascended"
         turnActive={false}
         voiceBound
       />,
@@ -121,8 +134,6 @@ describe("Composer", () => {
         onCancel={vi.fn()}
         onDraftChange={vi.fn()}
         onSubmit={vi.fn()}
-        onTierChange={vi.fn()}
-        tier="ascended"
         turnActive={false}
       />,
     );
@@ -131,7 +142,7 @@ describe("Composer", () => {
     expect(screen.queryByText("Shadow Slave")).toBeNull();
   });
 
-  it("keeps the rune-cut border decorative", () => {
+  it("keeps the composer free of decorative rune cuts", () => {
     const { container } = render(
       <Composer
         cancelling={false}
@@ -139,58 +150,11 @@ describe("Composer", () => {
         onCancel={vi.fn()}
         onDraftChange={vi.fn()}
         onSubmit={vi.fn()}
-        onTierChange={vi.fn()}
-        tier="ascended"
         turnActive={false}
       />,
     );
 
-    const decoration = container.querySelector(".composer-rune-border");
-    expect(decoration).toHaveAttribute("aria-hidden", "true");
-    expect(decoration?.querySelectorAll("span")).toHaveLength(5);
+    expect(container.querySelector(".composer-rune-border")).toBeNull();
   });
-describe("Composer reading tier", () => {
-  it("opens the tier menu and reports the pick", async () => {
-    const onTierChange = vi.fn();
-    render(
-      <Composer
-        cancelling={false}
-        draft=""
-        onCancel={vi.fn()}
-        onDraftChange={vi.fn()}
-        onSubmit={vi.fn()}
-        onTierChange={onTierChange}
-        tier="ascended"
-        turnActive={false}
-      />,
-    );
-
-    const pill = screen.getByRole("button", { name: "Reading tier: ascended" });
-    fireEvent.click(pill);
-    expect(screen.getByRole("option", { name: /transcendent/ })).toBeVisible();
-
-    fireEvent.click(screen.getByRole("option", { name: /transcendent/ }));
-    expect(onTierChange).toHaveBeenCalledWith("transcendent");
-  });
-
-  it("hides the menu on outside click", () => {
-    render(
-      <Composer
-        cancelling={false}
-        draft=""
-        onCancel={vi.fn()}
-        onDraftChange={vi.fn()}
-        onSubmit={vi.fn()}
-        onTierChange={vi.fn()}
-        tier="awakened"
-        turnActive={false}
-      />,
-    );
-    fireEvent.click(screen.getByRole("button", { name: "Reading tier: awakened" }));
-    expect(screen.getByRole("option", { name: /ascended/ })).toBeVisible();
-    fireEvent.pointerDown(document.body);
-    expect(screen.queryByRole("option")).toBeNull();
-  });
-});
 
 });

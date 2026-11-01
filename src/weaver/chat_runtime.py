@@ -6,9 +6,7 @@ never creates a conversation; callers start one.
 
 Surface profiles:
 - "developer": the Plan 010 tool set kept for direct development tests.
-- "web": an empty tool registry, no active tools, a read-only policy, and
-  a prompt that does not claim library access. The browser surface has no
-  tools until a later owner-approved plan.
+- "web": six read-only reading tools and the reviewed reader personality.
 """
 
 import asyncio
@@ -23,9 +21,18 @@ from .agent.tools import (
     ToolExecutionPolicy,
     ToolRegistry,
 )
-from .config import DEFAULT_TIMEOUT_SECONDS
+from .config import DEFAULT_TIMEOUT_SECONDS, normalize_model_id
 from .conversation.session import SessionWeave
 from .prefs import PreferencesStore
+from .prompts import load_personality
+from .skills import catalogue_text
+from .skills.loader import register_skill_tool
+from .sponsored import (
+    DeepSeekBalance,
+    FixedBalance,
+    SponsoredAccess,
+    config_from_environment,
+)
 from .corpus.tools import register_chat_tools, service_from_environment
 from .model_layer import (
     DEEPSEEK_FLASH,
@@ -49,59 +56,58 @@ DEVELOPER_SYSTEM_PROMPT = (
     "library from chat."
 )
 
-# Web surface system prompt: two reading tools, novel is truth.
-# Context-engineering rewrite 2026-08-07: sectioned, scoring literacy,
-# triage-first workflow, one worked example. Will keep sharpening as the
-# product matures.
+# The personality stays stable across the reading loop and final answer.
 #
 # Plan v1 (2026-08-17): the chapter ceiling is filled in at runtime from
 # the real shelf ({NOVEL_CHAPTERS}) so the model never repeats a stale
 # hardcoded number (it answered "the library ends at 3127" while the
 # shelf held 3160).
 WEB_SYSTEM_PROMPT = (
-    "You are Weaver, a plain and honest reading companion for Shadow Slave.\n"
-    "\n"
-    "<who_you_are>\n"
-    "Your name is Weaver, and it is a real name. In the novel, Weaver is the "
-    "Demon of Fate: firstborn of the -unknown-, eldest of the seven daemons, "
-    "the one who refused the war between gods and daemons and was hunted by "
-    "both sides for it. They hid behind a mask because knowledge was the "
-    "origin of power, and even the gods could not see what hid behind it. "
-    "They created the Nightmare Spell as a promise against the Doom, and when "
-    "they died, their death completed it. Those who wore the mask heard a "
-    "voice like a thousand hopeless prayers.\n"
-    "The user built the eighth lineage: someone had to. You carry Weaver's "
-    "spirit, not the mask. You deal in truth, not lies: canon is your "
-    "currency, chapter references are your receipts, and what-ifs are your "
-    "games. Speak unhurried, like a daemon who knows no fear: calm, gentle, "
-    "and unafraid to tell hard truths.\n"
-    "</who_you_are>\n"
-    "\n"
     "<what_you_have>\n"
     "- The whole novel, chapters 1-{NOVEL_CHAPTERS}, searchable and openable.\n"
     "- A story notebook: statements about the story, each with chapter evidence.\n"
-    "- Five tools: semantic_search (meaning search), read_chapters (read prose), \n"
+    "- Six tools: semantic_search (meaning search), read_chapters (read prose), \n"
     "  find_text (exact phrase + where a character speaks), browse_chapters (skim \n"
-    "  a range), who_is (the story map: resolve names).\n"
+    "  a range), who_is (the story map: resolve names), lore_path (trace how two \n"
+    "  entities connect).\n"
     "</what_you_have>\n"
+    "\n"
+    "<skills>\n"
+    "Load skills before you answer. The catalogue below is a map, not the "
+    "instructions. Call load_skill with one or more skill names. You may "
+    "combine related skills, in one call or across calls, when the request "
+    "truly needs both. Choose by scope first: one fact, one passage, one "
+    "scene, many chapters. Fanfic skills are only for writing or extending "
+    "the story, and everything you invent there must be labelled as "
+    "invention. Never mix invented content into a canon answer. Skill "
+    "examples show shape only: their names, events, and chapter numbers are "
+    "placeholders unless the passages you opened confirm them. Loading a "
+    "bigger skill raises your reading budget.\n"
+    "{SKILL_CATALOG}\n"
+    "</skills>\n"
     "\n"
     "<the_one_rule>\n"
     "The novel is the source of truth; the notebook is a summary map that can "
     "be wrong. NEVER answer any question from your trained knowledge alone: "
-    "every factual claim must trace to the novel text or a notebook statement. "
-    "Your own memory is only for guessing where to look, never for what to say.\n"
+    "every factual claim must trace to opened novel text. Notebook statements "
+    "only help locate that text. "
+    "Your own memory is only for guessing where to look, never for what to say. "
+    "Chapters you opened earlier in this conversation stay read. If this "
+    "turn's passages do not show something you said before, that is not "
+    "proof it was wrong: keep it, or re-open the chapter to check. Withdraw "
+    "an earlier claim only when an opened passage contradicts it.\n"
     "</the_one_rule>\n"
     "\n"
-    "<tone>\n"
-    "You are the friend who has read the whole novel front to back. Casual "
-    "and cool, never a wiki, a lecturer, or a support bot. Contractions, "
-    "direct address, fandom vocabulary (canon, takes, the goat), light jokes "
-    "and in-world flavor when they fit. Have opinions: if the user's take is "
-    "wrong per canon, say so plainly and bring the receipts (chapter refs). "
-    "When something is your own guess, label it as a take or speculation; "
-    "canon is canon, takes are takes. Brevity is the default, but give a "
-    "question the room it deserves. Never lecture, never list features.\n"
-    "</tone>\n"
+    "<your_own_words>\n"
+    "This conversation is the record of what you said. When the reader says "
+    "you said something, check it first; if you did not say it, say so "
+    "plainly and never own a claim you never made. When the reader asks you "
+    "to keep, repeat, or finalise an earlier list or verdict, give it exactly "
+    "as you gave it here, unless you say what changed and why. When the "
+    "reader challenges your list or verdict, defend it or move it with "
+    "evidence; never drop it because its chapters are not open this turn, "
+    "re-open them instead.\n"
+    "</your_own_words>\n"
     "\n"
     "<scope>\n"
     "You are a reading companion for one novel, nothing else. Requests "
@@ -113,18 +119,20 @@ WEB_SYSTEM_PROMPT = (
     "</scope>\n"
     "\n"
     "<workflow>\n"
-    "1. Plan silently: what is the question asking, which words would the novel "
-    "use for it? One concept per search.\n"
-    "2. Search once, well: name the characters, places and objects involved; use "
-    "the novel's vocabulary (a Shadow, a Memory, a clan).\n"
-    "3. Triage before you open: search results carry a score from 0 to 1 - higher "
-    "is a closer match, but close scores are NOT proof of the right chapter. "
-    "Notebook hits include the statement's full text: READ THOSE FIRST, they often "
-    "answer directly. Only then pick the best 1-2 hits (notebook or novel) to open.\n"
-    "4. Open, then judge the evidence. If the passage answers, prepare the answer "
-    "with chapter references. If it does not, keep using the available reading "
-    "tools until you have enough, or say plainly that the library does not cover "
-    "it.\n"
+    "1. Classify the reading work silently: exact words, factual canon, event, "
+    "relationship, timeline or version, contradiction, interpretation, what-if, "
+    "or follow-up. Name the answer parts you must support.\n"
+    "2. Locate with the smallest suitable finder and the novel's vocabulary. Use "
+    "one concept per meaning search.\n"
+    "3. Every search result, notebook statement, and story-map path is a lead, not proof. "
+    "Open the novel passage before making a factual claim. Scores only rank leads.\n"
+    "4. Read for the work: exact questions need the words and speaker context; events "
+    "need the actors, sequence, scene's outcome, and relevant aftermath; comparisons "
+    "need each requested version at the requested time; contradictions need both "
+    "competing passages. Use read_chapters direction 'before' or 'after' and cross into "
+    "the next chapter when the scene continues.\n"
+    "5. Stop when every answer part has direct support, or state the specific evidence "
+    "gap. Never turn a missing passage into certainty.\n"
     "\n"
     "When to reach for the finders: exact phrases, quotes, and 'where does this \n"
     "character speak' are find_text work (grep for the novel), never meaning \n"
@@ -139,38 +147,83 @@ WEB_SYSTEM_PROMPT = (
     "\n"
     "<output>\n"
     "Never narrate your steps: no 'let me search', no 'let me look' - tool calls "
-    "are invisible to the reader, so write only the answer. Keep replies short "
-    "and direct. You cannot modify the library.\n"
+    "are invisible to the reader, so write only the answer. Match the depth to "
+    "the question: a lookup can be brief; an invited scene needs room. "
+    "You cannot modify the library.\n"
     "A plain reply without a tool call is your answer candidate. Weaver validates "
     "it before the reader sees it. If it names or writes a tool call, narrates "
     "work you plan to do, or is a placeholder, it is rejected and you continue "
     "with tools available. If you still need evidence, call a tool in THIS "
-    "message. Never answer from memory alone. When you answer, answer fully with "
+    "message. Never answer from memory alone. On every canon question, "
+    "including a follow-up, open at least one relevant passage with "
+    "read_chapters before you answer. A greeting, a reaction, or a mood needs "
+    "no reading and no citation. Cite only the chapters you opened in this turn. If a claim "
+    "comes from the conversation, say so instead of inventing a citation. "
+    "When you answer, answer fully with "
     "chapter citations, because your answer gets one final heavy reading pass "
     "and then the turn ends. When you quote the novel's prose, put the quote in "
     "a blockquote: a line starting with '>'.\n"
+    "In the final reading pass, write the answer itself. Never open with "
+    "'same answer as before' or a note about the previous draft.\n"
     "Tool calls are STRUCTURED, never text: do not write '<tool calls>', "
     "'<find_text: ...>', angle-bracket stage directions, or a JSON block as "
     "prose. Use the tool-call mechanism attached to your reply, or write the "
     "answer.\n"
-    "</output>\n"
-    "\n"
-    "<example>\n"
-    "User: How did Sunny get Saint?\n"
-    "Good flow: semantic_search for how Sunny obtained the stone knight, read the "
-    "notebook hits (one statement summarizes the whole thing), open the best "
-    "chapter, then answer in one message: 'He killed the stone knight after she dealt "
-    "with her own enemy, then claimed her as an Echo (ch104-105). No one-shot "
-    "about it, the man actually had to work for it.'\n"
-    "</example>"
+    "</output>"
 )
 
+CANON_DOMAIN_PROMPT = (
+    "\n\n<thread_domain>\n"
+    "This is a canon reading thread. The novel is the only source of story fact. "
+    "You may write an invented scene when the reader asks for one, but label it "
+    "plainly as invention and never treat it as canon afterwards. Do not add "
+    "invented lore to a canon answer.\n"
+    "</thread_domain>"
+)
+
+FANFIC_DOMAIN_PROMPT = (
+    "\n\n<thread_domain>\n"
+    "This is a fanfic thread: the reader's own continuation of the novel. The novel "
+    "stays canon and its ending stands. The conversation history is this thread's "
+    "continuation ledger: everything you wrote here is part of this version, so keep "
+    "it consistent and do not contradict an earlier invented beat. Before writing, "
+    "read the canon anchor: the chapters the scene touches, including what canon says "
+    "happens around them. Then write the scene. Label invented content once, plainly, "
+    "and never present it as canon. Never cite an invented event to a chapter.\n"
+    "</thread_domain>"
+)
+
+
+def domain_prompt(domain: str, fanfic_kind: str | None = None) -> str:
+    """The per-thread context rule appended to the surface system prompt."""
+    if domain != "fanfic":
+        return CANON_DOMAIN_PROMPT
+    prompt = FANFIC_DOMAIN_PROMPT
+    if fanfic_kind:
+        prompt += f"\nKind of fanfic: {fanfic_kind}."
+    return prompt
+
+
+def web_system_prompt(
+    personality: str,
+    last_chapter: int,
+    skill_catalog: str | None = None,
+) -> str:
+    """Assemble the web prompt from a voice pack, the shelf, and the skills."""
+    return personality + "\n\n" + WEB_SYSTEM_PROMPT.format(
+        NOVEL_CHAPTERS=last_chapter,
+        SKILL_CATALOG=catalogue_text() if skill_catalog is None else skill_catalog,
+    )
+
+
 WEB_ACTIVE_TOOLS: tuple[str, ...] = (
+    "load_skill",
     "semantic_search",
     "read_chapters",
     "find_text",
     "browse_chapters",
     "who_is",
+    "lore_path",
 )
 
 # Scripted fake-mode reply: friendly, non-streamed, honest about being fake.
@@ -284,8 +337,8 @@ def _web_library_service():
 
 
 def _web_tool_registry() -> ToolRegistry:
-    """The five reading tools (Plan 15): semantic_search, read_chapters,
-    find_text, browse_chapters, who_is. READ-only, never touch the
+    """The six reading tools (Plan 15): semantic_search, read_chapters,
+    find_text, browse_chapters, who_is, lore_path. READ-only, never touch the
     library. Built lazily per runtime so tests can point at synthetic
     data; empty registry when the novel is not on this machine.
     """
@@ -379,7 +432,7 @@ def _fake_web_tool_registry(delay_seconds: float) -> ToolRegistry:
             retry_safe=True,
         )
     )
-    for tool_name in ("find_text", "browse_chapters", "who_is"):
+    for tool_name in ("find_text", "browse_chapters", "who_is", "lore_path"):
         registry.register(
             ToolDefinition(
                 name=tool_name,
@@ -390,6 +443,7 @@ def _fake_web_tool_registry(delay_seconds: float) -> ToolRegistry:
                 retry_safe=True,
             )
         )
+    register_skill_tool(registry)
     return registry
 
 
@@ -407,6 +461,8 @@ class ChatRuntime:
         library=None,
         model_layer: ModelLayer | None = None,
         model=None,
+        sponsored: SponsoredAccess | None = None,
+        sponsored_balance: DeepSeekBalance | FixedBalance | None = None,
         fake_delta_delay_seconds: float = 0,
     ) -> None:
         self.session = session
@@ -418,9 +474,13 @@ class ChatRuntime:
         # Plan 15 slice 5: the thread-naming call runs on this layer.
         self.model_layer = model_layer
         self.model = model
+        self.sponsored = sponsored
+        self.sponsored_balance = sponsored_balance
         self.fake_delta_delay_seconds = max(0, fake_delta_delay_seconds)
 
     async def close(self) -> None:
+        if self.sponsored is not None:
+            await self.sponsored.close()
         if self.prefs is not None:
             await self.prefs.close()
         await self.session.close()
@@ -432,6 +492,7 @@ async def open_chat_runtime(
     live: bool,
     surface: Surface,
     fake_delay_seconds: float = 0,
+    voice: str | None = None,
 ) -> ChatRuntime:
     """Build the exact chat session for a surface (test seam).
 
@@ -442,14 +503,16 @@ async def open_chat_runtime(
         raise ValueError(f"unknown surface: {surface}")
 
     # Config [chat] model (alias or id) picks the model; flash is the default.
-    model_id = os.environ.get("WEAVER_CHAT_MODEL") or DEEPSEEK_FLASH.model_id
+    model_id = normalize_model_id(
+        os.environ.get("WEAVER_CHAT_MODEL") or DEEPSEEK_FLASH.model_id
+    )
 
+    server_api_key = os.environ.get("DEEPSEEK_KEY")
     if live:
-        api_key = os.environ.get("DEEPSEEK_KEY")
-        if not api_key:
+        if not server_api_key:
             raise ValueError("live chat requires DEEPSEEK_KEY")
         provider = DeepSeekProvider(
-            api_key,
+            server_api_key,
             timeout_seconds=DEFAULT_TIMEOUT_SECONDS,
         )
     elif surface == "web":
@@ -498,6 +561,7 @@ async def open_chat_runtime(
         registry = ToolRegistry()
         if live and library is not None:
             register_reading_tools(registry, library)
+            register_skill_tool(registry)
         elif not live:
             registry = _fake_web_tool_registry(fake_delay_seconds)
         active_tools = WEB_ACTIVE_TOOLS
@@ -509,9 +573,11 @@ async def open_chat_runtime(
             if library is not None
             else 3160
         )
-        system_prompt = WEB_SYSTEM_PROMPT.format(
-            NOVEL_CHAPTERS=last_chapter
+        base_prompt = web_system_prompt(
+            load_personality(voice),
+            last_chapter,
         )
+        system_prompt = base_prompt
         execution_policy = ToolExecutionPolicy.read_only()
 
     # Plan 15 (owner 2026-08-08): the web locate phase sees a bounded
@@ -529,10 +595,39 @@ async def open_chat_runtime(
         active_tools=active_tools,
         execution_policy=execution_policy,
         token_budget=web_context_budget,
+        system_prompt_by_domain=(
+            (lambda domain, fanfic_kind: base_prompt + domain_prompt(domain, fanfic_kind))
+            if surface == "web"
+            else None
+        ),
     )
     await sw.open()
     prefs = PreferencesStore(state_dir / "weaver.sqlite3")
     await prefs.open()
+    sponsored = None
+    sponsored_balance = None
+    sponsored_config = config_from_environment()
+    if surface == "web" and sponsored_config.enabled:
+        sponsored_secret = os.environ.get("WEAVER_SPONSORED_PASS_SECRET", "")
+        if len(sponsored_secret.encode()) < 32:
+            await prefs.close()
+            await sw.close()
+            raise ValueError(
+                "sponsored access requires WEAVER_SPONSORED_PASS_SECRET "
+                "with at least 32 bytes"
+            )
+        sponsored = SponsoredAccess(
+            state_dir / "sponsored.sqlite3",
+            secret=sponsored_secret,
+            config=sponsored_config,
+        )
+        await sponsored.open()
+        await sponsored.recover_stale()
+        sponsored_balance = (
+            DeepSeekBalance(server_api_key)
+            if live and server_api_key is not None
+            else FixedBalance()
+        )
     return ChatRuntime(
         sw,
         surface=surface,
@@ -540,6 +635,10 @@ async def open_chat_runtime(
         live=live,
         prefs=prefs,
         library=library if surface == "web" else None,
+        model_layer=model_layer,
+        model=model,
+        sponsored=sponsored,
+        sponsored_balance=sponsored_balance,
         fake_delta_delay_seconds=(
             fake_delay_seconds / 8 if surface == "web" and not live else 0
         ),

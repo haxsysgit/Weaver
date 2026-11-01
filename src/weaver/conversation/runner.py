@@ -112,7 +112,12 @@ class ConversationRunner:
         tool_budget: int | None = None,
         reasoning: ReasoningEffort | None = None,
         packet_builder: PacketBuilder | None = None,
+        final_pass: bool = True,
         exclude_run_ids: set[str] | None = None,
+        system_prompt: str | None = None,
+        domain: str = "canon",
+        reader_note: str = "",
+        max_chapter: int | None = None,
     ) -> TurnResult:
         """Run one bounded model/tool turn inside an existing run.
 
@@ -163,7 +168,12 @@ class ConversationRunner:
             turn_id=turn_id,
             model_layer=self._model_layer,
             model=model,
-            system_prompt=self._system_prompt,
+            system_prompt=(
+                self._system_prompt if system_prompt is None else system_prompt
+            ),
+            domain=domain,
+            reader_note=reader_note,
+            max_chapter=max_chapter,
             history=history,
             tool_registry=self._tool_registry,
             active_tools=self._active_tools,
@@ -179,6 +189,7 @@ class ConversationRunner:
             tool_budget=tool_budget,
             reasoning=reasoning,
             packet_builder=packet_builder,
+            final_pass=final_pass,
         )
 
         # Plan 010 Phase D: surface the context meter on the result so the
@@ -196,6 +207,7 @@ class ConversationRunner:
                 turn_id,
                 result.final_text,
                 final_item_already_persisted=True,
+                reading=result.reading(),
             )
         else:
             await self._coordinator.record_run_failed(
@@ -205,6 +217,10 @@ class ConversationRunner:
                 message=result.safe_failure,
                 error_category=result.error_category,
                 raw_stop_reason=result.raw_stop_reason,
+                reading=result.reading(),
             )
-            await self._coordinator.mark_interrupted(run_id)
+            if result.exit_reason == TurnExitReason.INTERRUPTED:
+                await self._coordinator.mark_interrupted(run_id)
+            else:
+                await self._coordinator.mark_failed(run_id)
         return result

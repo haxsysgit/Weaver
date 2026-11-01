@@ -5,10 +5,13 @@ must not create a conversation, and both profiles keep their exact tool and
 policy boundaries even though the old terminal entrypoint is gone.
 """
 
+from importlib.resources import files
+
 import pytest
 
 from weaver.agent.tools import EffectKind, ToolExecutionPolicy
-from weaver.chat_runtime import open_chat_runtime
+from weaver.chat_runtime import open_chat_runtime, web_system_prompt
+from weaver.prompts import load_personality
 from weaver.conversation.session import SessionWeave
 
 
@@ -48,18 +51,22 @@ async def test_web_profile_has_reading_tools_and_read_only_policy(tmp_path) -> N
     try:
         assert runtime.surface == "web"
         assert runtime.session._active_tools == (
+            "load_skill",
             "semantic_search",
             "read_chapters",
             "find_text",
             "browse_chapters",
             "who_is",
+            "lore_path",
         )
         registry = runtime.session._tool_registry
+        assert registry.has("load_skill")
         assert registry.has("semantic_search")
         assert registry.has("read_chapters")
         assert registry.has("find_text")
         assert registry.has("browse_chapters")
         assert registry.has("who_is")
+        assert registry.has("lore_path")
         assert not registry.has("echo")
         policy = runtime.session._execution_policy
         assert policy == ToolExecutionPolicy.read_only()
@@ -94,7 +101,11 @@ async def test_web_prompt_makes_library_claim_with_truth_rule(tmp_path) -> None:
         assert "read_chapters" in prompt
         assert "find_text" in prompt
         assert "who_is" in prompt
+        assert "lore_path" in prompt
         assert "source of truth" in prompt
+        assert "lead, not proof" in prompt
+        assert "scene's outcome" in prompt
+        assert "requested version" in prompt
         assert "<find_text: ...>" in prompt
         assert "angle-bracket stage directions" in prompt
         assert "blockquote" in prompt
@@ -102,6 +113,36 @@ async def test_web_prompt_makes_library_claim_with_truth_rule(tmp_path) -> None:
         assert "<scope>" in prompt
         assert "Never write code" in prompt
         assert "reading companion for one novel, nothing else" in prompt
+    finally:
+        await runtime.close()
+
+
+def test_web_prompt_separates_the_echo_from_the_daemon() -> None:
+    prompt = web_system_prompt(load_personality("buddy"), 3160)
+    assert "hidden thread" in prompt
+    assert "product flavor" in prompt
+    assert "Never claim to be the Daemon Weaver" in prompt
+    assert "You carry the daemon's manner" not in prompt
+
+
+async def test_web_prompt_loads_reviewed_resources_into_the_runtime(tmp_path) -> None:
+    runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
+    try:
+        prompt = runtime.session._system_prompt
+        for name in ("identity", "soul"):
+            component = (
+                files("weaver.prompts")
+                .joinpath("voices", "buddy", f"{name}.md")
+                .read_text(encoding="utf-8")
+                .strip()
+            )
+            assert prompt.count(component) == 1
+            assert f"<{name}>" in prompt
+        assert "owner-review draft" not in prompt
+        assert "{NOVEL_CHAPTERS}" not in prompt
+        assert "<workflow>" in prompt
+        assert "source of truth" in prompt
+        assert "carry the daemon's manner" not in prompt
     finally:
         await runtime.close()
 

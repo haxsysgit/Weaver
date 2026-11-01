@@ -18,7 +18,7 @@
 ## What Is This
 
 A reading companion for web novels. Right now it knows **Shadow Slave**
-inside out, all 3148 chapters, and it wants to talk about the story with
+inside out, all 3160 chapters, and it wants to talk about the story with
 you.
 
 Not a search engine. Not a wiki. You ask *"wait, what actually happened
@@ -66,19 +66,22 @@ itself stays where it belongs, private and out of the browser.
 
 ## Running It
 
-Requires Python 3.11+ and a DeepSeek API key (bring your own key, that's
-the deal).
+Requires Python 3.11+. The hosted app gives each reader a small shared
+daily allowance; you can also bring your own DeepSeek key under Advanced.
+For a local live run, set `DEEPSEEK_KEY` and the sponsored values in
+`.env`, or bind your own key in Settings. Fake mode needs no key.
 
 ```bash
 uv sync
-cp .env.example .env   # put your DEEPSEEK_KEY in here
+cp .env.example .env   # set DEEPSEEK_KEY and the shared-allowance values
+# WEAVER_VOICE=buddy (chat) or storyteller (prose and fan fiction)
 uv run weaver web      # the chat app
 ```
 
-No key? Run in fake mode to see the interface without live answers:
+See the interface without live answers:
 
 ```bash
-uv run weaver --fake
+uv run weaver web --fake
 ```
 
 ## Contributing
@@ -97,7 +100,7 @@ need them.
 ## Tests
 
 ```bash
-uv run pytest    # backend, 500+ tests, all synthetic
+uv run pytest    # backend, 700+ tests, all synthetic
 npm run test     # frontend
 ```
 
@@ -106,10 +109,11 @@ content in tests, ever.
 
 ## Privacy
 
-The novels never leave the machine. The library, the notes, and your
-conversations stay private and local. The web app only serves chat,
-memory, and links; chapter text is never served to the browser. Full
-rules in [`AGENTS.md`](AGENTS.md).
+The library and notebook stay on the server. The full novel is never sent to
+a browser. To answer a question, Weaver sends the question and the passages it
+opens on the server to DeepSeek; DeepSeek processes them under its own terms.
+Conversations are stored on the server so you can return to them. There are no
+accounts, ads, or payments. The app's `/privacy` page has the full detail.
 
 ## The Name
 

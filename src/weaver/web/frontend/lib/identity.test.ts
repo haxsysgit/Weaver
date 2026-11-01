@@ -70,8 +70,15 @@ describe("browser-local model selection", () => {
 
   it("offers the flash and pro models", () => {
     expect(AVAILABLE_MODELS.map((model) => model.id)).toEqual([
-      "deepseek-v4-flash",
+      "deepseek-flash",
       "deepseek-v4-pro",
     ]);
+  });
+
+  it("migrates the retired flash alias", () => {
+    localStorage.setItem("weaver_model_id", "deepseek-v4-flash");
+
+    expect(getModelId()).toBe("deepseek-flash");
+    expect(localStorage.getItem("weaver_model_id")).toBeNull();
   });
 });

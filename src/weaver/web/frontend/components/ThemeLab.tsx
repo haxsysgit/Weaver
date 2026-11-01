@@ -30,7 +30,7 @@ interface LabMessage {
 const INITIAL_THREADS: LabThread[] = [
   {
     archived: false,
-    dateGroup: "Today",
+    domain: "canon",
     id: "ariel-tomb",
     pinned: true,
     preview: "people online keep saying Ariel one-shotted an Unholy Titan...",
@@ -39,7 +39,7 @@ const INITIAL_THREADS: LabThread[] = [
   },
   {
     archived: false,
-    dateGroup: "Today",
+    domain: "canon",
     id: "sunny-azarax",
     pinned: false,
     preview: "could current Sunny comfortably beat Azarax in his prime?",
@@ -48,7 +48,7 @@ const INITIAL_THREADS: LabThread[] = [
   },
   {
     archived: false,
-    dateGroup: "Yesterday",
+    domain: "canon",
     id: "anvil-what-if",
     pinned: false,
     preview: "what if Anvil of Valor entered Effie's Fourth Nightmare?",
@@ -57,7 +57,7 @@ const INITIAL_THREADS: LabThread[] = [
   },
   {
     archived: false,
-    dateGroup: "Others",
+    domain: "canon",
     id: "memory-spheres",
     pinned: false,
     preview: "memory lights circling a lonely soul core",
@@ -66,7 +66,7 @@ const INITIAL_THREADS: LabThread[] = [
   },
   {
     archived: true,
-    dateGroup: "Others",
+    domain: "canon",
     id: "seven-suns",
     pinned: false,
     preview: "a later Soul Sea state, hidden while spoiler protection is active",
@@ -93,12 +93,10 @@ const INITIAL_PREFERENCES: LabPreferences = {
   density: "comfortable",
   fontSize: "small",
   glass: "immersive",
-  runeMode: "particles",
   soulMode: "sunny",
   spoilerMode: "protect",
   starIntensity: "balanced",
   theme: "void",
-  tier: "ascended",
   volume: 5,
 };
 
@@ -280,7 +278,7 @@ export function ThemeLab() {
     }, 900);
   }
 
-  const readerStatus = `Vol ${preferences.volume} · ch ${preferences.chapter} · ${preferences.tier}`;
+  const readerStatus = `Vol ${preferences.volume} · ch ${preferences.chapter}`;
   const threadAlpha = preferences.starIntensity === "quiet"
     ? 0.12
     : preferences.starIntensity === "vivid"
@@ -297,7 +295,6 @@ export function ThemeLab() {
       data-density={preferences.density}
       data-font-size={preferences.fontSize}
       data-glass={preferences.glass}
-      data-runes={preferences.runeMode}
       data-soul={preferences.soulMode}
       data-star-intensity={preferences.starIntensity}
       data-theme={preferences.theme}
@@ -380,7 +377,7 @@ export function ThemeLab() {
           </div>
         </div>
 
-        <SpellSurfaceRunes announcement={announcement} eventKey={announcementKey} mode={preferences.runeMode} />
+        <SpellSurfaceRunes announcement={announcement} eventKey={announcementKey} mode="particles" />
 
         <footer className="lab-composer-dock">
           <form className="lab-composer" onSubmit={sendMessage}>
@@ -399,7 +396,6 @@ export function ThemeLab() {
               rows={1}
               value={draft}
             />
-            <span className="lab-tier-pill">{preferences.tier}</span>
             <button aria-label="Send message" disabled={!draft.trim() || weaving} type="submit"><ArrowUpIcon /></button>
           </form>
           <p><span /> everything stays on this machine</p>

@@ -22,6 +22,7 @@ from weaver import (
     ModelStreamEventType,
     ModelToolCall,
 )
+from tests.platform_support import assert_no_group_or_other_access
 from weaver.agent.tools import ToolRegistry
 from weaver.conversation import SessionWeave
 
@@ -53,18 +54,9 @@ async def test_subprocess_restart():
         # Process A: start conversation, emit tool call, settle, crash
         _run("a", state_dir)
 
-        # Verify directory permissions
-        stat = state_dir.stat()
-        assert stat.st_mode & 0o077 == 0, (
-            f"state dir has group/other access: {stat.st_mode:o}"
-        )
-
-        # Verify DB file permissions
-        db_path = state_dir / "weaver.sqlite3"
-        db_stat = db_path.stat()
-        assert db_stat.st_mode & 0o077 == 0, (
-            f"db file has group/other access: {db_stat.st_mode:o}"
-        )
+        # Verify directory and DB file permissions (Unix hosts)
+        assert_no_group_or_other_access(state_dir)
+        assert_no_group_or_other_access(state_dir / "weaver.sqlite3")
 
         # Process B: open same state, continue, verify
         _run("b", state_dir)
@@ -198,7 +190,7 @@ async def test_version_two_migration_keeps_generated_title_and_retires_legacy_ta
             row[0]
             for row in database.execute("SELECT version FROM _migration ORDER BY version")
         ]
-        assert versions == [2, 3]
+        assert versions == [2, 3, 4]
 
     reopened_session = SessionWeave(state_dir)
     await reopened_session.open()
@@ -654,6 +646,56 @@ async def test_send_restart_projection():
             ]
         finally:
             await sw2.close()
+
+
+@pytest.mark.asyncio
+async def test_final_turn_brief_rebuilds_prior_positions_after_restart():
+    """The brief is a projection over persisted items, not separate state."""
+    with tempfile.TemporaryDirectory() as tmp:
+        layer, model, provider = _fake_layer(
+            _tool_use_response("prior-call"),
+            _stop_response("My position is that the earlier version lacks the counter."),
+        )
+        sw = _open_woven(Path(tmp), layer, model, _echo_registry())
+        await sw.open()
+        try:
+            conv_id = await sw.start_conversation("I think the earlier version wins.")
+            first = await sw.send(conv_id, "Compare the two versions.")
+            assert first.exit_reason == "completed"
+        finally:
+            await sw.close()
+
+        layer2, model2, provider2 = _fake_layer(
+            _tool_use_response("followup-call"),
+            _stop_response("Draft: the later evidence changes the comparison."),
+            _stop_response("Final: the later version wins."),
+        )
+        reopened = _open_woven(Path(tmp), layer2, model2, _echo_registry())
+        await reopened.open()
+        try:
+            async def packet_builder(results, draft):
+                return (
+                    "--- chapter 104, lines 1-2 ---\n"
+                    "PACKET: version evidence"
+                )
+
+            result = await reopened.send(
+                conv_id,
+                "No, you're wrong. What about current Sunny after chapter 3120?",
+                packet_builder=packet_builder,
+            )
+            assert result.exit_reason == "completed"
+
+            final_request = provider2.calls[-1].request
+            joined = "\n".join(
+                message.content or "" for message in final_request.messages
+            )
+            assert "--- turn brief ---" in joined
+            assert "prior reader position: Compare the two versions." in joined
+            assert "prior Weaver position: My position is that the earlier version" in joined
+            assert "reader challenges prior answer: yes" in joined
+        finally:
+            await reopened.close()
 
 
 @pytest.mark.asyncio
@@ -1158,6 +1200,26 @@ async def test_list_conversations_newest_first_with_preview(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_list_conversations_breaks_timestamp_ties_by_insert_order(
+    tmp_path, monkeypatch
+):
+    """Two conversations created in the same clock tick (common on Windows,
+    whose clock is coarse) still list newest first."""
+    import weaver.conversation.coordinator as coordinator
+
+    monkeypatch.setattr(coordinator, "now", lambda: "2026-10-28T00:00:00+00:00")
+    layer, model, provider = _fake_layer(_stop_response("ok"))
+    sw = _open_woven(Path(tmp_path), layer, model, _echo_registry())
+    await sw.open()
+    try:
+        ids = [await sw.start_conversation(f"hello {n}") for n in range(5)]
+        convs = await sw.list_conversations()
+        assert [c["conversation_id"] for c in convs] == list(reversed(ids))
+    finally:
+        await sw.close()
+
+
+@pytest.mark.asyncio
 async def test_conversation_metadata_survives_restart_and_manual_titles_win(tmp_path):
     """Conversation-owned metadata stays durable and beats late naming."""
     state_dir = Path(tmp_path) / ".weaver" / "state"
@@ -1284,9 +1346,9 @@ async def test_assembler_empty_input_tight_budget_does_not_raise():
     assert snapshot.token_count > 1  # the system prompt alone exceeds
 
 
-async def test_send_persist_failure_marks_run_interrupted():
-    """Plan 008 test-plan item 3: a raising persist callback produces
-    PERSISTENCE_FAILED and the run lands interrupted, not completed."""
+async def test_send_persist_failure_settles_the_run():
+    """A raising persist callback produces PERSISTENCE_FAILED and a failed
+    run, not a completed or permanently interrupted one. The next send runs."""
     from weaver.agent.tools import ToolExecutionPolicy
 
     import weaver.conversation.runner as runner_module
@@ -1318,7 +1380,11 @@ async def test_send_persist_failure_marks_run_interrupted():
             result = await sw.send(conv_id, "hi")
             assert result.exit_reason == "persistence_failed"
             runs = await sw._repo.load_runs(conv_id)
-            assert runs[-1].phase == "interrupted"
+            assert runs[-1].phase == "failed"
+            # the failed run no longer blocks the conversation
+            following = await sw.send(conv_id, "hi again")
+            assert following.exit_reason == "persistence_failed"
+            assert following.turn_id != ""
         finally:
             runner_module.ConversationRunner._persist_callback = real_callback
             await sw.close()
@@ -1712,11 +1778,10 @@ async def test_retry_last_turn_reruns_the_failed_message_and_unblocks_sends():
             failed = await sw.send(conv_id, "hello there")
             assert failed.exit_reason == "persistence_failed"
 
-            # the dead-end the web UI hit: a send is refused while the
-            # interrupted run exists
-            refused = await sw.send(conv_id, "hello there")
-            assert refused.exit_reason == "interrupted"
-            assert refused.turn_id == ""
+            # a failed run is settled; the next send is not refused
+            following = await sw.send(conv_id, "hello there")
+            assert following.exit_reason == "persistence_failed"
+            assert following.turn_id != ""
         finally:
             runner_module.ConversationRunner._persist_callback = real_callback
             await sw.close()

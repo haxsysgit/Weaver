@@ -194,8 +194,7 @@ async def test_proof_two_phase_packet_drives_the_final_answer(tmp_path: Path) ->
             _mk_response("Draft: the leader was killed with the kunai.", (), ModelStopReason.STOP),
             # step 4: synthesis over the packet
             _mk_response(
-                "Sunny killed the leader with the kunai at chapter 98. "
-                "The Black Knight slew the other five at chapter 99.",
+                "Sunny killed the leader with the kunai at chapter 98.",
                 (),
                 ModelStopReason.STOP,
             ),

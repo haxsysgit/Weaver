@@ -27,9 +27,9 @@ export function FateWeavingLoader({
           d="M2 18 C32 18, 42 12, 64 18 S96 24, 126 18"
           pathLength="1"
         />
-        <circle className="fate-loader-core fate-loader-core-one" cx="40" cy="15" r="1.7" />
-        <circle className="fate-loader-core fate-loader-core-two" cx="64" cy="18" r="2.3" />
-        <circle className="fate-loader-core fate-loader-core-three" cx="89" cy="21" r="1.7" />
+        <circle className="fate-loader-core fate-loader-core-one" cx="40" cy="15" r="2.6" />
+        <circle className="fate-loader-core fate-loader-core-two" cx="64" cy="18" r="3.4" />
+        <circle className="fate-loader-core fate-loader-core-three" cx="89" cy="21" r="2.6" />
       </svg>
     </div>
   );

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createHttpChatApi } from "./chatApi";
+import { ChatApiError, createHttpChatApi } from "./chatApi";
 import { setApiKey } from "./identity";
 
 // Plan v1 slice 3 regression pin: the authed wrapper must add the
@@ -78,5 +78,44 @@ describe("createHttpChatApi authed wrapper", () => {
       "Content-Type": "application/json",
       "X-Device-Id": expect.any(String),
     });
+  });
+
+  it("loads allowance status and records notice consent", async () => {
+    const status = {
+      consented: true,
+      enabled: true,
+      remaining_questions: 3,
+      reset_at: "2026-10-01T00:00:00+00:00",
+      source: "sponsored",
+    };
+    const spy = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) => {
+      return new Response(JSON.stringify(status), {
+        headers: { "Content-Type": "application/json" },
+        status: 200,
+      });
+    });
+    const api = createHttpChatApi(spy as unknown as typeof fetch);
+
+    expect(await api.getAccess?.()).toEqual(status);
+    expect(await api.acceptSponsoredNotice?.()).toEqual(status);
+    expect(spy.mock.calls[0][0]).toBe("/api/access");
+    expect(spy.mock.calls[1][0]).toBe("/api/access/consent");
+    expect(spy.mock.calls[1][1]).toMatchObject({ method: "POST" });
+  });
+
+  it("preserves a safe sponsored refusal code", async () => {
+    const spy = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) =>
+      new Response(JSON.stringify({ detail: { code: "reader_exhausted" } }), {
+        headers: { "Content-Type": "application/json" },
+        status: 429,
+      }),
+    );
+    const api = createHttpChatApi(spy as unknown as typeof fetch);
+
+    const stream = api.streamTurn("thread", "question")[Symbol.asyncIterator]();
+    await expect(stream.next()).rejects.toMatchObject({
+      code: "reader_exhausted",
+      status: 429,
+    } satisfies Partial<ChatApiError>);
   });
 });

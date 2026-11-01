@@ -13,7 +13,7 @@ Two layered sources, loaded from the current working directory:
      key = "sk-..."     # DeepSeek API key (DEEPSEEK_KEY)
 
      [chat]
-     model = "flash"    # alias or full id; default deepseek-v4-flash
+     model = "flash"    # alias or full id; default deepseek-flash
 
 Precedence (first wins): `.env` > real environment > `.weaver/config.toml`.
 
@@ -36,8 +36,11 @@ from .errors import InvalidModelAliasError
 
 MODEL_ALIASES = MappingProxyType(
     {
-        "flash": "deepseek-v4-flash",
+        "flash": "deepseek-flash",
     }
+)
+LEGACY_MODEL_IDS = MappingProxyType(
+    {"deepseek-v4-flash": "deepseek-flash"}
 )
 
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
@@ -59,6 +62,10 @@ def resolve_model(alias: str) -> str:
         ) from exc
 
 
+def normalize_model_id(model_id: str) -> str:
+    return LEGACY_MODEL_IDS.get(model_id, model_id)
+
+
 def _parse_dotenv(path: Path) -> dict[str, str]:
     """Parse a minimal .env file: KEY=VALUE lines, # comments, quoted values."""
     values: dict[str, str] = {}
@@ -78,8 +85,9 @@ def _resolve_chat_model(model: str) -> str:
     """Accept a model alias (flash/pro) or a full model id."""
     if model in MODEL_ALIASES:
         return MODEL_ALIASES[model]
-    if model in MODEL_ALIASES.values():
-        return model
+    normalized = normalize_model_id(model)
+    if normalized in MODEL_ALIASES.values():
+        return normalized
     raise ValueError(
         f"Unknown chat model {model!r} in {CONFIG_FILE}; expected one of "
         f"{', '.join(sorted(set(MODEL_ALIASES.values())))} (aliases: "

@@ -51,6 +51,8 @@ class ConversationSummaryRecord:
     archived_at: str | None
     pinned_at: str | None
     edition_id: str
+    domain: str
+    fanfic_kind: str | None
     last_owner_body: str | None
 
 
@@ -72,12 +74,19 @@ class ConversationRepository:
         )
 
     async def _insert_conversation(
-        self, id: str, relationship_id: str, created_at: str, device_id: str = ""
+        self,
+        id: str,
+        relationship_id: str,
+        created_at: str,
+        device_id: str = "",
+        domain: str = "canon",
+        fanfic_kind: str | None = None,
     ) -> None:
         await self._db.execute(
-            "INSERT INTO conversation (id, relationship_id, device_id, created_at) "
-            "VALUES (?, ?, ?, ?)",
-            (id, relationship_id, device_id, created_at),
+            "INSERT INTO conversation "
+            "(id, relationship_id, device_id, created_at, domain, fanfic_kind) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (id, relationship_id, device_id, created_at, domain, fanfic_kind),
         )
 
     async def _insert_turn(
@@ -187,13 +196,48 @@ class ConversationRepository:
         return await cursor.fetchone() is not None
 
     async def find_interrupted_run(self, conversation_id: str) -> RunRecord | None:
+        return await self._find_run_in_phases(conversation_id, ("interrupted",))
+
+    async def find_retryable_run(self, conversation_id: str) -> RunRecord | None:
+        """The conversation's last run, if the reader may retry it.
+
+        Only the newest run can be retried. A model failure and an
+        interrupted run are retryable; a completed run, or a failed run the
+        reader already moved past, is not.
+        """
         cursor = await self._db.execute(
             "SELECT r.id, r.turn_id, r.attempt, r.phase, r.interrupted_run_id, r.created_at "
             "FROM run r "
             "JOIN turn t ON r.turn_id = t.id "
-            "WHERE t.conversation_id = ? AND r.phase = 'interrupted' "
-            "ORDER BY r.created_at DESC LIMIT 1",
+            "WHERE t.conversation_id = ? "
+            "ORDER BY r.created_at DESC, r.rowid DESC LIMIT 1",
             (conversation_id,),
+        )
+        row = await cursor.fetchone()
+        if row is None or row[3] not in ("interrupted", "failed"):
+            return None
+        return RunRecord(
+            id=row[0],
+            turn_id=row[1],
+            attempt=row[2],
+            phase=row[3],
+            interrupted_run_id=row[4],
+            created_at=row[5],
+        )
+
+    async def _find_run_in_phases(
+        self,
+        conversation_id: str,
+        phases: tuple[str, ...],
+    ) -> RunRecord | None:
+        placeholders = ", ".join("?" for _ in phases)
+        cursor = await self._db.execute(
+            "SELECT r.id, r.turn_id, r.attempt, r.phase, r.interrupted_run_id, r.created_at "
+            "FROM run r "
+            "JOIN turn t ON r.turn_id = t.id "
+            f"WHERE t.conversation_id = ? AND r.phase IN ({placeholders}) "
+            "ORDER BY r.created_at DESC LIMIT 1",
+            (conversation_id, *phases),
         )
         row = await cursor.fetchone()
         if row is None:
@@ -277,6 +321,8 @@ class ConversationRepository:
                 c.archived_at,
                 c.pinned_at,
                 c.edition_id,
+                c.domain,
+                c.fanfic_kind,
                 (
                 SELECT i.body FROM conversation_item i
                 WHERE i.conversation_id = c.id AND i.kind = 'owner'
@@ -284,7 +330,7 @@ class ConversationRepository:
                 ) AS last_owner
             FROM conversation c
             WHERE c.device_id = ?
-            ORDER BY c.created_at DESC
+            ORDER BY c.created_at DESC, c.rowid DESC
         """
         parameters: tuple[str | int, ...] = (device_id,)
         if limit is not None:
@@ -305,7 +351,9 @@ class ConversationRepository:
                 archived_at=row[4],
                 pinned_at=row[5],
                 edition_id=row[6],
-                last_owner_body=row[7],
+                domain=row[7],
+                fanfic_kind=row[8],
+                last_owner_body=row[9],
             )
             for row in rows
         ]
@@ -323,6 +371,8 @@ class ConversationRepository:
                 c.archived_at,
                 c.pinned_at,
                 c.edition_id,
+                c.domain,
+                c.fanfic_kind,
                 (
                     SELECT i.body FROM conversation_item i
                     WHERE i.conversation_id = c.id AND i.kind = 'owner'
@@ -344,7 +394,9 @@ class ConversationRepository:
             archived_at=row[4],
             pinned_at=row[5],
             edition_id=row[6],
-            last_owner_body=row[7],
+            domain=row[7],
+            fanfic_kind=row[8],
+            last_owner_body=row[9],
         )
 
     async def set_generated_title(self, conversation_id: str, title: str) -> bool:

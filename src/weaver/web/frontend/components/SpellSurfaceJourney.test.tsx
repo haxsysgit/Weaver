@@ -32,7 +32,6 @@ function createDurableFakeApi(): { api: ChatApi; store: DurableFakeStore } {
   let preferences: UserPreferences = {
     reader_chapter: 1000,
     spoiler_mode: "protect" as const,
-    tier: "ascended" as const,
   };
 
   function findConversation(conversationId: string): ConversationSummary {
@@ -199,6 +198,9 @@ describe("Plan 027 deterministic fake journey", () => {
     expect(reply.querySelector("script")).toBeNull();
     expect(reply.querySelector('a[href^="javascript:"]')).toBeNull();
 
+    fireEvent.click(await screen.findByRole("button", {
+      name: "Open threads and settings",
+    }));
     let thread = await screen.findByTestId("thread-thread-1");
     fireEvent.click(within(thread).getByRole("button", {
       name: "Rename Ariel and the Tomb",
@@ -213,8 +215,8 @@ describe("Plan 027 deterministic fake journey", () => {
     fireEvent.click(within(thread).getByRole("button", {
       name: "Pin Ariel canon check",
     }));
-    const pinned = await screen.findByRole("region", { name: "Pinned threads" });
-    thread = within(pinned).getByTestId("thread-thread-1");
+    const chats = await screen.findByRole("region", { name: "Chats" });
+    thread = within(chats).getByTestId("thread-thread-1");
     fireEvent.click(within(thread).getByRole("button", {
       name: "Archive Ariel canon check",
     }));
@@ -229,6 +231,9 @@ describe("Plan 027 deterministic fake journey", () => {
 
     expect(screen.queryByRole("dialog", { name: "First Nightmare setup" })).toBeNull();
     fireEvent.click(await screen.findByRole("button", {
+      name: "Open threads and settings",
+    }));
+    fireEvent.click(await screen.findByRole("button", {
       name: /Open archived threads/,
     }));
     const archivedThread = await screen.findByTestId("thread-thread-1");
@@ -238,10 +243,10 @@ describe("Plan 027 deterministic fake journey", () => {
     }));
 
     fireEvent.click(screen.getByRole("button", { name: "Return to active threads" }));
-    const restoredPinned = await screen.findByRole("region", {
-      name: "Pinned threads",
+    const restoredChats = await screen.findByRole("region", {
+      name: "Chats",
     });
-    const restoredThread = within(restoredPinned).getByTestId("thread-thread-1");
+    const restoredThread = within(restoredChats).getByTestId("thread-thread-1");
     fireEvent.click(within(restoredThread).getByRole("button", {
       name: "Delete Ariel canon check",
     }));

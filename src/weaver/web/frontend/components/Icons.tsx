@@ -8,6 +8,7 @@ import {
   faCopy,
   faEye,
   faEyeSlash,
+  faFileArrowDown,
   faLink,
   faMagnifyingGlass,
   faPen,
@@ -32,6 +33,10 @@ export function ArrowUpIcon(props: IconProps) {
 
 export function CopyIcon(props: IconProps) {
   return <FontAwesomeIcon aria-hidden="true" icon={faCopy} {...props} />;
+}
+
+export function DownloadIcon(props: IconProps) {
+  return <FontAwesomeIcon aria-hidden="true" icon={faFileArrowDown} {...props} />;
 }
 
 export function EyeIcon(props: IconProps) {

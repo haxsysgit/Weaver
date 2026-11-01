@@ -1,11 +1,18 @@
 import { weaverHeaders } from "./identity";
 
+export interface CreateThreadOptions {
+  domain?: "canon" | "fanfic";
+  fanfic_kind?: string | null;
+}
+
 export interface ConversationSummary {
   archived: boolean;
   conversation_id: string;
   created_at: string;
+  domain?: "canon" | "fanfic";
   edition_id: string;
   pinned: boolean;
+  preview?: string;
   title: string;
 }
 
@@ -33,16 +40,26 @@ export type StreamEvent =
 export interface UserPreferences {
   reader_chapter: number | null;
   spoiler_mode: "protect" | "none";
-  tier: "awakened" | "ascended" | "transcendent";
+}
+
+export interface AccessStatus {
+  consented: boolean;
+  development?: boolean;
+  enabled: boolean;
+  remaining_questions: number;
+  reset_at: string | null;
+  source: "reader_byok" | "sponsored" | "unavailable" | "owner_key";
 }
 
 export interface ChatApi {
+  getAccess?(): Promise<AccessStatus>;
+  acceptSponsoredNotice?(): Promise<AccessStatus>;
   listConversations(): Promise<ConversationSummary[]>;
   updateConversation(
     conversationId: string,
     patch: ConversationMetadataPatch,
   ): Promise<ConversationSummary>;
-  createConversation(): Promise<{ conversation_id: string }>;
+  createConversation(options?: CreateThreadOptions): Promise<{ conversation_id: string }>;
   loadMessages(conversationId: string): Promise<StoredMessage[]>;
   streamTurn(conversationId: string, message: string): AsyncIterable<StreamEvent>;
   retryTurn(conversationId: string): AsyncIterable<StreamEvent>;
@@ -60,19 +77,36 @@ interface RawStreamEvent {
 
 export class ChatApiError extends Error {
   readonly action: string;
+  readonly code?: string;
   readonly status: number;
 
-  constructor(action: string, status: number) {
+  constructor(action: string, status: number, code?: string) {
     super(`${action} failed (${status})`);
     this.name = "ChatApiError";
     this.action = action;
+    this.code = code;
     this.status = status;
   }
 }
 
+async function responseError(response: Response, action: string): Promise<ChatApiError> {
+  let code: string | undefined;
+  try {
+    const body = (await response.clone().json()) as {
+      detail?: { code?: unknown };
+    };
+    if (typeof body.detail?.code === "string") {
+      code = body.detail.code;
+    }
+  } catch {
+    // Empty and non-JSON errors still retain their safe status mapping.
+  }
+  return new ChatApiError(action, response.status, code);
+}
+
 async function requireJson<T>(response: Response, action: string): Promise<T> {
   if (!response.ok) {
-    throw new ChatApiError(action, response.status);
+    throw await responseError(response, action);
   }
   return (await response.json()) as T;
 }
@@ -222,6 +256,16 @@ export function createHttpChatApi(fetcher: typeof fetch = fetch): ChatApi {
       },
     });
   return {
+    async getAccess() {
+      const response = await authed("/api/access");
+      return requireJson<AccessStatus>(response, "Loading shared allowance");
+    },
+
+    async acceptSponsoredNotice() {
+      const response = await authed("/api/access/consent", { method: "POST" });
+      return requireJson<AccessStatus>(response, "Accepting the privacy notice");
+    },
+
     async getPreferences() {
       const response = await authed("/api/preferences");
       return requireJson<UserPreferences>(response, "Loading preferences");
@@ -261,8 +305,12 @@ export function createHttpChatApi(fetcher: typeof fetch = fetch): ChatApi {
       return requireJson<ConversationSummary>(response, "Updating conversation");
     },
 
-    async createConversation() {
-      const response = await authed("/api/conversations", { method: "POST" });
+    async createConversation(options?: CreateThreadOptions) {
+      const response = await authed("/api/conversations", {
+        body: options ? JSON.stringify(options) : undefined,
+        headers: options ? { "Content-Type": "application/json" } : undefined,
+        method: "POST",
+      });
       return requireJson<{ conversation_id: string }>(
         response,
         "Creating a conversation",
@@ -286,7 +334,7 @@ export function createHttpChatApi(fetcher: typeof fetch = fetch): ChatApi {
         },
       );
       if (!response.ok) {
-        throw new ChatApiError("Sending the message", response.status);
+        throw await responseError(response, "Sending the message");
       }
       yield* openTurnStream(conversationId);
     },
@@ -299,7 +347,7 @@ export function createHttpChatApi(fetcher: typeof fetch = fetch): ChatApi {
         { method: "POST" },
       );
       if (!response.ok) {
-        throw new ChatApiError("Retrying", response.status);
+        throw await responseError(response, "Retrying");
       }
       yield* openTurnStream(conversationId);
     },
@@ -314,7 +362,7 @@ export function createHttpChatApi(fetcher: typeof fetch = fetch): ChatApi {
         { method: "POST" },
       );
       if (!response.ok) {
-        throw new ChatApiError("Regenerating", response.status);
+        throw await responseError(response, "Regenerating");
       }
       yield* openTurnStream(conversationId);
     },
@@ -330,7 +378,7 @@ export function createHttpChatApi(fetcher: typeof fetch = fetch): ChatApi {
       if (response.status === 200) {
         return "idle";
       }
-      throw new ChatApiError("Stopping the reply", response.status);
+      throw await responseError(response, "Stopping the reply");
     },
   };
 }

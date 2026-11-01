@@ -32,7 +32,3 @@ deletions of process docs and the audit prompt.
    Qdrant + fastembed/onnx stays; the quantized bge swap is an embedder
    change, not a store change. Risks (index shipping, rebuild-after-
    quantize, model download at first run) go to the v1 plan.
-
-## Final choice
-
-Awaiting owner: accept and close, or reject with reasons.

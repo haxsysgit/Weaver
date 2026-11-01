@@ -2,12 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   ArchiveIcon,
-  ChevronDownIcon,
   EditIcon,
   PinIcon,
   PlusIcon,
-  RailCloseIcon,
-  RailOpenIcon,
+  SearchIcon,
   SettingsIcon,
   TrashIcon,
   UnpinIcon,
@@ -16,7 +14,7 @@ import { WeaverMark } from "./WeaverMark";
 
 export interface LabThread {
   archived: boolean;
-  dateGroup: "Today" | "Yesterday" | "Others";
+  domain: "canon" | "fanfic";
   id: string;
   pinned: boolean;
   preview: string;
@@ -24,37 +22,8 @@ export interface LabThread {
   volume: number | null;
 }
 
-type ThreadGrouping = "date" | "flat";
-
-interface ThreadGroup {
-  label: string | null;
-  threads: LabThread[];
-}
-
-const DATE_GROUPS: LabThread["dateGroup"][] = ["Today", "Yesterday", "Others"];
-
-const GROUPING_OPTIONS: Array<{
-  description: string;
-  label: string;
-  value: ThreadGrouping;
-}> = [
-  { description: "Today, yesterday, and older threads", label: "By date", value: "date" },
-  { description: "Every thread together", label: "In one list", value: "flat" },
-];
-
-function groupThreads(threads: LabThread[], grouping: ThreadGrouping): ThreadGroup[] {
-  if (grouping === "flat") {
-    return [{ label: null, threads }];
-  }
-
-  if (grouping === "date") {
-    return DATE_GROUPS.map((label) => ({
-      label,
-      threads: threads.filter((thread) => thread.dateGroup === label),
-    }));
-  }
-
-  return [];
+function pinFirst(threads: LabThread[]): LabThread[] {
+  return [...threads].sort((left, right) => Number(right.pinned) - Number(left.pinned));
 }
 
 interface ThreadArchiveProps {
@@ -66,6 +35,8 @@ interface ThreadArchiveProps {
   onArchive: (threadId: string) => Promise<boolean | void> | boolean | void;
   onClose: () => void;
   onCreate: () => void;
+  onCreateFanfic?: () => void;
+  newMenuSignal?: number;
   onDelete: (threadId: string) => Promise<boolean | void> | boolean | void;
   onOpen: () => void;
   onOpenSettings: () => void;
@@ -86,7 +57,9 @@ export function ThreadArchive({
   drawerOpen,
   onArchive,
   onClose,
+  newMenuSignal = 0,
   onCreate,
+  onCreateFanfic,
   onDelete,
   onOpen,
   onOpenSettings,
@@ -98,16 +71,13 @@ export function ThreadArchive({
   startupReady = true,
   threads,
 }: ThreadArchiveProps) {
+  const [query, setQuery] = useState("");
+  const [newMenuOpen, setNewMenuOpen] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
   const [actionsOpenId, setActionsOpenId] = useState<string | null>(null);
   const [pendingIds, setPendingIds] = useState<Set<string>>(() => new Set());
-  const [grouping, setGrouping] = useState<ThreadGrouping>("date");
-  const [groupingMenuOpen, setGroupingMenuOpen] = useState(false);
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
-    () => new Set(),
-  );
   const [mobileLayout, setMobileLayout] = useState(() => {
     return window.matchMedia("(max-width: 767px)").matches;
   });
@@ -129,22 +99,41 @@ export function ThreadArchive({
   }, []);
 
   useEffect(() => {
+    if (newMenuSignal > 0) {
+      setNewMenuOpen(true);
+    }
+  }, [newMenuSignal]);
+
+  useEffect(() => {
     if (mobileLayout && drawerOpen) {
       closeButtonRef.current?.focus();
     }
   }, [drawerOpen, mobileLayout]);
 
-  const pinnedThreads = useMemo(() => {
-    return threads.filter((thread) => !thread.archived && thread.pinned);
-  }, [threads]);
-  const activeThreads = useMemo(() => {
-    return threads.filter((thread) => !thread.archived && !thread.pinned);
-  }, [threads]);
+  const chats = useMemo(
+    () =>
+      pinFirst(
+        threads.filter((thread) => !thread.archived && thread.domain !== "fanfic"),
+      ),
+    [threads],
+  );
+  const fanfic = useMemo(
+    () =>
+      pinFirst(
+        threads.filter((thread) => !thread.archived && thread.domain === "fanfic"),
+      ),
+    [threads],
+  );
   const archivedThreads = useMemo(() => {
     return threads.filter((thread) => thread.archived);
   }, [threads]);
-  const threadGroups = groupThreads(activeThreads, grouping);
-  const archivedCount = threads.filter((thread) => thread.archived).length;
+  const archivedCount = archivedThreads.length;
+  const needle = query.trim().toLowerCase();
+  const matches = (thread: LabThread) =>
+    !needle ||
+    `${thread.title} ${thread.preview}`.toLowerCase().includes(needle);
+  const visibleChats = chats.filter(matches);
+  const visibleFanfic = fanfic.filter(matches);
   const railVisible = mobileLayout ? drawerOpen : !collapsed;
   const railOperable = startupReady && (mobileLayout ? drawerOpen : true);
 
@@ -198,7 +187,7 @@ export function ThreadArchive({
       setConfirmingDelete(null);
       const visibleThreads = archivedOpen
         ? archivedThreads
-        : [...pinnedThreads, ...activeThreads];
+        : [...chats, ...fanfic];
       const deletedIndex = visibleThreads.findIndex(
         (thread) => thread.id === threadId,
       );
@@ -212,18 +201,6 @@ export function ThreadArchive({
         newWeaveRef.current?.focus();
       }, 0);
     }
-  }
-
-  function toggleGroup(groupLabel: string) {
-    setCollapsedGroups((current) => {
-      const next = new Set(current);
-      if (next.has(groupLabel)) {
-        next.delete(groupLabel);
-      } else {
-        next.add(groupLabel);
-      }
-      return next;
-    });
   }
 
   function renderThread(thread: LabThread) {
@@ -268,6 +245,7 @@ export function ThreadArchive({
           ) : (
             <button
               aria-current={active ? "page" : undefined}
+              aria-label={thread.title}
               className="lab-thread-select"
               onClick={() => onSelect(thread.id)}
               ref={(button) => {
@@ -279,6 +257,9 @@ export function ThreadArchive({
             >
               <span className="lab-thread-copy">
                 <strong>{thread.title}</strong>
+                <small>
+                  {thread.preview || (thread.domain === "fanfic" ? "Fanfic" : "Canon")}
+                </small>
               </span>
             </button>
           )}
@@ -408,29 +389,67 @@ export function ThreadArchive({
       role={mobileLayout ? "dialog" : undefined}
     >
       <header className="lab-brand">
-        <span className="lab-brand-mark"><WeaverMark compact /></span>
-        <span><strong>weaver</strong></span>
         <button
           aria-label={railVisible ? "Close threads" : "Open threads"}
-          className="lab-rail-close"
+          className="lab-brand-toggle"
           onClick={railVisible ? onClose : onOpen}
           ref={closeButtonRef}
           type="button"
         >
-          {railVisible ? <RailCloseIcon /> : <RailOpenIcon />}
+          <span className="lab-brand-mark"><WeaverMark compact /></span>
+          <span><strong>weaver</strong></span>
         </button>
       </header>
 
-      <button
-        aria-label="Start a new weave"
-        className="lab-new-thread"
-        onClick={onCreate}
-        ref={newWeaveRef}
-        type="button"
-      >
-        <PlusIcon />
-        <span>New Weave</span>
-      </button>
+      <div className="lab-new-wrap">
+        <button
+          aria-expanded={newMenuOpen}
+          aria-haspopup="menu"
+          aria-label="Start a new weave"
+          className="lab-new-fanfic lab-new-pair"
+          onClick={() => setNewMenuOpen((open) => !open)}
+          ref={newWeaveRef}
+          type="button"
+        >
+          <span aria-hidden="true" className="lab-fanfic-mark">❖</span>
+          <span>New thread/fanfic</span>
+        </button>
+        {newMenuOpen && (
+          <div aria-label="Choose a thread kind" className="lab-new-options" role="menu">
+            <button
+              onClick={onCreate}
+              role="menuitem"
+              title="Canon conversation: cited answers and your spoiler boundary."
+              type="button"
+            >
+              <span aria-hidden="true" className="lab-fanfic-mark">◇</span>
+              <span>New thread</span>
+            </button>
+            {onCreateFanfic && (
+              <button
+                onClick={onCreateFanfic}
+                role="menuitem"
+                title="Fanfic: invented scenes in the storyteller voice, canon kept straight."
+                type="button"
+              >
+                <span aria-hidden="true" className="lab-fanfic-mark">❖</span>
+                <span>New fanfic</span>
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      <label className="lab-thread-search">
+        <SearchIcon />
+        <input
+          aria-label="Search chats and fanfic"
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search chats"
+          type="search"
+          value={query}
+        />
+      </label>
 
       <div className="lab-rail-scroll">
         {actionError && <p className="lab-archive-error" role="alert">{actionError}</p>}
@@ -458,91 +477,37 @@ export function ThreadArchive({
           </section>
         ) : (
           <>
-            {pinnedThreads.length > 0 && (
-              <section aria-label="Pinned threads" className="lab-pinned-section">
-                <header className="lab-rail-section-head">
-                  <h2>Pinned</h2>
-                  <small>{pinnedThreads.length}</small>
-                </header>
-                <ul className="lab-thread-flat-list">
-                  {pinnedThreads.map(renderThread)}
-                </ul>
-              </section>
-            )}
-
-            <section className="lab-chat-section">
+            <section className="lab-chat-section" aria-label="Chats">
               <header className="lab-rail-section-head">
                 <h2>Chats</h2>
-                <div className="lab-grouping-picker">
-                  <button
-                    aria-expanded={groupingMenuOpen}
-                    aria-haspopup="menu"
-                    aria-label="Organize chats"
-                    onClick={() => setGroupingMenuOpen((open) => !open)}
-                    type="button"
-                  >
-                    {GROUPING_OPTIONS.find((option) => option.value === grouping)?.label}
-                    <ChevronDownIcon />
-                  </button>
-                  {groupingMenuOpen && (
-                    <div aria-label="Organize threads" className="lab-grouping-menu" role="menu">
-                      <p>Organize threads</p>
-                      {GROUPING_OPTIONS.map((option) => (
-                        <button
-                          aria-checked={grouping === option.value}
-                          key={option.value}
-                          onClick={() => {
-                            setGrouping(option.value);
-                            setGroupingMenuOpen(false);
-                          }}
-                          role="menuitemradio"
-                          type="button"
-                        >
-                          <span aria-hidden="true">{grouping === option.value ? "✓" : ""}</span>
-                          <strong>{option.label}</strong>
-                          <small>{option.description}</small>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <small>{visibleChats.length}</small>
               </header>
-
-              <nav aria-label="Active threads" className="lab-thread-list">
-                {threadGroups.map((group) => {
-                  const groupLabel = group.label;
-                  const groupCollapsed = groupLabel
-                    ? collapsedGroups.has(groupLabel)
-                    : false;
-                  return (
-                    <section className="lab-thread-group" key={groupLabel ?? "all"}>
-                      {groupLabel && (
-                        <button
-                          aria-expanded={!groupCollapsed}
-                          className="lab-thread-group-toggle"
-                          onClick={() => toggleGroup(groupLabel)}
-                          type="button"
-                        >
-                          <span>{groupLabel}</span>
-                          <small>{group.threads.length}</small>
-                          <ChevronDownIcon />
-                        </button>
-                      )}
-                      <div
-                        aria-hidden={groupCollapsed}
-                        className={`lab-thread-group-body ${groupCollapsed ? "collapsed" : ""}`}
-                      >
-                        <div>
-                          <ul className="lab-thread-flat-list">{group.threads.map(renderThread)}</ul>
-                        </div>
-                      </div>
-                    </section>
-                  );
-                })}
-                {activeThreads.length === 0 && (
+              <nav aria-label="Chats" className="lab-thread-list">
+                <ul className="lab-thread-flat-list">
+                  {visibleChats.map(renderThread)}
+                </ul>
+                {visibleChats.length === 0 && (
                   <div className="lab-thread-empty">
                     <span aria-hidden="true" />
-                    <p>[No active threads answer the call.]</p>
+                    <p>[No chats yet.]</p>
+                  </div>
+                )}
+              </nav>
+            </section>
+
+            <section className="lab-chat-section" aria-label="Fanfic">
+              <header className="lab-rail-section-head">
+                <h2>Fanfic</h2>
+                <small>{visibleFanfic.length}</small>
+              </header>
+              <nav aria-label="Fanfic" className="lab-thread-list">
+                <ul className="lab-thread-flat-list">
+                  {visibleFanfic.map(renderThread)}
+                </ul>
+                {visibleFanfic.length === 0 && (
+                  <div className="lab-thread-empty">
+                    <span aria-hidden="true" />
+                    <p>[No fanfic yet. Start one above.]</p>
                   </div>
                 )}
               </nav>
@@ -567,7 +532,7 @@ export function ThreadArchive({
       <footer className="lab-rail-footer">
         <button aria-label="Open Soul Sea settings" onClick={onOpenSettings} type="button">
           <SettingsIcon />
-          <span><strong>Settings</strong><small>{readerStatus} · runes · appearance</small></span>
+          <span><strong>Settings</strong><small>{readerStatus || "Reader position and appearance"}</small></span>
         </button>
       </footer>
     </aside>

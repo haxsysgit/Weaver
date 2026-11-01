@@ -6,6 +6,7 @@ import asyncio
 import json
 import logging
 import os
+from collections.abc import Callable
 from pathlib import Path
 from typing import Literal, TypedDict
 
@@ -51,10 +52,13 @@ class ConversationSummary(TypedDict):
 
     conversation_id: str
     title: str
+    preview: str
     created_at: str
     archived: bool
     pinned: bool
     edition_id: str
+    domain: str
+    fanfic_kind: str | None
 
 
 class SessionWeave:
@@ -69,6 +73,7 @@ class SessionWeave:
         model_layer: ModelLayer | None = None,
         model: ModelSpec | None = None,
         system_prompt: str = "",
+        system_prompt_by_domain: Callable[[str, str | None], str] | None = None,
         tool_registry: ToolRegistry | None = None,
         active_tools: tuple[str, ...] = (),
         execution_policy: ToolExecutionPolicy | None = None,
@@ -83,6 +88,7 @@ class SessionWeave:
         self._model_layer = model_layer
         self._model = model
         self._system_prompt = system_prompt
+        self._system_prompt_by_domain = system_prompt_by_domain
         self._tool_registry = tool_registry
         self._active_tools = active_tools
         self._execution_policy = execution_policy
@@ -153,6 +159,9 @@ class SessionWeave:
         tool_budget: int | None = None,
         reasoning: ReasoningEffort | None = None,
         packet_builder: PacketBuilder | None = None,
+        final_pass: bool = True,
+        reader_note: str = "",
+        max_chapter: int | None = None,
     ) -> TurnResult:
         """Run one full turn with the owner's input and return the result.
 
@@ -197,6 +206,7 @@ class SessionWeave:
         )
         if cancel_event is None:
             cancel_event = asyncio.Event()
+        system_prompt, domain = await self._turn_prompt(conversation_id)
         return await self._runner.run_turn_in_run(
             conversation_id,
             run_id,
@@ -207,14 +217,32 @@ class SessionWeave:
             tool_budget=tool_budget,
             reasoning=reasoning,
             packet_builder=packet_builder,
+            final_pass=final_pass,
+            system_prompt=system_prompt,
+            domain=domain,
+            reader_note=reader_note,
+            max_chapter=max_chapter,
         )
 
-    async def start_conversation(self, owner_text: str, device_id: str = "") -> str:
+    async def start_conversation(
+        self,
+        owner_text: str,
+        device_id: str = "",
+        domain: str = "canon",
+        fanfic_kind: str | None = None,
+    ) -> str:
         """Create relationship + conversation + first turn in one transaction.
-        Returns conversation_id."""
+        Returns conversation_id.
+
+        ``domain`` is canon or fanfic. A fanfic thread keeps the novel as a
+        constraint and treats the thread as its own continuation.
+        """
         assert self._coordinator is not None
         conv_id, _, _ = await self._coordinator.start_conversation_and_turn(
-            owner_text, device_id
+            owner_text,
+            device_id,
+            domain=domain,
+            fanfic_kind=fanfic_kind,
         )
         return conv_id
 
@@ -240,11 +268,31 @@ class SessionWeave:
         return {
             "conversation_id": record.id,
             "title": title,
+            "preview": cls._last_owner_text(record.last_owner_body)[:120],
             "created_at": record.created_at,
             "archived": record.archived_at is not None,
             "pinned": record.pinned_at is not None,
             "edition_id": record.edition_id,
+            "domain": record.domain,
+            "fanfic_kind": record.fanfic_kind,
         }
+
+    async def _turn_prompt(self, conversation_id: str) -> tuple[str, str]:
+        """The prompt and domain for one turn of this conversation."""
+        domain, fanfic_kind = await self.conversation_domain(conversation_id)
+        if self._system_prompt_by_domain is None:
+            return self._system_prompt, domain
+        return self._system_prompt_by_domain(domain, fanfic_kind), domain
+
+    async def conversation_domain(
+        self, conversation_id: str
+    ) -> tuple[str, str | None]:
+        """Return (domain, fanfic_kind) for one conversation, canon by default."""
+        assert self._repo is not None
+        summary = await self._repo.load_conversation_summary(conversation_id)
+        if summary is None:
+            return "canon", None
+        return summary.domain, summary.fanfic_kind
 
     async def list_conversations(
         self, limit: int | None = None, device_id: str = ""
@@ -310,6 +358,11 @@ class SessionWeave:
         if owner is None:
             return False
         return owner == device_id
+
+    async def conversation_device(self, conversation_id: str) -> str | None:
+        """The device id that owns this conversation (None if unknown)."""
+        assert self._repo is not None
+        return await self._repo.conversation_owner(conversation_id)
 
     async def load_transcript(
         self, conversation_id: str
@@ -434,10 +487,13 @@ class SessionWeave:
         tool_budget: int | None = None,
         reasoning: ReasoningEffort | None = None,
         packet_builder: PacketBuilder | None = None,
+        final_pass: bool = True,
+        reader_note: str = "",
+        max_chapter: int | None = None,
     ) -> tuple[TurnResult, str] | None:
-        """Re-run the last interrupted turn with its own owner message.
+        """Re-run the last interrupted or failed turn with its own owner message.
 
-        The interrupted run is superseded so future sends are no longer
+        The failed run is superseded so future sends are no longer
         refused, the owner message is re-persisted for the new run (the
         runner treats this run's owner item as the current question), and
         the turn runs through the same loop as send(). Returns
@@ -448,7 +504,7 @@ class SessionWeave:
             "retry_last_turn() requires model_layer, model, tool_registry, "
             "and execution_policy at construction"
         )
-        interrupted = await self._repo.find_interrupted_run(conversation_id)
+        interrupted = await self._repo.find_retryable_run(conversation_id)
         if interrupted is None:
             return None
         items = await self._repo.load_items(
@@ -482,6 +538,7 @@ class SessionWeave:
             await self._repo._update_run_phase(interrupted.id, "superseded")
         if cancel_event is None:
             cancel_event = asyncio.Event()
+        system_prompt, domain = await self._turn_prompt(conversation_id)
         result = await self._runner.run_turn_in_run(
             conversation_id,
             new_run_id,
@@ -492,6 +549,11 @@ class SessionWeave:
             tool_budget=tool_budget,
             reasoning=reasoning,
             packet_builder=packet_builder,
+            final_pass=final_pass,
+            system_prompt=system_prompt,
+            domain=domain,
+            reader_note=reader_note,
+            max_chapter=max_chapter,
         )
         return result, message
 
@@ -505,6 +567,9 @@ class SessionWeave:
         tool_budget: int | None = None,
         reasoning: ReasoningEffort | None = None,
         packet_builder: PacketBuilder | None = None,
+        final_pass: bool = True,
+        reader_note: str = "",
+        max_chapter: int | None = None,
     ) -> tuple[TurnResult, str] | None:
         """Re-answer the last question in place, never as a new message.
 
@@ -559,6 +624,7 @@ class SessionWeave:
             await self._repo._update_run_phase(target.id, "superseded")
         if cancel_event is None:
             cancel_event = asyncio.Event()
+        system_prompt, domain = await self._turn_prompt(conversation_id)
         result = await self._runner.run_turn_in_run(
             conversation_id,
             new_run_id,
@@ -569,7 +635,12 @@ class SessionWeave:
             tool_budget=tool_budget,
             reasoning=reasoning,
             packet_builder=packet_builder,
+            final_pass=final_pass,
             exclude_run_ids={target.id},
+            system_prompt=system_prompt,
+            domain=domain,
+            reader_note=reader_note,
+            max_chapter=max_chapter,
         )
         return result, message
 

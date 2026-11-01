@@ -1,3 +1,4 @@
+import asyncio
 import json
 from pathlib import Path
 
@@ -12,6 +13,7 @@ from weaver import (
     FakeModelProvider,
     ModelLayer,
     ModelMessage,
+    ModelRequest,
     ModelResponse,
     ModelStopReason,
     ModelToolCall,
@@ -26,6 +28,7 @@ from weaver.experiment import (
     CAT_UNEXPECTED_SECOND,
     run_provider_tool_contract,
 )
+from weaver.model_layer.deepseek import current_api_key, current_sponsored_turn
 
 RAW_ARGUMENTS = '{"item":"status"}'
 FINAL_TEXT = "Synthetic contract complete."
@@ -292,8 +295,8 @@ async def test_runner_preserves_linked_payload_and_stable_model_order(
 
     assert result.outcome == "passed"
     assert [call.model.model_id for call in provider.calls] == [
-        "deepseek-v4-flash",
-        "deepseek-v4-flash",
+        "deepseek-flash",
+        "deepseek-flash",
     ]
     first_call, second_call = provider.calls
     assert first_call.request.tool_choice == "synthetic_lookup"
@@ -425,7 +428,7 @@ async def test_failure_in_first_contract_call_fails_the_model(tmp_path: Path) ->
 
     assert result.outcome == "failed"
     assert [call.model.model_id for call in provider.calls] == [
-        "deepseek-v4-flash",
+        "deepseek-flash",
     ]
     records = json.loads((result.run_dir / "response.json").read_text())
     assert [record["outcome"] for record in records] == ["failed"]
@@ -552,6 +555,80 @@ async def test_real_sdk_serializes_and_parses_complete_tool_contract(
     assert record["second_raw_finish_reason"] == "stop"
     assert record["first_usage"]["total_tokens"] == 38
     assert record["second_usage"]["total_tokens"] == 49
+
+
+@pytest.mark.asyncio
+async def test_real_sdk_sponsored_request_carries_only_opaque_user_id() -> None:
+    requests: list[httpx.Request] = []
+
+    def handle_request(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return final_text_stream(DEEPSEEK_FLASH.model_id)
+
+    class SponsoredTracker:
+        def __init__(self) -> None:
+            self.usage = []
+
+        async def before_call(self, payload, *, has_tools) -> None:
+            payload["extra_body"]["user_id"] = "wv_opaque-reader"
+
+        async def record_usage(self, usage) -> None:
+            self.usage.append(usage)
+
+    model_layer, sdk_client = sdk_backed_layer(httpx.MockTransport(handle_request))
+    tracker = SponsoredTracker()
+    token = current_sponsored_turn.set(tracker)
+    try:
+        response = await model_layer.complete(
+            DEEPSEEK_FLASH,
+            ModelRequest(messages=(ModelMessage(role="user", content="synthetic"),)),
+            asyncio.Event(),
+        )
+    finally:
+        current_sponsored_turn.reset(token)
+        await sdk_client.close()
+
+    body = json.loads(requests[0].content)
+    assert response.stop_reason == ModelStopReason.STOP
+    assert len(requests) == 1
+    assert body["model"] == "deepseek-flash"
+    assert body["user_id"] == "wv_opaque-reader"
+    assert tracker.usage[0].total_tokens == 49
+
+
+@pytest.mark.asyncio
+async def test_real_sdk_byok_request_uses_reader_authorization() -> None:
+    requests: list[httpx.Request] = []
+
+    def handle_request(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return final_text_stream(DEEPSEEK_FLASH.model_id)
+
+    http_client = httpx.AsyncClient(transport=httpx.MockTransport(handle_request))
+    reader_client = AsyncOpenAI(
+        api_key="sk-reader-only",
+        base_url="https://deepseek.invalid/v1",
+        http_client=http_client,
+        max_retries=0,
+    )
+    provider = DeepSeekProvider("server-key", sdk_client=reader_client)
+    provider._client_for = lambda _key: reader_client  # type: ignore[method-assign]
+    model_layer = ModelLayer()
+    model_layer.register_provider(provider)
+    token = current_api_key.set("sk-reader-only")
+    try:
+        response = await model_layer.complete(
+            DEEPSEEK_FLASH,
+            ModelRequest(messages=(ModelMessage(role="user", content="synthetic"),)),
+            asyncio.Event(),
+        )
+    finally:
+        current_api_key.reset(token)
+        await reader_client.close()
+
+    assert response.stop_reason == ModelStopReason.STOP
+    assert len(requests) == 1
+    assert requests[0].headers["authorization"] == "Bearer sk-reader-only"
 
 
 @pytest.mark.asyncio

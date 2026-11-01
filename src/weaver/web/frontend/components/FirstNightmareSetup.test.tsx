@@ -1,34 +1,49 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FIRST_NIGHTMARE_STORAGE_KEY } from "../lib/firstNightmare";
-import { getApiKey } from "../lib/identity";
-import { FirstNightmareSetup } from "./FirstNightmareSetup";
+import {
+  FirstNightmareSetup,
+  type SharedAccessStatus,
+} from "./FirstNightmareSetup";
 
-function renderRite() {
+function renderRite(
+  accepts = true,
+  options: { sharedStatus?: SharedAccessStatus; voiceBound?: boolean } = {},
+) {
+  const onAcceptSponsored = vi.fn(async () => accepts);
   const onComplete = vi.fn();
   const onDefer = vi.fn();
   const onRevealStart = vi.fn();
+  const onUseOwnKey = vi.fn();
 
   render(
     <div className="spell-surface-lab">
       <main data-testid="chat-surface" />
       <FirstNightmareSetup
+        onAcceptSponsored={onAcceptSponsored}
         onComplete={onComplete}
         onDefer={onDefer}
         onRevealStart={onRevealStart}
+        onUseOwnKey={onUseOwnKey}
+        sharedStatus={options.sharedStatus}
+        voiceBound={options.voiceBound}
       />
     </div>,
   );
 
-  return { onComplete, onDefer, onRevealStart };
+  return { onAcceptSponsored, onComplete, onDefer, onRevealStart, onUseOwnKey };
 }
 
-function reachKeyEntry(dialog: HTMLElement) {
+function reachNotice(dialog: HTMLElement) {
   fireEvent.click(
     within(dialog).getByRole("button", { name: "Enter the First Nightmare" }),
   );
-  fireEvent.click(within(dialog).getByRole("button", { name: "I have a key" }));
+  fireEvent.click(
+    within(dialog).getByRole("button", {
+      name: "Continue with the shared allowance",
+    }),
+  );
 }
 
 function setMotionPreference(reduced: boolean) {
@@ -63,11 +78,13 @@ describe("Hidden Thread initiation rite", () => {
     expect(mask?.tagName).toBe("IMG");
     expect(mask).toHaveAttribute("draggable", "false");
     expect(within(dialog).queryByText("First Nightmare")).toBeNull();
+    // The opening is the rune line and the title: no explainer paragraph.
     expect(within(dialog).getByText("[The hidden thread has found you.]")).toBeVisible();
+    expect(within(dialog).queryByText(/taken root in this browser/)).toBeNull();
     expect(within(dialog).getByText("The Spell has found you")).toBeVisible();
   });
 
-  it("unweaves into the plain DeepSeek explanation and supports Back", () => {
+  it("unweaves into the shared allowance explanation and supports Back", () => {
     renderRite();
     const dialog = screen.getByRole("dialog", { name: "First Nightmare setup" });
 
@@ -77,49 +94,44 @@ describe("Hidden Thread initiation rite", () => {
 
     expect(dialog).toHaveAttribute("data-rite-act", "initiation");
     expect(dialog.querySelector("[data-hidden-thread-mask]")).not.toBeNull();
-    const link = within(dialog).getByRole("link", { name: /Get a key from DeepSeek/ });
-    expect(link).toHaveAttribute("href", "https://platform.deepseek.com/");
-    expect(link).toHaveAttribute("rel", "noreferrer");
+    expect(within(dialog).getByText(/three shared questions every day/i)).toBeVisible();
+    expect(within(dialog).getByText(/do not need an API key/i)).toBeVisible();
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Back" }));
     expect(within(dialog).getByText("The Spell has found you")).toBeVisible();
   });
 
-  it("binds the masked browser-local key and seals it before appraisal", () => {
-    renderRite();
+  it("records consent before appraisal", async () => {
+    const { onAcceptSponsored } = renderRite();
     const dialog = screen.getByRole("dialog", { name: "First Nightmare setup" });
-    reachKeyEntry(dialog);
+    reachNotice(dialog);
 
-    const input = within(dialog).getByLabelText("Your DeepSeek API key");
-    expect(input).toHaveAttribute("type", "password");
-    expect(input).toHaveAttribute("placeholder", "sk-...");
-    fireEvent.click(within(dialog).getByRole("button", { name: "Show API key" }));
-    expect(input).toHaveAttribute("type", "text");
-    fireEvent.click(within(dialog).getByRole("button", { name: "Hide API key" }));
-    expect(input).toHaveAttribute("type", "password");
-    fireEvent.change(input, { target: { value: "  owner-test-key  " } });
-    expect(within(dialog).getByTestId("key-binding-beads").children.length).toBeGreaterThan(0);
+    expect(within(dialog).getByText(/servers in China/i)).toBeVisible();
+    expect(within(dialog).getByRole("link", { name: "DeepSeek terms" })).toBeVisible();
 
     fireEvent.click(
-      within(dialog).getByRole("button", { name: "Store key and continue" }),
+      within(dialog).getByRole("button", {
+        name: "I understand. Bind the shared voice",
+      }),
     );
 
-    expect(getApiKey()).toBe("owner-test-key");
+    await waitFor(() => expect(onAcceptSponsored).toHaveBeenCalledOnce());
     expect(localStorage.getItem(FIRST_NIGHTMARE_STORAGE_KEY)).toBe("completed");
     expect(dialog).toHaveAttribute("data-rite-act", "appraisal");
     expect(within(dialog).getByTestId("appraisal-mask")).toBeVisible();
   });
 
-  it("replaces each appraisal tier before opening into the conversation", () => {
+  it("replaces each appraisal tier before opening into the conversation", async () => {
     const { onComplete, onRevealStart } = renderRite();
     const dialog = screen.getByRole("dialog", { name: "First Nightmare setup" });
-    reachKeyEntry(dialog);
-    fireEvent.change(within(dialog).getByLabelText("Your DeepSeek API key"), {
-      target: { value: "owner-test-key" },
-    });
+    reachNotice(dialog);
     fireEvent.click(
-      within(dialog).getByRole("button", { name: "Store key and continue" }),
+      within(dialog).getByRole("button", {
+        name: "I understand. Bind the shared voice",
+      }),
     );
+
+    await waitFor(() => expect(within(dialog).getByText("Good")).toBeVisible());
 
     for (const [current, next] of [
       ["Good", "Exceptional"],
@@ -141,33 +153,20 @@ describe("Hidden Thread initiation rite", () => {
     expect(onComplete).toHaveBeenCalledOnce();
   });
 
-  it("shows storage failure without advancing or exposing the key", () => {
-    const nativeSetItem = Storage.prototype.setItem;
-    vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (
-      this: Storage,
-      key: string,
-      value: string,
-    ) {
-      if (key === "weaver_api_key") {
-        throw new Error("storage unavailable");
-      }
-      nativeSetItem.call(this, key, value);
-    });
-    renderRite();
+  it("shows a safe failure when consent cannot be recorded", async () => {
+    renderRite(false);
     const dialog = screen.getByRole("dialog", { name: "First Nightmare setup" });
-    reachKeyEntry(dialog);
-    fireEvent.change(within(dialog).getByLabelText("Your DeepSeek API key"), {
-      target: { value: "owner-test-key" },
-    });
+    reachNotice(dialog);
     fireEvent.click(
-      within(dialog).getByRole("button", { name: "Store key and continue" }),
+      within(dialog).getByRole("button", {
+        name: "I understand. Bind the shared voice",
+      }),
     );
 
-    expect(within(dialog).getByRole("alert")).toHaveTextContent(
-      "The key could not be stored in this browser.",
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+      "The shared thread could not be bound.",
     );
     expect(dialog).toHaveAttribute("data-rite-act", "binding");
-    expect(document.body.textContent).not.toContain("owner-test-key");
   });
 
   it("records Escape as Enter later and restores the surface", () => {
@@ -180,19 +179,135 @@ describe("Hidden Thread initiation rite", () => {
     expect(onDefer).toHaveBeenCalledOnce();
   });
 
-  it("finishes appraisal and reveal immediately with reduced motion", () => {
+  it("sends direct-key readers to Advanced", () => {
+    const onUseOwnKey = vi.fn();
+    render(
+      <FirstNightmareSetup
+        onComplete={vi.fn()}
+        onDefer={vi.fn()}
+        onUseOwnKey={onUseOwnKey}
+      />,
+    );
+    const dialog = screen.getByRole("dialog", { name: "First Nightmare setup" });
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Enter the First Nightmare" }),
+    );
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Use my own key" }));
+
+    expect(onUseOwnKey).toHaveBeenCalledOnce();
+    expect(localStorage.getItem(FIRST_NIGHTMARE_STORAGE_KEY)).toBe("deferred");
+  });
+
+  it("continues in fake mode without recording shared consent", () => {
+    const { onAcceptSponsored } = renderRite(true, { sharedStatus: "development" });
+    const dialog = screen.getByRole("dialog", { name: "First Nightmare setup" });
+
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Enter the First Nightmare" }),
+    );
+
+    expect(within(dialog).getByText(/Fake mode is active/i)).toBeVisible();
+    expect(
+      within(dialog).queryByRole("button", {
+        name: "Continue with the shared allowance",
+      }),
+    ).toBeNull();
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Continue in fake mode" }),
+    );
+
+    expect(dialog).toHaveAttribute("data-rite-act", "appraisal");
+    expect(onAcceptSponsored).not.toHaveBeenCalled();
+    expect(localStorage.getItem(FIRST_NIGHTMARE_STORAGE_KEY)).toBe("completed");
+  });
+
+  it("routes local live without a shared allowance to BYOK", () => {
+    const { onUseOwnKey } = renderRite(true, { sharedStatus: "unconfigured" });
+    const dialog = screen.getByRole("dialog", { name: "First Nightmare setup" });
+
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Enter the First Nightmare" }),
+    );
+
+    expect(
+      within(dialog).getByText(/No shared allowance is configured/i),
+    ).toBeVisible();
+    expect(
+      within(dialog).queryByRole("button", {
+        name: "Continue with the shared allowance",
+      }),
+    ).toBeNull();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Use my own key" }));
+
+    expect(onUseOwnKey).toHaveBeenCalledOnce();
+    expect(localStorage.getItem(FIRST_NIGHTMARE_STORAGE_KEY)).toBe("deferred");
+  });
+
+  it("continues with a bound key when shared access is unconfigured", () => {
+    const { onAcceptSponsored, onUseOwnKey } = renderRite(true, {
+      sharedStatus: "unconfigured",
+      voiceBound: true,
+    });
+    const dialog = screen.getByRole("dialog", { name: "First Nightmare setup" });
+
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Enter the First Nightmare" }),
+    );
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Continue with your own key" }),
+    );
+
+    expect(dialog).toHaveAttribute("data-rite-act", "appraisal");
+    expect(onUseOwnKey).not.toHaveBeenCalled();
+    expect(onAcceptSponsored).not.toHaveBeenCalled();
+    expect(localStorage.getItem(FIRST_NIGHTMARE_STORAGE_KEY)).toBe("completed");
+  });
+
+  it("explains an exhausted shared allowance and keeps BYOK available", () => {
+    renderRite(true, { sharedStatus: "exhausted" });
+    const dialog = screen.getByRole("dialog", { name: "First Nightmare setup" });
+
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Enter the First Nightmare" }),
+    );
+
+    expect(within(dialog).getByText(/resting until 00:00 UTC/i)).toBeVisible();
+    expect(
+      within(dialog).getByRole("button", { name: "Use my own key" }),
+    ).toBeVisible();
+  });
+
+  it("does not offer the shared allowance while status is loading", () => {
+    renderRite(true, { sharedStatus: "loading" });
+    const dialog = screen.getByRole("dialog", { name: "First Nightmare setup" });
+
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Enter the First Nightmare" }),
+    );
+
+    expect(
+      within(dialog).getByRole("button", {
+        name: "Checking the shared allowance...",
+      }),
+    ).toBeDisabled();
+    expect(
+      within(dialog).getByRole("button", { name: "Enter later" }),
+    ).toBeVisible();
+  });
+
+  it("finishes appraisal and reveal immediately with reduced motion", async () => {
     setMotionPreference(true);
     const { onComplete } = renderRite();
     const dialog = screen.getByRole("dialog", { name: "First Nightmare setup" });
-    reachKeyEntry(dialog);
-    fireEvent.change(within(dialog).getByLabelText("Your DeepSeek API key"), {
-      target: { value: "owner-test-key" },
-    });
+    reachNotice(dialog);
     fireEvent.click(
-      within(dialog).getByRole("button", { name: "Store key and continue" }),
+      within(dialog).getByRole("button", {
+        name: "I understand. Bind the shared voice",
+      }),
     );
 
-    expect(within(dialog).getByText("Glorious")).toBeVisible();
+    expect(await within(dialog).findByText("Glorious")).toBeVisible();
     fireEvent.click(within(dialog).getByRole("button", { name: "Enter Weaver" }));
     expect(onComplete).toHaveBeenCalledOnce();
   });

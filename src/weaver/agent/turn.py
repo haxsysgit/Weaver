@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 import uuid
 from collections.abc import Awaitable
 from dataclasses import dataclass, field, replace
@@ -12,11 +13,25 @@ from enum import Enum
 from typing import Callable
 
 from weaver.agent.errors import CANCELLED, safe_error, safe_tool_error
+from weaver.agent.answer import (
+    AnswerBlueprint,
+    PublicationFinding,
+    build_answer_blueprint,
+    build_repair_instruction,
+    build_spoiler_boundary_answer,
+    format_answer_blueprint,
+    has_spoiler_finding,
+    strip_unsupported_citations,
+    cited_chapters,
+    inspect_publication,
+    unopened_text_claims,
+)
 from weaver.agent.messages import (
     AssistantMessage,
     ConversationMessage,
     ToolCallMessage,
     ToolResultMessage,
+    UserMessage,
     project_messages,
 )
 from weaver.agent.tools import (
@@ -36,6 +51,12 @@ from ..model_layer import (
     ModelStreamEventType,
     ModelToolCall,
 )
+from ..skills import (
+    MAX_TOOL_BUDGET,
+    format_skill_brief,
+    plan_for_ids,
+    plan_for_turn,
+)
 from ..model_layer.layer import ModelProtocolError
 from ..model_layer.types import ReasoningEffort
 
@@ -46,19 +67,22 @@ logger = logging.getLogger(__name__)
 # exceed it; hermes uses 90 iterations, pi uses no cap at all.
 _MAX_MODEL_STEPS = 100
 
-# Plan 15 tiers: the model is trusted to find the answer without burning
-# the budget; the cap exists so a runaway tool loop cannot run forever.
-# Owner decision 2026-08-07: awakened 50 / ascended 70 / transcendent 90.
-TOOL_BUDGET_TIERS: dict[str, int] = {
-    "awakened": 50,
-    "ascended": 70,
-    "transcendent": 90,
-}
 
-# Plan 15 (2026-08-07, owner decision): thinking is ALWAYS on for every
-# tier. Only the tool budget and the reasoning effort differ. DeepSeek's
-# API only supports high and max (low/medium clamp up to high), so
-# awakened and ascended share high and transcendent gets max.
+class _TurnBudget:
+    """A tool budget the model can raise by loading a bigger skill."""
+
+    def __init__(self, limit: int | None) -> None:
+        self.limit = limit
+
+    def raise_to(self, floor: int) -> None:
+        if self.limit is None:
+            return
+        self.limit = max(self.limit, floor)
+
+
+# Each skill names a thinking tier; Weaver picks it per question, the reader
+# never does. DeepSeek's API only supports high and max for answers
+# (low/medium clamp up to high), so ascended gets high and transcendent max.
 # Plan 15 (owner 2026-08-08): search/locate steps do not need the tier's
 # full reasoning effort. Thinking stays on for every call, but tool-call
 # steps (and a no-packet final answer) drop to low so the search loop is
@@ -67,10 +91,18 @@ TOOL_BUDGET_TIERS: dict[str, int] = {
 LOCATE_REASONING_EFFORT: ReasoningEffort = "low"
 
 REASONING_TIERS: dict[str, ReasoningEffort] = {
-    "awakened": "high",
     "ascended": "high",
     "transcendent": "max",
 }
+_EFFORT_RANK: dict[str | None, int] = {None: 0, "low": 1, "medium": 2, "high": 3, "max": 4}
+
+
+def _deeper_effort(
+    first: ReasoningEffort | None,
+    second: ReasoningEffort | None,
+) -> ReasoningEffort | None:
+    """The deeper of two thinking efforts; None means thinking off."""
+    return first if _EFFORT_RANK[first] >= _EFFORT_RANK[second] else second
 
 # Per-step countdown reminders are noise at 50-90 step budgets; they only
 # appear when the budget is running low or on the forced answer call.
@@ -94,22 +126,173 @@ PacketBuilder = Callable[[list[ToolResult], str], Awaitable[str | None]]
 ToolEventCallback = Callable[[str, str, str], Awaitable[None]]
 
 
+@dataclass(frozen=True, slots=True)
+class TurnBrief:
+    """Ephemeral projection over canonical conversation messages."""
+
+    actual_ask: str
+    ask_message_id: str
+    prior_reader_position: str
+    prior_reader_message_id: str
+    prior_weaver_position: str
+    prior_weaver_message_id: str
+    needs_prior_context: bool
+    version_signals: tuple[str, ...]
+    reader_challenges_prior_answer: bool
+    # The reader's earlier messages, oldest first, so a short follow-up
+    # ("huh", "prove it") is read against the question it follows.
+    earlier_asks: tuple[str, ...] = ()
+
+
+VERSION_SIGNAL_RE = re.compile(
+    r"\b(current|prime|before|after|chapter\s+\d+\+?|at that point|back then)\b",
+    re.IGNORECASE,
+)
+FOLLOW_UP_PREFIXES = (
+    "and ",
+    "but ",
+    "how about ",
+    "what about ",
+    "why then ",
+)
+EARLIER_ASKS_KEPT = 6
+DISAGREEMENT_MARKERS = (
+    "you're wrong",
+    "you are wrong",
+    "i disagree",
+    "that's wrong",
+    "that is wrong",
+    "no,",
+)
+
+
+def _compact_position(content: str, *, limit: int = 2_000) -> str:
+    text = content.strip()
+    if len(text) <= limit:
+        return text
+    half = limit // 2
+    return text[:half].rstrip() + " [...] " + text[-half:].lstrip()
+
+
+def _build_turn_brief(history: list[ConversationMessage]) -> TurnBrief:
+    user_messages = [
+        message
+        for message in history
+        if isinstance(message, UserMessage) and message.content.strip()
+    ]
+    assistant_messages = [
+        message
+        for message in history
+        if isinstance(message, AssistantMessage) and message.content.strip()
+    ]
+    current = user_messages[-1] if user_messages else UserMessage()
+    prior_reader = user_messages[-2] if len(user_messages) > 1 else UserMessage()
+    prior_weaver = assistant_messages[-1] if assistant_messages else AssistantMessage()
+    ask_casefolded = current.content.strip().casefold()
+    reader_challenges = any(
+        marker in ask_casefolded for marker in DISAGREEMENT_MARKERS
+    )
+    version_signals = tuple(
+        dict.fromkeys(
+            match.group(0).casefold()
+            for match in VERSION_SIGNAL_RE.finditer(current.content)
+        )
+    )
+    return TurnBrief(
+        actual_ask=_compact_position(current.content),
+        ask_message_id=current.message_id,
+        prior_reader_position=_compact_position(prior_reader.content),
+        prior_reader_message_id=prior_reader.message_id,
+        prior_weaver_position=_compact_position(prior_weaver.content),
+        prior_weaver_message_id=prior_weaver.message_id,
+        needs_prior_context=(
+            reader_challenges
+            or ask_casefolded.startswith(FOLLOW_UP_PREFIXES)
+            or any(prefix in ask_casefolded for prefix in FOLLOW_UP_PREFIXES)
+        ),
+        version_signals=version_signals,
+        reader_challenges_prior_answer=reader_challenges,
+        earlier_asks=tuple(
+            _compact_position(message.content)
+            for message in user_messages[:-1][-EARLIER_ASKS_KEPT:]
+        ),
+    )
+
+
+def _earlier_opened_chapters(
+    history: list[ConversationMessage],
+    max_chapter: int | None,
+) -> tuple[int, ...]:
+    """Novel chapters this conversation already opened, within the cap."""
+    chapters: set[int] = set()
+    for message in history:
+        if not isinstance(message, ToolResultMessage) or not message.ok:
+            continue
+        evidence = (message.result or {}).get("durable_evidence")
+        if not isinstance(evidence, dict) or evidence.get("source_kind") != "novel":
+            continue
+        try:
+            chapter = int(evidence["chapter"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if max_chapter is None or chapter <= max_chapter:
+            chapters.add(chapter)
+    return tuple(sorted(chapters))
+
+
+def _may_use_spoiler_boundary(
+    blueprint: AnswerBlueprint,
+    findings: tuple[PublicationFinding, ...],
+) -> bool:
+    """A guarded turn may fall back to the safe line on a real spoiler leak."""
+    if blueprint.spoiler_mode not in {"guarded", "ask_first", "protect"}:
+        return False
+    return has_spoiler_finding(findings)
+
+
+def _format_turn_brief(brief: TurnBrief) -> str:
+    version_signals = "; ".join(brief.version_signals) or "none explicit"
+    prior_reader = brief.prior_reader_position or "none"
+    prior_weaver = brief.prior_weaver_position or "none"
+    return (
+        "--- turn brief ---\n"
+        f"actual ask: {brief.actual_ask}\n"
+        f"prior reader position: {prior_reader}\n"
+        f"prior Weaver position: {prior_weaver}\n"
+        f"needs prior context: {'yes' if brief.needs_prior_context else 'no'}\n"
+        f"version signals: {version_signals}\n"
+        "reader challenges prior answer: "
+        f"{'yes' if brief.reader_challenges_prior_answer else 'no'}\n"
+        "answer obligation: answer the actual ask and address any visible "
+        "challenge without silently changing the earlier position. An earlier "
+        "claim missing from this turn's passages is not wrong: withdraw it "
+        "only when an opened passage contradicts it."
+    )
+
+
 async def _complete_buffered_stream(
     model_layer: ModelLayer,
     model: ModelSpec,
     request: ModelRequest,
     cancel_event: asyncio.Event,
+    preview: DeltaCallback | None = None,
 ) -> tuple[ModelResponse, tuple[str, ...]]:
-    """Drain a model stream without exposing unvalidated text.
+    """Drain a model stream, optionally previewing the deltas live.
 
-    The caller releases the buffered chunks only after deciding which
-    answer is safe to publish.
+    The full text is still buffered for validation. The preview lets the
+    reader see the answer as it is written; a failed validation replaces
+    it with the repair or the recovery panel.
     """
     final_response: ModelResponse | None = None
     text_deltas: list[str] = []
     async for event in model_layer.stream(model, request, cancel_event):
         if event.event_type == ModelStreamEventType.TEXT_DELTA and event.delta:
             text_deltas.append(event.delta)
+            if preview is not None and not cancel_event.is_set():
+                try:
+                    await preview(event.delta)
+                except Exception:
+                    logger.warning("delta preview failed", exc_info=True)
         elif event.event_type == ModelStreamEventType.RESPONSE_COMPLETE:
             final_response = event.response
     if final_response is None:
@@ -138,6 +321,14 @@ async def _publish_deltas(
     return True
 
 
+def _answer_without_blockquotes(answer: str) -> str:
+    """Drop blockquoted lines so a long quote cannot kill the turn."""
+    kept = [
+        line for line in answer.splitlines() if not line.lstrip().startswith(">")
+    ]
+    return "\n".join(kept).strip()
+
+
 # Plan 15 (owner 2026-08-08): the answer call must never truncate. The
 # model writes long answers while thinking is on, and DeepSeek counts
 # reasoning tokens against max_tokens, so the default 4096 cap cut the
@@ -157,13 +348,6 @@ async def _publish_deltas(
 ANSWER_MAX_OUTPUT_TOKENS = 16384
 TOOL_CALL_MAX_OUTPUT_TOKENS = 8192
 
-# Plan 15 (owner 2026-08-08): the final reading call keeps conversation
-# continuity without letting an old exchange dominate. The window is the
-# last three owner/assistant exchanges (the immediate question plus two
-# previous Q&A pairs); anything older is dropped and only survives in
-# the packet.
-SYNTHESIS_HISTORY_EXCHANGES = 3
-
 # A thinking model sometimes slips out of the structured tool-call
 # protocol and writes its call as prose ('<tool calls>' plus a JSON
 # block). That text is never an answer: the harness corrects the model
@@ -180,6 +364,12 @@ WORKING_NOTE_CORRECTION = (
     "done. Call a tool now if you need evidence, or answer the user fully "
     "and directly."
 )
+UNOPENED_TEXT_CORRECTION = (
+    "Your answer cites, quotes, or describes chapters you have not opened, "
+    "so it is written from memory. Search results are not the text. Open "
+    "the chapter with read_chapters before you cite, quote, or describe it, "
+    "or remove those claims."
+)
 ZERO_EVIDENCE_CORRECTION = (
     "You answered without opening any evidence this turn. The library is the "
     "only source of truth: run at least one search or read, or say honestly "
@@ -188,8 +378,19 @@ ZERO_EVIDENCE_CORRECTION = (
 )
 FINAL_ANSWER_INSTRUCTION = (
     "This is the final answer phase. The evidence packet above is complete and "
-    "no tools are available. Answer the user directly, citing chapters. Do not "
-    "name or describe searches, tool calls, or work you plan to do."
+    "no tools are available. Answer the user directly. Before returning the "
+    "answer, silently inspect each factual claim: it must follow from the opened "
+    "passages and carry its supporting chapter citation beside it. A synthesis "
+    "that needs several chapters must cite all of them. Remove or qualify claims "
+    "with incomplete support. Keep interpretations and invented branches labelled. "
+    "Do not name or describe searches, tool calls, or work you plan to do. "
+    "The private draft above was never shown to the reader, so never "
+    "mention it, compare against it, or announce what you changed in it (no "
+    "'small fix to my phrasing', no 'as I said', no 'earlier I told you'). "
+    "Only earlier turns of the conversation are things the reader saw."
+)
+PRIVATE_DRAFT_HEADER = (
+    "--- private draft: written this turn, never shown to the reader ---\n"
 )
 WORKING_NOTE_MARKERS = (
     "one moment",
@@ -321,6 +522,21 @@ class TurnResult:
     # (0 = no snapshot; token_budget 0 = unbounded).
     token_count: int = 0
     token_budget: int = 0
+    # How deep the turn read: the routed and loaded skills, the lookups it
+    # made, its lookup limit, and the deepest thinking effort it asked for.
+    # Recorded on the run so under- and over-reading show up in real use.
+    skill_ids: tuple[str, ...] = ()
+    tool_steps: int = 0
+    tool_limit: int | None = None
+    thinking: str | None = None
+
+    def reading(self) -> dict:
+        return {
+            "skills": list(self.skill_ids),
+            "lookups": self.tool_steps,
+            "lookup_limit": self.tool_limit,
+            "thinking": self.thinking,
+        }
 
 
 def _message_id() -> str:
@@ -397,43 +613,6 @@ def _tool_calls_are_safe(
     return True
 
 
-def _recent_exchanges(
-    history: list[ConversationMessage],
-    *,
-    max_exchanges: int,
-) -> list[ConversationMessage]:
-    """The last ``max_exchanges`` owner/assistant exchanges, in order.
-
-    Tool-call and tool-result messages are skipped (their evidence lives
-    in the packet; carrying old tool transcripts bloats the context). The
-    returned window always ends at the current question.
-    """
-    # Keep user messages and content-bearing assistant answers only.
-    # Tool-use assistants from earlier turns (tool_calls, empty content)
-    # must never reach the final reading wire: their tool results are skipped
-    # here, so keeping them orphaned the tool_calls and DeepSeek 400'd
-    # (invalid_request) exactly when holding a conversation.
-    messages = [
-        message
-        for message in history
-        if message.kind == "user"
-        or (
-            message.kind == "assistant"
-            and message.content
-            and not message.tool_calls
-        )
-    ]
-    window: list[ConversationMessage] = []
-    user_count = 0
-    for message in reversed(messages):
-        window.append(message)
-        if message.kind == "user":
-            user_count += 1
-            if user_count >= max_exchanges:
-                break
-    return list(reversed(window))
-
-
 def _known_call_ids(
     history: list[ConversationMessage],
 ) -> set[str]:
@@ -490,16 +669,24 @@ async def run_turn(
     # there is no evidence to re-read. The candidate remains ephemeral
     # until the final reading call succeeds or falls back to it.
     packet_builder: PacketBuilder | None = None,
+    final_pass: bool = True,
+    domain: str = "canon",
+    reader_note: str = "",
+    max_chapter: int | None = None,
 ) -> TurnResult:
     max_steps = min(max(max_model_steps, 1), _MAX_MODEL_STEPS)
+    budget = _TurnBudget(tool_budget)
     if tool_budget is not None:
         # Plan 15 two-budget split: tool calls are capped at tool_budget
         # and the final answer call is always guaranteed. Candidate
         # corrections and the one zero-evidence check are bounded overhead;
         # they must not consume either the tool ceiling or answer slot.
+        # Plan 030: the model loop must allow the largest skill budget,
+        # because loading a bigger skill raises the ceiling mid-turn.
         correction_steps = TEXT_TOOL_SLIP_LIMIT + 1
+        loop_ceiling = max(tool_budget, MAX_TOOL_BUDGET)
         max_steps = min(
-            max(tool_budget, 0) + 1 + correction_steps,
+            loop_ceiling + 1 + correction_steps,
             _MAX_MODEL_STEPS,
         )
     new_messages: list[ConversationMessage] = []
@@ -507,6 +694,29 @@ async def run_turn(
     model_steps = 0
     tool_starts = 0
     tool_steps_used = 0
+    loaded_skills: list[str] = []
+
+    def note_skills_loaded(skill_ids: tuple[str, ...]) -> None:
+        for skill_id in skill_ids:
+            if skill_id not in loaded_skills:
+                loaded_skills.append(skill_id)
+        budget.raise_to(plan_for_ids(loaded_skills).tool_budget)
+
+    # Stepping up mid-turn: a loaded skill raises the reading budget, and it
+    # also raises the thinking effort and turns the final reread on, so a
+    # turn that started as small talk can become a real read.
+    def turn_reasoning() -> ReasoningEffort | None:
+        if not loaded_skills:
+            return reasoning
+        tier = plan_for_ids(loaded_skills).reasoning_tier
+        loaded_effort = REASONING_TIERS[tier] if tier is not None else None
+        return _deeper_effort(reasoning, loaded_effort)
+
+    def turn_final_pass() -> bool:
+        if final_pass or not loaded_skills:
+            return final_pass
+        return plan_for_ids(loaded_skills).final_pass
+
     final_text = ""
     safe_failure = ""
     error_category = ""
@@ -518,9 +728,20 @@ async def run_turn(
     final_packet: str | None = None
     validated_candidate: AssistantMessage | None = None
     validated_candidate_deltas: tuple[str, ...] = ()
+    answer_blueprint: AnswerBlueprint | None = None
+    publication_draft: AssistantMessage | None = None
+    publication_findings: tuple[PublicationFinding, ...] = ()
+    publication_repair_attempted = False
     candidate_rejections = 0
     candidate_note: str | None = None
+    # One last attempt with the tools stripped when the model keeps
+    # returning an empty or planning-only candidate.
+    stripped_retry = False
+    strip_tools_next = False
+    last_stop_reason = ""
     zero_evidence_reprompted = False
+    unopened_text_reprompted = False
+    deepest_thinking: ReasoningEffort | None = None
 
     try:
         tool_schemas = tool_registry.active_schemas(active_tools)
@@ -536,6 +757,13 @@ async def run_turn(
         system_prompt=system_prompt,
         history=history,
     )
+    turn_brief = _build_turn_brief(history)
+    earlier_opened = _earlier_opened_chapters(history, max_chapter)
+    routed_plan = plan_for_turn(
+        turn_brief.actual_ask,
+        earlier_asks=turn_brief.earlier_asks,
+        domain=domain,
+    )
     input_characters = _input_characters(initial_messages)
     known_call_ids = _known_call_ids(history)
 
@@ -543,12 +771,27 @@ async def run_turn(
         answer: AssistantMessage,
         deltas: tuple[str, ...],
     ) -> tuple[bool, bool]:
+        if not (answer.content or "").strip():
+            logger.warning("empty answer rejected")
+            return False, False
         new_messages.append(answer)
         persisted = await _persist(answer, persist_message)
         if not persisted:
             return False, False
         published = await _publish_deltas(deltas, on_delta, cancel_event)
         return True, published
+
+    async def persist_spoiler_boundary(
+        candidate: AssistantMessage,
+        blueprint: AnswerBlueprint,
+    ) -> tuple[bool, bool]:
+        boundary = replace(
+            candidate,
+            content=build_spoiler_boundary_answer(blueprint),
+            tool_calls=(),
+            reasoning_content="",
+        )
+        return await persist_answer(boundary, ())
 
     while model_steps < max_steps:
         if cancel_event.is_set():
@@ -562,46 +805,94 @@ async def run_turn(
         in_final_phase = final_packet is not None and validated_candidate is not None
         forced_answer = (
             not in_final_phase
-            and tool_budget is not None
-            and tool_steps_used >= tool_budget
+            and budget.limit is not None
+            and tool_steps_used >= budget.limit
         )
+        turn_system_prompt = system_prompt
+        if not in_final_phase:
+            turn_plan = routed_plan
+            if loaded_skills:
+                turn_plan = plan_for_ids([*turn_plan.ids, *loaded_skills])
+            skill_brief = format_skill_brief(turn_plan)
+            if skill_brief:
+                # The skill shapes this answer, so it belongs in the system
+                # prompt on every call, not only the final reading pass.
+                turn_system_prompt = system_prompt + "\n\n" + skill_brief
+        if reader_note:
+            turn_system_prompt = turn_system_prompt + "\n\n" + reader_note
         request_messages = project_messages(
-            system_prompt=system_prompt,
+            system_prompt=turn_system_prompt,
             history=history + new_messages,
         )
         if in_final_phase:
             # The packet is ephemeral context for one fail-soft final
-            # reading call. This call must NOT carry the
-            # whole conversation history (an older exchange's answer can
-            # dominate the model and it replies to the wrong question),
-            # but it also must not forget the conversation (follow-ups
-            # like "and what about the 6th daemon?" need the previous
-            # exchange). Curate the recent exchanges, validated candidate,
-            # and packet. Current-turn tool transcripts stay out because
-            # their evidence has already been folded into the packet.
-            recent = _recent_exchanges(
-                history,
-                max_exchanges=SYNTHESIS_HISTORY_EXCHANGES,
+            # reading call. The current question and compact turn brief carry
+            # the conversation state; old exchanges and current tool transcripts
+            # stay out because their positions and evidence are already projected.
+            current_owner = next(
+                (
+                    message
+                    for message in reversed(history)
+                    if isinstance(message, UserMessage)
+                ),
+                None,
             )
+            if answer_blueprint is None:
+                answer_blueprint = build_answer_blueprint(
+                    question=turn_brief.actual_ask,
+                    prior_weaver_position=turn_brief.prior_weaver_position,
+                    reader_challenges_prior_answer=(
+                        turn_brief.reader_challenges_prior_answer
+                    ),
+                    evidence_packet=final_packet,
+                    extra_skill_ids=tuple(loaded_skills),
+                    domain=domain,
+                    earlier_asks=turn_brief.earlier_asks,
+                    earlier_opened_chapters=earlier_opened,
+                )
+            # The draft is not part of the conversation: shown as an
+            # assistant message, the model took it for something the reader
+            # had seen and corrected it out loud. It rides in the private
+            # instructions instead, labelled as never shown.
+            final_history: list[ConversationMessage] = []
+            if current_owner is not None:
+                final_history.append(current_owner)
+            draft = publication_draft or validated_candidate
             request_messages = project_messages(
                 system_prompt=system_prompt,
-                history=[*recent, validated_candidate],
+                history=final_history,
             )
+            final_instructions = (
+                _format_turn_brief(turn_brief)
+                + "\n\n"
+                + final_packet
+                + "\n\n"
+                + format_answer_blueprint(answer_blueprint)
+                + "\n\n"
+                + PRIVATE_DRAFT_HEADER
+                + (draft.content or "")
+                + "\n\n"
+                + FINAL_ANSWER_INSTRUCTION
+            )
+            if publication_findings:
+                final_instructions += (
+                    "\n\n" + build_repair_instruction(publication_findings)
+                )
             request_messages = [
                 *request_messages,
                 ModelMessage(
                     role="system",
-                    content=final_packet + "\n\n" + FINAL_ANSWER_INSTRUCTION,
+                    content=final_instructions,
                 ),
             ]
-        if tool_budget is not None and not in_final_phase:
-            remaining = tool_budget - tool_steps_used
+        if budget.limit is not None and not in_final_phase:
+            remaining = budget.limit - tool_steps_used
             if forced_answer or remaining <= BUDGET_REMINDER_THRESHOLD:
                 reminder = (
                     "Your tool steps are spent. Answer now from what you "
                     "have gathered. Do not call tools."
                     if forced_answer
-                    else f"Tool steps remaining: {remaining} of {tool_budget}."
+                    else f"Tool steps remaining: {remaining} of {budget.limit}."
                 )
                 request_messages = [
                     *request_messages,
@@ -613,12 +904,21 @@ async def run_turn(
                 ModelMessage(role="system", content=candidate_note),
             ]
             candidate_note = None
+        request_tools = (
+            ()
+            if (forced_answer or in_final_phase or strip_tools_next)
+            else tuple(tool_schemas)
+        )
+        strip_tools_next = False
+        step_reasoning = turn_reasoning()
+        deepest_thinking = _deeper_effort(deepest_thinking, step_reasoning)
         request = ModelRequest(
             messages=tuple(request_messages),
             # Plan 15: on the forced call the tools are stripped from the
             # request (hermes-style), so the model physically cannot call
-            # one and must write the answer.
-            tools=() if (forced_answer or in_final_phase) else tuple(tool_schemas),
+            # one and must write the answer. A candidate rejected twice gets
+            # the same treatment, so it has to speak instead of plan.
+            tools=request_tools,
             # Plan 15: answer calls get headroom so a long answer with a
             # long thinking trace never truncates (see the daemons turn);
             # Plan v1 (2026-08-17): tool-call calls get explicit headroom
@@ -640,12 +940,12 @@ async def run_turn(
                 ModelReasoning(
                     enabled=True,
                     effort=(
-                        reasoning
+                        step_reasoning
                         if (in_final_phase or forced_answer)
                         else LOCATE_REASONING_EFFORT
                     ),
                 )
-                if reasoning is not None
+                if step_reasoning is not None
                 else ModelReasoning()
             ),
         )
@@ -661,13 +961,15 @@ async def run_turn(
                     cancel_event,
                 )
             else:
-                # Candidate text stays buffered until validation chooses
-                # the one answer that may reach the public callback.
+                # Plan 030: the reader only ever sees the validated answer.
+                # Candidate tokens stay buffered until validation chooses the
+                # one answer that may reach the public callback.
                 response, response_deltas = await _complete_buffered_stream(
                     model_layer,
                     model,
                     request,
                     cancel_event,
+                    preview=None,
                 )
         except asyncio.CancelledError:
             exit_reason = TurnExitReason.INTERRUPTED
@@ -688,6 +990,48 @@ async def run_turn(
             # The final reading pass only enhances an answer that already
             # passed validation. A provider failure cannot erase it.
             assert validated_candidate is not None
+            assert answer_blueprint is not None
+            fallback_findings = inspect_publication(
+                validated_candidate.content,
+                answer_blueprint,
+                final_packet,
+            )
+            if (
+                fallback_findings
+                and not publication_repair_attempted
+                and model_steps < max_steps
+            ):
+                publication_draft = validated_candidate
+                publication_findings = fallback_findings
+                publication_repair_attempted = True
+                continue
+            if fallback_findings:
+                if _may_use_spoiler_boundary(
+                    answer_blueprint,
+                    fallback_findings,
+                ):
+                    persisted, published = await persist_spoiler_boundary(
+                        validated_candidate,
+                        answer_blueprint,
+                    )
+                    if not persisted:
+                        exit_reason = TurnExitReason.PERSISTENCE_FAILED
+                        safe_failure = safe_error("assistant_persistence")
+                        break
+                    if not published:
+                        exit_reason = TurnExitReason.INTERRUPTED
+                        safe_failure = safe_error("interrupted")
+                        break
+                    final_text = build_spoiler_boundary_answer(answer_blueprint)
+                    completed_response = True
+                    break
+                logger.warning(
+                    "publication repair failed: %s",
+                    ", ".join(finding.code for finding in fallback_findings),
+                )
+                exit_reason = TurnExitReason.MODEL_FAILED
+                safe_failure = safe_error("model_protocol")
+                break
             persisted, published = await persist_answer(
                 validated_candidate,
                 validated_candidate_deltas,
@@ -706,6 +1050,7 @@ async def run_turn(
 
         model_name = response.model_id
         provider_name = response.provider_id
+        last_stop_reason = response.stop_reason.value
 
         if in_final_phase:
             if (
@@ -717,8 +1062,9 @@ async def run_turn(
                 break
 
             assert validated_candidate is not None
-            answer = validated_candidate
-            answer_deltas = validated_candidate_deltas
+            assert answer_blueprint is not None
+            proposed_answer = validated_candidate
+            proposed_deltas = validated_candidate_deltas
             if _response_matches_model(response, model):
                 response_message = response.assistant_message
                 rejection_note = _candidate_rejection_note(
@@ -728,16 +1074,146 @@ async def run_turn(
                 valid_final = (
                     response.stop_reason == ModelStopReason.STOP
                     and not response_message.tool_calls
+                    and (response_message.content or "").strip() != ""
                     and rejection_note is None
                     and not _is_final_phase_refusal(response_message.content or "")
                 )
                 if valid_final:
-                    answer = _assistant_message(
+                    proposed_answer = _assistant_message(
                         turn_id=turn_id,
                         response_message=response_message,
                     )
-                    answer_deltas = response_deltas
-            persisted, published = await persist_answer(answer, answer_deltas)
+                    proposed_deltas = response_deltas
+
+            findings = inspect_publication(
+                proposed_answer.content,
+                answer_blueprint,
+                final_packet,
+            )
+            if (
+                findings
+                and not publication_repair_attempted
+                and model_steps < max_steps
+            ):
+                publication_draft = proposed_answer
+                publication_findings = findings
+                publication_repair_attempted = True
+                continue
+
+            answer = proposed_answer
+            answer_deltas = proposed_deltas
+            if findings:
+                fallback_findings = inspect_publication(
+                    validated_candidate.content,
+                    answer_blueprint,
+                    final_packet,
+                )
+                if fallback_findings:
+                    citation_clean = strip_unsupported_citations(
+                        validated_candidate.content,
+                        answer_blueprint.allowed_chapters,
+                    )
+                    if citation_clean != validated_candidate.content and not inspect_publication(
+                        citation_clean,
+                        answer_blueprint,
+                        final_packet,
+                    ):
+                        stripped_citation = replace(
+                            validated_candidate,
+                            content=citation_clean,
+                            tool_calls=(),
+                            reasoning_content="",
+                        )
+                        persisted, published = await persist_answer(
+                            stripped_citation,
+                            (citation_clean,),
+                        )
+                        if not persisted:
+                            exit_reason = TurnExitReason.PERSISTENCE_FAILED
+                            safe_failure = safe_error("assistant_persistence")
+                            break
+                        if not published:
+                            exit_reason = TurnExitReason.INTERRUPTED
+                            safe_failure = safe_error("interrupted")
+                            break
+                        final_text = citation_clean
+                        completed_response = True
+                        break
+                    if _may_use_spoiler_boundary(
+                        answer_blueprint,
+                        fallback_findings,
+                    ):
+                        persisted, published = await persist_spoiler_boundary(
+                            validated_candidate,
+                            answer_blueprint,
+                        )
+                        if not persisted:
+                            exit_reason = TurnExitReason.PERSISTENCE_FAILED
+                            safe_failure = safe_error("assistant_persistence")
+                            break
+                        if not published:
+                            exit_reason = TurnExitReason.INTERRUPTED
+                            safe_failure = safe_error("interrupted")
+                            break
+                        final_text = build_spoiler_boundary_answer(answer_blueprint)
+                        completed_response = True
+                        break
+                    for stripped_source in (
+                        proposed_answer,
+                        validated_candidate,
+                    ):
+                        stripped_content = _answer_without_blockquotes(
+                            stripped_source.content
+                        )
+                        if (
+                            not stripped_content
+                            or stripped_content == stripped_source.content
+                        ):
+                            continue
+                        stripped_findings = inspect_publication(
+                            stripped_content,
+                            answer_blueprint,
+                            final_packet,
+                        )
+                        if stripped_findings:
+                            continue
+                        stripped = replace(
+                            stripped_source,
+                            content=stripped_content,
+                            tool_calls=(),
+                            reasoning_content="",
+                        )
+                        persisted, published = await persist_answer(
+                            stripped,
+                            (stripped_content,),
+                        )
+                        if not persisted:
+                            exit_reason = TurnExitReason.PERSISTENCE_FAILED
+                            safe_failure = safe_error("assistant_persistence")
+                            break
+                        if not published:
+                            exit_reason = TurnExitReason.INTERRUPTED
+                            safe_failure = safe_error("interrupted")
+                            break
+                        final_text = stripped_content
+                        completed_response = True
+                        break
+                    if completed_response or exit_reason != TurnExitReason.COMPLETED:
+                        break
+                    logger.warning(
+                        "publication repair failed: %s",
+                        ", ".join(
+                            finding.code for finding in fallback_findings
+                        ),
+                    )
+                    exit_reason = TurnExitReason.MODEL_FAILED
+                    safe_failure = safe_error("model_protocol")
+                    break
+                answer = validated_candidate
+                answer_deltas = validated_candidate_deltas
+            persisted, published = await persist_answer(
+                answer, answer_deltas
+            )
             if not persisted:
                 exit_reason = TurnExitReason.PERSISTENCE_FAILED
                 safe_failure = safe_error("assistant_persistence")
@@ -797,11 +1273,7 @@ async def run_turn(
             safe_failure = safe_error("incomplete")
             break
 
-        if response.stop_reason == ModelStopReason.STOP:
-            if tool_calls:
-                exit_reason = TurnExitReason.MODEL_FAILED
-                safe_failure = safe_error("model_protocol")
-                break
+        if response.stop_reason == ModelStopReason.STOP and not tool_calls:
             assistant = _assistant_message(
                 turn_id=turn_id,
                 response_message=response_message,
@@ -816,29 +1288,97 @@ async def run_turn(
                     safe_failure = safe_error("limit")
                     break
                 if candidate_rejections >= TEXT_TOOL_SLIP_LIMIT:
+                    if not stripped_retry:
+                        stripped_retry = True
+                        strip_tools_next = True
+                        candidate_note = WORKING_NOTE_CORRECTION
+                        continue
+                    logger.warning(
+                        "candidate rejected %d times (last stop=%s)",
+                        candidate_rejections,
+                        last_stop_reason,
+                    )
                     exit_reason = TurnExitReason.MODEL_FAILED
                     safe_failure = safe_error("model_protocol")
                     break
                 candidate_rejections += 1
                 candidate_note = rejection_note
+                logger.debug(
+                    "candidate rejected (%d chars): %s",
+                    len(assistant.content or ""),
+                    (assistant.content or "")[:40],
+                )
                 continue
 
             if forced_answer:
-                persisted, published = await persist_answer(
-                    assistant,
-                    response_deltas,
-                )
-                if not persisted:
-                    exit_reason = TurnExitReason.PERSISTENCE_FAILED
-                    safe_failure = safe_error("assistant_persistence")
+                if packet_builder is None:
+                    persisted, published = await persist_answer(
+                        assistant,
+                        response_deltas,
+                    )
+                    if not persisted:
+                        exit_reason = TurnExitReason.PERSISTENCE_FAILED
+                        safe_failure = safe_error("assistant_persistence")
+                        break
+                    if not published:
+                        exit_reason = TurnExitReason.INTERRUPTED
+                        safe_failure = safe_error("interrupted")
+                        break
+                    final_text = assistant.content
+                    completed_response = True
                     break
-                if not published:
-                    exit_reason = TurnExitReason.INTERRUPTED
-                    safe_failure = safe_error("interrupted")
+
+                try:
+                    packet = await packet_builder(
+                        turn_tool_results,
+                        assistant.content,
+                    )
+                except Exception:
+                    logger.warning("reading packet build failed", exc_info=True)
+                    packet = None
+                if not packet:
+                    exit_reason = TurnExitReason.MODEL_FAILED
+                    safe_failure = safe_error("model_protocol")
                     break
-                final_text = assistant.content
-                completed_response = True
-                break
+                validated_candidate = assistant
+                validated_candidate_deltas = response_deltas
+                final_packet = packet
+                if not turn_final_pass() and answer_blueprint is None:
+                    answer_blueprint = build_answer_blueprint(
+                        question=turn_brief.actual_ask,
+                        prior_weaver_position=turn_brief.prior_weaver_position,
+                        reader_challenges_prior_answer=(
+                            turn_brief.reader_challenges_prior_answer
+                        ),
+                        evidence_packet=packet,
+                        extra_skill_ids=tuple(loaded_skills),
+                        domain=domain,
+                        earlier_asks=turn_brief.earlier_asks,
+                        earlier_opened_chapters=earlier_opened,
+                    )
+                if not turn_final_pass() and answer_blueprint is not None:
+                    findings = inspect_publication(
+                        assistant.content,
+                        answer_blueprint,
+                        packet,
+                    )
+                    if not findings:
+                        persisted, published = await persist_answer(
+                            assistant,
+                            response_deltas,
+                        )
+                        if not persisted:
+                            exit_reason = TurnExitReason.PERSISTENCE_FAILED
+                            safe_failure = safe_error("assistant_persistence")
+                            break
+                        if not published:
+                            exit_reason = TurnExitReason.INTERRUPTED
+                            safe_failure = safe_error("interrupted")
+                            break
+                        final_text = assistant.content
+                        completed_response = True
+                        break
+                continue
 
             if tool_steps_used == 0 and not zero_evidence_reprompted:
                 zero_evidence_reprompted = True
@@ -846,6 +1386,7 @@ async def run_turn(
                 continue
 
             packet: str | None = None
+            packet_build_failed = False
             if packet_builder is not None:
                 try:
                     packet = await packet_builder(
@@ -854,14 +1395,85 @@ async def run_turn(
                     )
                 except Exception:
                     logger.warning("reading packet build failed", exc_info=True)
+                    packet_build_failed = True
 
             if packet and model_steps < max_steps:
                 validated_candidate = assistant
                 validated_candidate_deltas = response_deltas
                 final_packet = packet
+                if not turn_final_pass() and answer_blueprint is None:
+                    answer_blueprint = build_answer_blueprint(
+                        question=turn_brief.actual_ask,
+                        prior_weaver_position=turn_brief.prior_weaver_position,
+                        reader_challenges_prior_answer=(
+                            turn_brief.reader_challenges_prior_answer
+                        ),
+                        evidence_packet=packet,
+                        extra_skill_ids=tuple(loaded_skills),
+                        domain=domain,
+                        earlier_asks=turn_brief.earlier_asks,
+                        earlier_opened_chapters=earlier_opened,
+                    )
+                if not turn_final_pass() and answer_blueprint is not None:
+                    findings = inspect_publication(
+                        assistant.content,
+                        answer_blueprint,
+                        packet,
+                    )
+                    if not findings:
+                        persisted, published = await persist_answer(
+                            assistant,
+                            response_deltas,
+                        )
+                        if not persisted:
+                            exit_reason = TurnExitReason.PERSISTENCE_FAILED
+                            safe_failure = safe_error("assistant_persistence")
+                            break
+                        if not published:
+                            exit_reason = TurnExitReason.INTERRUPTED
+                            safe_failure = safe_error("interrupted")
+                            break
+                        final_text = assistant.content
+                        completed_response = True
+                        break
                 continue
 
-            persisted, published = await persist_answer(assistant, response_deltas)
+            if packet_builder is not None and packet_build_failed:
+                exit_reason = TurnExitReason.MODEL_FAILED
+                safe_failure = safe_error("model_protocol")
+                break
+            # Tools were used but produced nothing citable. Failing the turn
+            # would punish the reader for a dry search, so the answer stands
+            # with its own honesty about the gap. A quote or an opening-line
+            # claim is not honesty about a gap: send it back once to open the
+            # lines or drop the claim.
+            # A chapter citation with nothing opened (this turn or earlier in
+            # the conversation) is memory dressed as evidence.
+            memory_citations = [
+                chapter
+                for chapter in cited_chapters(assistant.content)
+                if chapter not in earlier_opened
+            ]
+            if (
+                domain != "fanfic"
+                and not unopened_text_reprompted
+                and (
+                    memory_citations
+                    or unopened_text_claims(
+                        assistant.content,
+                        None,
+                        reader_text=turn_brief.actual_ask,
+                    )
+                )
+            ):
+                unopened_text_reprompted = True
+                candidate_note = UNOPENED_TEXT_CORRECTION
+                continue
+            
+
+            persisted, published = await persist_answer(
+                    assistant, response_deltas
+                )
             if not persisted:
                 exit_reason = TurnExitReason.PERSISTENCE_FAILED
                 safe_failure = safe_error("assistant_persistence")
@@ -874,7 +1486,13 @@ async def run_turn(
             completed_response = True
             break
 
-        if response.stop_reason != ModelStopReason.TOOL_USE:
+        # Some providers label a tool-call turn as STOP. The calls are
+        # structured and the arguments are parsed like any other, so run
+        # them instead of failing the reader's turn on a label.
+        if response.stop_reason not in (
+            ModelStopReason.TOOL_USE,
+            ModelStopReason.STOP,
+        ):
             exit_reason = TurnExitReason.MODEL_FAILED
             safe_failure = safe_error("model_protocol")
             break
@@ -935,6 +1553,8 @@ async def run_turn(
                     call_id=tool_call.call_id,
                     cancel_event=cancel_event,
                     on_tool_event=on_tool_event,
+                    on_skills_loaded=note_skills_loaded,
+                    max_chapter=max_chapter,
                 )
                 tool_result = await tool_registry.dispatch(
                     tool_call.name,
@@ -989,6 +1609,20 @@ async def run_turn(
     ):
         exit_reason = TurnExitReason.LIMIT_REACHED
         safe_failure = safe_error("limit")
+    elif exit_reason == TurnExitReason.COMPLETED and not completed_response:
+        # A turn that ends without an accepted answer must never report a
+        # completed turn: the reader would get a silent empty reply and no
+        # retry affordance. Fail honestly instead.
+        logger.warning(
+            "turn ended without an accepted answer "
+            "(steps=%d tools=%d rejections=%d last_stop=%s)",
+            model_steps,
+            tool_starts,
+            candidate_rejections,
+            last_stop_reason,
+        )
+        exit_reason = TurnExitReason.MODEL_FAILED
+        safe_failure = safe_error("empty_answer")
 
     return TurnResult(
         turn_id=turn_id,
@@ -1006,4 +1640,8 @@ async def run_turn(
         input_characters=input_characters,
         error_category=error_category,
         raw_stop_reason=raw_stop_reason,
+        skill_ids=tuple(dict.fromkeys([*routed_plan.ids, *loaded_skills])),
+        tool_steps=tool_steps_used,
+        tool_limit=budget.limit,
+        thinking=deepest_thinking,
     )

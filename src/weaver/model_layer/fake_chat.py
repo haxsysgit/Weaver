@@ -45,9 +45,10 @@ current_fake_retry: ContextVar[bool] = ContextVar(
 
 MARKDOWN_ANSWER = """## The simulated answer
 
-> This quotation is synthetic. It exists to test Weaver's blockquote treatment.
+> Synthetic passage for development only.
 
-The fixture supports **one direct reading** and *one competing interpretation*.
+The fixture supports **one direct reading** and *one competing interpretation*
+(ch. 184).
 
 1. The first clue appears in Chapter 184.
 2. The later scene changes how that clue reads.
@@ -121,9 +122,10 @@ def _normal_answer(current_prompt: str, previous_prompt: str | None) -> str:
     return (
         f"{continuity}The simulated reading points to a choice with two plausible "
         "interpretations.\n\n"
-        "> The first fixture passage makes the character's intent look certain.\n\n"
+        "> Synthetic passage for development only.\n\n"
         "The later fixture complicates that certainty. My read is that the action "
-        "was deliberate, while the result went further than the character expected.\n\n"
+        "was deliberate, while the result went further than the character expected "
+        "(ch. 184).\n\n"
         f"For your question, *{_safe_excerpt(current_prompt)}*, I would keep the "
         "distinction between intent and outcome at the centre of the discussion. "
         "That gives us something real to argue about instead of flattening the scene "
@@ -142,11 +144,11 @@ def _long_answer(current_prompt: str) -> str:
     ]
     for index in range(1, 9):
         sections.append(
-            f"### Thread {index}\n\n"
+            f"**Thread {index}**\n\n"
             "The synthetic passage establishes a motive, then a later scene adds a "
             "cost the character did not anticipate. The answer keeps both facts in "
             "view so the conclusion remains readable across several paragraphs.\n\n"
-            f"> Synthetic quotation {index}: the thread bends, but it does not break."
+            "Synthetic fixture detail (ch. 184)."
         )
     sections.append("*Development fixture. This is not novel canon.*")
     return "\n\n".join(sections)
@@ -222,6 +224,8 @@ class FakeChatProvider:
         *,
         max_output_tokens: int,
     ) -> AsyncIterator[ModelStreamEvent]:
+        from .deepseek import current_sponsored_turn
+
         self.calls.append(
             FakeModelCall(
                 model=model,
@@ -234,8 +238,28 @@ class FakeChatProvider:
         scenario = _scenario(prompt)
         if current_fake_retry.get() and scenario in {"model-error", "incomplete"}:
             scenario = "normal"
+        sponsored_turn = current_sponsored_turn.get()
+        if sponsored_turn is not None:
+            if cancel_event.is_set():
+                yield self._terminal(self._aborted_response(model))
+                return
+            payload = {
+                "model": model.model_id,
+                "messages": [
+                    {"role": message.role, "content": message.content}
+                    for message in request.messages
+                ],
+                "max_tokens": max_output_tokens,
+                "extra_body": {},
+            }
+            await sponsored_turn.before_call(
+                payload,
+                has_tools=bool(request.tools),
+            )
         response_delay = 1.2 if scenario == "slow" else self.delay_seconds
         if not await _wait(response_delay, cancel_event):
+            if sponsored_turn is not None:
+                await sponsored_turn.record_usage(None)
             yield self._terminal(self._aborted_response(model))
             return
 
@@ -244,12 +268,16 @@ class FakeChatProvider:
         if content:
             for chunk in _content_chunks(content):
                 if cancel_event.is_set():
+                    if sponsored_turn is not None:
+                        await sponsored_turn.record_usage(None)
                     yield self._terminal(self._aborted_response(model))
                     return
                 yield ModelStreamEvent(
                     event_type=ModelStreamEventType.TEXT_DELTA,
                     delta=chunk,
                 )
+        if sponsored_turn is not None:
+            await sponsored_turn.record_usage(response.usage)
         yield self._terminal(response)
 
     def _response(

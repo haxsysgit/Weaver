@@ -31,65 +31,100 @@
 - Label hypotheses, observations, and accepted decisions separately.
 - Record failures as evidence. Do not hide them with silent retries.
 
-## Foundational Reader Trials
+## Reader Experience Trials
 
-These three private, fresh-session conversations are Weaver's founding product
-trials. Build retrieval, reading, memory, reasoning, and conversation work
-toward them without hard-coding their answers, adding prompt-specific branches,
-or placing their answers in the system prompt.
+The final product gate is twelve private, fresh-session conversations with the
+owner as a reader. All twelve must pass. The purpose is not retrieval
+correctness. It is whether a reader enjoys talking with Weaver, and whether
+Weaver can retell, explain, and visualise the novel well.
 
-1. **Canon reconstruction and discussion**
+The full suite, prompts, follow-ups, and rubric live in
+`deliverables/030-weaver-v2-qualification-and-rollout/reader-experience-trials.md`.
+The twelve:
 
-   > hey weaver, people online keep saying Ariel one-shotted an Unholy Titan
-   > like it was nothing, but I remember clearly that Ariel and the Unholy
-   > Titan were tied for days. Then, to break the stalemate, Ariel whispered
-   > something to it, killed it, and used its soul cores, blood, and flesh to
-   > build the Tomb of Ariel. Can you remind me of the chapter, narrate it to
-   > me, or tell me what you think?
+1. **The vibe check.** No task, no lore question. Can Weaver be a buddy
+   without dumping lore or turning into a support bot?
+2. **The hot take.** A strong opinion about a character. Can Weaver argue,
+   cite, disagree, and keep it fun?
+3. **The half-memory.** A half-remembered scene with one wrong detail. Can
+   Weaver correct it without condescension and keep the thread alive?
+4. **The first-timer.** A spoiler boundary. Can Weaver protect the reader and
+   still be useful and fun?
+5. **The theory.** A wild fan theory. Can Weaver engage it, test it against
+   canon, and label canon, inference, and invention?
+6. **The vague ask.** "Tell me something I missed." Can Weaver choose a good
+   thread and follow it instead of listing?
+7. **The emotional favourite.** A scene the reader loves. Can Weaver match the
+   energy, add insight, and avoid lecturing?
+8. **The low-effort.** A quick versus question. Can Weaver answer briefly,
+   stay accurate, and survive "why" and "huh"?
+9. **The long thread.** An eight to ten turn conversation with callbacks and a
+   running joke. Can Weaver remember, stay consistent, and not repeat?
+10. **The adversarial.** "You're just a bot." Can Weaver hold its ground,
+    show evidence, and stay unbothered?
+11. **The fanfic spark.** A missing scene request. Can Weaver write
+    novel-quality prose in the `storyteller` voice, keep canon, and label
+    invention?
+12. **The confusing fight or arc.** The reader asks Weaver to explain a
+    genuinely confusing fight, scene, or arc and help them visualise it. Can
+    Weaver read the chapters, reconstruct the sequence and stakes, keep the
+    canon straight, and make the reader see it?
 
-   Weaver must verify the user's memory against the novel, find and read the
-   relevant chapters, investigate what Unholy Titans are and how their strength
-   is shown elsewhere, connect the fight to the Tomb of Ariel, separate canon
-   from interpretation and speculation, give an evidence-grounded take, and
-   continue the discussion naturally when challenged or asked follow-ups.
+Every trial is judged on two axes:
 
-2. **Time-aware power comparison**
+- **Conversation:** voice, flow, fun, challenge, memory, and safety. Would the
+  reader keep talking?
+- **Storytelling:** accuracy, sequence, causality, clarity, imagery, character
+  motive, and honest citation. Could the reader follow it and picture it? Is it
+  a retelling, not a dry summary and not an essay?
 
-   > hey weaver, do you think the current Sunny of chapter 3120+ would be able
-   > to comfortably beat Azarax in his prime before the cure of Shadow God?
+The storytelling axis is mandatory in Trials 3, 7, 11, and 12, and should be
+judged wherever the answer retells or explains the novel.
 
-   Weaver must reconstruct the requested versions of both characters, retrieve
-   their relevant feats, abilities, limits, counters, and circumstances from
-   the novel, respect the requested point in the timeline, explain uncertainty,
-   argue a position from evidence, and keep discussing alternative win
-   conditions when the owner pushes back.
+## Reader Trial protocol
 
-3. **Canon-grounded what-if**
+- Each trial is a fresh conversation. The evaluator (the assistant) may run
+  the trial through the product API as a simulated reader, or the owner may run
+  it by hand. The reader pushes at least once: a challenge, a correction, a
+  "huh", a "prove it", or a follow-up.
+- The evaluator writes the reader turns, judges both axes, improves the
+  product, and re-runs the failing trials. The evaluator's pass is evidence,
+  not the owner's acceptance. The owner receives the results and gives the
+  final acceptance.
+- Six to twelve turns per trial. The owner may improvise. The prompts are
+  examples, never hard-coded into the product, the system prompt, or the
+  retrieval path.
+- The product must not know which trial is running.
+- The private transcript stays private. The deliverable records the verdict,
+  the axis notes, the failure reason, and the build.
+- All twelve must pass. A failure on safety or accuracy blocks. A failure on
+  enjoyment or storytelling blocks. A re-run needs a changed build and the
+  owner's explicit approval. No silent retries.
+- Only the owner can give the final acceptance. The evaluator may pass a
+  trial in the evaluator record, iterate, and recommend; that is evidence, not
+  the owner's acceptance. Pytest, retrieval scores, validators, checkers,
+  reviewers, and other agents cannot accept a trial or declare Weaver
+  complete.
 
-   > hey weaver, can you come up with a what-if scenario where Anvil of Valor
-   > went against Azarax of Effie's Fourth Nightmare?
+## Retrieval regression
 
-   Weaver must retrieve the relevant versions of the characters and setting,
-   preserve established powers, motives, personalities, and world rules, mark
-   invented events as speculation, build a believable branch from canon, and
-   continue changing or defending the scenario as the conversation develops.
+The three old Foundational Reader Trials remain a retrieval regression set,
+not the final gate:
+
+1. Canon reconstruction and discussion: Ariel, the Unholy Titan, and the Tomb
+   of Ariel.
+2. Time-aware power comparison: current Sunny against prime Azarax.
+3. Canon-grounded what-if: Anvil of Valor against Azarax of Effie's Fourth
+   Nightmare.
 
 The working retrieval hypothesis includes retrieval-augmented answering,
 embeddings, a vector database, exact search, and direct rereading of larger
 chapter passages. `read`, `grep`, and `glob` are rudimentary tools and
-baselines; an agent must not claim they are sufficient for these trials without
-evidence from the trials.
+baselines; an agent must not claim they are sufficient without evidence.
 
 The first evidence is recorded: exact phrase and vocative finding on the raw
 chapters (the Weaver-voice trace, 2026-08-07) is a core agentic capability,
 not a convenience. See `docs/reading-finders.md`.
-
-Only the owner can decide whether Weaver has passed a Reader Trial. Pytest,
-retrieval scores, validators, checkers, reviewers, and other agents may collect
-evidence and identify failures, but they cannot accept a trial or declare
-Weaver complete. A first answer is not the whole trial: the owner must be able
-to hold the expected follow-up conversation in a fresh session. Weaver is
-fully complete only when the owner personally accepts all three trials.
 
 ## Pushback
 

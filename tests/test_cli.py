@@ -1,8 +1,10 @@
+import asyncio
 import json
 import os
 from pathlib import Path
 
 from weaver import cli
+from weaver.sponsored import SponsoredAccess, config_from_environment
 
 
 def test_fake_cli_succeeds_without_network_or_credential(
@@ -75,7 +77,7 @@ def test_provider_contract_fake_cli_runs_two_model_calls(
     assert len(run_dirs) == 1
     response_path = run_dirs[0] / "response.json"
     response_text = response_path.read_text()
-    assert "deepseek-v4-flash" in response_text
+    assert "deepseek-flash" in response_text
     # The contract has two model calls. The provider owns any transport retries.
     manifest = json.loads((run_dirs[0] / "manifest.json").read_text())
     assert manifest["settings"]["maximum_model_calls"] == 2
@@ -135,6 +137,57 @@ def test_doctor_has_no_network_requirement(
     assert "PASS model_catalogue: aliases and selectable models match v1" in output
     assert "PASS network: doctor made no network call" in output
     assert "WARN live_credential" in output
+
+
+def test_shared_allowance_reports_only_safe_totals(
+    tmp_path,
+    monkeypatch,
+    capsys,
+) -> None:
+    state_dir = tmp_path / "state"
+    database = state_dir / "sponsored.sqlite3"
+    secret = "test-only-shared-allowance-secret-32-bytes"
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("WEAVER_STATE_DIR", str(state_dir))
+    monkeypatch.setenv("WEAVER_SPONSORED_PASS_SECRET", secret)
+    monkeypatch.setenv("WEAVER_SPONSORED_ENABLED", "1")
+    monkeypatch.setenv(
+        "WEAVER_SPONSORED_PRICE_VALID_UNTIL",
+        "2099-01-01T00:00:00+00:00",
+    )
+
+    async def seed_ledger() -> None:
+        access = SponsoredAccess(
+            database,
+            secret=secret,
+            config=config_from_environment(),
+        )
+        await access.open()
+        await access.close()
+
+    asyncio.run(seed_ledger())
+    exit_code = cli.run(["shared-allowance"])
+    output = capsys.readouterr().out
+    summary = json.loads(output)
+
+    assert exit_code == 0
+    assert summary["remaining_microdollars"] == 10_000_000  # $10 a day
+    assert summary["completed_questions"] == 0
+    assert secret not in output
+    assert "prompt" not in output
+    assert "answer" not in output
+
+
+def test_shared_allowance_requires_an_existing_ledger(
+    tmp_path,
+    monkeypatch,
+    capsys,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("WEAVER_STATE_DIR", str(tmp_path / "state"))
+
+    assert cli.run(["shared-allowance"]) == 2
+    assert "ledger does not exist" in capsys.readouterr().out
 
 
 def test_corpus_fetch_cli_defaults_to_preview(monkeypatch, capsys) -> None:

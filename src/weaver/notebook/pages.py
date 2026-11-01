@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
-
 from .constants import ALIAS_MARKER_PATTERN, ENTITY_MARKER_PATTERN, ENTITY_TYPES, PAGE_DIRS
 from .context import NotebookContext, relative_path
 from .report import CheckResult

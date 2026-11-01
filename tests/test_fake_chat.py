@@ -41,7 +41,7 @@ async def test_fake_chat_runs_two_synthetic_tools_and_streams_markdown(tmp_path)
         ]
         assert len(deltas) > 4
         assert "".join(deltas) == result.final_text
-        assert "> This quotation is synthetic" in result.final_text
+        assert "> Synthetic passage for development only." in result.final_text
         assert "```text" in result.final_text
         assert "[safe reference](https://example.com" in result.final_text
         assert runtime.library is None

@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from .context import NotebookContext, read_json, relative_path
+from .context import read_json, relative_path
 from .report import CheckResult
 
 

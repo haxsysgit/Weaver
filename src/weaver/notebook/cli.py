@@ -19,7 +19,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--through",
         type=int,
         default=100,
-        help=f"maximum chapter to check deeply (1-3200); global structural passes always run",
+        help="maximum chapter to check deeply (1-3200); global structural passes always run",
     )
     parser.add_argument(
         "--novel-dir",
@@ -33,7 +33,6 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     result = check_notebook(args.root, through=args.through, novel_dir=args.novel_dir)
     prose_issue = result.has_message("copied source prose")
-    warnings = result.warnings
     if result.ok:
         print("Notebook check: PASS")
         for warning in result.warnings:
