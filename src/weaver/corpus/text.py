@@ -75,6 +75,12 @@ def _contains_marker(value: str, markers: tuple[str, ...]) -> bool:
     return any(marker.casefold() in lowered for marker in markers)
 
 
+def is_debris_line(line: str, spec: ShadowSlaveSpec) -> bool:
+    """A whole line a scrape left behind, not part of the chapter."""
+    normalized = normalize_inline(line).casefold().rstrip(".")
+    return any(normalized == marker for marker in spec.debris_lines)
+
+
 def _contains_placeholder(
     title: str | None,
     paragraphs: tuple[str, ...],
@@ -129,6 +135,13 @@ def clean_fetched_page(
         )
 
     soup = BeautifulSoup(page.raw_html, "lxml")
+    page_title = soup.title.get_text(" ", strip=True) if soup.title else ""
+    if normalize_inline(page_title).casefold() in spec.missing_chapter_titles:
+        raise CorpusError(
+            "The source has no page for this chapter yet.",
+            ErrorCategory.NOT_FOUND,
+            detail_code="missing_chapter_page",
+        )
     body = soup.select_one(spec.content_selector)
     if body is None:
         raise CorpusError(
@@ -173,6 +186,7 @@ def clean_fetched_page(
         paragraph
         for node in body.find_all("p")
         if (paragraph := normalize_inline(node.get_text(" ", strip=True)))
+        and not is_debris_line(paragraph, spec)
     )
     if len(paragraphs) < spec.min_paragraphs:
         raise CorpusError(

@@ -43,7 +43,6 @@ _BROWSER_HEADERS = {
     "Sec-Fetch-Site": "none",
     "Sec-Fetch-User": "?1",
     "Upgrade-Insecure-Requests": "1",
-    "Referer": "https://novelfire.net/",
 }
 
 
@@ -230,7 +229,7 @@ class DirectHttpChapterSource:
             http2=http2,
             timeout=timeout_seconds,
             follow_redirects=True,
-            headers=_BROWSER_HEADERS,
+            headers={**_BROWSER_HEADERS, "Referer": spec.referer},
         )
 
     async def fetch(self, chapter: int, url: str) -> FetchedPage:

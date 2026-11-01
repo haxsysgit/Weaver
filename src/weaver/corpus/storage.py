@@ -247,9 +247,18 @@ class CorpusStore:
                 ErrorCategory.FILESYSTEM,
             ) from exc
 
+        # The current address plus earlier ones the ledger may hold
+        # (Plan 031: the source moved; old lines stay byte-identical).
         pattern = re.compile(
-            rf"^https://{re.escape(self.spec.domain)}/book/"
-            rf"{re.escape(self.spec.slug)}/chapter-(\d+)/?$"
+            "^(?:"
+            + "|".join(
+                re.escape(template).replace(r"\{chapter\}", r"(\d+)")
+                for template in (
+                    self.spec.url_template,
+                    *self.spec.legacy_url_templates,
+                )
+            )
+            + ")/?$"
         )
         numbers: list[int] = []
         malformed: list[int] = []
@@ -271,7 +280,7 @@ class CorpusStore:
                 if observed is not None:
                     observed_templates.add(observed)
                 continue
-            number = int(match.group(1))
+            number = int(next(group for group in match.groups() if group))
             numbers.append(number)
             if previous is not None and number < previous:
                 out_of_order.append(line_number)

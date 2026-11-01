@@ -12,10 +12,18 @@ class ShadowSlaveSpec:
     novel_id: NovelId = NovelId.SHADOW_SLAVE
     title: str = "Shadow Slave"
     language: str = "en"
-    domain: str = "novelfire.net"
+    # Plan 031 (2026-11-01): novelfire.net now redirects every chapter
+    # through readnovel.site to novelphoenix.com. The shelf's extractor
+    # reproduced chapters 3158 and 3160 byte for byte from the new host.
+    domain: str = "novelphoenix.com"
     slug: str = "shadow-slave"
     url_template: str = (
-        "https://novelfire.net/book/shadow-slave/chapter-{chapter}"
+        "https://novelphoenix.com/novel/shadow-slave/chapter-{chapter}"
+    )
+    # Earlier addresses the URL ledger may still hold. Accepted when the
+    # ledger is read; new chapters always append url_template.
+    legacy_url_templates: tuple[str, ...] = (
+        "https://novelfire.net/book/shadow-slave/chapter-{chapter}",
     )
     content_selector: str = "#chapter-article .d-chapter-content"
     title_selectors: tuple[str, ...] = (
@@ -62,6 +70,14 @@ class ShadowSlaveSpec:
         "coming soon",
         "page not found",
     )
+    # The source's page for a chapter that does not exist yet (served
+    # with HTTP 200, so it needs its own not-found signal).
+    missing_chapter_titles: tuple[str, ...] = ("page chapter not found",)
+    # Whole lines a scrape can leave inside a chapter (an ad blocker's
+    # notice was found in chapter 3150). Dropped on fetch and on read.
+    debris_lines: tuple[str, ...] = (
+        "this page has been blocked by an extension",
+    )
     unwanted_markers: tuple[str, ...] = (
         "please disable your ad blocker",
         "disable adblock",
@@ -75,6 +91,10 @@ class ShadowSlaveSpec:
     chapters_per_folder: int = 100
     legacy_last_folder: str = "3001-3047"
     canonical_last_folder: str = "3001-3100"
+
+    @property
+    def referer(self) -> str:
+        return f"https://{self.domain}/"
 
     def url_for(self, chapter: int) -> str:
         if chapter < 1:

@@ -61,3 +61,27 @@ fetch) still waits for the owner's go after a fresh preview.
    starts.
 9. Scraper footers are filtered when chapters are read. Chapter files stay
    byte-identical.
+
+## Amendments (2026-11-01, during execution)
+
+- **Run every slice without waiting.** The owner directed all slices to
+  run in order without per-slice permission. The final report covers what
+  was done, how, how it fits what was already built, how it makes updates
+  easier, and when updates are scheduled.
+- **Weekly, not daily (owner).** The author releases Monday to Friday and
+  not at weekends. The scheduled run is weekly, on Saturday after the
+  week's last chapter, and catches up on the next start if the PC was off.
+  The "schedule has not run" alert threshold becomes 8 days.
+- **The source moved (executor decision, flagged for the owner).**
+  - novelfire.net now forwards every chapter through readnovel.site to
+    novelphoenix.com.
+  - The plan put changing the source out of scope. But the old source no
+    longer serves chapters at all, and the new host reproduced the shelf
+    byte for byte (chapters 3158 and 3160).
+  - So the spec now fetches from novelphoenix.com and keeps the old
+    address as accepted ledger history. Evidence is in `results.md`.
+  - Reverting is a one-field change in `corpus/spec.py`.
+- **Debris inside chapters, not only footers.** Chapter 3150 on the shelf
+  carries an ad blocker's notice as a line of text. Item 9's read-time
+  filter covers known debris lines as well as footers, and new fetches
+  drop them.

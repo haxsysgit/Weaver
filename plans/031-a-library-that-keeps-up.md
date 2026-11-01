@@ -59,8 +59,10 @@ Confirmed by the owner at admission (2026-11-01, "Admit as drafted"):
 6. **Alerts in two places for now.** A library status in Settings (edge,
    last check, last failure) and a Windows notification on failure. A
    hosted channel waits for Plan 039, when Weaver moves off this machine.
-7. **Daily schedule** through Windows Task Scheduler on the owner's
-   machine; the schedule moves to the server host in Plan 039.
+7. **Weekly schedule** (amended by the owner 2026-11-01: the author
+   releases Monday to Friday) through Windows Task Scheduler on the
+   owner's machine, on Saturday; the schedule moves to the server host in
+   Plan 039.
 8. **Volume 13 stays open-ended.** The shelf edge is not a volume end.
    Volume 13 runs to the shelf edge until the owner confirms where a new
    volume starts.
@@ -96,7 +98,7 @@ Confirmed by the owner at admission (2026-11-01, "Admit as drafted"):
 - **Failure alerts:** the scheduled run alerts on:
   - a fetch failure, or a block by the source;
   - a validation failure;
-  - a schedule that has not run for two days;
+  - a schedule that has not run for eight days;
   - a source with no new chapter for longer than the owner sets.
 - **Footer filter on read**, test-first, without touching chapter files.
 
