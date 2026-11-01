@@ -5,8 +5,8 @@ v2.0.0 is released offline (merged to `main` and tagged, not deployed). The
 deploy workflow stays disabled and the EC2 box stays stopped; going public is
 Plan 039. The 021-030 checkpoint ran on 2026-11-01
 (`docs/checkpoints/021-030.md`). Plan 031 (A library that keeps up) ran all
-seven slices the same day and waits for the owner's accept or reject in
-`deliverables/031-a-library-that-keeps-up/decision.md`. The shelf now ends at
+seven slices the same day and the owner accepted it (closed 2026-11-01, not
+merged to `main`). Next: draft Plan 032 (the retrieval verdict). The shelf now ends at
 3232, the source moved to `novelphoenix.com`, and a weekly Task Scheduler
 check (Saturday 10:00) appends new chapters. See
 `plans/031-a-library-that-keeps-up.md`.
@@ -195,9 +195,9 @@ screenshots before claims.
 > reading companion. Plan 030 is closed and v2.0.0 is released offline. Read
 > `HANDOFF.md`, `TODO_future.md` (roadmap 031 to 040), and the Plan 030
 > deliverables first, and `docs/checkpoints/021-030.md` for the methods
-> codified at the last checkpoint. Plan 031 ran all slices and waits for
-> the owner's decision; after it closes, draft Plan 032 with the
-> `arinze-plans` skill. Constraints: every commit starts with `Plan NNN: `;
+> codified at the last checkpoint. Plan 031 is closed (accepted 2026-11-01).
+> Next: draft Plan 032 (the retrieval verdict) with the `arinze-plans`
+> skill and wait for the owner's admission. Constraints: every commit starts with `Plan NNN: `;
 > no Claude attribution in commits or PRs; no deploy, push, or tag without
 > the owner; no secrets or private chapters in commits; one server at a time
 > because of the Qdrant lock. UI changes need real desktop and mobile

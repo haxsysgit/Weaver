@@ -13,8 +13,9 @@
 - **Tooling:** repo commands via `uv` (pytest, ruff, pip check), `npx vitest`,
   the root production build. Every `uv` command on this Windows checkout
   needs `UV_PYTHON_INSTALL_DIR=$USERPROFILE/.uv/python`.
-- **State:** admitted 2026-11-01 (owner: "Admit as drafted"). Slices 2 to 7
-  ran 2026-11-01; waits for the owner's accept or reject.
+- **State:** closed 2026-11-01, accepted by the owner ("Accept Plan 031").
+  Admitted the same day ("Admit as drafted"); slices 2 to 7 ran that day.
+  See `deliverables/031-a-library-that-keeps-up/decision.md`.
 - **Depends on:** Plan 030 closed (2026-11-01, v2.0.0 released offline);
   checkpoint 021-030 done (2026-11-01). Builds on Plan 002 (shelf rules)
   and Plan 016 (`weaver refresh`).
@@ -177,7 +178,7 @@ Confirmed by the owner at admission (2026-11-01, "Admit as drafted"):
 6. **Failure alerts.** Done 2026-11-01 (`8f7b9d7`). The triggers, the Windows notification, and the
    Settings status. Proven with stubbed failures, then with one real
    scheduled run.
-7. **Close.** Done 2026-11-01 except the owner's decision. The live smoke turn, the full floor, screenshots, an
+7. **Close.** Done 2026-11-01; the owner accepted. The live smoke turn, the full floor, screenshots, an
    independent review, the measured budget in `results.md`, and the
    owner's decision in `decision.md`. Read the plan status and deploy
    state before any merge, tag, or deploy. Update HANDOFF and

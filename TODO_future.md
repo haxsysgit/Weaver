@@ -81,8 +81,8 @@ accepted public release is v3.0.0 at Plan 040.
    novel's latest chapter (about 3230), scheduled checks for new chapters,
    validation, failure alerts. Only raw chapters are needed: Weaver opens
    chapters far more than it searches (1,378 chapter reads to 414 vector
-   searches across 554 turns, measured 2026-10-31). Slices done
-   2026-11-01: shelf at 3232, weekly Saturday check; waits for the owner.
+   searches across 554 turns, measured 2026-10-31). Closed
+   2026-11-01 (accepted): shelf at 3232, weekly Saturday check.
 2. **032 The retrieval verdict**: the same questions answered four ways
    (normal, no vector search, no notebook, chapters and exact search only),
    judged on accuracy and citations. Decide what the pipeline keeps. Absorbs
