@@ -264,7 +264,9 @@ async def test_preferences_roundtrip(client) -> None:
 async def test_preferences_reject_invalid(client) -> None:
     assert (await client.put("/api/preferences", json={"reader_chapter": 0})).status_code == 422
     assert (await client.put("/api/preferences", json={"reader_chapter": 3128})).status_code == 200
-    assert (await client.put("/api/preferences", json={"reader_chapter": 3161})).status_code == 422
+    # The shelf-edge ceiling is pinned in tests/test_shelf_edge.py (Plan 031);
+    # here only the request's sanity bound, which holds without a shelf.
+    assert (await client.put("/api/preferences", json={"reader_chapter": 10000})).status_code == 422
     assert (await client.put("/api/preferences", json={"spoiler_mode": "maybe"})).status_code == 422
 
 

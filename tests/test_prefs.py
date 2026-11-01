@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from weaver.prefs import MAX_CHAPTER, PreferencesStore, UserPreferences
+from weaver.prefs import PreferencesStore, UserPreferences
 
 DEVICE = "device-a"
 
@@ -119,7 +119,9 @@ async def test_rejects_out_of_range_chapter(tmp_path: Path) -> None:
         with pytest.raises(ValueError):
             await store.set(DEVICE, UserPreferences(reader_chapter=0))
         with pytest.raises(ValueError):
-            await store.set(DEVICE, UserPreferences(reader_chapter=MAX_CHAPTER + 1))
+            await store.set(DEVICE, UserPreferences(reader_chapter=3233), ceiling=3232)
+        saved = await store.set(DEVICE, UserPreferences(reader_chapter=3232), ceiling=3232)
+        assert saved.reader_chapter == 3232
     finally:
         await store.close()
 

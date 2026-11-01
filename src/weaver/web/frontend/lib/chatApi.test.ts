@@ -103,6 +103,20 @@ describe("createHttpChatApi authed wrapper", () => {
     expect(spy.mock.calls[1][1]).toMatchObject({ method: "POST" });
   });
 
+  it("reads the shelf edge from the library route", async () => {
+    const library = { last_chapter: 3232, search_through: 3127 };
+    const spy = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) => {
+      return new Response(JSON.stringify(library), {
+        headers: { "Content-Type": "application/json" },
+        status: 200,
+      });
+    });
+    const api = createHttpChatApi(spy as unknown as typeof fetch);
+
+    expect(await api.getLibrary?.()).toEqual(library);
+    expect(spy.mock.calls[0][0]).toBe("/api/library");
+  });
+
   it("preserves a safe sponsored refusal code", async () => {
     const spy = vi.fn(async (_input: string | URL | Request, _init?: RequestInit) =>
       new Response(JSON.stringify({ detail: { code: "reader_exhausted" } }), {

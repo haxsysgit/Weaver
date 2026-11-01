@@ -23,4 +23,10 @@ describe("mentionedChapter", () => {
   ])("ignores %j", (text) => {
     expect(mentionedChapter(text)).toBeNull();
   });
+
+  it("follows the shelf edge instead of a fixed ceiling", () => {
+    expect(mentionedChapter("I'm at chapter 3200", 3232)).toBe(3200);
+    expect(mentionedChapter("I'm at chapter 3232", 3232)).toBe(3232);
+    expect(mentionedChapter("I'm at chapter 3233", 3232)).toBeNull();
+  });
 });

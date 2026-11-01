@@ -42,6 +42,14 @@ export interface UserPreferences {
   spoiler_mode: "protect" | "none";
 }
 
+/** The shelf as the server sees it (Plan 031). */
+export interface LibraryStatus {
+  /** The last chapter Weaver can open; null when no shelf is present. */
+  last_chapter: number | null;
+  /** The last chapter meaning search covers, when recorded. */
+  search_through: number | null;
+}
+
 export interface AccessStatus {
   consented: boolean;
   development?: boolean;
@@ -68,6 +76,7 @@ export interface ChatApi {
   deleteConversation(conversationId: string): Promise<{ deleted: string }>;
   getPreferences(): Promise<UserPreferences>;
   savePreferences(prefs: UserPreferences): Promise<UserPreferences>;
+  getLibrary?(): Promise<LibraryStatus>;
 }
 
 interface RawStreamEvent {
@@ -269,6 +278,11 @@ export function createHttpChatApi(fetcher: typeof fetch = fetch): ChatApi {
     async getPreferences() {
       const response = await authed("/api/preferences");
       return requireJson<UserPreferences>(response, "Loading preferences");
+    },
+
+    async getLibrary() {
+      const response = await authed("/api/library");
+      return requireJson<LibraryStatus>(response, "Loading the library");
     },
 
     async deleteConversation(conversationId: string) {

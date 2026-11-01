@@ -1,5 +1,7 @@
-// The last chapter on the shelf. Keep in step with weaver.prefs.MAX_CHAPTER.
-export const MAX_CHAPTER = 3160;
+// A placeholder ceiling for the moment before /api/library answers. The
+// real edge is the shelf's last chapter, which the server reports
+// (Plan 031); every caller passes it once known.
+export const UNKNOWN_EDGE = 9999;
 
 const CHAPTER = String.raw`(?:ch(?:apter)?s?\.?\s*)(\d{1,4})\b`;
 const MENTIONS = [
@@ -15,15 +17,16 @@ const MENTIONS = [
 /** The chapter a reader says they have reached, or null.
  *
  * Only first-person position phrases count: "chapter 742 was sad" names a
- * chapter but says nothing about how far the reader is. */
-export function mentionedChapter(text: string): number | null {
+ * chapter but says nothing about how far the reader is. A chapter past the
+ * shelf edge is ignored. */
+export function mentionedChapter(text: string, lastChapter: number = UNKNOWN_EDGE): number | null {
   for (const pattern of MENTIONS) {
     const match = pattern.exec(text);
     if (!match) {
       continue;
     }
     const chapter = Number(match[1]);
-    if (chapter >= 1 && chapter <= MAX_CHAPTER) {
+    if (chapter >= 1 && chapter <= lastChapter) {
       return chapter;
     }
   }

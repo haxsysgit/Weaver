@@ -19,7 +19,8 @@ import {
 } from "../lib/firstNightmare";
 import { getApiKey, isApiKeyDisabled } from "../lib/identity";
 import { downloadThread } from "../lib/exportThread";
-import { mentionedChapter } from "../lib/readerPosition";
+import { mentionedChapter, UNKNOWN_EDGE } from "../lib/readerPosition";
+import { volumeForChapter } from "../lib/volumes";
 import { Composer } from "./Composer";
 import { DownloadIcon } from "./Icons";
 import { FirstNightmareSetup, type SharedAccessStatus } from "./FirstNightmareSetup";
@@ -182,13 +183,6 @@ function saveVisualPreferences(preferences: LabPreferences) {
   }));
 }
 
-const VOLUME_ENDS = [95, 350, 600, 750, 1060, 1230, 1590, 1840, 2260, 2720, 3000, 3127, 3160];
-
-function volumeForChapter(chapter: number): number {
-  const volumeIndex = VOLUME_ENDS.findIndex((endChapter) => chapter <= endChapter);
-  return volumeIndex === -1 ? VOLUME_ENDS.length : volumeIndex + 1;
-}
-
 function toApiPreferences(
   preferences: LabPreferences,
   boundaryChosen: boolean,
@@ -227,6 +221,8 @@ function SpellSurfaceChatSurface({
   const [chapterSaved, setChapterSaved] = useState<boolean | null>(null);
   const [chapterOffer, setChapterOffer] = useState<number | null>(null);
   const [chapterOfferFailed, setChapterOfferFailed] = useState(false);
+  // The shelf edge from /api/library (Plan 031); a placeholder until it answers.
+  const [lastChapter, setLastChapter] = useState(UNKNOWN_EDGE);
   const [desktop, setDesktop] = useState(() => {
     return typeof window !== "undefined"
       && window.matchMedia("(min-width: 900px)").matches;
@@ -276,6 +272,20 @@ function SpellSurfaceChatSurface({
     void refreshAccess();
     void loadStoredBoundary();
   }, []);
+
+  async function refreshLibrary() {
+    if (!api.getLibrary) {
+      return;
+    }
+    try {
+      const library = await api.getLibrary();
+      if (library.last_chapter) {
+        setLastChapter(library.last_chapter);
+      }
+    } catch {
+      // The boundary stays usable on the placeholder edge if this read fails.
+    }
+  }
 
   // Access can change while the page stays open (a server restart, the
   // owner switch, the daily reset), so re-check whenever the reader returns.
@@ -462,6 +472,7 @@ function SpellSurfaceChatSurface({
   }
 
   async function loadStoredBoundary() {
+    void refreshLibrary();
     try {
       const stored = await api.getPreferences();
       setPreferences((current) => {
@@ -644,7 +655,7 @@ function SpellSurfaceChatSurface({
     }
     // "I'm at chapter 742": offer to make that the boundary, unless it
     // already is. Weaver never changes the boundary without a tap.
-    const chapter = mentionedChapter(message);
+    const chapter = mentionedChapter(message, lastChapter);
     const alreadyProtected = chapterSaved === true
       && preferences.spoilerMode === "protect"
       && preferences.chapter === chapter;
@@ -986,6 +997,7 @@ function SpellSurfaceChatSurface({
           boundarySaved={chapterSaved !== false}
           initial={preferences}
           initialSection={settingsInitialSection}
+          lastChapter={lastChapter}
           onApiKeyChange={(hasApiKey) => {
             setVoiceBound(hasApiKey);
             window.setTimeout(() => void refreshAccess(), 0);

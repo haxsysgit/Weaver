@@ -24,6 +24,7 @@ from .agent.tools import (
 from .config import DEFAULT_TIMEOUT_SECONDS, normalize_model_id
 from .conversation.session import SessionWeave
 from .prefs import PreferencesStore
+from .shelf import ShelfEdge, search_coverage
 from .prompts import load_personality
 from .skills import catalogue_text
 from .skills.loader import register_skill_tool
@@ -64,7 +65,7 @@ DEVELOPER_SYSTEM_PROMPT = (
 # shelf held 3160).
 WEB_SYSTEM_PROMPT = (
     "<what_you_have>\n"
-    "- The whole novel, chapters 1-{NOVEL_CHAPTERS}, searchable and openable.\n"
+    "{SHELF_LINE}"
     "- A story notebook: statements about the story, each with chapter evidence.\n"
     "- Six tools: semantic_search (meaning search), read_chapters (read prose), \n"
     "  find_text (exact phrase + where a character speaks), browse_chapters (skim \n"
@@ -204,14 +205,36 @@ def domain_prompt(domain: str, fanfic_kind: str | None = None) -> str:
     return prompt
 
 
+def shelf_line(last_chapter: int | None, search_through: int | None = None) -> str:
+    """What the reading tools reach, stated honestly (Plan 031).
+
+    Opening and exact search read the chapter files, so they reach the
+    shelf edge. Meaning search reads an index that lags until rebuilt.
+    """
+    if not last_chapter:
+        return "- The whole novel, searchable and openable.\n"
+    line = (
+        f"- The whole novel, chapters 1-{last_chapter}. read_chapters and "
+        "find_text reach every one"
+    )
+    if search_through and search_through < last_chapter:
+        line += (
+            f"; semantic_search covers chapters 1-{search_through}, so for "
+            "later chapters open them or use find_text"
+        )
+    return line + ".\n"
+
+
 def web_system_prompt(
     personality: str,
-    last_chapter: int,
+    last_chapter: int | None,
     skill_catalog: str | None = None,
+    *,
+    search_through: int | None = None,
 ) -> str:
     """Assemble the web prompt from a voice pack, the shelf, and the skills."""
     return personality + "\n\n" + WEB_SYSTEM_PROMPT.format(
-        NOVEL_CHAPTERS=last_chapter,
+        SHELF_LINE=shelf_line(last_chapter, search_through),
         SKILL_CATALOG=catalogue_text() if skill_catalog is None else skill_catalog,
     )
 
@@ -464,8 +487,13 @@ class ChatRuntime:
         sponsored: SponsoredAccess | None = None,
         sponsored_balance: DeepSeekBalance | FixedBalance | None = None,
         fake_delta_delay_seconds: float = 0,
+        shelf: ShelfEdge | None = None,
+        search_through: int | None = None,
     ) -> None:
         self.session = session
+        # Plan 031: the shelf edge every surface reads (None: no shelf).
+        self.shelf = shelf or ShelfEdge(Path("__no_shelf__"))
+        self.search_through = search_through
         self.surface = surface
         self.mode_label = mode_label
         self.live = live
@@ -501,6 +529,10 @@ async def open_chat_runtime(
     """
     if surface not in ("developer", "web"):
         raise ValueError(f"unknown surface: {surface}")
+
+    # Plan 031: one shelf edge for the whole app, fake or live.
+    project_root = Path(os.environ.get("WEAVER_PROJECT_ROOT", Path.cwd()))
+    shelf = ShelfEdge(project_root / "novels" / "shadow-slave")
 
     # Config [chat] model (alias or id) picks the model; flash is the default.
     model_id = normalize_model_id(
@@ -565,19 +597,23 @@ async def open_chat_runtime(
         elif not live:
             registry = _fake_web_tool_registry(fake_delay_seconds)
         active_tools = WEB_ACTIVE_TOOLS
-        # Plan v1 (2026-08-17): tell the model the real shelf length.
-        # Without the library (no novel on this machine) fall back to
-        # the last known ceiling so the prompt still forms.
-        last_chapter = (
-            library.index.last_chapter()
-            if library is not None
-            else 3160
-        )
-        base_prompt = web_system_prompt(
-            load_personality(voice),
-            last_chapter,
-        )
-        system_prompt = base_prompt
+        # Plan 031: the prompt names the live shelf edge and what meaning
+        # search covers. The edge is rescanned on a short cache, so a
+        # running server follows a refresh without a restart. The prompt
+        # text only changes when the edge does, keeping provider cache hits.
+        personality = load_personality(voice)
+        search_through = search_coverage(project_root)
+        prompts_by_edge: dict[int | None, str] = {}
+
+        def base_prompt_now() -> str:
+            edge = shelf.last_chapter()
+            if edge not in prompts_by_edge:
+                prompts_by_edge[edge] = web_system_prompt(
+                    personality, edge, search_through=search_through
+                )
+            return prompts_by_edge[edge]
+
+        system_prompt = base_prompt_now()
         execution_policy = ToolExecutionPolicy.read_only()
 
     # Plan 15 (owner 2026-08-08): the web locate phase sees a bounded
@@ -596,7 +632,7 @@ async def open_chat_runtime(
         execution_policy=execution_policy,
         token_budget=web_context_budget,
         system_prompt_by_domain=(
-            (lambda domain, fanfic_kind: base_prompt + domain_prompt(domain, fanfic_kind))
+            (lambda domain, fanfic_kind: base_prompt_now() + domain_prompt(domain, fanfic_kind))
             if surface == "web"
             else None
         ),
@@ -642,4 +678,6 @@ async def open_chat_runtime(
         fake_delta_delay_seconds=(
             fake_delay_seconds / 8 if surface == "web" and not live else 0
         ),
+        shelf=shelf,
+        search_through=search_coverage(project_root),
     )

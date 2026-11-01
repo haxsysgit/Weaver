@@ -9,7 +9,8 @@ import {
   setApiKeyDisabled,
   setModelId,
 } from "../lib/identity";
-import { MAX_CHAPTER } from "../lib/readerPosition";
+import { UNKNOWN_EDGE } from "../lib/readerPosition";
+import { volumeForChapter } from "../lib/volumes";
 import { EyeIcon, EyeSlashIcon } from "./Icons";
 import {
   SOUL_SEA_DESCRIPTIONS,
@@ -56,6 +57,8 @@ interface SpellSurfaceSettingsProps {
   boundarySaved?: boolean;
   initialSection?: SettingsSection;
   initial: LabPreferences;
+  /** The shelf edge from /api/library: the highest chapter a boundary may name. */
+  lastChapter?: number;
   onApiKeyChange?: (hasApiKey: boolean) => void;
   onClose: () => void;
   onReplayFirstNightmare?: () => void;
@@ -69,30 +72,12 @@ type SaveState = "idle" | "saving" | "saved" | "failed";
 /** How long the Saved confirmation stays up before the panel closes. */
 export const SAVED_HOLD_MS = 900;
 
-const VOLUMES = [
-  { end: 95, number: 1 },
-  { end: 350, number: 2 },
-  { end: 600, number: 3 },
-  { end: 750, number: 4 },
-  { end: 1060, number: 5 },
-  { end: 1230, number: 6 },
-  { end: 1590, number: 7 },
-  { end: 1840, number: 8 },
-  { end: 2260, number: 9 },
-  { end: 2720, number: 10 },
-  { end: 3000, number: 11 },
-  { end: 3127, number: 12 },
-  { end: MAX_CHAPTER, number: 13 },
-];
 
 const MODEL_DESCRIPTIONS: Record<string, string> = {
   "deepseek-flash": "Fast responses for everyday chapter questions.",
   "deepseek-v4-pro": "More reasoning for hard canon debates and theories.",
 };
 
-function volumeForChapter(chapter: number) {
-  return VOLUMES.find((volume) => chapter <= volume.end)?.number ?? VOLUMES.length;
-}
 
 function titleCase(value: string) {
   return `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
@@ -124,6 +109,7 @@ export function SpellSurfaceSettings({
   boundarySaved = true,
   initial,
   initialSection = "reader",
+  lastChapter = UNKNOWN_EDGE,
   onApiKeyChange,
   onClose,
   onReplayFirstNightmare,
@@ -199,7 +185,7 @@ export function SpellSurfaceSettings({
   }
 
   function setChapter(nextChapter: number) {
-    const chapter = Math.min(MAX_CHAPTER, Math.max(1, nextChapter || 1));
+    const chapter = Math.min(lastChapter, Math.max(1, nextChapter || 1));
     setChapterTouched(true);
     setPreferences((current) => ({
       ...current,
@@ -401,7 +387,7 @@ export function SpellSurfaceSettings({
                     <div>
                       <input
                         id="reader-chapter"
-                        max={MAX_CHAPTER}
+                        max={lastChapter}
                         min={1}
                         onChange={(event) => setChapter(Number(event.target.value))}
                         placeholder="Chapter"

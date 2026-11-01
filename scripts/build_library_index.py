@@ -43,6 +43,16 @@ def main() -> int:
         sparse_model=args.sparse,
     )
     print(f"index built: {summary}")
+    # Plan 031: record how far meaning search reaches, beside the index,
+    # so the prompt can say which chapters it covers (weaver.shelf).
+    import json
+
+    coverage = args.out.parent / "coverage.json"
+    coverage.write_text(
+        json.dumps({"novel_chunks_through": summary["ceiling"]}) + "\n",
+        encoding="utf-8",
+    )
+    print(f"coverage recorded: {coverage}")
     return 0
 
 

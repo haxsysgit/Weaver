@@ -33,7 +33,7 @@ from weaver.model_layer.deepseek import (
     current_sponsored_turn,
 )
 from weaver.model_layer.fake_chat import current_fake_retry
-from weaver.prefs import MAX_CHAPTER
+from weaver.shelf import NO_SHELF_CEILING
 from weaver.sponsored import SponsoredTurn, SponsoredUnavailable
 
 MAX_MESSAGE_CHARS = 32_000
@@ -144,7 +144,8 @@ class TurnBody(BaseModel):
 
 
 class PreferencesBody(BaseModel):
-    reader_chapter: int | None = Field(default=None, ge=1, le=MAX_CHAPTER)
+    # The shelf edge is checked in the handler (it moves); this is a sanity bound.
+    reader_chapter: int | None = Field(default=None, ge=1, le=NO_SHELF_CEILING)
     spoiler_mode: str = Field(default="protect", pattern="^(protect|none)$")
 
 
@@ -556,6 +557,14 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
             "spoiler_mode": prefs.spoiler_mode,
         }
 
+    # Plan 031: the one shelf edge the frontend reads (no hard-coded 3160).
+    @app.get("/api/library", dependencies=[Depends(_check_local_hostname)])
+    async def get_library() -> dict:
+        return {
+            "last_chapter": runtime.shelf.last_chapter(),
+            "search_through": runtime.search_through,
+        }
+
     @app.get("/api/access", dependencies=[Depends(_check_local_hostname)])
     async def get_access(request: Request, response: Response) -> dict:
         return await _access_status(request, response)
@@ -586,12 +595,19 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
             raise HTTPException(status_code=404, detail="preferences store unavailable")
         from weaver.prefs import UserPreferences
 
+        ceiling = runtime.shelf.ceiling()
+        if body.reader_chapter is not None and body.reader_chapter > ceiling:
+            raise HTTPException(
+                status_code=422,
+                detail=f"reader_chapter must be 1..{ceiling} or null",
+            )
         await runtime.prefs.set(
             _device_id(request),
             UserPreferences(
                 reader_chapter=body.reader_chapter,
                 spoiler_mode=body.spoiler_mode,
-            )
+            ),
+            ceiling=ceiling,
         )
         return {
             "reader_chapter": body.reader_chapter,

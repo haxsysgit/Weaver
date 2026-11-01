@@ -38,6 +38,25 @@ describe("Reader Appraisal settings", () => {
     expect(screen.queryByText("Discard unsaved changes?")).not.toBeInTheDocument();
   });
 
+  it("lets the boundary reach the shelf edge and no further", () => {
+    render(
+      <SpellSurfaceSettings
+        initial={LEGACY_PREFERENCES}
+        lastChapter={3232}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+
+    const chapter = screen.getByLabelText("Current chapter");
+    expect(chapter).toHaveAttribute("max", "3232");
+    fireEvent.change(chapter, { target: { value: "3200" } });
+    expect(chapter).toHaveValue(3200);
+    expect(screen.getByText("Volume 13")).toBeInTheDocument();
+    fireEvent.change(chapter, { target: { value: "4000" } });
+    expect(chapter).toHaveValue(3232);
+  });
+
   it("leaves reading depth to Weaver instead of offering a setting", () => {
     render(
       <SpellSurfaceSettings

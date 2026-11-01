@@ -25,11 +25,11 @@ from typing import Literal
 
 import aiosqlite
 
+from weaver.shelf import NO_SHELF_CEILING
+
 SPOILER_MODES = ("protect", "none")
-# Plan v1 (2026-08-17): the reader-position ceiling. Keep in step with
-# the shelf (novels/shadow-slave, currently 3160); the web system prompt
-# derives its own count at runtime so it can never lie again.
-MAX_CHAPTER = 3160
+# The reader-position ceiling is the shelf edge (weaver.shelf), passed in
+# by the caller; Plan 031 removed the hard-coded constant.
 
 SpoilerMode = Literal["protect", "none"]
 
@@ -82,11 +82,20 @@ class PreferencesStore:
             flavor=json.loads(row[2] or "{}"),
         )
 
-    async def set(self, device_id: str, prefs: UserPreferences) -> UserPreferences:
-        """Replace this device's preferences; other devices are untouched."""
+    async def set(
+        self,
+        device_id: str,
+        prefs: UserPreferences,
+        *,
+        ceiling: int = NO_SHELF_CEILING,
+    ) -> UserPreferences:
+        """Replace this device's preferences; other devices are untouched.
+
+        ceiling is the shelf edge (the last chapter a boundary may name).
+        """
         assert self._db is not None
-        if prefs.reader_chapter is not None and not 1 <= prefs.reader_chapter <= MAX_CHAPTER:
-            raise ValueError(f"reader_chapter must be 1..{MAX_CHAPTER} or null")
+        if prefs.reader_chapter is not None and not 1 <= prefs.reader_chapter <= ceiling:
+            raise ValueError(f"reader_chapter must be 1..{ceiling} or null")
         if prefs.spoiler_mode not in SPOILER_MODES:
             raise ValueError(f"spoiler_mode must be one of {SPOILER_MODES}")
         await self._db.execute(
