@@ -3,7 +3,8 @@
 Date: 2026-11-01. Plan 030 is closed: the owner accepted the build and
 v2.0.0 is released offline (merged to `main` and tagged, not deployed). The
 deploy workflow stays disabled and the EC2 box stays stopped; going public is
-Plan 039. Next: the 021-030 checkpoint, then Plan 031 (see the roadmap in
+Plan 039. The 021-030 checkpoint ran on 2026-11-01
+(`docs/checkpoints/021-030.md`). Next: draft Plan 031 (see the roadmap in
 `TODO_future.md`).
 
 ## What Weaver is
@@ -176,12 +177,11 @@ screenshots before claims.
 > `UV_PYTHON_INSTALL_DIR=$USERPROFILE/.uv/python`). Weaver is a Shadow Slave
 > reading companion. Plan 030 is closed and v2.0.0 is released offline. Read
 > `HANDOFF.md`, `TODO_future.md` (roadmap 031 to 040), and the Plan 030
-> deliverables first. Next: run the standing 021-030 checkpoint (review the
-> last ten plans, refresh methods from the web, codify changes, prove on one
-> real slice), then draft Plan 031 with the `arinze-plans` skill and wait for
-> the owner's admission. Constraints: every commit starts with `Plan NNN: `;
+> deliverables first, and `docs/checkpoints/021-030.md` for the methods
+> codified at the last checkpoint. Next: draft Plan 031 with the
+> `arinze-plans` skill and wait for the owner's admission. Constraints: every commit starts with `Plan NNN: `;
 > no Claude attribution in commits or PRs; no deploy, push, or tag without
 > the owner; no secrets or private chapters in commits; one server at a time
 > because of the Qdrant lock. UI changes need real desktop and mobile
 > screenshots (`.weaver/tools/shoot.mjs`). Floors: 167 frontend tests + tsc +
-> build; 777 backend tests.
+> build; 779 backend tests.

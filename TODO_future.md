@@ -75,9 +75,8 @@ Open questions for the owner when this plan is admitted:
 Plan 030 closed 2026-11-01 with v2.0.0 released offline. The next owner-
 accepted public release is v3.0.0 at Plan 040.
 
-0. **Checkpoint 021-030**, before Plan 031 is drafted: review the last ten
-   plans, refresh method knowledge from the web, codify what changed in the
-   process docs, prove it on one real slice. Standing ritual, no number.
+0. **Checkpoint 021-030**: done 2026-11-01, recorded in
+   `docs/checkpoints/021-030.md`. Standing ritual, no number.
 1. **031 A library that keeps up** (owner priority): fetch from 3161 to the
    novel's latest chapter (about 3230), scheduled checks for new chapters,
    validation, failure alerts. Only raw chapters are needed: Weaver opens
@@ -205,8 +204,8 @@ accepted public release is v3.0.0 at Plan 040.
 - Plan 030 admitted 2026-10-17: final DeepSeek qualification through the
   finished system, measured sponsored allowance, release candidate,
   Foundational Reader Trials, Cloudflare launch, and public v2.0.0 release.
-- Plan 030 closed 2026-11-01 (v2.0.0 released offline). Run the standing
-  021-030 checkpoint before drafting or admitting Plan 031.
+- Plan 030 closed 2026-11-01 (v2.0.0 released offline). The 021-030
+  checkpoint ran the same day; Plan 031 is next to draft.
 - Privacy-light analytics (umami-style) if the public launch is real enough
   to need it.
 

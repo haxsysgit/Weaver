@@ -598,7 +598,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
             "spoiler_mode": body.spoiler_mode,
         }
 
-    @app.get("/api/conversations")
+    @app.get("/api/conversations", dependencies=[Depends(_check_local_hostname)])
     async def list_conversations(request: Request) -> list[dict]:
         device = _device_id(request)
         return await runtime.session.list_conversations(device_id=device)
@@ -680,7 +680,10 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
             raise HTTPException(status_code=404, detail="unknown conversation")
         return {"deleted": conversation_id}
 
-    @app.get("/api/conversations/{conversation_id}/messages")
+    @app.get(
+        "/api/conversations/{conversation_id}/messages",
+        dependencies=[Depends(_check_local_hostname)],
+    )
     async def get_messages(conversation_id: str, request: Request) -> list[dict]:
         await _own_conversation(conversation_id, request)
         # Dead attempts (interrupted or retried runs) never render: a retry
