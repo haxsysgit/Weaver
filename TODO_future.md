@@ -70,6 +70,50 @@ Open questions for the owner when this plan is admitted:
   Spellweave during initial load, and Plan 030 qualifies, rolls out, and
   launches v2.0.0.
 
+## Roadmap 031 to 040 (owner-set 2026-10-31)
+
+Plan 030 closed 2026-11-01 with v2.0.0 released offline. The next owner-
+accepted public release is v3.0.0 at Plan 040.
+
+0. **Checkpoint 021-030**, before Plan 031 is drafted: review the last ten
+   plans, refresh method knowledge from the web, codify what changed in the
+   process docs, prove it on one real slice. Standing ritual, no number.
+1. **031 A library that keeps up** (owner priority): fetch from 3161 to the
+   novel's latest chapter (about 3230), scheduled checks for new chapters,
+   validation, failure alerts. Only raw chapters are needed: Weaver opens
+   chapters far more than it searches (1,378 chapter reads to 414 vector
+   searches across 554 turns, measured 2026-10-31).
+2. **032 The retrieval verdict**: the same questions answered four ways
+   (normal, no vector search, no notebook, chapters and exact search only),
+   judged on accuracy and citations. Decide what the pipeline keeps. Absorbs
+   the three Foundational Reader Trials as a retrieval regression.
+3. **033 The knowledge pipeline**: chain what survives 032 into the updater
+   (notebook pages, incremental embeddings, reload); retire what does not.
+4. **034 Weaver's mind**: the reader card in every turn (chapter, spoiler
+   mode, library edge, what Weaver can and cannot see), a lookup tool, an arc
+   map with chapter ranges built from the chapters, and the system prompt
+   restructured for the 1M window.
+5. **035 Weaver's voice and memory**: the lorekeeper voice with life and
+   imagery but no essay shape (sample answers to the owner first); per-device
+   opinions in defined categories, recorded by a narrow tool and fed back
+   every turn; the storyteller voice per fanfic thread; re-run the affected
+   trials.
+6. **036 The Spell in 3D**: read how the novel shows the Spell first; Blender
+   (connected), React Three Fiber, drei, postprocessing, Theatre.js, glTF with
+   meshopt and KTX2; a performance budget before any art.
+7. **037 The Soul Sea and the themes**: Soul Sea redesign and themes from the
+   novel's own places, on 036's engine.
+8. **038 Echoes and small delights** (optional, may slip past v3): an Echo
+   companion (Rive or a small model), Memories as saved answers, spoiler fog,
+   "I just read chapter N".
+9. **039 Weaver's home on the web**: a domain on Cloudflare (not `.ss`; `.ai`
+   is about $80 a year; check `.app` and `.ink`), Cloudflare Tunnel, host
+   decision before the AWS free plan ends about 2027-02-14, staging, backups,
+   monitoring, secrets, and the first public deploy since v1.2.1.
+10. **040 Weaver v3.0.0**: all twelve trials on the final build, performance
+    audit, owner acceptance, tag, deploy.
+11. **Checkpoint 031-040**, before Plan 041: the same ritual as above.
+
 ## Standing series (no plan number, runs across plans)
 
 - Architecture teaching sessions: go over the whole app piece by piece, layer
@@ -161,8 +205,8 @@ Open questions for the owner when this plan is admitted:
 - Plan 030 admitted 2026-10-17: final DeepSeek qualification through the
   finished system, measured sponsored allowance, release candidate,
   Foundational Reader Trials, Cloudflare launch, and public v2.0.0 release.
-- After Plan 030 closes, run the standing 021-030 checkpoint before drafting or
-  admitting Plan 031.
+- Plan 030 closed 2026-11-01 (v2.0.0 released offline). Run the standing
+  021-030 checkpoint before drafting or admitting Plan 031.
 - Privacy-light analytics (umami-style) if the public launch is real enough
   to need it.
 

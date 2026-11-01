@@ -184,3 +184,20 @@ redesign and Plan 030 amendment-or-successor decision are pending.
 6. Accept or reject each Foundational Reader Trial in a fresh session.
 7. Authorize public v2.0.0 release and the launch merge.
 8. Record the final launch accept, reject, or scope-cut decision.
+
+## Owner decisions at close (2026-10-31 to 2026-11-01)
+
+- Release v2.0.0 to `main` and tag it, offline. The retired EC2 and Funnel
+  path stays retired; deployment, Cloudflare, and a domain move to Plan 039.
+- The next release is v3.0.0 at Plan 040.
+- Plans 031 to 040 follow the roadmap in `TODO_future.md`, with the ten-plan
+  checkpoint before Plan 031 and again before Plan 041.
+- Weaver's own opinions are per device (each reader has their own Weaver),
+  with categories defined in the prompt; the base persona is shared.
+- The voice moves toward a lorekeeper with life in the storytelling, without
+  the essay shape rejected at CP4.5.
+- The reader card (settings in every turn) and a lookup tool both land in
+  Plan 034.
+- The shared allowance's global daily ceiling is $10; the deepseek-flash
+  price table was re-checked and is valid to 2026-11-29.
+

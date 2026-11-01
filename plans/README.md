@@ -39,8 +39,17 @@ evidence, review, and human decision gates must also be complete.
 | [027.5 - v1.2.1 mobile thread hotfix](027.5-v1-2-1-mobile-thread-hotfix.md) | Closed 2026-09-08 | Plan 027 closed and Weaver 1.2.0 released | Repaired startup ordering, New Weave, mobile thread recall, installed-app behavior, and conversation-first Spellweave loading |
 | [028 - Sponsored DeepSeek access](028-sponsored-deepseek-access.md) | Closed 2026-10-02, accepted | Plan 027.5 closed; Plans 003, 005, and 015 foundations | Owner-funded daily allowance, preserved DeepSeek BYOK, atomic cost limits, anonymous access, and privacy controls |
 | [029 - Weaver intelligence and conversation](029-weaver-intelligence-and-conversation.md) | Closed 2026-10-17; owner accepted | Plan 028 closed and owner-accepted | Fiction retrieval, direct rereading, context and evidence, conversation continuity, answer planning, voice, and bounded inspection |
-| [030 - Weaver v2.0.0 qualification and rollout](030-weaver-v2-qualification-and-rollout.md) | Admitted 2026-10-17; checkpoint cadence pending | Plans 028 and 029 closed and owner-accepted; Plan 029.5 not admitted | DeepSeek qualification, sponsored preflight, release candidate, Foundational Reader Trials, gated deployment, and public v2.0.0 launch |
-| Later - Durable reader memory | Not yet drafted | Plan 030 closed | Reader opinions, favorites, theories, and unresolved disagreements kept separately from canon |
+| [030 - Weaver v2.0.0 qualification and rollout](030-weaver-v2-qualification-and-rollout.md) | Closed 2026-11-01; accepted, v2.0.0 released offline | Plans 028 and 029 closed and owner-accepted | DeepSeek qualification, the twelve Reader Experience Trials, settings slices, and the v2.0.0 release; deployment moved to Plan 039 |
+| 031 - A library that keeps up | Not yet drafted | Plan 030 closed; 021-030 checkpoint done | Fetch to the novel's latest chapter, scheduled checks, validation, alerts |
+| 032 - The retrieval verdict | Not yet drafted | Plan 031 closed | Measure vector search, notebook, and plain reading against each other; decide the pipeline; retrieval regression |
+| 033 - The knowledge pipeline | Not yet drafted | Plan 032 closed | Chain what survives 032 into the updater: notebook pages, incremental embeddings, reload |
+| 034 - Weaver's mind | Not yet drafted | Plan 033 closed | Reader card every turn, lookup tool, arc map, prompt restructure for the 1M window |
+| 035 - Weaver's voice and memory | Not yet drafted | Plan 034 closed | Lorekeeper voice, per-device opinions with defined categories, fanfic voice per thread |
+| 036 - The Spell in 3D | Not yet drafted | Plan 035 closed | Source-read Spell visuals, 3D toolchain, performance budget |
+| 037 - The Soul Sea and the themes | Not yet drafted | Plan 036 closed | Soul Sea redesign and novel-grounded themes on 036's engine |
+| 038 - Echoes and small delights | Not yet drafted | Plan 037 closed; optional | Echo companion, Memories, spoiler fog, "I just read chapter N" |
+| 039 - Weaver's home on the web | Not yet drafted | Plan 038 closed or skipped | Domain, Cloudflare Tunnel, EC2 or new host, staging, backups, monitoring |
+| 040 - Weaver v3.0.0 qualification and release | Not yet drafted | Plan 039 closed | All twelve trials on the final build, performance audit, owner acceptance, public v3.0.0 |
 
 ## Execution order
 
@@ -84,7 +93,8 @@ Plans 001-010 are complete (007.5 applied). The next sequence is:
    system, tune the sponsored allowance from measured cost, prove the release
    candidate and rollback, run the Foundational Reader Trials, and publish
    Weaver v2.0.0 only after the owner launch gate.
-16. **Later**: durable reader memory after Plan 030.
+16. **031 to 040** (owner-set 2026-10-31): see the roadmap in
+   `TODO_future.md`. Durable memory lands in Plan 035 as per-device opinions.
 
 Historical references to Plans 028 and 029 inside Plans 023-027 refer to the
 old Thread Archive and integration drafts that Plan 027 absorbed. They do not

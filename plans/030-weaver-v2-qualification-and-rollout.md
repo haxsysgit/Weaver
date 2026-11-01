@@ -14,7 +14,13 @@
   tooling selected in CP7, rollback proof, Chrome DevTools browser probes, and
   the 2026-10-17 read-only draft audit in
   [`draft-audit.md`](../deliverables/030-weaver-v2-qualification-and-rollout/draft-audit.md).
-- **State:** drafted 2026-08-24, rewritten 2026-09-23 for the DeepSeek-only
+- **Closed 2026-11-01: owner accepted, released v2.0.0 offline.** All twelve
+  Reader Experience Trials passed the evaluator on the candidate; the owner
+  accepted the build and chose an offline release (tagged on `main`, not
+  deployed). Deployment and the Cloudflare launch move to Plan 039, library
+  coverage to Plan 031, the retrieval regression to Plan 032. See
+  `deliverables/030-weaver-v2-qualification-and-rollout/decision.md`.
+- **History:** drafted 2026-08-24, rewritten 2026-09-23 for the DeepSeek-only
   sponsored direction, amended 2026-10-17 after Plans 028 and 029 closed.
   **Admitted 2026-10-17.** Plan 029.5 is not admitted and does not block.
   **Checkpoint cadence: 7 (owner decision 2026-10-17).** The EC2 and Tailscale

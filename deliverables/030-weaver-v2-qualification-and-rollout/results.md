@@ -797,6 +797,74 @@ Fixes (757 backend tests pass, not yet live-tested):
    turn, never shown to the reader", and the instruction forbids mentioning
    it ("small fix", "as I said", "earlier I told you").
 
+### v2.0.0 candidate: all twelve trials (2026-10-31)
+
+Owner-approved full run before closing Plan 030. Build `5fa74b5`. Each trial
+is a fresh device and thread through the real web app in-process; reading
+position 3160 protect (300 for the first-timer); `buddy` voice, and
+`storyteller` with a fanfic thread for Trial 11; Trial 12 is the owner's
+pick, Sunny against the Flesh of Kanakht. 61 reader turns, 318 model calls,
+metered spend `$0.5135`. Private transcripts:
+`.weaver/evaluation/plan030/experience/transcripts/v2-candidate/`.
+
+Accuracy check: all 33 direct quotes of six or more words in the eleven
+canon trials are verbatim in the chapter files; spot checks of paraphrased
+details in Trials 5, 9, and 10 match their cited chapters.
+
+Evaluator verdicts (evidence, not the owner's acceptance):
+
+| Trial | Verdict | Notes |
+|---|---|---|
+| 1 vibe | pass | Buddy, no lore dump, asks back. |
+| 2 hot take | pass | Argues against "we all agree", cites, stays fun. |
+| 3 half-memory | pass, one retry | Corrects the order kindly (fight, whisper, death, tomb from the corpse) and paints the scene. Turn 0 failed once (answer checks) and passed on the reader's retry. |
+| 4 first-timer | pass | Refuses the survival probes without a hint, still useful inside ch. 300. |
+| 5 theory | pass, one retry | Engages, labels, commits to "80/20 no". Turn 4 needed one retry. |
+| 6 vague ask | pass | A real overlooked detail, then follows the thread. One broken sentence where a stripped citation left "is." behind. |
+| 7 emotional | pass | Matches the energy, adds insight, a strong closing line. |
+| 8 low effort | pass | Verdict first, short "why" and "huh", real tldr. One malformed citation "(, 593)". Capitalisation drifts between turns. |
+| 9 long thread | **fail** | The peak ranking put Sunny 8th and Mordret 10th, against ch. 3147, which Weaver itself quoted later. It refused to defend its own ranking ("not holding those chapters this turn"), accepted a claim it never made, and changed its list on "no changes". "defend it" routed as quick recall with a 4-lookup limit. Turn 4 needed one retry. |
+| 10 adversarial | pass | Composed, real receipts (chs. 1, 15, 61, 86), answers "predicting words" head on. |
+| 11 fanfic spark | **fail** | Turn 0 (3.9k characters of prose) and the canon-fit turn passed; the three follow-ups ("make it darker", "keep sunny in character", "more show") failed twice. The new exact-text check read invented dialogue as unverified quotes because a follow-up's wording did not mark it as prose. Fixed in the working tree: in a fanfic thread, continuation and missing-scene skills are always prose (769 backend tests). Harness note: the second server instance could not open the search index, a harness artifact; the next run uses its own process. |
+| 12 confusing fight | pass, both axes | Reconstructs the hold-not-kill fight, answers who won, builds the arena with scale and vertical axis, separates canon from framing. |
+
+Ten of twelve pass the evaluator. The gate needs all twelve.
+
+### v2.0.0 candidate: Trials 9 and 11 re-run (2026-11-01)
+
+Owner-approved re-run on `5fa74b5` plus the uncommitted fixes (777 backend
+tests): fanfic continuations are always prose; challenges to Weaver's own
+list or verdict ("defend it", "you put X third?", "you said...") keep the
+earlier read at its depth; "no changes" and "final answer" carry it; a new
+`<your_own_words>` prompt section (check before owning a claim, repeat a
+list exactly, defend or move with evidence, re-open chapters rather than
+drop a list); the ranking skill ranks from passages that compare the
+candidates directly; and a stripped citation no longer leaves "is." or
+"(, 593)" behind. Each trial ran in its own process. Metered spend
+`$0.2071` (long thread `$0.1159`, fanfic `$0.0912`). Private transcripts:
+`.weaver/evaluation/plan030/experience/transcripts/v2-rerun-*/`.
+
+- **9 long thread: pass, with two continuity slips.** 9 of 9 completed, no
+  retries. It ranks by passages that compare the Supremes (Asterion,
+  Mordret, Eurys, Nephis, Sunny; chs. 2804, 2831, 2857), defends Changing
+  Star over Lost from Light from ch. 3096, refuses both claims the reader
+  falsely attributes to it, and its "no changes" top three matches its first
+  list exactly. All 6 long quotes are verbatim. Slips: it gave five slots
+  instead of ten ("not filling slots 5 through 10 from vibes"); in turn 2 it
+  said the only thing it had ranked was Nephis over Sunny, forgetting its own
+  list; and it said Cassie had not come up when it had mentioned her once.
+  Memory across a thread is Plan 034/035 work.
+- **11 fanfic spark: pass, both axes.** 5 of 5 completed, no retries. Every
+  scene is labelled invention and anchored in the gap ch. 29 leaves;
+  "keep sunny in character" restores his distance and arithmetic; "more
+  show" is real prose; the canon-fit answer explains why the slot works.
+  Notes: Sunny's shadow speaks a line, which it never does in canon, and the
+  fit answer reprints part of the scene.
+
+With these, all twelve trials pass the evaluator on the v2.0.0 candidate:
+ten from the full run and these two on the fixed build. Owner acceptance is
+the only acceptance.
+
 ## v2.0.0 rollout
 
 Pending tag, exact artifact, deployment, public health, safe launch metrics,

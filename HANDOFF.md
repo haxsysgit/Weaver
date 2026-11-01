@@ -1,7 +1,10 @@
 # Weaver handoff
 
-Date: 2026-10-29. Branch: `plan-030`. The approved settings slices 1 to 6
-are done (see "Approved next steps"); nothing is pushed.
+Date: 2026-11-01. Plan 030 is closed: the owner accepted the build and
+v2.0.0 is released offline (merged to `main` and tagged, not deployed). The
+deploy workflow stays disabled and the EC2 box stays stopped; going public is
+Plan 039. Next: the 021-030 checkpoint, then Plan 031 (see the roadmap in
+`TODO_future.md`).
 
 ## What Weaver is
 
@@ -29,8 +32,8 @@ PWA. DeepSeek only. Do not push `main`, deploy, or tag without the owner.
 ```bash
 uv run weaver web --port 8016 --fake            # UI
 npm --prefix src/weaver/web/frontend run build  # rebuild served bundle
-npx vitest run                                  # 164 frontend tests (repo root)
-uv run pytest tests/test_web.py -q              # 75 web tests
+npx vitest run                                  # 167 frontend tests (repo root)
+uv run pytest tests/test_web.py -q              # 80 web tests
 ```
 
 Screenshot harness: `.weaver/tools/shoot.mjs` (Chrome CDP, no deps).
@@ -131,8 +134,13 @@ will want screenshots and tests per slice.
   deleted `ChatApp`, `ConversationRail`, and `SettingsModal` (`conversation-*`,
   `soul-sphere*`, `settings-button*`, and more). Prune them selector by
   selector with screenshots; `Composer` still uses some `app.css` classes.
-- **Slice 3 is not verified live.** Follow-up routing and step-up need paid
-  runs of Reader Trials 8, 10, and 12 before claiming better answers.
+- **Live checks.** All twelve Reader Trials passed the evaluator on the
+  v2.0.0 candidate (2026-10-31 and 2026-11-01, about $0.72). Harness:
+  `.weaver/evaluation/plan030/run_v2_trials.py`; run one trial per process
+  (`--only name`), with the server stopped (index lock).
+- **Local owner key switch.** `WEAVER_LOCAL_OWNER_KEY=1` in `.env` lets
+  chats on this machine use `DEEPSEEK_KEY` with no allowance. Off by default;
+  never set it on a shared or tunnelled server.
 - **Windows dev setup.** Every `uv` command needs
   `UV_PYTHON_INSTALL_DIR=$USERPROFILE/.uv/python` (MSIX `%APPDATA%`).
 - Live spend is about $5 of a $20 cap, not reconciled to the cent.
@@ -164,15 +172,16 @@ screenshots before claims.
 
 ## Handoff prompt for the next agent
 
-> Work in `/home/hax/weaver`, branch `plan-030`. Weaver is a Shadow Slave
-> reading companion. Read `HANDOFF.md`, `plans/030-...md`, and
-> `deliverables/030-.../settings-audit.md` first. The approved settings
-> slices 1 to 6 are done. Open items, none started: prune the dead legacy CSS,
-> verify slice 3 live with Reader Trials 8, 10, and 12 (paid; needs the
-> owner's OK), and close the chapter coverage launch blocker. Constraints: every
-> commit starts with `Plan 030: `; no deploy/push/tag without the owner; no
-> secrets or private chapters in commits; one server at a time because of the
-> Qdrant lock. For every UI change, run the fake server on port 8016, rebuild
-> the frontend, and take desktop + mobile screenshots with
-> `.weaver/tools/shoot.mjs` before reporting. The frontend floor is 164
-> tests + tsc + production build; backend floor is 729 tests.
+> Work in the Weaver repo on Windows (every `uv` command needs
+> `UV_PYTHON_INSTALL_DIR=$USERPROFILE/.uv/python`). Weaver is a Shadow Slave
+> reading companion. Plan 030 is closed and v2.0.0 is released offline. Read
+> `HANDOFF.md`, `TODO_future.md` (roadmap 031 to 040), and the Plan 030
+> deliverables first. Next: run the standing 021-030 checkpoint (review the
+> last ten plans, refresh methods from the web, codify changes, prove on one
+> real slice), then draft Plan 031 with the `arinze-plans` skill and wait for
+> the owner's admission. Constraints: every commit starts with `Plan NNN: `;
+> no Claude attribution in commits or PRs; no deploy, push, or tag without
+> the owner; no secrets or private chapters in commits; one server at a time
+> because of the Qdrant lock. UI changes need real desktop and mobile
+> screenshots (`.weaver/tools/shoot.mjs`). Floors: 167 frontend tests + tsc +
+> build; 777 backend tests.
