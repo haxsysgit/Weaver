@@ -12,7 +12,8 @@
 - **Tooling:** repo commands via `uv` (pytest, ruff), `npx vitest`, the
   root production build. Every `uv` command on this Windows checkout needs
   `UV_PYTHON_INSTALL_DIR=$USERPROFILE/.uv/python`.
-- **State:** admitted 2026-11-01 (owner: "Admit as drafted").
+- **State:** closed 2026-11-03, accepted (owner: "Accept Plan 032").
+  Admitted 2026-11-01 (owner: "Admit as drafted").
 - **Depends on:** Plan 031 closed (2026-11-01, accepted): the shelf reaches
   3232, so the question set can include the newest chapters.
 - **Priority:** P1 (second plan of the owner's 031-040 roadmap; Plan 033
@@ -198,5 +199,6 @@ Confirmed by the owner at admission (2026-11-01, "Admit as drafted"):
    statements, story map) with its evidence; an independent review; the
    measured budget in `results.md`; the owner's decision in
    `decision.md`; HANDOFF and TODO_future updated, with Plan 033 rescoped
-   to the verdict. Done except the owner's spot-check and decision:
-   recommendation, review, and measured budget recorded.
+   to the verdict. Done: recommendation, review, and measured budget
+   recorded; the owner chose "Retire nothing, test first" and accepted
+   the plan (2026-11-03).

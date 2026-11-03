@@ -2,8 +2,9 @@
 
 ## Status
 
-**Direction decided 2026-11-03. Spot-check done 2026-11-03: the owner
-agreed with all 10 verdicts. Plan acceptance pending.**
+**Closed 2026-11-03. Accepted.** The owner accepted Plan 032 ("Accept
+Plan 032") after the spot-check, in which the owner agreed with all 10
+verdicts.
 
 ## Decision
 
@@ -36,6 +37,4 @@ owner's spot-check); close the library's search index in
 
 ## Not part of this decision
 
-- Plan 032's acceptance and close, which wait on the owner's explicit
-  "Accept Plan 032".
 - No merge to `main`, tag, or deploy.

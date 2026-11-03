@@ -7,11 +7,12 @@ Plan 039. The 021-030 checkpoint ran on 2026-11-01
 (`docs/checkpoints/021-030.md`). Plan 031 (A library that keeps up) ran all
 seven slices the same day and the owner accepted it (closed 2026-11-01, not
 merged to `main`). Plan 032 (the retrieval verdict) was admitted the same
-day and ran all seven slices by 2026-11-03: 372 official answers in
+day, ran all seven slices, and the owner accepted it (closed 2026-11-03): 372 official answers in
 four arms, judged blind, $2.55 (arm C re-ran after the review found its
 searches had all failed). The recommendation and tables are in
-`deliverables/032-the-retrieval-verdict/results.md`; the owner's
-spot-check of 10 answers and decision are pending. The shelf now ends at
+`deliverables/032-the-retrieval-verdict/results.md`. The owner chose
+"Retire nothing, test first": Plan 033 fixes no-answer turns, then runs a
+held-out paraphrase test before extending vector search. The shelf now ends at
 3232, the source moved to `novelphoenix.com`, and a weekly Task Scheduler
 check (Saturday 10:00) appends new chapters. See
 `plans/031-a-library-that-keeps-up.md`.
@@ -207,9 +208,9 @@ screenshots before claims.
 > `HANDOFF.md`, `TODO_future.md` (roadmap 031 to 040), and the Plan 030
 > deliverables first, and `docs/checkpoints/021-030.md` for the methods
 > codified at the last checkpoint. Plan 031 is closed (accepted 2026-11-01).
-> Plan 032 (the retrieval verdict) has run all seven slices and waits on
-> the owner's spot-check and decision; then close it with the
-> `arinze-plans` skill. Constraints: every commit starts with `Plan NNN: `;
+> Plan 032 is closed (accepted 2026-11-03; direction in its
+> `decision.md`). Plan 033 is next: draft it with the `arinze-plans`
+> skill. Constraints: every commit starts with `Plan NNN: `;
 > no Claude attribution in commits or PRs; no deploy, push, or tag without
 > the owner; no secrets or private chapters in commits; one server at a time
 > because of the Qdrant lock. UI changes need real desktop and mobile
