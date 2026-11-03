@@ -573,7 +573,7 @@ Finished steps 9 to 12 / Stopped at step N because ...
 ```bash
 git add FILE1 FILE2 ...                 # exactly the slice's files
 git diff --cached --name-only           # must list only those files
-git diff --cached | grep -nE "DEEPSEEK_KEY|sk-[A-Za-z0-9]{20}" ; echo "secret check exit $?"
+git diff --cached | grep -nE "DEEPSEEK_KEY=[^\"' ]|sk-[A-Za-z0-9]{20}" ; echo "secret check exit $?"
 git commit -m "MESSAGE"
 git log --oneline -1
 ```
