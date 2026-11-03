@@ -109,6 +109,12 @@ netstat -ano | grep ":8016 " | grep LISTENING
 
 ## 3. Slice 2: small fixes (patch 1)
 
+> **Done (ecdd403).** The executor's floor caught one frontend test the
+> pre-test missed (`SpellSurfaceSettings.test.tsx` expected "Volume 13"
+> for chapter 3200) and stopped, as it should. The planning agent changed
+> that expectation to "Volume 14" (the intended change), re-ran vitest
+> (185 passed) and tsc, and committed the slice. Resume at step 4.
+
 ```bash
 uv run python deliverables/033-every-turn-answers/patches/p1_small_fixes.py
 ```
