@@ -209,8 +209,10 @@ screenshots before claims.
 > deliverables first, and `docs/checkpoints/021-030.md` for the methods
 > codified at the last checkpoint. Plan 031 is closed (accepted 2026-11-01).
 > Plan 032 is closed (accepted 2026-11-03; direction in its
-> `decision.md`). Plan 033 is next: draft it with the `arinze-plans`
-> skill. Constraints: every commit starts with `Plan NNN: `;
+> `decision.md`). Plan 033 is drafted (`plans/033-every-turn-answers.md`)
+> and waits on the owner's admission; `deepseek-flash` runs its scripted
+> slices from `deliverables/033-every-turn-answers/runbook.md`, and the
+> planning agent does the questions and review. Constraints: every commit starts with `Plan NNN: `;
 > no Claude attribution in commits or PRs; no deploy, push, or tag without
 > the owner; no secrets or private chapters in commits; one server at a time
 > because of the Qdrant lock. UI changes need real desktop and mobile

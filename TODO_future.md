@@ -93,15 +93,20 @@ accepted public release is v3.0.0 at Plan 040.
    the evaluator recommends retiring nothing until a held-out paraphrase
    test runs. The owner chose the recommendation (2026-11-03);
    spot-check done (10 of 10 agreed); accepted.
-3. **033 The knowledge pipeline**: chain what survives 032 into the updater
-   (notebook pages, incremental embeddings, reload); retire what does not.
-   Rescoped by the 032 decision (owner, 2026-11-03): first fix
-   turns that end with no answer (35 of 372 in 032) and answers that
-   present another scene when a lookup misses; then a held-out
-   paraphrase test (about 15 new questions, arms A and D, about $0.50)
-   before re-embedding past 3127 or indexing statements past 1000;
-   close the library's index in `ChatRuntime.close()`; fix the volume
-   table (volume 13 is 3128 to 3160).
+3. **033 Every turn answers, then the vector test** (drafted 2026-11-03,
+   `plans/033-every-turn-answers.md`; scoped by the 032 decision): name
+   the check behind every silent turn (35 of 372 in 032 gave the reader
+   nothing), an honest gap answer instead of nothing, no substituted
+   scenes when a lookup misses, close the search index on runtime close,
+   volume 13 ends at 3160; then 15 held-out "find the scene" questions in
+   arms A and D (about $0.50) decide extend or retire vector search.
+   Executed by `deepseek-flash` from a scripted runbook, with Opus for the
+   questions and review.
+   - **033.5 The knowledge pipeline**: extend vector search into the
+     weekly refresh (re-embed past 3127, statements past 1000), or retire
+     it, per the 033 verdict.
+   - The 033 prompt rule touches every answer: re-run the twelve Reader
+     Experience Trials before the next release (Plan 039 at the latest).
    Measured at Plan 031: semantic search reaches 3127, index notebook
    statements 1000, notebook files 3160, shelf 3232.
 4. **034 Weaver's mind**: the reader card in every turn (chapter, spoiler
