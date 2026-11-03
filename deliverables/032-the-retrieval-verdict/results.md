@@ -73,6 +73,14 @@ private in `.weaver/evaluation/plan032/`.
   the same in other words), but it is not the novel's wording. No arm
   invented a scene or misplaced a quote to the wrong chapter.
 
+- **Owner spot-check (2026-11-03):** 10 official answers picked at
+  random (seed 32032) from all four judges' batches. The owner agreed
+  with all 10 verdicts. On one (judged wrong), the owner noted the answer
+  looked like it could not locate the scene. That is the cause: it
+  missed the right chapter and presented a different, later scene as the
+  answer, with a hedge. It commits to an answer, so the rubric keeps it
+  wrong; either label counts as not correct.
+
 ## Accuracy (correct answers)
 
 `pass^3`: a contested question counts only if all three runs were
@@ -221,6 +229,10 @@ which one Plan 033 follows.
 ## Findings recorded, not fixed (rule: no tuning mid-run)
 
 - No answer after lookups or a guard rejection (above). Plan 033.
+- When a lookup misses, some answers present a different scene they
+  could find as the answer, with only a soft hedge (seen in several
+  arms on one reveal question, and in the owner's spot-check). Better to
+  say the scene was not found. Plan 033, with the no-answer fix.
 - `ChatRuntime.close()` leaves the library's search index open; a second
   runtime in the same process then fails every search. The harness
   works around it (`release_library`); the product should close it.

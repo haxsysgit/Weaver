@@ -189,8 +189,8 @@ Confirmed by the owner at admission (2026-11-01, "Admit as drafted"):
    all four arms, not only the arms that disagreed (a recorded departure).
 6. **Blind judging.** Shuffle, judge accuracy and citations against the
    source, join the arms back, build the tables, and apply the decision
-   rule from item 9. The owner spot-checks 10 answers. Done except the
-   owner spot-check: 372 official verdicts, tables in `results.md`. The
+   rule from item 9. The owner spot-checks 10 answers. Done: the owner
+   agreed with all 10 verdicts (2026-11-03). 372 official verdicts, tables in `results.md`. The
    last 68 were judged by `deepseek-flash` from a written runbook, behind
    a decoy gate (20 of 22) and an evaluator audit. The 10 picks are in
    `.weaver/evaluation/plan032/spot_check.md` (private).

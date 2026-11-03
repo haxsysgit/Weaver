@@ -92,7 +92,7 @@ accepted public release is v3.0.0 at Plan 040.
    on the primary metric, so the literal rule retires all three parts;
    the evaluator recommends retiring nothing until a held-out paraphrase
    test runs. The owner chose the recommendation (2026-11-03);
-   acceptance waits on the spot-check.
+   spot-check done (10 of 10 agreed); acceptance pending.
 3. **033 The knowledge pipeline**: chain what survives 032 into the updater
    (notebook pages, incremental embeddings, reload); retire what does not.
    Rescoped by the 032 decision (owner, 2026-11-03): first fix

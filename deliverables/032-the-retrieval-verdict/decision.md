@@ -2,8 +2,8 @@
 
 ## Status
 
-**Direction decided 2026-11-03. Plan acceptance pending** (the owner's
-spot-check of 10 answers is still open).
+**Direction decided 2026-11-03. Spot-check done 2026-11-03: the owner
+agreed with all 10 verdicts. Plan acceptance pending.**
 
 ## Decision
 
@@ -28,13 +28,14 @@ both ways (vector search doubles the paraphrase score on reused
 questions, the notebook halves wrong answers), and retiring a part on a
 measurement miss would mean rebuilding it later (`results.md`).
 
-Also carried into Plan 033 with it: close the library's search index in
+Also carried into Plan 033 with it: when a lookup misses, say the scene
+was not found instead of presenting another scene (raised by the
+owner's spot-check); close the library's search index in
 `ChatRuntime.close()`, and fix the volume table (volume 13 is 3128 to
 3160).
 
 ## Not part of this decision
 
-- Plan 032's acceptance and close, which wait on the owner's spot-check
-  (`.weaver/evaluation/plan032/spot_check.md`, private) or the owner
-  waiving it.
+- Plan 032's acceptance and close, which wait on the owner's explicit
+  "Accept Plan 032".
 - No merge to `main`, tag, or deploy.
