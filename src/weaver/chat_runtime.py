@@ -524,6 +524,14 @@ class ChatRuntime:
         if self.prefs is not None:
             await self.prefs.close()
         await self.session.close()
+        # Plan 033: release the embedded search index. It allows one client
+        # per process, and Plan 032 found a second runtime failing every
+        # search while the first still held it.
+        library = self.library
+        client = getattr(library, "client", None)
+        if client is not None:
+            client.close()
+            library.client = None
 
 
 async def open_chat_runtime(

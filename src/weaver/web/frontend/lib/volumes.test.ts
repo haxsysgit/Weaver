@@ -10,13 +10,15 @@ describe("volumeForChapter", () => {
     [3000, 11],
     [3127, 12],
     [3128, 13],
-    [3232, 13],
+    [3160, 13],
+    [3161, 14],
+    [3232, 14],
   ])("puts chapter %i in volume %i", (chapter, volume) => {
     expect(volumeForChapter(chapter)).toBe(volume);
   });
 
   it("keeps the current volume open past the shelf edge", () => {
     // The shelf edge is not a volume end (Plan 031).
-    expect(volumeForChapter(9000)).toBe(13);
+    expect(volumeForChapter(9000)).toBe(14);
   });
 });

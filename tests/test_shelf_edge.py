@@ -68,8 +68,10 @@ def test_search_coverage_reads_the_recorded_index_reach(tmp_path) -> None:
 def test_the_last_volume_is_open_ended() -> None:
     assert volume_of(3127) == 12
     assert volume_of(3128) == 13
-    assert volume_of(3232) == 13
-    assert volume_of(9000) == 13
+    assert volume_of(3160) == 13
+    assert volume_of(3161) == 14
+    assert volume_of(3232) == 14
+    assert volume_of(9000) == 14
 
 
 @pytest.fixture

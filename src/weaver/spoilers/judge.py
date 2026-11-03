@@ -46,15 +46,17 @@ HEAVY_LABELS = frozenset({"reveal", "twist", "death", "arc_payoff"})
 # Vol 7 The Tomb of Ariel ch1231-1590, Vol 8 Lord of Shadows ch1591-1840,
 # Vol 9 Throne of War ch1841-2260, Vol 10 Dark Lord's Dreadful Travelogue
 # ch2261-2720, Vol 11 The Song of Ariadne ch2721-3000, Vol 12 ch3001-3127,
-# Vol 13 Prelude to Apocalypse from ch3128 (still running).
+# Vol 13 Prelude to Apocalypse ch3128-3160 (chapter 3160 ends with the Spell
+# announcing the end of volume thirteen; owner confirmed in the Plan 032
+# decision, 2026-11-03), Vol 14 from ch3161 (still running).
 # Ends of finished volumes only. The current volume is open-ended: the
 # shelf edge is not a volume end (Plan 031, owner 2026-11-01). Add its end
 # here only when the owner confirms where the next volume starts.
-VOLUME_ENDS = (95, 350, 600, 750, 1060, 1230, 1590, 1840, 2260, 2720, 3000, 3127)
+VOLUME_ENDS = (95, 350, 600, 750, 1060, 1230, 1590, 1840, 2260, 2720, 3000, 3127, 3160)
 
 
 def volume_of(chapter: int) -> int:
-    """Volume number containing the chapter (1-13)."""
+    """Volume number containing the chapter (1-14)."""
     for i, end in enumerate(VOLUME_ENDS):
         if chapter <= end:
             return i + 1

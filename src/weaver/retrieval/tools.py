@@ -761,7 +761,7 @@ def register_reading_tools(
         "evidence, read these first, they often carry the answer) and novel passages "
         "(chapter + line handles to open with read_chapters). Scores run 0-1; close "
         "scores are not proof of the right chapter. The whole novel is always "
-        "automatically and can only be narrowed."
+        "searched automatically and can only be narrowed."
     )
     search_handler = service.semantic_search
     if novel_only_search:

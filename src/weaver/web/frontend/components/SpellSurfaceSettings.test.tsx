@@ -52,7 +52,7 @@ describe("Reader Appraisal settings", () => {
     expect(chapter).toHaveAttribute("max", "3232");
     fireEvent.change(chapter, { target: { value: "3200" } });
     expect(chapter).toHaveValue(3200);
-    expect(screen.getByText("Volume 13")).toBeInTheDocument();
+    expect(screen.getByText("Volume 14")).toBeInTheDocument();
     fireEvent.change(chapter, { target: { value: "4000" } });
     expect(chapter).toHaveValue(3232);
   });

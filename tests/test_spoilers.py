@@ -29,10 +29,11 @@ def test_volume_of_uses_canonical_boundaries() -> None:
     assert volume_of(3127) == 12
     assert volume_of(3128) == 13
     assert volume_of(3160) == 13
+    assert volume_of(3161) == 14
 
 
 def test_volume_of_past_the_shelf_stays_in_last_volume() -> None:
-    assert volume_of(3200) == 13
+    assert volume_of(3200) == 14
 
 
 def test_full_when_all_citations_at_position() -> None:
