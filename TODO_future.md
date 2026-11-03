@@ -91,10 +91,11 @@ accepted public release is v3.0.0 at Plan 040.
    judging done 2026-11-03 ($2.55, 372 official answers): every arm ties
    on the primary metric, so the literal rule retires all three parts;
    the evaluator recommends retiring nothing until a held-out paraphrase
-   test runs. Awaiting the owner's spot-check and decision.
+   test runs. The owner chose the recommendation (2026-11-03);
+   acceptance waits on the spot-check.
 3. **033 The knowledge pipeline**: chain what survives 032 into the updater
    (notebook pages, incremental embeddings, reload); retire what does not.
-   Rescoped by the 032 recommendation (pending the owner): first fix
+   Rescoped by the 032 decision (owner, 2026-11-03): first fix
    turns that end with no answer (35 of 372 in 032); then a held-out
    paraphrase test (about 15 new questions, arms A and D, about $0.50)
    before re-embedding past 3127 or indexing statements past 1000;
