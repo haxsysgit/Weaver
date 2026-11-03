@@ -13,7 +13,7 @@
 - **Tooling:** repo commands via `uv` (pytest, ruff), `npx vitest`, `npx
   tsc`, `npm run build` (root). Every `uv` command on this Windows checkout
   needs `UV_PYTHON_INSTALL_DIR=$USERPROFILE/.uv/python`.
-- **State:** drafted (awaiting owner admission).
+- **State:** admitted 2026-11-03 (owner: "I admit Plan 033 as drafted").
 - **Depends on:** Plan 032 closed (2026-11-03, accepted). Its decision sets
   this plan's order: fix no-answer turns first, then a held-out paraphrase
   test before extending vector search.

@@ -2,7 +2,7 @@
 
 ## Gate status
 
-**Unadmitted.**
+**Admitted 2026-11-03.** The owner admitted the plan as drafted, which confirms owner directions 1 to 7, including the gap answer's wording and the decision rule.
 
 ## Observations (2026-11-03, before admission)
 
