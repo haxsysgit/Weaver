@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import logging
 import os
 import random
 import sys
@@ -93,6 +94,41 @@ def join_arms(judgements: list[dict[str, Any]], key: dict[str, dict[str, Any]]) 
     return joined
 
 
+class ToolFailureCounter(logging.Handler):
+    """Counts reading-tool failures from their warning log lines.
+
+    The answer stream reports each tool as start and done, never whether
+    it worked, so a tool failing on every call looks like a working one
+    (Plan 032: arm C's searches all failed on a held index lock).
+    """
+
+    def __init__(self) -> None:
+        super().__init__(level=logging.WARNING)
+        self.failed: list[str] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        message = record.getMessage()
+        if " failed" in message:
+            self.failed.append(message.split(" failed", 1)[0])
+
+    def take(self) -> list[str]:
+        failed, self.failed = self.failed, []
+        return failed
+
+
+def release_library(runtime: Any) -> None:
+    """Close the runtime's embedded search index so the next arm can open it.
+
+    `ChatRuntime.close()` leaves the library's Qdrant client open, and the
+    embedded index allows one client per process.
+    """
+    library = getattr(runtime, "library", None)
+    client = getattr(library, "client", None)
+    if client is not None:
+        client.close()
+        library.client = None
+
+
 def parse_stream(text: str) -> tuple[list[tuple[str, dict[str, Any]]], str, str]:
     """Server-sent events into (events, exit name, final text)."""
     events: list[tuple[str, dict[str, Any]]] = []
@@ -129,7 +165,15 @@ async def run_arm(
     state = out_dir / "state" / f"{arm_name}-run{run_index}-{stamp}"
     runtime = await open_chat_runtime(state, live=live, surface="web", arm=arm)
     records: list[dict[str, Any]] = []
+    failures = ToolFailureCounter()
+    logging.getLogger("weaver.retrieval.tools").addHandler(failures)
     try:
+        if live and "semantic_search" in arm.tools and runtime.library is not None:
+            # Prove search works before spending on an arm that relies on it.
+            probe = runtime.library._run_search("Sunny", surface="novel", chapter_from=None, chapter_to=None)
+            if not probe["canonical_hits"]:
+                raise RuntimeError(f"arm {arm_name}: the search probe found nothing; is the index open elsewhere?")
+            print(f"{arm_name} search probe ok ({len(probe['canonical_hits'])} hits)", flush=True)
         async with AsyncClient(
             transport=ASGITransport(app=create_app(runtime)), base_url="http://127.0.0.1", timeout=None
         ) as client:
@@ -159,6 +203,7 @@ async def run_arm(
                 tools = [(d.get("name"), d.get("status")) for n, d in events if n == "tool"]
                 started_tools = [tool for tool, status in tools if status == "start"]
                 outside = sorted({tool for tool in started_tools if tool not in ("load_skill", *arm.tools)})
+                tool_errors = failures.take()
                 record = {
                     "question_id": question["id"],
                     "arm": arm_name,
@@ -169,6 +214,7 @@ async def run_arm(
                     "tools": tools,
                     "tool_calls": len(started_tools),
                     "outside_arm": outside,
+                    "tool_errors": tool_errors,
                     "seconds": seconds,
                     "cost_usd": round(meter.spent_usd - spent_before, 6),
                     "text": text,
@@ -180,10 +226,16 @@ async def run_arm(
                 print(
                     f"{arm_name} {number}/{len(questions)} {question['id']}: {exit_name}, "
                     f"{len(started_tools)} tools, {seconds}s, ${record['cost_usd']:.4f} "
-                    f"(total ${meter.spent_usd:.4f}){' OUTSIDE ' + str(outside) if outside else ''}",
+                    f"(total ${meter.spent_usd:.4f}){' OUTSIDE ' + str(outside) if outside else ''}"
+                    f"{' TOOL ERRORS ' + str(tool_errors) if tool_errors else ''}",
                     flush=True,
                 )
+                if tool_errors and live:
+                    print(f"STOP tool errors in {question['id']}: {tool_errors}", flush=True)
+                    break
     finally:
+        logging.getLogger("weaver.retrieval.tools").removeHandler(failures)
+        release_library(runtime)
         await runtime.close()
     return records
 

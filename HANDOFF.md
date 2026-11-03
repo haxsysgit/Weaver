@@ -7,7 +7,11 @@ Plan 039. The 021-030 checkpoint ran on 2026-11-01
 (`docs/checkpoints/021-030.md`). Plan 031 (A library that keeps up) ran all
 seven slices the same day and the owner accepted it (closed 2026-11-01, not
 merged to `main`). Plan 032 (the retrieval verdict) was admitted the same
-day: `plans/032-the-retrieval-verdict.md`. The shelf now ends at
+day and ran all seven slices by 2026-11-03: 372 official answers in
+four arms, judged blind, $2.55 (arm C re-ran after the review found its
+searches had all failed). The recommendation and tables are in
+`deliverables/032-the-retrieval-verdict/results.md`; the owner's
+spot-check of 10 answers and decision are pending. The shelf now ends at
 3232, the source moved to `novelphoenix.com`, and a weekly Task Scheduler
 check (Saturday 10:00) appends new chapters. See
 `plans/031-a-library-that-keeps-up.md`.
@@ -137,8 +141,14 @@ will want screenshots and tests per slice.
 
 - **Search reach**: the shelf ends at 3232 (Plan 031), but semantic search
   covers 1 to 3127 and notebook statements in the index stop at 1000.
-  Later chapters are reachable by direct reading and exact find. Plans
-  032/033.
+  Later chapters are reachable by direct reading and exact find. Plan 032
+  found no measurable loss past 3127; Plan 033 acts on the verdict.
+- **Turns with no answer**: 35 of 372 Plan 032 turns gave the reader
+  nothing, in every arm (lookups ran out, or the publication guard
+  rejected the draft). A product bug for Plan 033.
+- **Search index left open**: `ChatRuntime.close()` does not close the
+  library's embedded index, so a second runtime in one process fails
+  every search. The Plan 032 harness works around it; Plan 033.
 - **Mobile Settings**: the threads sheet text shows through the Settings
   panel on mobile.
 - **Desktop rail is verified by screenshots, not unit tests.** jsdom tests
@@ -197,8 +207,9 @@ screenshots before claims.
 > `HANDOFF.md`, `TODO_future.md` (roadmap 031 to 040), and the Plan 030
 > deliverables first, and `docs/checkpoints/021-030.md` for the methods
 > codified at the last checkpoint. Plan 031 is closed (accepted 2026-11-01).
-> Plan 032 (the retrieval verdict) is admitted: follow its slices with
-> the `arinze-plans` skill. Constraints: every commit starts with `Plan NNN: `;
+> Plan 032 (the retrieval verdict) has run all seven slices and waits on
+> the owner's spot-check and decision; then close it with the
+> `arinze-plans` skill. Constraints: every commit starts with `Plan NNN: `;
 > no Claude attribution in commits or PRs; no deploy, push, or tag without
 > the owner; no secrets or private chapters in commits; one server at a time
 > because of the Qdrant lock. UI changes need real desktop and mobile

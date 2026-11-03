@@ -168,23 +168,35 @@ Confirmed by the owner at admission (2026-11-01, "Admit as drafted"):
    commit.
 2. **The arm switch.** Test-first: one function builds each arm's tool
    registry, prompt, and skill text; private to the harness; the web
-   route tests prove it unreachable.
+   route tests prove it unreachable. Done: `src/weaver/reading_arms.py`,
+   16 tests.
 3. **The question set.** Re-check the 20 reused questions against their
    chapters; write 20 new ones from bounded reads; write the answer key
    (expected chapters and required facts) for all 40 plus the three
    Foundational Reader Trials. Record counts and kinds in `learning.md`.
    Show the owner five sample questions with their keys before the rest
-   are written.
+   are written. Done: owner approved the samples ("Yes, write the
+   rest"); counts in `learning.md`.
 4. **The harness and a dry run.** Run every arm on every question in fake
    mode; check records, the shuffle, and the cap. Then one live question
-   per arm as a smoke test.
+   per arm as a smoke test. Done: every arm dry in fake mode; the live
+   smoke ran arms A and B only ($0.0096), not all four.
 5. **The live runs.** Every question once per arm; then pass^3 on the
-   contested ones. Meter spend after each answer.
+   contested ones. Meter spend after each answer. Done: 461 answers,
+   $2.55 of the $5.00 cap. Arm C's first 87 answers were invalid (every
+   search failed on a held index lock, found by the review); the harness
+   was fixed test-first and arm C re-ran in full. Passes 2 and 3 ran in
+   all four arms, not only the arms that disagreed (a recorded departure).
 6. **Blind judging.** Shuffle, judge accuracy and citations against the
    source, join the arms back, build the tables, and apply the decision
-   rule from item 9. The owner spot-checks 10 answers.
+   rule from item 9. The owner spot-checks 10 answers. Done except the
+   owner spot-check: 372 official verdicts, tables in `results.md`. The
+   last 68 were judged by `deepseek-flash` from a written runbook, behind
+   a decoy gate (20 of 22) and an evaluator audit. The 10 picks are in
+   `.weaver/evaluation/plan032/spot_check.md` (private).
 7. **Close.** The recommendation per component (vector search, notebook
    statements, story map) with its evidence; an independent review; the
    measured budget in `results.md`; the owner's decision in
    `decision.md`; HANDOFF and TODO_future updated, with Plan 033 rescoped
-   to the verdict.
+   to the verdict. Done except the owner's spot-check and decision:
+   recommendation, review, and measured budget recorded.

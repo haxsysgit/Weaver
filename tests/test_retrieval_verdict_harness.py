@@ -77,3 +77,45 @@ def test_the_stream_parser_reads_the_final_answer() -> None:
     events, exit_name, answer = harness.parse_stream(text)
     assert exit_name == "completed" and answer == "Chapter 3171."
     assert events[0] == ("tool", {"name": "find_text", "status": "start"})
+
+
+def test_tool_failures_are_counted_from_the_reading_tools_log() -> None:
+    import logging
+
+    counter = harness.ToolFailureCounter()
+    log = logging.getLogger("weaver.retrieval.tools")
+    log.addHandler(counter)
+    try:
+        log.warning("semantic_search failed: %s", "Storage folder is already accessed")
+        log.warning("find_text failed for %r", "x")
+        log.info("read_chapters ok")
+        assert counter.take() == ["semantic_search", "find_text"]
+        assert counter.take() == []  # taking resets the count
+    finally:
+        log.removeHandler(counter)
+
+
+class _Client:
+    closed = False
+
+    def close(self) -> None:
+        self.closed = True
+
+
+class _Library:
+    def __init__(self) -> None:
+        self.client = _Client()
+
+
+class _Runtime:
+    def __init__(self, library) -> None:
+        self.library = library
+
+
+def test_releasing_the_library_closes_the_search_index() -> None:
+    library = _Library()
+    client = library.client
+    harness.release_library(_Runtime(library))
+    assert client.closed is True and library.client is None
+    harness.release_library(_Runtime(None))  # no library: nothing to do
+    harness.release_library(_Runtime(library))  # already released: no error

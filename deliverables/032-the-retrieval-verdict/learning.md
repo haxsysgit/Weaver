@@ -75,8 +75,7 @@ note records counts only.
   swapped for q08 and q18.
 - q11 was dropped: its chapter shows the prison but not the reason asked
   for. Replaced by q16.
-- q38 was reworded: its premise was wrong. In the chapter, Azarax's undead
-  army travels with the Shadow Legion; the Deathless are the hunters.
+- q38 was reworded: its premise did not match the chapter.
 
 ### Observations (not fixed here)
 
@@ -89,3 +88,70 @@ note records counts only.
   Weaver's volume table (`spoilers/judge.py`, `lib/volumes.ts`) ends
   volume 12 at 3127 and calls everything after it volume 13. A small fix
   for a later plan: volume 13 is 3128 to 3160.
+
+## Slices 4 to 7: harness, live runs, blind judging, review (2026-11-01 to 2026-11-03)
+
+Numbers and tables are in `results.md`. What was learned:
+
+### Observations
+
+- **Smoke and dry run.** Every arm ran every question in fake mode with
+  no network; one live question per arm (A and B) cost $0.0096. No answer
+  in any pass used a tool outside its arm.
+- **A broken arm looked like a working one.** The independent review
+  found that every arm C search had failed: the arms shared one process
+  and the first arm kept the embedded index open. The answer stream says
+  a tool started and finished, never whether it worked, so nothing in
+  the records looked wrong. The first draft's conclusions about arm C
+  ("passage vectors add nothing") were wrong. Lesson: a harness that
+  compares toolsets must prove each tool works in each arm (a probe) and
+  count tool failures per answer. Both are now in the harness, test-first.
+- **Live runs.** 461 answers, $2.55. 372 are official (93 per arm); 87
+  invalid arm C answers are kept as evidence.
+- **No-answer failures.** 35 of 372 official turns gave the reader
+  nothing (A 7, B 12, C 2, D 14). A product bug in every arm.
+- **Citations.** 126 of 128 quotes verbatim in a cited chapter; one
+  false positive (the reader's own question) and one paraphrase in quote
+  marks (arm C).
+- **The question mix hid the main effect from the held-out half.** The
+  paraphrase effect (A 7.0, C 5.0, B 4.0, D 3.7 of 13) sits on 12 reused
+  questions; only 1 of the 20 new questions is a paraphrase. Lesson for
+  future verdicts: balance kinds across the held-out and reused halves,
+  and weight the kind the component exists for.
+- **pass^3 saturates.** With 25 contested questions, every arm scored 10
+  of 40 on pass^3. A primary metric that ties every arm cannot drive a
+  keep-or-retire rule; the mean per run carried the information.
+- **Removing the notebook trades no-answers for wrong answers.** Arm C
+  answered almost every time but was wrong twice as often as arm A in
+  pass 1 (same judge).
+- **A smaller judge, gated.** The last 68 official answers were judged
+  by `deepseek-flash` from a written runbook, with decoys from earlier
+  judging mixed in blind; it matched 20 of 22, and an evaluator audit of
+  13 found no correct-or-not disagreement. A cheap judge is usable when
+  a decoy gate and an audit back it.
+- **Judging corrections.** One run-1 verdict moved from wrong to partial
+  on re-reading the chapter (a later name for the same item); one pass-2
+  verdict moved from wrong to correct after the chapter confirmed the
+  answer. Two questions are ambiguous on reflection; flagged for reuse.
+
+### Hypotheses after the runs (not decisions)
+
+- **H5 (revised).** Both kinds of vectors lift paraphrased scenes:
+  passages about 1.3 of 13 (C over D), notebook statements about 2 more
+  (A over C). Reused questions only. Plan 033 should settle it on about
+  15 new paraphrase questions, arms A and D, before re-embedding.
+- **H6.** No-answer turns come from the lookup budget ending without a
+  forced answer and from the publication guard rejecting a draft. Arm C
+  almost never failed, which neither explains. To check in Plan 033.
+- **H7.** The full toolset's weakness on "who is" questions (A 1.7, B
+  3.7 of 7) comes from the prompt steering it to vector search over the
+  story map. Untested.
+
+### The decision rule, applied
+
+No component clears the fixed accuracy bar (3 of 40 on pass^3; every arm
+ties at 10); none saves 30%. The citation clause is touched by one
+paraphrase in quote marks from the arm without the notebook. The
+evaluator recommends retiring nothing and extending nothing until a
+held-out paraphrase test runs; the literal rule proposes retiring all
+three. Both are in `results.md`; the owner decides.
