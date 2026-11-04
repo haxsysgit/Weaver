@@ -2,7 +2,7 @@
 
 ## Status
 
-**Pending owner decision.**
+**Accepted 2026-11-04. Plan closed.**
 
 ## Recommendation (planning agent, 2026-11-04)
 
@@ -32,4 +32,9 @@ one answer; a bootstrap gives about a 4.5% chance the hybrid is not ahead.
 
 ## Decision
 
-Waiting for the owner.
+**Accepted (owner, 2026-11-04): "Accept, keep hybrid".** Plan 033 is
+closed. The hybrid search stays as built (`3e31779`), both halves. Plan
+033.5 is rescoped to give the meaning half the whole shelf and fold it
+into the weekly refresh (recommendation 3). The twelve Reader Experience
+Trials run before this build reaches `main` (recommendation 4), with the
+owner's approval for that run. Not merged, tagged, or deployed.

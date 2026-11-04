@@ -13,7 +13,8 @@
 - **Tooling:** repo commands via `uv` (pytest, ruff), `npx vitest`, `npx
   tsc`, `npm run build` (root). Every `uv` command on this Windows checkout
   needs `UV_PYTHON_INSTALL_DIR=$USERPROFILE/.uv/python`.
-- **State:** admitted 2026-11-03 (owner: "I admit Plan 033 as drafted").
+- **State:** closed 2026-11-04, accepted (owner: "Accept, keep hybrid").
+  Admitted 2026-11-03. Live spend $2.58 of $10.00.
 - **Depends on:** Plan 032 closed (2026-11-03, accepted). Its decision sets
   this plan's order: fix no-answer turns first, then a held-out paraphrase
   test before extending vector search.
@@ -221,7 +222,7 @@ recorded.
 15. **Review and close** as slices 10 and 11. **Review done 2026-11-04:**
     audit 0 of 20 disagree; both rules keep after the quote-echo
     correction (review finding 8); recommendation in `decision.md`. Close
-    waits on the owner.
+    waits on the owner. **Closed 2026-11-04** (accepted).
 
 ### Question recipe (slice 8, Opus)
 

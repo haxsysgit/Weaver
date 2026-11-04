@@ -12,7 +12,11 @@ four arms, judged blind, $2.55 (arm C re-ran after the review found its
 searches had all failed). The recommendation and tables are in
 `deliverables/032-the-retrieval-verdict/results.md`. The owner chose
 "Retire nothing, test first": Plan 033 fixes no-answer turns, then runs a
-held-out paraphrase test before extending vector search. The shelf now ends at
+held-out paraphrase test before extending vector search. Plan 033 closed
+on 2026-11-04 (accepted, $2.58): no turn goes silent, and search is now a
+real hybrid of meaning and words that beat word-only and no-search on
+held-out questions; Plan 033.5 extends its meaning half to the whole shelf.
+Not merged to `main`. The shelf now ends at
 3232, the source moved to `novelphoenix.com`, and a weekly Task Scheduler
 check (Saturday 10:00) appends new chapters. See
 `plans/031-a-library-that-keeps-up.md`.
@@ -140,16 +144,13 @@ will want screenshots and tests per slice.
 
 ## Known gaps and risks
 
-- **Search reach**: the shelf ends at 3232 (Plan 031), but semantic search
-  covers 1 to 3127 and notebook statements in the index stop at 1000.
-  Later chapters are reachable by direct reading and exact find. Plan 032
-  found no measurable loss past 3127; Plan 033 acts on the verdict.
-- **Turns with no answer**: 35 of 372 Plan 032 turns gave the reader
-  nothing, in every arm (lookups ran out, or the publication guard
-  rejected the draft). A product bug for Plan 033.
-- **Search index left open**: `ChatRuntime.close()` does not close the
-  library's embedded index, so a second runtime in one process fails
-  every search. The Plan 032 harness works around it; Plan 033.
+- **Search reach**: the shelf ends at 3232. Search's word half covers
+  every chapter; its meaning half covers 1 to 3127, and notebook
+  statements stop at 1000. Plan 033.5 embeds the rest.
+- **What-if answers**: the check set's three power-comparison trials
+  stayed at 3 of 9 after Plan 033's give-up rule (review finding 10).
+  Run the twelve Reader Experience Trials before this build reaches
+  `main`.
 - **Mobile Settings**: the threads sheet text shows through the Settings
   panel on mobile.
 - **Desktop rail is verified by screenshots, not unit tests.** jsdom tests
@@ -209,10 +210,9 @@ screenshots before claims.
 > deliverables first, and `docs/checkpoints/021-030.md` for the methods
 > codified at the last checkpoint. Plan 031 is closed (accepted 2026-11-01).
 > Plan 032 is closed (accepted 2026-11-03; direction in its
-> `decision.md`). Plan 033 is drafted (`plans/033-every-turn-answers.md`)
-> and waits on the owner's admission; `deepseek-flash` runs its scripted
-> slices from `deliverables/033-every-turn-answers/runbook.md`, and the
-> planning agent does the questions and review. Constraints: every commit starts with `Plan NNN: `;
+> `decision.md`). Plan 033 is closed (accepted 2026-11-04; verdict in
+> `deliverables/033-every-turn-answers/results.md`). Next: draft Plan
+> 033.5 (the meaning half reaches the whole shelf). Constraints: every commit starts with `Plan NNN: `;
 > no Claude attribution in commits or PRs; no deploy, push, or tag without
 > the owner; no secrets or private chapters in commits; one server at a time
 > because of the Qdrant lock. UI changes need real desktop and mobile

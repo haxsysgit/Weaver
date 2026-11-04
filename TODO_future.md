@@ -93,8 +93,12 @@ accepted public release is v3.0.0 at Plan 040.
    the evaluator recommends retiring nothing until a held-out paraphrase
    test runs. The owner chose the recommendation (2026-11-03);
    spot-check done (10 of 10 agreed); accepted.
-3. **033 Every turn answers, then the vector test** (drafted 2026-11-03,
-   `plans/033-every-turn-answers.md`; scoped by the 032 decision): name
+3. **033 Every turn answers, then the vector test** (closed 2026-11-04,
+   accepted; $2.58). No silent turn in 327 answers; search rebuilt as a
+   real hybrid of meaning and words (`3e31779`), which beat word-only by
+   2.33 and no-search by 3.00 of 15 per run on held-out questions and was
+   the cheapest and fastest arm. The owner kept both halves. Scope as
+   drafted (`plans/033-every-turn-answers.md`; from the 032 decision): name
    the check behind every silent turn (35 of 372 in 032 gave the reader
    nothing), an honest gap answer instead of nothing, no substituted
    scenes when a lookup misses, close the search index on runtime close,
@@ -102,11 +106,16 @@ accepted public release is v3.0.0 at Plan 040.
    arms A and D (about $0.50) decide extend or retire vector search.
    Executed by `deepseek-flash` from a scripted runbook, with Opus for the
    questions and review.
-   - **033.5 The knowledge pipeline**: extend vector search into the
-     weekly refresh (re-embed past 3127, statements past 1000), or retire
-     it, per the 033 verdict.
-   - The 033 prompt rule touches every answer: re-run the twelve Reader
-     Experience Trials before the next release (Plan 039 at the latest).
+   - **033.5 The knowledge pipeline** (rescoped by the 033 verdict):
+     embed chapters 3128 to 3232 into the existing index and embed each
+     new chapter in the weekly refresh, so the meaning half covers the
+     whole shelf (the word half already does). Optional: fit chunks to the
+     model's 512-token window (helped vectors alone, not the blend). The
+     owner's GPU embeds the novel in minutes.
+   - Before the 033 build reaches `main`: re-run the twelve Reader
+     Experience Trials (about $0.75, owner approval). The check set's
+     what-if trials stayed at 3 of 9: wide comparisons admit a gap instead
+     of looking up the second side (033 review finding 10).
    Measured at Plan 031: semantic search reaches 3127, index notebook
    statements 1000, notebook files 3160, shelf 3232.
 4. **034 Weaver's mind**: the reader card in every turn (chapter, spoiler
