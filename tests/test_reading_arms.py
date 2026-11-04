@@ -19,8 +19,10 @@ from weaver.web.app import create_app
 PERSONALITY = "You are Weaver."
 
 
-def test_the_four_arms_hold_exactly_their_tools() -> None:
-    assert set(ARMS) == {"A", "B", "C", "D"}
+def test_the_arms_hold_exactly_their_tools() -> None:
+    # Plan 033 round 2 adds W: every tool, word half of the search only.
+    assert set(ARMS) == {"A", "B", "C", "D", "W"}
+    assert ARMS["W"].tools == READING_TOOLS and ARMS["W"].word_only_search is True
     assert ARMS["A"].tools == READING_TOOLS
     assert "semantic_search" not in ARMS["B"].tools
     assert set(ARMS["B"].tools) == set(READING_TOOLS) - {"semantic_search"}

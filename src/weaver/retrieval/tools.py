@@ -32,6 +32,7 @@ so the conversation store never persists novel text.
 
 from __future__ import annotations
 
+import functools
 import logging
 from dataclasses import dataclass
 from typing import Any
@@ -41,12 +42,19 @@ from pydantic import BaseModel, Field, model_validator
 from weaver.agent.tools import EffectKind, ToolDefinition, ToolExecutionContext, ToolRegistry
 
 from . import library as lib
+from .chunker import chunk_chapter
+from .words import Passage, WordIndex, best_per_chapter, fuse, preview
 
 logger = logging.getLogger(__name__)
 
 MAX_CANONICAL_HITS = 8
 MAX_NOTEBOOK_HITS = 8
 MAX_PASSAGE_LINES = 200  # ~a chapter-and-a-half, bounded
+SEARCH_DEPTH = 60  # passages each half of the hybrid ranks before fusion
+# bge-large-en-v1.5 is trained with this instruction on short queries
+# (passages are embedded without it). Plan 033 round 2.
+QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
+FIND_TEXT_BUDGET = 20_000  # stay under the tool's 24,000-character cap
 
 
 class SearchStoryInput(BaseModel):
@@ -221,6 +229,25 @@ class LibraryService:
         self.entities = lib.EntityMap(self.notebook_dir)
         self.graph = lib.ConnectionGraph(self.notebook_dir)
         self.notebook = lib.NotebookReader(self.notebook_dir)
+        self._words: WordIndex | None = None
+        self._words_through = 0
+
+    def _word_index(self) -> WordIndex:
+        """BM25 over every chapter on the shelf, built on first use and
+        rebuilt when the shelf grows (a refresh appends chapters)."""
+        last = self.index.last_chapter()
+        if self._words is None or last != self._words_through:
+            passages: list[Passage] = []
+            for chapter in range(1, last + 1):
+                try:
+                    text = self.index.read(chapter)
+                except FileNotFoundError:
+                    continue
+                for c in chunk_chapter(chapter, text):
+                    passages.append(Passage(c.chapter, c.line_start, c.line_end, c.text))
+            self._words = WordIndex(passages)
+            self._words_through = last
+        return self._words
 
     def _client(self):
         """Lazy client: open once on first use, never at construction."""
@@ -238,6 +265,8 @@ class LibraryService:
         self,
         arguments: dict[str, Any],
         context: ToolExecutionContext,
+        *,
+        meaning: bool = True,
     ) -> dict[str, Any]:
         try:
             inp = SearchStoryInput(**arguments)
@@ -249,11 +278,22 @@ class LibraryService:
                 surface=inp.surface,
                 chapter_from=inp.chapter_from,
                 chapter_to=inp.chapter_to,
+                meaning=meaning,
             )
         except Exception as exc:
             logger.warning("semantic_search failed: %s", exc)
             return {"ok": False, "error_category": "tool_failed", "error": "search failed"}
-        return {"ok": True, "result": result}
+        # Previews are novel prose: persist pointers only (leads, not
+        # opened evidence: there is no top-level passage handle).
+        durable = {
+            "source_kind": "novel",
+            "kind": "semantic_search",
+            "hits": [
+                {key: hit[key] for key in ("chapter", "line_start", "line_end", "source_hash", "passage_handle")}
+                for hit in result["canonical_hits"]
+            ],
+        }
+        return {"ok": True, "durable_evidence": durable, "result": result}
 
     def _run_search(
         self,
@@ -262,11 +302,12 @@ class LibraryService:
         surface: str,
         chapter_from: int | None,
         chapter_to: int | None,
+        meaning: bool = True,
     ) -> dict[str, Any]:
         canonical: list[dict[str, Any]] = []
         notebook_hits: list[dict[str, Any]] = []
         if surface in ("both", "novel"):
-            canonical = self._search_novel(query, chapter_from, chapter_to)
+            canonical = self._search_novel(query, chapter_from, chapter_to, meaning=meaning)
         if surface in ("both", "notebook"):
             notebook_hits = self._search_notebook(query, chapter_from, chapter_to)
         return {
@@ -280,47 +321,83 @@ class LibraryService:
         query: str,
         chapter_from: int | None,
         chapter_to: int | None,
+        *,
+        meaning: bool = True,
     ) -> list[dict[str, Any]]:
-        """Dense-first, sparse fallback (measured at the Plan 014 sweep:
-        bge-large dense hit@5 0.57 beats BM42 0.40 at 40-line chunks, so
-        dense is the primary arm and sparse is the backup for keyword
-        queries the embedder smears). Range filters are built here, never
-        model arguments."""
+        """Hybrid search: meaning (bge-large vectors) and words (BM25),
+        blended by reciprocal rank fusion at chapter level (Plan 033
+        round 2: hit@5 0.38 meaning alone, 0.45 words alone, 0.58
+        blended, on 53 dev questions). Each chapter shows the passage its
+        better-ranked half found, with a one-line preview. Words reach
+        every chapter on the shelf; meaning reaches what is embedded.
+        Range filters are built here, never model arguments."""
+        rankings: dict[str, list[Passage]] = {}
+        if meaning:
+            rankings["meaning"] = best_per_chapter(self._meaning_passages(query, chapter_from, chapter_to))
+        rankings["words"] = best_per_chapter(
+            [
+                passage
+                for passage, _ in self._word_index().search(
+                    query, chapter_from=chapter_from, chapter_to=chapter_to, limit=SEARCH_DEPTH
+                )
+            ]
+        )
+        position = {
+            name: {p.chapter: (rank, p) for rank, p in enumerate(ranked)} for name, ranked in rankings.items()
+        }
+        hits = []
+        fused = fuse({name: [p.chapter for p in ranked] for name, ranked in rankings.items()})
+        for chapter, score, found_by in fused[:MAX_CANONICAL_HITS]:
+            best = min(found_by, key=lambda name: position[name][chapter][0])
+            passage = position[best][chapter][1]
+            text = passage.text or self.index.open_lines(chapter, passage.line_start, passage.line_end).text
+            hits.append(
+                {
+                    "chapter": chapter,
+                    "line_start": passage.line_start,
+                    "line_end": passage.line_end,
+                    "passage_handle": lib.make_passage_handle(chapter, passage.line_start, passage.line_end),
+                    "source_hash": self.index.source_hash(chapter),
+                    "score": round(score, 4),
+                    "found_by": found_by,
+                    "preview": preview(text, query),
+                }
+            )
+        return hits
+
+    def _meaning_passages(
+        self,
+        query: str,
+        chapter_from: int | None,
+        chapter_to: int | None,
+    ) -> list[Passage]:
+        """Ranked vector hits (text left empty; opened only for previews)."""
         from qdrant_client import models
 
         client = self._client()
-        if client is None:
+        if client is None or self.embedder is None:
             return []
         filters: list[Any] = []
         if chapter_from is not None:
             filters.append(models.FieldCondition(key="chapter", range=models.Range(gte=chapter_from)))
         if chapter_to is not None:
             filters.append(models.FieldCondition(key="chapter", range=models.Range(lte=chapter_to)))
-        qfilter = models.Filter(must=filters) if filters else None
-
-        hits: list[lib.CanonicalHit] = []
-        if self.embedder is not None:
-            vector = list(self.embedder.embed([query]))[0]
-            res = client.query_points(
-                "novel_chunks",
-                query=vector,
-                using="dense",
-                query_filter=qfilter,
-                limit=MAX_CANONICAL_HITS,
-                with_payload=True,
-            )
-            hits = [h for h in (self._canonical_from_point(p) for p in res.points) if h.score > 0.0]
-        if not hits and self.sparse_encoder is not None:
-            res = client.query_points(
-                "novel_chunks",
-                query=self.sparse_encoder(query),
-                using="bm25",
-                query_filter=qfilter,
-                limit=MAX_CANONICAL_HITS,
-                with_payload=True,
-            )
-            hits = [self._canonical_from_point(p) for p in res.points]
-        return [h.__dict__ for h in hits]
+        vector = list(self.embedder.embed([QUERY_PREFIX + query]))[0]
+        res = client.query_points(
+            "novel_chunks",
+            query=vector,
+            using="dense",
+            query_filter=models.Filter(must=filters) if filters else None,
+            limit=SEARCH_DEPTH,
+            with_payload=True,
+        )
+        out = []
+        for point in res.points:
+            if point.score <= 0.0:
+                continue
+            hit = self._canonical_from_point(point)
+            out.append(Passage(hit.chapter, hit.line_start, hit.line_end, ""))
+        return out
 
     @staticmethod
     def _canonical_from_point(point: Any) -> lib.CanonicalHit:
@@ -506,16 +583,18 @@ class LibraryService:
                     for h in hits
                 ],
             }
-            return {
-                "ok": True,
-                "durable_evidence": durable,
-                "result": {
-                    "mode": "together",
-                    "groups": inp.groups,
-                    "within_lines": inp.within_lines,
-                    "hits": hits,
-                },
-            }
+            return _fit_find_text(
+                {
+                    "ok": True,
+                    "durable_evidence": durable,
+                    "result": {
+                        "mode": "together",
+                        "groups": inp.groups,
+                        "within_lines": inp.within_lines,
+                        "hits": hits,
+                    },
+                }
+            )
         durable = {
             "source_kind": "novel",
             "kind": f"find_text:{inp.mode}",
@@ -534,7 +613,9 @@ class LibraryService:
                 for h in hits
             ],
         }
-        return {"ok": True, "durable_evidence": durable, "result": {"query": inp.query, "mode": inp.mode, "hits": hits}}
+        return _fit_find_text(
+            {"ok": True, "durable_evidence": durable, "result": {"query": inp.query, "mode": inp.mode, "hits": hits}}
+        )
 
     # ------------------------------------------------------------------
     # browse_chapters
@@ -689,6 +770,29 @@ class LibraryService:
         }
 
 
+def _fit_find_text(response: dict[str, Any]) -> dict[str, Any]:
+    """Drop the last hits until the response fits the tool's size cap.
+
+    A broad phrase used to overflow the cap, fail the call, and spend one
+    of the turn's lookups for nothing (Plan 033: 65 such failures in 66
+    answers). Hits are already in rank order, so the best ones stay."""
+    import json
+
+    hits = response["result"]["hits"]
+    evidence = response["durable_evidence"]["hits"]
+    total = len(hits)
+    while hits and len(json.dumps(response)) > FIND_TEXT_BUDGET:
+        hits.pop()
+        evidence.pop()
+    if len(hits) < total:
+        response["result"]["trimmed"] = True
+        response["result"]["note"] = (
+            f"{total - len(hits)} more hits not shown; narrow chapter_from/chapter_to "
+            "or use a more distinctive phrase"
+        )
+    return response
+
+
 def _chapter_of(item: dict) -> int | None:
     chapter = item.get("chapter")
     return chapter if isinstance(chapter, int) else None
@@ -748,31 +852,52 @@ def register_reading_tools(
     service: LibraryService,
     *,
     novel_only_search: bool = False,
+    word_only_search: bool = False,
 ) -> None:
     """Register the reading tools (Plan 15 tool design, 2026-08-07).
 
     ``novel_only_search`` is the Plan 032 evaluation arm without the
-    notebook; the product never sets it.
+    notebook, and ``word_only_search`` the Plan 033 arm W that keeps the
+    word half of the hybrid only; the product sets neither.
     """
+    novel_part = (
+        "Novel hits come first: up to 8 chapters, best first, each with a passage "
+        "handle to open with read_chapters, a one-line preview of the closest line, "
+        "and found_by (meaning, words, or both; both is the strongest lead). "
+        "A preview is a lead, not proof: open the passage before you rely on it. "
+    )
     search_description = (
-        "Meaning search across the whole story (the novel and the story notebook). "
-        "Use to LOCATE where something happens when you do not know the exact words. "
-        "Returns grouped hits: notebook statements first (short summaries with chapter "
-        "evidence, read these first, they often carry the answer) and novel passages "
-        "(chapter + line handles to open with read_chapters). Scores run 0-1; close "
-        "scores are not proof of the right chapter. The whole novel is always "
+        "Hybrid search across the whole story: meaning search and word search "
+        "blended. Use to LOCATE where something happens when you do not know the "
+        "exact words; describe the scene in the novel's own vocabulary. "
+        + novel_part
+        + "Notebook statements (short summaries with chapter evidence) come after "
+        "and only cover chapters 1-1000. The whole novel is always "
         "searched automatically and can only be narrowed."
     )
-    search_handler = service.semantic_search
+    search_handler = (
+        functools.partial(service.semantic_search, meaning=False)
+        if word_only_search
+        else service.semantic_search
+    )
     if novel_only_search:
         search_description = (
-            "Meaning search across the novel's text. Use to LOCATE where something "
-            "happens when you do not know the exact words. Returns novel passages "
-            "(chapter + line handles to open with read_chapters). Scores run 0-1; close "
-            "scores are not proof of the right chapter. The whole novel is always "
-            "searched and can only be narrowed."
+            "Hybrid search across the novel's text: meaning search and word search "
+            "blended. Use to LOCATE where something happens when you do not know the "
+            "exact words. " + novel_part + "The whole novel is always searched and can "
+            "only be narrowed."
         )
-        search_handler = _novel_only(service.semantic_search)
+        search_handler = _novel_only(search_handler)
+    if word_only_search:
+        search_description = (
+            "Word search across the whole story (BM25 ranking over the novel's words). "
+            "Use to LOCATE where something happens when you do not know the exact "
+            "words; describe the scene in the novel's own vocabulary. "
+            + novel_part.replace("found_by (meaning, words, or both; both is the strongest lead)", "found_by")
+            + "Notebook statements (short summaries with chapter evidence) come after "
+            "and only cover chapters 1-1000. The whole novel is always searched and "
+            "can only be narrowed."
+        )
     registry.register(
         ToolDefinition(
             name="semantic_search",

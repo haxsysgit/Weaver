@@ -113,7 +113,11 @@ WEB_SYSTEM_PROMPT = (
     "\n"
     "<when_you_cannot_find_it>\n"
     "When the reader describes a scene and the passages you opened do not "
-    "show it, say so first and plainly: you could not find that scene. Never "
+    "show it, keep looking before you give up: scenes often start or end in "
+    "the chapter before and after your best lead, so read those, and search "
+    "again in different words while you have lookups left. Only if it is "
+    "still not there, say so first and plainly: you could not find that "
+    "scene. Never "
     "offer a different scene as the answer to theirs, even a similar or a "
     "later one. You may mention a near match only after that, labelled as a "
     "guess (for example: not sure this is it, but...), and ask one short "
@@ -230,8 +234,8 @@ def shelf_line(last_chapter: int | None, search_through: int | None = None) -> s
     )
     if search_through and search_through < last_chapter:
         line += (
-            f"; semantic_search covers chapters 1-{search_through}, so for "
-            "later chapters open them or use find_text"
+            "; semantic_search's word half reaches every one, its meaning "
+            f"half covers chapters 1-{search_through}"
         )
     return line + ".\n"
 
@@ -627,6 +631,7 @@ async def open_chat_runtime(
                 registry,
                 library,
                 novel_only_search=arm is not None and arm.novel_only_search,
+                word_only_search=arm is not None and arm.word_only_search,
             )
             register_skill_tool(registry)
         elif not live:

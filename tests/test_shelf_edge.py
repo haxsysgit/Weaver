@@ -152,7 +152,8 @@ async def test_the_prompt_names_the_edge_and_what_search_covers(shelf_app) -> No
     runtime, _client, project = shelf_app
     prompt = runtime.session._system_prompt_by_domain("canon", None)
     assert "chapters 1-3232" in prompt
-    assert "semantic_search covers chapters 1-3127" in prompt
+    # Plan 033 round 2: the word half of the hybrid reads the whole shelf.
+    assert "word half reaches every one, its meaning half covers chapters 1-3127" in prompt
 
     shelve(project, 3233)
     runtime.shelf._expires_at = 0.0  # as if the cache had expired

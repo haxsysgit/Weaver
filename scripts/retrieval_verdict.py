@@ -204,10 +204,15 @@ async def run_arm(
     try:
         if live and "semantic_search" in arm.tools and runtime.library is not None:
             # Prove search works before spending on an arm that relies on it.
-            probe = runtime.library._run_search("Sunny", surface="novel", chapter_from=None, chapter_to=None)
-            if not probe["canonical_hits"]:
+            meaning = not arm.word_only_search
+            probe = runtime.library._run_search(
+                "Sunny", surface="novel", chapter_from=None, chapter_to=None, meaning=meaning
+            )
+            hits = probe["canonical_hits"]
+            by_meaning = sum("meaning" in hit["found_by"] for hit in hits)
+            if not hits or (meaning and not by_meaning):
                 raise RuntimeError(f"arm {arm_name}: the search probe found nothing; is the index open elsewhere?")
-            print(f"{arm_name} search probe ok ({len(probe['canonical_hits'])} hits)", flush=True)
+            print(f"{arm_name} search probe ok ({len(hits)} hits, {by_meaning} by meaning)", flush=True)
         async with AsyncClient(
             transport=ASGITransport(app=create_app(runtime)), base_url="http://127.0.0.1", timeout=None
         ) as client:
@@ -297,7 +302,7 @@ async def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--questions", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
-    parser.add_argument("--arm", action="append", choices=["A", "B", "C", "D"], required=True)
+    parser.add_argument("--arm", action="append", choices=["A", "B", "C", "D", "W"], required=True)
     parser.add_argument("--only", action="append", default=[])
     parser.add_argument("--run", type=int, default=1)
     parser.add_argument("--live", action="store_true")

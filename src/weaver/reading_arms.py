@@ -7,6 +7,8 @@ An arm is the set of reading tools the model gets for one evaluation run:
 - C, no notebook: semantic_search reads novel passages only; no who_is or
   lore_path, which read the notebook's story map.
 - D, chapters and exact search: read_chapters, find_text, browse_chapters.
+- W, word search only (Plan 033): all six tools, but semantic_search keeps
+  only the word half of the hybrid, so A against W isolates the vectors.
 
 Private to the evaluation harness. Only `open_chat_runtime(arm=...)` takes
 one; no route, setting, header, or environment variable can pick an arm.
@@ -32,6 +34,7 @@ class ReadingArm:
     label: str
     tools: tuple[str, ...]
     novel_only_search: bool = False
+    word_only_search: bool = False
 
     @property
     def has_notebook(self) -> bool:
@@ -54,6 +57,7 @@ ARMS: dict[str, ReadingArm] = {
         "chapters and exact search",
         ("read_chapters", "find_text", "browse_chapters"),
     ),
+    "W": ReadingArm("W", "word search only", READING_TOOLS, word_only_search=True),
 }
 
 # What each tool does, in the prompt's own words, for arms that list fewer
