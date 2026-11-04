@@ -1030,6 +1030,7 @@ async def run_turn(
                     ", ".join(finding.code for finding in fallback_findings),
                 )
                 exit_reason = TurnExitReason.MODEL_FAILED
+                error_category = "protocol_publication_repair_1"
                 safe_failure = safe_error("model_protocol")
                 break
             persisted, published = await persist_answer(
@@ -1207,6 +1208,7 @@ async def run_turn(
                         ),
                     )
                     exit_reason = TurnExitReason.MODEL_FAILED
+                    error_category = "protocol_publication_repair_2"
                     safe_failure = safe_error("model_protocol")
                     break
                 answer = validated_candidate
@@ -1228,6 +1230,7 @@ async def run_turn(
 
         if not _response_matches_model(response, model):
             exit_reason = TurnExitReason.MODEL_FAILED
+            error_category = "protocol_model_mismatch"
             safe_failure = safe_error("model_protocol")
             break
 
@@ -1299,6 +1302,7 @@ async def run_turn(
                         last_stop_reason,
                     )
                     exit_reason = TurnExitReason.MODEL_FAILED
+                    error_category = "protocol_candidate_rejected"
                     safe_failure = safe_error("model_protocol")
                     break
                 candidate_rejections += 1
@@ -1338,6 +1342,7 @@ async def run_turn(
                     packet = None
                 if not packet:
                     exit_reason = TurnExitReason.MODEL_FAILED
+                    error_category = "protocol_no_packet"
                     safe_failure = safe_error("model_protocol")
                     break
                 validated_candidate = assistant
@@ -1440,6 +1445,7 @@ async def run_turn(
 
             if packet_builder is not None and packet_build_failed:
                 exit_reason = TurnExitReason.MODEL_FAILED
+                error_category = "protocol_packet_build_failed"
                 safe_failure = safe_error("model_protocol")
                 break
             # Tools were used but produced nothing citable. Failing the turn
@@ -1494,6 +1500,8 @@ async def run_turn(
             ModelStopReason.STOP,
         ):
             exit_reason = TurnExitReason.MODEL_FAILED
+            error_category = "protocol_stop_reason"
+            raw_stop_reason = response.raw_stop_reason or ""
             safe_failure = safe_error("model_protocol")
             break
         if forced_answer:
@@ -1507,6 +1515,10 @@ async def run_turn(
             known_call_ids,
         ):
             exit_reason = TurnExitReason.MODEL_FAILED
+            error_category = (
+                "protocol_unsafe_tool_calls" if tool_calls else "protocol_no_tool_calls"
+            )
+            raw_stop_reason = response.raw_stop_reason or ""
             safe_failure = safe_error("model_protocol")
             break
         tool_steps_used += 1
@@ -1622,6 +1634,7 @@ async def run_turn(
             last_stop_reason,
         )
         exit_reason = TurnExitReason.MODEL_FAILED
+        error_category = "protocol_empty_answer"
         safe_failure = safe_error("empty_answer")
 
     return TurnResult(

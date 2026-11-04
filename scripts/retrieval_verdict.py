@@ -129,6 +129,40 @@ def release_library(runtime: Any) -> None:
         library.client = None
 
 
+def read_run_body(db_path: Path, conversation_id: str) -> dict[str, Any]:
+    """The last run_completed or run_failed event body for a conversation.
+
+    Plan 033: the answer stream does not say which check failed a turn, or
+    whether the gap answer rescued it; the runtime's state database does.
+    Read-only; returns {} when there is no database or no such event.
+    """
+    import sqlite3
+
+    if not db_path.exists():
+        return {}
+    db = sqlite3.connect(f"file:{db_path.as_posix()}?mode=ro", uri=True)
+    try:
+        row = db.execute(
+            "SELECT kind, body FROM run_event WHERE conversation_id = ? "
+            "AND kind IN ('run_completed', 'run_failed') "
+            "ORDER BY sequence DESC LIMIT 1",
+            (conversation_id,),
+        ).fetchone()
+    finally:
+        db.close()
+    if row is None:
+        return {}
+    body = json.loads(row[1] or "{}")
+    body["kind"] = row[0]
+    return body
+
+
+def failure_site(run_body: dict[str, Any]) -> str:
+    """The check that failed the turn, or that the gap answer rescued."""
+    reading = run_body.get("reading") or {}
+    return run_body.get("error_category") or reading.get("rescued_from") or ""
+
+
 def parse_stream(text: str) -> tuple[list[tuple[str, dict[str, Any]]], str, str]:
     """Server-sent events into (events, exit name, final text)."""
     events: list[tuple[str, dict[str, Any]]] = []
@@ -204,6 +238,8 @@ async def run_arm(
                 started_tools = [tool for tool, status in tools if status == "start"]
                 outside = sorted({tool for tool in started_tools if tool not in ("load_skill", *arm.tools)})
                 tool_errors = failures.take()
+                run_body = read_run_body(state / "weaver.sqlite3", conversation)
+                site = failure_site(run_body)
                 record = {
                     "question_id": question["id"],
                     "arm": arm_name,
@@ -215,6 +251,8 @@ async def run_arm(
                     "tool_calls": len(started_tools),
                     "outside_arm": outside,
                     "tool_errors": tool_errors,
+                    "run_body": run_body,
+                    "site": site,
                     "seconds": seconds,
                     "cost_usd": round(meter.spent_usd - spent_before, 6),
                     "text": text,
@@ -227,7 +265,8 @@ async def run_arm(
                     f"{arm_name} {number}/{len(questions)} {question['id']}: {exit_name}, "
                     f"{len(started_tools)} tools, {seconds}s, ${record['cost_usd']:.4f} "
                     f"(total ${meter.spent_usd:.4f}){' OUTSIDE ' + str(outside) if outside else ''}"
-                    f"{' TOOL ERRORS ' + str(tool_errors) if tool_errors else ''}",
+                    f"{' TOOL ERRORS ' + str(tool_errors) if tool_errors else ''}"
+                    f"{' SITE ' + site if site else ''}",
                     flush=True,
                 )
                 if tool_errors and live:
