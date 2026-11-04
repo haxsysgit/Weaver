@@ -106,7 +106,8 @@ accepted public release is v3.0.0 at Plan 040.
    arms A and D (about $0.50) decide extend or retire vector search.
    Executed by `deepseek-flash` from a scripted runbook, with Opus for the
    questions and review.
-   - **033.5 The knowledge pipeline** (rescoped by the 033 verdict):
+   - **033.5 Meaning search keeps up** (drafted 2026-11-04,
+     `plans/033.5-meaning-search-keeps-up.md`; rescoped by the 033 verdict):
      embed chapters 3128 to 3232 into the existing index and embed each
      new chapter in the weekly refresh, so the meaning half covers the
      whole shelf (the word half already does). Optional: fit chunks to the

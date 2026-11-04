@@ -211,8 +211,10 @@ screenshots before claims.
 > codified at the last checkpoint. Plan 031 is closed (accepted 2026-11-01).
 > Plan 032 is closed (accepted 2026-11-03; direction in its
 > `decision.md`). Plan 033 is closed (accepted 2026-11-04; verdict in
-> `deliverables/033-every-turn-answers/results.md`). Next: draft Plan
-> 033.5 (the meaning half reaches the whole shelf). Constraints: every commit starts with `Plan NNN: `;
+> `deliverables/033-every-turn-answers/results.md`). Plan 033.5 is drafted
+> (`plans/033.5-meaning-search-keeps-up.md`) and waits on the owner's
+> admission; `deepseek-flash` runs slices 2 to 4 from its `runbook.md`.
+> Constraints: every commit starts with `Plan NNN: `;
 > no Claude attribution in commits or PRs; no deploy, push, or tag without
 > the owner; no secrets or private chapters in commits; one server at a time
 > because of the Qdrant lock. UI changes need real desktop and mobile
