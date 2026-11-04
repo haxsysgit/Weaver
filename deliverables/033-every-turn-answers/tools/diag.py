@@ -22,7 +22,7 @@ def main(argv: list[str]) -> int:
     rescued_sites: Counter = Counter()
     cost = 0.0
     no_body = 0
-    for path in sorted(root.glob("[ABCD]/*.json")):
+    for path in sorted(root.glob("[ABCDW]/*.json")):
         record = json.loads(path.read_text(encoding="utf-8"))
         if record["run"] not in runs:
             continue
@@ -39,16 +39,16 @@ def main(argv: list[str]) -> int:
             no_body += not record.get("run_body")
         if rescued:
             rescued_sites[site] += 1
-    for arm in "ABCD":
+    for arm in "ABCDW":
         if counts[arm, "answers"]:
             print(
                 f"{arm}: {counts[arm, 'answers']} answers, {counts[arm, 'none']} with no answer, "
                 f"{counts[arm, 'rescued']} rescued by the gap answer"
             )
-    total = sum(counts[a, "answers"] for a in "ABCD")
+    total = sum(counts[a, "answers"] for a in "ABCDW")
     print(
-        f"total: {total} answers, {sum(counts[a, 'none'] for a in 'ABCD')} with no answer, "
-        f"{sum(counts[a, 'rescued'] for a in 'ABCD')} rescued"
+        f"total: {total} answers, {sum(counts[a, 'none'] for a in 'ABCDW')} with no answer, "
+        f"{sum(counts[a, 'rescued'] for a in 'ABCDW')} rescued"
     )
     print("no-answer sites:", dict(failed_sites.most_common()))
     print("rescued sites:", dict(rescued_sites.most_common()))

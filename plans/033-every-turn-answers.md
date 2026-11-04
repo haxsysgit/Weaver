@@ -76,6 +76,12 @@
    (test-first), may re-run a command once after an environment crash
    (never to re-sample a model answer), and records every decision in its
    report. It stops only for the hard rules in the brief.
+9. (2026-11-04, after the first held-out run) Fix, then re-test. Do not
+   judge vector search on the tool as built: find out why it does not
+   help. The intent was always a hybrid (meaning search seamed together
+   with word search, faster and more accurate); test that. The first
+   held-out result (rule: retire) stays on record as evidence of the old
+   build. Slices 12 to 15 below.
 
 ## Scope
 
@@ -191,6 +197,25 @@ recorded.
 11. **Close.** The owner's decision in `decision.md`; HANDOFF,
     TODO_future, and the index updated; Plan 033.5 rescoped to the
     verdict. No merge, tag, or deploy without the owner.
+
+### Round 2 (owner direction 9)
+
+12. **Root cause (Opus, no model spend).** Score the search arms directly
+    on dev questions (Plan 032's set and the older retrieval set, never
+    the held-out 15): chapter hit@1, @5, @8 for the live tool, real
+    keyword search, blends, re-chunked embeddings, a reranker.
+    **Done 2026-11-04** (`learning.md`).
+13. **Fix (test-first).** The search tool the dev scores pick, its
+    results carrying enough text to judge a hit; the give-up rule
+    reworded to keep looking before conceding; oversized `find_text`
+    results trimmed instead of failed. **Done 2026-11-04** (`3e31779`,
+    owner chose the simple hybrid; floor 865 passed, 4 skipped).
+14. **Re-test (live, executor).** The check set, then the held-out set
+    once on the new build, arms A, W (word half only) and D, three runs,
+    judged blind with the chapters; the same rule for A vs D (the search
+    tool) and A vs W (the meaning half). Runs are new runs; the first
+    round's stay. Brief: runbook section 6. About $0.95; cap $3.00.
+15. **Review and close** as slices 10 and 11.
 
 ### Question recipe (slice 8, Opus)
 

@@ -33,6 +33,66 @@ protect the verdict and the repo, not because of the executor's skill.
 - **Overlap check:** no question shares a run of four or more words with
   its expected chapter (`overlap.py`, all 15 OK).
 
+## Root cause of weak vector search (slice 12, 2026-11-04)
+
+Measured directly, no model in the loop, on 53 dev questions (Plan 032's
+scene and name questions plus the older retrieval set; never the held-out
+15), whole novel 1 to 3127. Chapter-level hit rates:
+
+| Search | hit@1 | hit@5 | hit@8 | hit@20 |
+|---|---|---|---|---|
+| Live tool (vector only, as shipped) | 0.09 | 0.38 | 0.49 | 0.62 |
+| Real BM25 word search, same chunks | 0.28 | 0.45 | 0.57 | 0.72 |
+| Blend: vector (with bge query prefix) + BM25, RRF | 0.21 | 0.58 | 0.66 | 0.77 |
+| Blend of four (both chunk sizes, both methods) | 0.26 | 0.58 | 0.66 | 0.79 |
+| Blend + cross-encoder rerank (bge-reranker-base) | 0.15 | 0.42 | 0.62 | 0.83 |
+
+Observations:
+
+- **The hybrid was never built.** The tool runs vector search and falls
+  back to word search only when vector returns nothing, which does not
+  happen. The stored word vectors are BM42 with about 48 terms per
+  half-chapter chunk, not BM25.
+- **Chunks overflow the model.** 6,826 chunks for 3,127 chapters, each
+  about 79 lines and 800 tokens; bge-large reads 512, so about a third of
+  the text was never embedded. Re-chunking to fit (19,999 chunks, about
+  380 tokens; 3.4 minutes on the owner's GPU, vectors match the runtime
+  query path at cosine 1.000) lifts vector-only hit@1 from 0.09 to 0.17,
+  but blends land within noise of the simple blend.
+- **Vector alone loses to word search; blended, it adds about 13 points
+  at hit@5** (0.45 to 0.58). The owner's hybrid idea holds.
+- **The tool's output hides the evidence.** Novel hits carry only a
+  chapter-and-line handle, no text, so judging a hit costs a lookup. The
+  description tells the model to read notebook hits first, but the
+  notebook stops at chapter 1000.
+- **A generic reranker hurts** on this novel's paraphrases. Dropped.
+- One question is about 2 points; differences under about 6 points are
+  noise at this size.
+
+**Accepted (owner, 2026-11-04): "Simple hybrid".** Built test-first
+(`3e31779`): the existing vector index with the bge query prefix, BM25
+over every chapter on the shelf, fused by RRF; each hit carries a preview
+and `found_by`; `find_text` trims oversized results; the give-up rule
+says to read the chapters either side and search in other words first.
+Scored through the shipped tool on the same dev questions:
+
+| Tool | hit@1 | hit@5 | hit@8 |
+|---|---|---|---|
+| Before (vector only) | 0.09 | 0.38 | 0.49 |
+| Hybrid (arm A) | 0.21 | 0.58 | 0.66 |
+| Word half only (arm W) | 0.25 | 0.42 | 0.57 |
+
+About 0.1 s a warm search. Word search alone ranks the single best
+chapter slightly better; the blend wins at five and eight, which is what
+the model sees (it gets eight hits with previews).
+
+- **Caveat for round 2's held-out run.** The search design used dev
+  questions only. The give-up rule's rewording was prompted by the check
+  set and by the pattern of round 1's held-out declines (no question
+  text or key fact went into it). The held-out questions are unchanged
+  and the product has never been tuned on them, but the planning agent
+  had seen round 1's held-out answers.
+
 ## Observations (2026-11-03, before admission)
 
 - **No-answer turns are not mostly a lookup budget problem.** In Plan

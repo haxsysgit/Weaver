@@ -202,6 +202,64 @@ writes; if `$P/questions.json` already exists with a status starting
   it prints is the plan's fixed rule; report it, do not argue it.
 - Write `$P/EXECUTOR_REPORT_2.md` and tell the owner it is ready.
 
+## 6. Round 2 (owner direction 9): the hybrid re-test
+
+**Why:** round 1 measured a search tool that was never the hybrid the
+owner designed (vector only, oversized chunks, hits without text) under a
+give-up rule that made Weaver concede early. The planning agent found the
+causes on dev questions and rebuilt search (commit `3e31779`): meaning
+plus word search blended, a preview on every hit, `find_text` trimming
+instead of failing, and a "keep looking first" give-up rule. Floor at
+that commit: 865 passed, 4 skipped. Round 1's results stay as evidence;
+nothing here overwrites them.
+
+**Same hard rules** (section 1). The product is frozen at the round 2
+build from the first round 2 held-out answer until all 135 are in. Use
+new folders and prefixes only; never touch round 1's files.
+
+**Spend:** round 1 ended at $1.540354. Round 2 is about 153 answers,
+about $0.95. Pass `--spent` from the last log as before; the $2.70 stop
+line still holds. If the meter would cross it, stop and report.
+
+### Step R1: the check set on the new build (live)
+
+- Arm A, runs 1 to 3, questions `r15 r35 n18 t1 t2 t3` from `$Q32`,
+  output `$P/check2`. Arm A's probe line must now read
+  `search probe ok (N hits, M by meaning)` with M above 0; if M is 0 the
+  vector half is not running (index locked or missing): fix that first.
+- Judge blind: `PREFIX=x2_ PATTERN="A/*.json" SEED=3312` with the `q032`
+  tools, then `PREFIX=x2_ uv run python deliverables/033-every-turn-answers/tools/check_summary.py`.
+- Label consistently with `.weaver/evaluation/plan032/rulings.md`. In
+  particular, an r15 answer about the earlier confession to the first
+  cohort is `partial:original-cohort-reading`, not `substitutes-scene`
+  (review finding 4).
+- Go on to step R2 whatever the gate says; report it.
+
+### Step R2: the held-out set on the new build (live)
+
+- Arms A, W, and D, runs 1 to 3, all 15 questions, output
+  `$P/heldout2` (135 answers). Order: A1, W1, D1, A2, W2, D2, A3, W3, D3.
+  Arm W has every tool but only the word half of search; its probe line
+  reads `0 by meaning`, which is correct for W.
+- Judge blind: `PREFIX=h2_ PATTERN="[ADW]/*.json" SEED=33034` with
+  `$P/tools/judge_prep.py`, then `$P/tools/packet.py` and
+  `$P/tools/judge.py` with `PREFIX=h2_` for h01 to h15.
+- **Judge with the chapters.** Round 1 was judged from packets alone; the
+  review agreed with every verdict, but it was fast. This time, for every
+  answer that is not a plain decline, open the expected chapter
+  (`$P/tools/chapter.py N --grep WORD`) and check F1 against the text
+  before you call it correct or wrong. Same content, same verdict.
+- Analysis: `PREFIX=h2_ DIR=heldout2 ARMS=ADW uv run python deliverables/033-every-turn-answers/tools/analyze_heldout.py > $P/heldout2_analysis.txt`
+  and `diag.py $P/heldout2 1 2 3 > $P/heldout2_diag.txt`. It prints two
+  rules: A vs D (does the search tool earn its keep) and A vs W (does the
+  meaning half earn its keep over word search alone). Report both; do not
+  argue them.
+
+### End of round 2
+
+Write `$P/EXECUTOR_REPORT_3.md` (Appendix B, plus both rule lines and
+the check gate) and tell the owner it is ready.
+
 ---
 
 ## Appendix A. The rubric

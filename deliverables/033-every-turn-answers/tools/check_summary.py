@@ -2,7 +2,8 @@
 
     uv run python deliverables/033-every-turn-answers/tools/check_summary.py
 
-Reads .weaver/evaluation/plan033/q032/x_judgements.json and x_key.json.
+Reads .weaver/evaluation/plan033/q032/{PREFIX}judgements.json and
+{PREFIX}key.json; PREFIX defaults to x_ (round 1), round 2 uses x2_.
 Gate: at most 1 of the 9 scene answers (r15, r35, n18) presents another
 scene as the answer (its note contains "substitutes-scene"), and at least
 6 of the 9 trial answers (t1, t2, t3) are correct.
@@ -12,18 +13,20 @@ Exit codes: 0 pass, 1 not finished, 2 fail.
 from __future__ import annotations
 
 import json
+import os
 import sys
 from collections import Counter
 from pathlib import Path
 
 ROOT = Path(".weaver/evaluation/plan033/q032")
+PREFIX = os.environ.get("PREFIX", "x_")
 SCENES = ("r15", "r35", "n18")
 TRIALS = ("t1", "t2", "t3")
 
 
 def main() -> int:
-    judged = json.loads((ROOT / "x_judgements.json").read_text(encoding="utf-8"))
-    key = json.loads((ROOT / "x_key.json").read_text(encoding="utf-8"))
+    judged = json.loads((ROOT / f"{PREFIX}judgements.json").read_text(encoding="utf-8"))
+    key = json.loads((ROOT / f"{PREFIX}key.json").read_text(encoding="utf-8"))
     if set(judged) != set(key):
         print(f"ERROR judged {len(judged)} of {len(key)}; finish judging first")
         return 1
