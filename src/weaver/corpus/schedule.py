@@ -37,6 +37,9 @@ STALE_LOCK = timedelta(hours=2)
 
 Update = Callable[..., Awaitable[dict[str, Any]]]
 Notify = Callable[[str, str], None]
+# The meaning-index step (Plan 033.5): returns a small state record, such
+# as {"state": "updated", ...} or {"state": "waiting", "reaches": N}.
+IndexStep = Callable[[], dict[str, Any]]
 
 
 def state_dir(project_root: Path) -> Path:
@@ -66,8 +69,11 @@ def _write_status(project_root: Path, status: dict[str, Any]) -> None:
 def _log(project_root: Path, now: datetime, status: dict[str, Any]) -> None:
     line = (
         f"{now.isoformat()} outcome={status.get('outcome')} "
-        f"added={status.get('added', 0)} last={status.get('last_chapter')}\n"
+        f"added={status.get('added', 0)} last={status.get('last_chapter')}"
     )
+    if status.get("index"):
+        line += f" index={status['index'].get('state')}"
+    line += "\n"
     with (state_dir(project_root) / "scheduled.log").open("a", encoding="utf-8") as log:
         log.write(line)
 
@@ -150,9 +156,16 @@ async def run_scheduled_refresh(
     *,
     update: Update,
     notify: Notify,
+    index: IndexStep | None = None,
     now: datetime | None = None,
 ) -> dict[str, Any]:
-    """One unattended weekly run; returns the status it recorded."""
+    """One unattended weekly run; returns the status it recorded.
+
+    After the chapter step, `index` brings the meaning index level with
+    the shelf (also when nothing new arrived but the index lags). Its
+    result is recorded under "index" and never changes the outcome: a
+    busy index waits for the next run.
+    """
     now = now or datetime.now(UTC)
     previous = _read_status(project_root)
     if not take_lock(project_root, now):
@@ -177,11 +190,25 @@ async def run_scheduled_refresh(
                 f"The weekly refresh stopped on an unexpected {type(exc).__name__}. "
                 "Run `weaver refresh` on this machine to see the plan.",
             )
+        if index is not None:
+            status["index"] = _run_index(index, notify)
         _write_status(project_root, status)
         _log(project_root, now, status)
         return status
     finally:
         release_lock(project_root)
+
+
+def _run_index(index: IndexStep, notify: Notify) -> dict[str, Any]:
+    try:
+        return index()
+    except Exception as exc:  # noqa: BLE001 - recorded; the chapters are safe
+        notify(
+            "Weaver's search index did not update",
+            f"The meaning index stopped on an unexpected {type(exc).__name__}. "
+            "Search still works; run `weaver library index` on this machine.",
+        )
+        return {"state": "failed", "code": type(exc).__name__}
 
 
 def record_manual_apply(

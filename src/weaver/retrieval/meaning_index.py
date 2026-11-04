@@ -45,9 +45,13 @@ __all__ = [
     "CHUNK_TARGET_LINES",
     "DENSE_MODEL",
     "SPARSE_MODEL",
+    "IndexBusy",
     "IndexCheck",
     "check_meaning_index",
     "index_chunks",
+    "load_models",
+    "open_index",
+    "refresh_meaning_index",
     "stable_point_id",
     "update_meaning_index",
     "write_coverage",
@@ -231,3 +235,94 @@ def write_coverage(path: Path, coverage: int, *, now: datetime | None = None) ->
         encoding="utf-8",
     )
     temporary.replace(path)
+
+
+# ---------------------------------------------------------------------------
+# The job: `weaver library index [--check]` and the weekly refresh step
+# ---------------------------------------------------------------------------
+
+NOVEL_ID = "shadow-slave"
+
+
+class IndexBusy(Exception):
+    """Another process (usually the running server) holds the index."""
+
+
+def index_dir(project_root: Path) -> Path:
+    return project_root / ".weaver" / "retrieval" / "index"
+
+
+def coverage_path(project_root: Path) -> Path:
+    return project_root / ".weaver" / "retrieval" / "coverage.json"
+
+
+def open_index(path: Path):
+    from qdrant_client import QdrantClient
+
+    try:
+        return QdrantClient(path=str(path))
+    except RuntimeError as exc:
+        if "already accessed" in str(exc):
+            raise IndexBusy from None
+        raise
+
+
+def load_models():
+    """The live index's embedders, on CPU (about 1.3 GB for bge-large)."""
+    from fastembed import SparseTextEmbedding, TextEmbedding
+
+    from .experiment import splade_encoder
+
+    return TextEmbedding(DENSE_MODEL, threads=4), splade_encoder(SparseTextEmbedding(SPARSE_MODEL))
+
+
+def refresh_meaning_index(
+    project_root: Path,
+    *,
+    check_only: bool = False,
+    models: Callable[[], tuple[Any, Any]] | None = None,
+    progress: Callable[[list[int]], None] | None = None,
+) -> dict[str, Any]:
+    """Bring the meaning index level with the shelf. Counts only.
+
+    States: checked (`check_only`), current, updated, waiting (another
+    process holds the index; `reaches` is the recorded coverage), and
+    no_index (this machine has no index; building one is the build
+    script's job).
+    """
+    from weaver.shelf import search_coverage
+
+    path = index_dir(project_root)
+    if not path.is_dir():
+        return {"state": "no_index"}
+    try:
+        client = open_index(path)
+    except IndexBusy:
+        return {"state": "waiting", "reaches": search_coverage(project_root)}
+    try:
+        chapters = ChapterIndex(project_root / "novels" / NOVEL_ID)
+        check = check_meaning_index(client, chapters)
+        recorded = search_coverage(project_root)
+        if check_only:
+            return {"state": "checked", **check.as_dict(), "recorded_coverage": recorded}
+        if not check.missing and not check.changed:
+            if recorded != check.coverage:
+                write_coverage(coverage_path(project_root), check.coverage)
+            return {"state": "current", "embedded": 0, "coverage": check.coverage, "points_written": 0}
+        embedder, sparse_encoder = (models or load_models)()
+        try:
+            report = update_meaning_index(
+                client, chapters, embedder=embedder, sparse_encoder=sparse_encoder, on_batch=progress
+            )
+        finally:
+            # Even a run that stops part-way records how far search reaches.
+            coverage = check_meaning_index(client, chapters).coverage
+            write_coverage(coverage_path(project_root), coverage)
+        return {
+            "state": "updated",
+            "embedded": len(report["embedded_chapters"]),
+            "coverage": coverage,
+            "points_written": report["points_written"],
+        }
+    finally:
+        client.close()

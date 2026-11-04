@@ -3,6 +3,7 @@ import asyncio
 import dataclasses
 import json
 import os
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Sequence
@@ -216,6 +217,19 @@ def _parser() -> argparse.ArgumentParser:
     packet.add_argument("novel_id", choices=["shadow-slave"])
     packet.add_argument("chapters", nargs="+", type=int)
 
+    index = library_commands.add_parser(
+        "index",
+        help="Bring the meaning-search index level with the shelf "
+        "(only new or changed chapters are embedded).",
+    )
+    index.add_argument("novel_id", nargs="?", default="shadow-slave", choices=["shadow-slave"])
+    index.add_argument(
+        "--check",
+        action="store_true",
+        help="Report chapters missing, changed, and current, and how far "
+        "search reaches; change nothing.",
+    )
+
     export = library_commands.add_parser("export")
     export.add_argument("novel_id", choices=["shadow-slave"])
     export.add_argument("format", choices=["txt", "md", "epub"])
@@ -293,10 +307,15 @@ def _notifier():
 def _run_scheduled_refresh() -> int:
     """The weekly unattended run (Plan 031). Exit 1 when it needs a person."""
     from .corpus.schedule import run_scheduled_refresh
+    from .retrieval.meaning_index import refresh_meaning_index
 
+    root = _project_root()
     status = asyncio.run(
         run_scheduled_refresh(
-            _project_root(), update=update_novel_corpus, notify=_notifier()
+            root,
+            update=update_novel_corpus,
+            notify=_notifier(),
+            index=lambda: refresh_meaning_index(root),
         )
     )
     print(
@@ -304,6 +323,30 @@ def _run_scheduled_refresh() -> int:
         f"{status.get('added', 0)}, last chapter {status.get('last_chapter')}"
     )
     return 1 if status.get("outcome") in {"failed", "needs_owner"} else 0
+
+
+def _run_library_index(*, check_only: bool) -> int:
+    """`weaver library index [--check]` (Plan 033.5). Counts only."""
+    from .retrieval import meaning_index
+
+    def progress(chapters: list[int]) -> None:
+        print(f"embedded through chapter {chapters[-1]}", file=sys.stderr, flush=True)
+
+    result = meaning_index.refresh_meaning_index(
+        _project_root(),
+        check_only=check_only,
+        models=meaning_index.load_models,
+        progress=progress,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    if result["state"] == "waiting":
+        print(
+            "The search index is in use (is the Weaver server running?). "
+            "Stop the server and run this again.",
+            file=sys.stderr,
+        )
+        return 1
+    return 0
 
 
 def _run_schedule(command: str) -> int:
@@ -507,6 +550,9 @@ def run(argv: Sequence[str] | None = None) -> int:
             if args.novel_dir is not None:
                 check_args.extend(["--novel-dir", str(args.novel_dir)])
             return notebook_check_main(check_args)
+
+    if args.command == "library" and args.library_command == "index":
+        return _run_library_index(check_only=args.check)
 
     if args.command == "library":
         try:

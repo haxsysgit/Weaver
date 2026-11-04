@@ -282,3 +282,81 @@ def test_a_failed_run_that_saved_chapters_still_moves_the_edge(tmp_path) -> None
     assert status["outcome"] == "failed"
     assert status["added"] == 2
     assert status["last_new_chapter_at"] == NOW.isoformat()
+
+
+class FakeIndex:
+    """Stands in for the meaning-index step; records when it ran."""
+
+    def __init__(self, result=None, error=None, order=None):
+        self.result = result or {"state": "updated", "embedded": 5, "coverage": 3237}
+        self.error = error
+        self.order = order
+        self.calls = 0
+
+    def __call__(self) -> dict:
+        self.calls += 1
+        if self.order is not None:
+            self.order.append("index")
+        if self.error is not None:
+            raise self.error
+        return self.result
+
+
+@pytest.mark.asyncio
+async def test_the_meaning_index_catches_up_after_the_chapter_step(tmp_path) -> None:
+    order: list[str] = []
+
+    class OrderedUpdate(FakeUpdate):
+        async def __call__(self, novel_id, through_chapter=None, preview=True, source="direct", *, appends_only=False):
+            order.append("preview" if preview else "apply")
+            return await super().__call__(novel_id, through_chapter, preview, source, appends_only=appends_only)
+
+    index = FakeIndex(order=order)
+    status = await run_scheduled_refresh(
+        tmp_path,
+        update=OrderedUpdate(preview(PROBE), applied(5, stopped=3238)),
+        notify=Notes(),
+        index=index,
+        now=NOW,
+    )
+
+    assert order == ["preview", "apply", "index"]
+    assert status["outcome"] == "added"
+    assert status["index"] == {"state": "updated", "embedded": 5, "coverage": 3237}
+    assert json.loads(status_path(tmp_path).read_text(encoding="utf-8"))["index"] == status["index"]
+
+
+@pytest.mark.asyncio
+async def test_the_index_catches_up_even_when_no_chapter_was_added(tmp_path) -> None:
+    index = FakeIndex({"state": "updated", "embedded": 2, "coverage": 3232})
+    status = await run_scheduled_refresh(
+        tmp_path, update=FakeUpdate(preview(PROBE), applied(0, stopped=3233)), notify=Notes(), index=index, now=NOW
+    )
+    assert index.calls == 1
+    assert status["outcome"] == "up_to_date"
+    assert status["index"]["state"] == "updated"
+
+
+@pytest.mark.asyncio
+async def test_a_busy_index_waits_and_does_not_fail_the_refresh(tmp_path) -> None:
+    notes = Notes()
+    index = FakeIndex({"state": "waiting", "reaches": 3127})
+    status = await run_scheduled_refresh(
+        tmp_path, update=FakeUpdate(preview(PROBE), applied(5, stopped=3238)), notify=notes, index=index, now=NOW
+    )
+    assert status["outcome"] == "added"
+    assert status["index"] == {"state": "waiting", "reaches": 3127}
+    assert notes.sent == []
+
+
+@pytest.mark.asyncio
+async def test_a_broken_index_step_is_recorded_without_failing_the_refresh(tmp_path) -> None:
+    notes = Notes()
+    index = FakeIndex(error=ValueError("a path or text that must not be stored"))
+    status = await run_scheduled_refresh(
+        tmp_path, update=FakeUpdate(preview(PROBE), applied(5, stopped=3238)), notify=notes, index=index, now=NOW
+    )
+    assert status["outcome"] == "added"
+    assert status["index"] == {"state": "failed", "code": "ValueError"}
+    assert "must not be stored" not in json.dumps(status)
+    assert len(notes.sent) == 1 and "weaver library index" in notes.sent[0][1]
