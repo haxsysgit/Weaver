@@ -93,6 +93,35 @@ the model sees (it gets eight hits with previews).
   and the product has never been tuned on them, but the planning agent
   had seen round 1's held-out answers.
 
+## Round 2 verdict (slices 14 and 15, 2026-11-04)
+
+Observations (counts in `results.md`):
+
+- **The hybrid wins on fresh questions.** Arm A 6.67 of 15 per run, word
+  half only (W) 4.33, no search (D) 3.67. Both rules keep: A vs D +3.00
+  (the search tool), A vs W +2.33 (the meaning half), quote misses 0 each
+  after echoes of the question stopped counting (review finding 8).
+- **It is faster and cheaper, as the owner expected.** A used 5.5 tool
+  calls, 12.2 s and $0.0053 per answer; W 6.2, 15.4 s, $0.0066; D 6.8,
+  15.5 s, $0.0072.
+- **The vector half matters most where word search is weakest:** on
+  chapters 1 to 1000, A 3.00 and W 2.33; and W leaves far more answers
+  half right (11 partial against A's 3), consistent with word search
+  landing near the scene but not on it.
+- **Fewer give-ups.** Arm A declined 11 of 45, down from 18 in round 1.
+- **The margin is narrow.** A bootstrap over questions gives about a 4.5%
+  chance A is not ahead; 15 questions cannot say more.
+
+Hypotheses at close:
+
+- **H2 confirmed.** No turn without an answer in 327 live answers after
+  the gap answer.
+- **H3 half confirmed.** Scene substitution 0 of 9; trial answers 3 of 9,
+  below the bar of 6 (review finding 10).
+- **H4 confirmed for the hybrid, rejected for vector-only search.** Round
+  1's vector-only search missed the bar (+1.67); the rebuilt hybrid clears
+  it (+3.00).
+
 ## Observations (2026-11-03, before admission)
 
 - **No-answer turns are not mostly a lookup budget problem.** In Plan

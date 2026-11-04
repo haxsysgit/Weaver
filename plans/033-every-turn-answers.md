@@ -217,7 +217,11 @@ recorded.
     judged blind with the chapters; the same rule for A vs D (the search
     tool) and A vs W (the meaning half). Runs are new runs; the first
     round's stay. Brief: runbook section 6. About $0.95; cap $10.00.
-15. **Review and close** as slices 10 and 11.
+    **Done 2026-11-04** (`EXECUTOR_REPORT_3.md`, private; $1.04).
+15. **Review and close** as slices 10 and 11. **Review done 2026-11-04:**
+    audit 0 of 20 disagree; both rules keep after the quote-echo
+    correction (review finding 8); recommendation in `decision.md`. Close
+    waits on the owner.
 
 ### Question recipe (slice 8, Opus)
 

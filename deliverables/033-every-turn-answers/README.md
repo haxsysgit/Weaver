@@ -4,8 +4,8 @@
 | --- | --- | --- |
 | `plan.md` | Pointer to the canonical implementation plan | Current |
 | `learning.md` | Owner-confirmed decisions | Admitted 2026-11-03 |
-| `results.md` | Deterministic observations and commands | Not started |
-| `review-ledger.md` | Independent findings, repairs, and rechecks | Not started |
+| `results.md` | Deterministic observations and commands | Complete 2026-11-04 |
+| `review-ledger.md` | Independent findings, repairs, and rechecks | Complete 2026-11-04 |
 | `decision.md` | Owner's final accept or reject record | Pending |
 | `runbook.md` | Exact steps for the executor (`deepseek-flash`) | Current |
 | `patches/` | Pre-tested patch scripts, applied all or nothing | Pre-tested 2026-11-03 |

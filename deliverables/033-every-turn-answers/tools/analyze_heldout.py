@@ -22,6 +22,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import re
 import statistics
 import sys
 from collections import defaultdict
@@ -40,6 +41,10 @@ def _harness():
     sys.modules["retrieval_verdict"] = module
     spec.loader.exec_module(module)
     return module
+
+
+def _norm(text: str) -> str:
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", text.casefold()).split())
 
 
 def load(name: str):
@@ -100,13 +105,24 @@ def main() -> int:
             f"no answer {none} rescued {rescued} spend ${sum(r['cost_usd'] for r in records):.4f}"
         )
 
+    # A quoted span that repeats the reader's own question is an echo, not a
+    # quote from the novel, so it cannot be a quote miss (review finding 8).
+    asked = {qid: _norm(q["text"]) for qid, q in questions.items()}
     quotes = {arm: 0 for arm in ARMS}
+    raw_misses = {arm: 0 for arm in ARMS}
     misses = {arm: 0 for arm in ARMS}
+    echoes = {arm: 0 for arm in ARMS}
     for check in load(f"{PREFIX}quote_checks.json"):
-        arm = key[check["blind_id"]]["arm"]
+        entry = key[check["blind_id"]]
+        arm = entry["arm"]
+        echo = _norm(check["quote"]) in asked[entry["question_id"]]
         quotes[arm] += 1
-        misses[arm] += not check["in_cited"]
-    print("\nquotes: " + ", ".join(f"{a} {quotes[a]} ({misses[a]} not in a cited chapter)" for a in ARMS))
+        echoes[arm] += echo
+        raw_misses[arm] += not check["in_cited"]
+        misses[arm] += not check["in_cited"] and not echo
+    print("\nquotes: " + ", ".join(f"{a} {quotes[a]} ({raw_misses[a]} not in a cited chapter)" for a in ARMS))
+    print("echoes of the question: " + ", ".join(f"{a} {echoes[a]}" for a in ARMS))
+    print("quote misses used by the rule: " + ", ".join(f"{a} {misses[a]}" for a in ARMS))
 
     print(f"\nper question (runs 1-3: c p w d n), arms {' then '.join(ARMS)}:")
     for qid in every:
