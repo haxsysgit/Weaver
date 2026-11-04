@@ -20,8 +20,9 @@ rules below.
 2. **Blind judging.** While judging a set, do not open its key file, its
    run-record folder, or its logs. Judge from the packet, the rubric, and
    the chapters.
-3. **Spend.** Live spend is metered by the harness. Hard cap $3.00. Do not
-   start a live command when the meter is above $2.70.
+3. **Spend.** Live spend is metered by the harness. Hard cap $10.00 (owner,
+   2026-11-04; was $3.00). Do not start a live command when the meter is
+   above $9.70.
 4. **Private stays private.** Never print, copy, or commit the DeepSeek key;
    never open `.env`. No question text, answer text, or novel text in any
    committed file. Run records, judgements, and reports live in
@@ -218,7 +219,7 @@ build from the first round 2 held-out answer until all 135 are in. Use
 new folders and prefixes only; never touch round 1's files.
 
 **Spend:** round 1 ended at $1.540354. Round 2 is about 153 answers,
-about $0.95. Pass `--spent` from the last log as before; the $2.70 stop
+about $0.95. Pass `--spent` from the last log as before; the $9.70 stop
 line still holds. If the meter would cross it, stop and report.
 
 ### Step R1: the check set on the new build (live)

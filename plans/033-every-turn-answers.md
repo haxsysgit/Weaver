@@ -32,7 +32,8 @@
   - Live model, product harness (`deepseek-flash`, metered per answer):
     diagnosis 66 answers (about $0.36), regression 66 (about $0.36), check
     set 18 (about $0.11), held-out 90 (about $0.50). Estimate **$1.35**;
-    hard cap **$3.00** on the meter.
+    hard cap **$10.00** on the meter (raised from $3.00 by the owner,
+    2026-11-04).
   - Executor context (`deepseek-flash` agent, billed to the owner's key):
     about 3M to 6M tokens, mostly cache hits; estimate $1 to $3. Judging
     108 answers is most of it.
@@ -67,7 +68,8 @@
    otherwise **retire** it. The bands (chapters 1 to 1000, where notebook
    statements are indexed, and 1001 to 3127, passages only) are reported
    separately. The owner decides.
-7. Live cap $3.00 on the meter. No tuning of the held-out test: once its
+7. Live cap $10.00 on the meter (owner raised it from $3.00 on
+   2026-11-04). No tuning of the held-out test: once its
    first answer runs, product, prompts, and questions are frozen until all
    90 are in.
 8. (2026-11-04) The executor gets goals and judgement, not a script: it
@@ -151,7 +153,7 @@ runbook):
 - anything that would change the held-out test once it has started, or
   re-sample a model answer;
 - judging that would see a set's key or run records;
-- the meter above $2.70 before a live command (cap $3.00);
+- the meter above $9.70 before a live command (cap $10.00);
 - a commit that would carry the key, private text, or the owner's
   unrelated work; any push, merge, tag, stash, reset, or force;
 - the server running on port 8016 (ask the owner);
@@ -214,7 +216,7 @@ recorded.
     once on the new build, arms A, W (word half only) and D, three runs,
     judged blind with the chapters; the same rule for A vs D (the search
     tool) and A vs W (the meaning half). Runs are new runs; the first
-    round's stay. Brief: runbook section 6. About $0.95; cap $3.00.
+    round's stay. Brief: runbook section 6. About $0.95; cap $10.00.
 15. **Review and close** as slices 10 and 11.
 
 ### Question recipe (slice 8, Opus)
