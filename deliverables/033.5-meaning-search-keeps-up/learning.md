@@ -2,9 +2,11 @@
 
 ## Gate status
 
-**Drafted 2026-11-04, awaiting admission.** Admission confirms the owner
-directions and the findings in the plan's "Owner direction" section, and
-approves one run of the twelve Reader Experience Trials (slice 6).
+**Admitted 2026-11-04** (owner: "admit plan 33.5 but no you will be doing
+everything"). Admission confirms the owner directions and the findings in
+the plan's "Owner direction" section, and approves one run of the twelve
+Reader Experience Trials (slice 6). The planning agent (Opus) executes all
+slices; the runbook's hard rules bind it.
 
 ## Observations (planning agent, 2026-11-04, no model spend)
 

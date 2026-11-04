@@ -1,4 +1,7 @@
-# Plan 033.5 brief for the executor (`deepseek-flash`)
+# Plan 033.5 brief for the executor
+
+At admission the owner moved execution to the planning agent (Opus); no
+`deepseek-flash` run. The hard rules below still bind.
 
 The plan is `plans/033.5-meaning-search-keeps-up.md`. Read it first. You
 run slices 2, 3 and 4. You are a capable engineer: fix what breaks, make
