@@ -179,6 +179,8 @@ recorded.
 8. **The held-out questions (Opus).** Recipe below; five samples to the
    owner first; then all 15 frozen in `.weaver/evaluation/plan033/
    questions.json` (private) before any held-out run.
+   **Done 2026-11-04:** frozen during Part 1's regression; counts and the
+   30-apart draw rule in `learning.md`.
 9. **The held-out runs (live) and blind judging.** Arms A and D, three
    runs each; prep, judge, analyse. The executor writes
    `EXECUTOR_REPORT_2.md` and stops.

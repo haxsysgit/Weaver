@@ -15,6 +15,24 @@ index process, honest tests, owner-only decisions) and freedom inside them
 (plan direction 8). The planning agent kept the hard rules because they
 protect the verdict and the repo, not because of the executor's skill.
 
+## The held-out set (slice 8, 2026-11-04)
+
+- **Frozen** in `.weaver/evaluation/plan033/questions.json` (private) on
+  2026-11-04, while Part 1's regression was still running and before any
+  held-out answer.
+- **Owner approval:** five sample questions (h01 to h05) were shown; the
+  owner replied "lets go", taken as approval of their style. The other ten
+  follow the same shape.
+- **Counts:** 15 questions; 5 from chapters 1 to 1000 and 10 from 1001 to
+  3127; volumes 2 (2), 3 (2), 4, 5, 6, 8 (3), 9 (2), 10 (3). Each has one
+  expected chapter and 3 required facts, every fact read in the chapter.
+  At most one proper name per question (most use only "Sunny" or none).
+- **Recipe addition:** draws closer than 30 chapters to an earlier draw
+  were skipped, so no two questions share a stretch of story. No draw
+  landed in a recap or interlude, so none moved.
+- **Overlap check:** no question shares a run of four or more words with
+  its expected chapter (`overlap.py`, all 15 OK).
+
 ## Observations (2026-11-03, before admission)
 
 - **No-answer turns are not mostly a lookup budget problem.** In Plan
