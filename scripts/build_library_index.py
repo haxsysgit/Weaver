@@ -3,10 +3,13 @@
 Usage:
     uv run python scripts/build_library_index.py [--ceiling N] [--dense MODEL] [--sparse MODEL]
 
-Writes the Qdrant store to .weaver/retrieval/index/ (owner-only dirs).
-The web runtime loads this index when present. Deterministic machinery;
-run once per library state. The index stores payload metadata only
-(chapter, lines, hash, kind, ids) and never novel prose.
+Builds from scratch: it replaces both collections in the store at
+.weaver/retrieval/index/. To bring the live index up to date with new
+chapters, run `weaver library index` instead (Plan 033.5), which changes
+only the chapters that need it. The defaults are the live index's
+settings, and the ceiling defaults to the shelf's last chapter. The index
+stores payload metadata only (chapter, lines, hash, kind, ids) and never
+novel prose.
 """
 
 from __future__ import annotations
@@ -14,21 +17,24 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from weaver.retrieval.index_settings import DENSE_MODEL, SPARSE_MODEL
 from weaver.retrieval.library import build_library_index
 
-DEFAULT_CEILING = 1000
 
-
-def main() -> int:
+def parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--novel-dir", type=Path, default=Path("novels/shadow-slave"))
     ap.add_argument("--notebook-dir", type=Path, default=Path(".weaver/knowledge/shadow-slave"))
     ap.add_argument("--out", type=Path, default=Path(".weaver/retrieval/index"))
-    ap.add_argument("--ceiling", type=int, default=DEFAULT_CEILING)
-    ap.add_argument("--dense", default="BAAI/bge-large-en-v1.5",
+    ap.add_argument("--ceiling", type=int, default=None, help="last chapter (default: the shelf's last)")
+    ap.add_argument("--dense", default=DENSE_MODEL,
                     help="dense embedder: a fastembed model id, or 'openai' for the API")
-    ap.add_argument("--sparse", default="Qdrant/bm42-all-minilm-l6-v2-attentions")
-    args = ap.parse_args()
+    ap.add_argument("--sparse", default=SPARSE_MODEL)
+    return ap
+
+
+def main() -> int:
+    args = parser().parse_args()
 
     from weaver.config import load_startup_config
 
@@ -45,13 +51,10 @@ def main() -> int:
     print(f"index built: {summary}")
     # Plan 031: record how far meaning search reaches, beside the index,
     # so the prompt can say which chapters it covers (weaver.shelf).
-    import json
+    from weaver.retrieval.meaning_index import write_coverage
 
     coverage = args.out.parent / "coverage.json"
-    coverage.write_text(
-        json.dumps({"novel_chunks_through": summary["ceiling"]}) + "\n",
-        encoding="utf-8",
-    )
+    write_coverage(coverage, summary["ceiling"])
     print(f"coverage recorded: {coverage}")
     return 0
 

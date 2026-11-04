@@ -20,6 +20,7 @@ spoiler boundary.
 
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import json
 import re
@@ -28,6 +29,12 @@ from pathlib import Path
 
 from weaver.corpus.spec import SHADOW_SLAVE
 from weaver.corpus.text import is_debris_line
+from weaver.retrieval.index_settings import (
+    CHUNK_OVERLAP_LINES,
+    CHUNK_TARGET_LINES,
+    DENSE_MODEL,
+    SPARSE_MODEL,
+)
 
 # Chapter text as Weaver sees it, keyed by path and checked against the
 # file's mtime and size, so a changed or new file is read again. The whole
@@ -693,18 +700,21 @@ def build_library_index(
     notebook_dir: Path,
     out_dir: Path,
     *,
-    ceiling: int,
-    dense_model: str = "BAAI/bge-large-en-v1.5",
-    sparse_model: str = "Qdrant/bm42-all-minilm-l6-v2-attentions",
-    chunk_target: int = 12,
-    chunk_overlap: int = 5,
+    ceiling: int | None = None,
+    dense_model: str = DENSE_MODEL,
+    sparse_model: str = SPARSE_MODEL,
+    chunk_target: int = CHUNK_TARGET_LINES,
+    chunk_overlap: int = CHUNK_OVERLAP_LINES,
 ) -> dict:
-    """Build the persistent Qdrant index for the library.
+    """Build the persistent Qdrant index for the library from scratch.
 
     Deterministic machinery: chunks the novel with the story-aware
     chunker, embeds dense (local fastembed) and sparse (BM42), stores
     payload metadata only (chapter, lines, hash, kind, ids, never
-    prose). Run once per library state; the runtime opens the result.
+    prose). The defaults are the live index's settings, and the ceiling
+    defaults to the shelf's last chapter. This replaces the collections;
+    to bring an existing index up to date, use
+    weaver.retrieval.meaning_index (`weaver library index`) instead.
     Returns a summary dict with counts.
     """
     from qdrant_client import QdrantClient
@@ -716,12 +726,20 @@ def build_library_index(
         splade_encoder,
     )
 
+    chapters = ChapterIndex(novel_dir)
+    if ceiling is None:
+        ceiling = chapters.last_chapter()
     chunks = []
     for n in range(1, ceiling + 1):
-        lo = ((n - 1) // 100) * 100 + 1
-        path = novel_dir / f"{lo:04d}-{lo + 99:04d}" / f"chapter-{n:04d}.txt"
-        text = ChapterIndex._read_path(path)
-        chunks.extend(chunk_chapter(n, text, target_lines=chunk_target, overlap_lines=chunk_overlap))
+        # Chunk what Weaver reads (debris blanked), keep the raw file's
+        # hash: the same points the in-place update writes.
+        raw_hash = chapters.source_hash(n)
+        chunks.extend(
+            dataclasses.replace(chunk, source_hash=raw_hash)
+            for chunk in chunk_chapter(
+                n, chapters.read(n), target_lines=chunk_target, overlap_lines=chunk_overlap
+            )
+        )
 
     statements = []
     for n in range(1, ceiling + 1):

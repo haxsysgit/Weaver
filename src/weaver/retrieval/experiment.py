@@ -17,6 +17,7 @@ records keep only chapter references, line ranges, and hashes.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from dataclasses import dataclass, field
@@ -157,8 +158,13 @@ def splade_encoder(model) -> callable:
 
 
 def _point_id(key: str) -> int:
-    """Deterministic point id for a string key."""
-    return abs(hash(key)) % (2**63 - 1)
+    """Deterministic point id for a string key, the same in every process.
+
+    Python's hash() changes per process, so ids built with it could not be
+    found or replaced by a later run (Plan 033.5).
+    """
+    digest = hashlib.sha256(key.encode("utf-8")).digest()
+    return int.from_bytes(digest[:8], "big") & (2**63 - 1)
 
 
 # ---------------------------------------------------------------------------
