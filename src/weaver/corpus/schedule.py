@@ -34,6 +34,8 @@ QUIET_DAYS = 9
 # schedule stopped (the PC was off for a long time, or the task is gone).
 STALE_DAYS = 8
 STALE_LOCK = timedelta(hours=2)
+# Weekly runs in a row that found the search index busy before an alert.
+INDEX_WAIT_ALERT = 3
 
 Update = Callable[..., Awaitable[dict[str, Any]]]
 Notify = Callable[[str, str], None]
@@ -191,7 +193,7 @@ async def run_scheduled_refresh(
                 "Run `weaver refresh` on this machine to see the plan.",
             )
         if index is not None:
-            status["index"] = _run_index(index, notify)
+            status["index"] = _run_index(index, notify, previous.get("index"))
         _write_status(project_root, status)
         _log(project_root, now, status)
         return status
@@ -199,9 +201,9 @@ async def run_scheduled_refresh(
         release_lock(project_root)
 
 
-def _run_index(index: IndexStep, notify: Notify) -> dict[str, Any]:
+def _run_index(index: IndexStep, notify: Notify, previous: Any) -> dict[str, Any]:
     try:
-        return index()
+        result = index()
     except Exception as exc:  # noqa: BLE001 - recorded; the chapters are safe
         notify(
             "Weaver's search index did not update",
@@ -209,6 +211,19 @@ def _run_index(index: IndexStep, notify: Notify) -> dict[str, Any]:
             "Search still works; run `weaver library index` on this machine.",
         )
         return {"state": "failed", "code": type(exc).__name__}
+    if result.get("state") == "waiting":
+        waited = 1
+        if isinstance(previous, dict) and previous.get("state") == "waiting":
+            waited += int(previous.get("waiting_runs", 1))
+        result = {**result, "waiting_runs": waited}
+        if waited == INDEX_WAIT_ALERT:
+            notify(
+                "Weaver's search index is falling behind",
+                f"The weekly refresh found the index in use {waited} weeks in a row "
+                "(the Weaver server was running). Stop the server and run "
+                "`weaver library index`.",
+            )
+    return result
 
 
 def record_manual_apply(
@@ -357,5 +372,6 @@ def library_status(project_root: Path, *, now: datetime | None = None) -> dict[s
         "outcome": status.get("outcome"),
         "added": status.get("added", 0),
         "last_failure": status.get("last_failure"),
+        "index": status.get("index"),
         "stale": stale,
     }

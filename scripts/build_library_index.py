@@ -15,6 +15,7 @@ novel prose.
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 from weaver.retrieval.index_settings import DENSE_MODEL, SPARSE_MODEL
@@ -30,11 +31,23 @@ def parser() -> argparse.ArgumentParser:
     ap.add_argument("--dense", default=DENSE_MODEL,
                     help="dense embedder: a fastembed model id, or 'openai' for the API")
     ap.add_argument("--sparse", default=SPARSE_MODEL)
+    ap.add_argument(
+        "--replace",
+        action="store_true",
+        help="allow replacing an existing index (it is deleted and rebuilt)",
+    )
     return ap
 
 
 def main() -> int:
     args = parser().parse_args()
+    if args.out.exists() and not args.replace:
+        print(
+            f"{args.out} already exists. To bring it up to date, run "
+            "`weaver library index`. To delete and rebuild it, pass --replace.",
+            file=sys.stderr,
+        )
+        return 1
 
     from weaver.config import load_startup_config
 

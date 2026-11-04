@@ -48,9 +48,9 @@ class FakeEmbedder:
             yield [b / 255.0 + 0.01 for b in digest[:8]]
 
 
-def chapter_text(chapter: int, version: str = "a", *, debris: bool = False) -> str:
+def chapter_text(chapter: int, version: str = "a", *, debris: bool = False, paragraphs: int = 30) -> str:
     lines = [f"Shadow Slave-Chapter {chapter}: Title {chapter}"]
-    for paragraph in range(30):
+    for paragraph in range(paragraphs):
         lines.append(f"Chapter {chapter} {version} paragraph {paragraph} tells of a quiet road.")
         lines.append("")
         if debris and paragraph == 3:
@@ -59,11 +59,12 @@ def chapter_text(chapter: int, version: str = "a", *, debris: bool = False) -> s
     return "\n".join(lines) + "\n"
 
 
-def shelve(novel_dir: Path, chapter: int, version: str = "a", *, debris: bool = False) -> None:
+def shelve(novel_dir: Path, chapter: int, version: str = "a", *, debris: bool = False, paragraphs: int = 30) -> None:
     lo = ((chapter - 1) // 100) * 100 + 1
     path = novel_dir / f"{lo:04d}-{lo + 99:04d}" / f"chapter-{chapter:04d}.txt"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(chapter_text(chapter, version, debris=debris), encoding="utf-8", newline="\n")
+    text = chapter_text(chapter, version, debris=debris, paragraphs=paragraphs)
+    path.write_text(text, encoding="utf-8", newline="\n")
 
 
 @pytest.fixture
@@ -116,7 +117,9 @@ def test_new_chapters_are_added_with_the_raw_file_hash(client, novel_dir) -> Non
     for payload in stored.values():
         assert payload["source_hash"] == index.source_hash(payload["chapter"])
         assert payload["source_kind"] == "novel"
-        assert set(payload) == {"chapter", "line_start", "line_end", "source_hash", "source_kind"}
+        assert set(payload) == {
+            "chapter", "line_start", "line_end", "source_hash", "source_kind", "text_hash", "chunks"
+        }
     check = check_meaning_index(client, index)
     assert (check.missing, check.changed, check.current, check.coverage) == ([], [], 3, 3)
 
@@ -178,7 +181,10 @@ def test_point_ids_are_the_same_in_two_processes() -> None:
         for _ in range(2)
     }
     assert runs == {str(stable_point_id(3128, 42))}
-    assert 0 <= stable_point_id(3128, 42) < 2**63
+    # Pinned: a hash() id would pass the two-process check under a fixed
+    # PYTHONHASHSEED, but not this.
+    expected = int.from_bytes(hashlib.sha256(b"3128:42").digest()[:8], "big") & (2**63 - 1)
+    assert stable_point_id(3128, 42) == expected
 
 
 def test_coverage_stops_below_the_first_missing_or_stale_chapter(client, novel_dir) -> None:
@@ -290,3 +296,143 @@ def test_the_full_build_uses_the_pinned_settings_and_the_whole_shelf() -> None:
     args = script.parser().parse_args([])
     assert args.ceiling is None
     assert (args.dense, args.sparse) == (DENSE_MODEL, SPARSE_MODEL)
+
+
+def chapter_points(client, chapter: int):
+    batch, _ = client.scroll(
+        NOVEL_COLLECTION,
+        scroll_filter=models.Filter(
+            must=[models.FieldCondition(key="chapter", match=models.MatchValue(value=chapter))]
+        ),
+        limit=500,
+        with_payload=True,
+    )
+    return batch
+
+
+def test_a_chapter_left_short_by_a_killed_run_is_repaired(client, novel_dir) -> None:
+    shelve(novel_dir, 2, paragraphs=120)  # several chunks
+    update(client, novel_dir)
+    stored = chapter_points(client, 2)
+    assert len(stored) > 1 and {p.payload["chunks"] for p in stored} == {len(stored)}
+    client.delete(NOVEL_COLLECTION, points_selector=models.PointIdsList(points=[stored[-1].id]))
+
+    index = ChapterIndex(novel_dir)
+    assert check_meaning_index(client, index).changed == [2]
+    update(client, novel_dir)
+    assert len(chapter_points(client, 2)) == len(stored)
+    assert check_meaning_index(client, index).changed == []
+
+
+def first_build_point(chapter: int, raw_hash: str) -> models.PointStruct:
+    """A point as the first build wrote it: no text_hash, no chunks."""
+    return models.PointStruct(
+        id=987654321 + chapter,
+        vector={"dense": [0.5] * 8, "bm25": bm25_sparse_vector("old")},
+        payload={"chapter": chapter, "line_start": 2, "line_end": 9, "source_hash": raw_hash, "source_kind": "novel"},
+    )
+
+
+def test_first_build_points_count_only_where_nothing_was_blanked(tmp_path, client) -> None:
+    novel = tmp_path / "novels" / "shadow-slave"
+    shelve(novel, 1)
+    shelve(novel, 2, debris=True)
+    index = ChapterIndex(novel)
+    update(client, novel)  # creates the collection
+    for chapter in (1, 2):
+        client.delete(
+            NOVEL_COLLECTION,
+            points_selector=models.FilterSelector(
+                filter=models.Filter(
+                    must=[models.FieldCondition(key="chapter", match=models.MatchValue(value=chapter))]
+                )
+            ),
+        )
+        client.upsert(NOVEL_COLLECTION, [first_build_point(chapter, index.source_hash(chapter))])
+
+    check = check_meaning_index(client, index)
+
+    assert (check.changed, check.current) == ([2], 1)
+
+
+class ReadsDifferently(ChapterIndex):
+    """The debris list grew: Weaver now blanks a line the file still has."""
+
+    def read(self, chapter: int) -> str:
+        return super().read(chapter).replace("paragraph 5 tells", "")
+
+
+def test_a_change_in_what_weaver_reads_re_embeds_the_chapter(client, novel_dir) -> None:
+    update(client, novel_dir)
+    index = ReadsDifferently(novel_dir)
+    assert check_meaning_index(client, index).changed == [1, 2, 3]
+    report = update_meaning_index(client, index, embedder=FakeEmbedder(), sparse_encoder=bm25_sparse_vector)
+    assert report["after"]["changed"] == 0
+
+
+class FailsOnSecondBatch(FakeEmbedder):
+    def __init__(self) -> None:
+        super().__init__()
+        self.batches = 0
+
+    def embed(self, texts):
+        self.batches += 1
+        if self.batches == 3:  # 1 is the size probe, 2 the first batch
+            raise RuntimeError("killed")
+        return super().embed(texts)
+
+
+def test_a_run_that_stops_part_way_records_true_coverage_and_the_next_run_finishes(
+    tmp_path, monkeypatch
+) -> None:
+    from weaver.retrieval import meaning_index
+    from weaver.retrieval.meaning_index import refresh_meaning_index
+
+    monkeypatch.setattr(meaning_index, "CHAPTERS_PER_BATCH", 2)
+    novel = tmp_path / "novels" / "shadow-slave"
+    for chapter in range(1, 6):
+        shelve(novel, chapter)
+    (tmp_path / ".weaver" / "retrieval" / "index").mkdir(parents=True)
+    failing = FailsOnSecondBatch()
+
+    with pytest.raises(RuntimeError):
+        refresh_meaning_index(tmp_path, models=lambda: (failing, bm25_sparse_vector))
+
+    assert search_coverage(tmp_path) == 2
+    result = refresh_meaning_index(tmp_path, models=lambda: (FakeEmbedder(), bm25_sparse_vector))
+    assert (result["embedded"], result["coverage"]) == (3, 5)
+
+
+def test_recorded_coverage_drops_before_any_write(tmp_path) -> None:
+    from weaver.retrieval.meaning_index import refresh_meaning_index
+
+    novel = tmp_path / "novels" / "shadow-slave"
+    for chapter in (1, 2, 3):
+        shelve(novel, chapter)
+    (tmp_path / ".weaver" / "retrieval" / "index").mkdir(parents=True)
+    refresh_meaning_index(tmp_path, models=lambda: (FakeEmbedder(), bm25_sparse_vector))
+    shelve(novel, 2, "b")
+    seen: list[int | None] = []
+
+    def models_loading():
+        seen.append(search_coverage(tmp_path))  # what a hard kill here would leave
+        raise RuntimeError("killed while loading models")
+
+    with pytest.raises(RuntimeError):
+        refresh_meaning_index(tmp_path, models=models_loading)
+    assert seen == [1]
+
+
+def test_the_full_build_refuses_to_replace_an_index_without_replace(tmp_path, monkeypatch, capsys) -> None:
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("build_library_index_script", "scripts/build_library_index.py")
+    script = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(script)
+    out = tmp_path / "index"
+    out.mkdir()
+    monkeypatch.setattr("sys.argv", ["build_library_index.py", "--out", str(out)])
+    monkeypatch.setattr(script, "build_library_index", lambda *a, **k: pytest.fail("must not build"))
+
+    assert script.main() == 1
+    assert "--replace" in capsys.readouterr().err

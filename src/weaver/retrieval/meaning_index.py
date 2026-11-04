@@ -5,21 +5,28 @@ This module extends it chapter by chapter with exactly the settings it was
 built with, and never deletes or recreates the collection:
 
 - a chapter is current when every stored point for it carries the raw
-  chapter file's hash (`ChapterIndex.source_hash`, the hash citations use);
-- a chapter that is missing, or whose stored hash differs, has its old
-  points removed by a `chapter` filter (whatever their ids) and new points
-  written with stable ids;
+  chapter file's hash (`source_hash`, the hash citations use), the hash of
+  the text Weaver reads (`text_hash`: scrape debris blanked), and the
+  chapter's full chunk count (`chunks`);
+- points from the first build carry only `source_hash`; such a chapter is
+  current only when the text Weaver reads equals the raw file (no debris);
+- a chapter that is missing, partly written, or stale gets its new points
+  written first (stable ids), then the chapter's other points removed by a
+  `chapter` filter, whatever their ids;
 - current chapters are never re-embedded, so a second run writes nothing.
 
-Chunk text is the chapter as Weaver reads it (scrape debris blanked, line
-numbers unchanged), so the vectors match what the reading tools open.
-Coverage is the highest chapter N such that every chapter 1 to N is on the
-shelf and current; the prompt's reach line reads it from coverage.json.
+Chunk text is the chapter as Weaver reads it (line numbers unchanged), so
+the vectors match what the reading tools open, and a change to the debris
+list re-embeds the chapters it touches. Coverage is the highest chapter N
+such that every chapter 1 to N is on the shelf and current; the prompt's
+reach line reads it from coverage.json, lowered before any write so a run
+killed part-way never overstates it.
 """
 
 from __future__ import annotations
 
 import dataclasses
+import hashlib
 import json
 from collections import defaultdict
 from collections.abc import Callable
@@ -53,6 +60,7 @@ __all__ = [
     "open_index",
     "refresh_meaning_index",
     "stable_point_id",
+    "text_hash",
     "update_meaning_index",
     "write_coverage",
 ]
@@ -87,6 +95,11 @@ def stable_point_id(chapter: int, line_start: int) -> int:
     return _point_id(f"{chapter}:{line_start}")
 
 
+def text_hash(chapters: ChapterIndex, chapter: int) -> str:
+    """Hash of the chapter as Weaver reads it (debris blanked)."""
+    return hashlib.sha256(chapters.read(chapter).encode("utf-8")).hexdigest()[:16]
+
+
 def index_chunks(chapters: ChapterIndex, chapter: int) -> list[Chunk]:
     """One chapter's chunks with the pinned settings and the raw file hash."""
     raw_hash = chapters.source_hash(chapter)
@@ -101,8 +114,16 @@ def index_chunks(chapters: ChapterIndex, chapter: int) -> list[Chunk]:
     ]
 
 
-def _stored_hashes(client) -> dict[int, set[str]]:
-    stored: dict[int, set[str]] = defaultdict(set)
+@dataclass
+class _Stored:
+    points: int = 0
+    source: set[str] = dataclasses.field(default_factory=set)
+    text: set[str | None] = dataclasses.field(default_factory=set)
+    chunks: set[int | None] = dataclasses.field(default_factory=set)
+
+
+def _stored(client) -> dict[int, _Stored]:
+    stored: dict[int, _Stored] = defaultdict(_Stored)
     if not client.collection_exists(NOVEL_COLLECTION):
         return stored
     offset = None
@@ -111,19 +132,32 @@ def _stored_hashes(client) -> dict[int, set[str]]:
             NOVEL_COLLECTION,
             limit=2000,
             offset=offset,
-            with_payload=["chapter", "source_hash"],
+            with_payload=["chapter", "source_hash", "text_hash", "chunks"],
             with_vectors=False,
         )
         for point in batch:
             payload = point.payload or {}
-            stored[int(payload["chapter"])].add(str(payload.get("source_hash", "")))
+            entry = stored[int(payload["chapter"])]
+            entry.points += 1
+            entry.source.add(str(payload.get("source_hash", "")))
+            entry.text.add(payload.get("text_hash"))
+            entry.chunks.add(payload.get("chunks"))
         if offset is None:
             return stored
 
 
+def _is_current(entry: _Stored, raw: str, read: str) -> bool:
+    if entry.source != {raw}:
+        return False
+    if entry.text == {None} and entry.chunks == {None}:
+        # First-build points: right only when nothing was blanked.
+        return read == raw
+    return entry.text == {read} and entry.chunks == {entry.points}
+
+
 def check_meaning_index(client, chapters: ChapterIndex) -> IndexCheck:
     """Compare the index with the shelf. Reads only."""
-    stored = _stored_hashes(client)
+    stored = _stored(client)
     shelf = chapters.last_chapter()
     missing: list[int] = []
     changed: list[int] = []
@@ -134,11 +168,11 @@ def check_meaning_index(client, chapters: ChapterIndex) -> IndexCheck:
         if not chapters._path(chapter).exists():
             contiguous = False
             continue
-        hashes = stored.get(chapter)
-        if not hashes:
+        entry = stored.get(chapter)
+        if entry is None or not entry.points:
             missing.append(chapter)
             contiguous = False
-        elif hashes != {chapters.source_hash(chapter)}:
+        elif not _is_current(entry, chapters.source_hash(chapter), text_hash(chapters, chapter)):
             changed.append(chapter)
             contiguous = False
         else:
@@ -164,10 +198,12 @@ def _ensure_collection(client, dense_size: int) -> None:
     )
 
 
-def _chapter_filter(chapter: int) -> models.FilterSelector:
+def _others_in_chapter(chapter: int, keep: list[int]) -> models.FilterSelector:
+    """The chapter's points other than the ones just written."""
     return models.FilterSelector(
         filter=models.Filter(
-            must=[models.FieldCondition(key="chapter", match=models.MatchValue(value=chapter))]
+            must=[models.FieldCondition(key="chapter", match=models.MatchValue(value=chapter))],
+            must_not=[models.HasIdCondition(has_id=keep)],
         )
     )
 
@@ -189,11 +225,13 @@ def update_meaning_index(
             _ensure_collection(client, len(next(iter(embedder.embed(["probe"])))))
         for start in range(0, len(todo), CHAPTERS_PER_BATCH):
             group = todo[start : start + CHAPTERS_PER_BATCH]
-            chunks = [chunk for chapter in group for chunk in index_chunks(chapters, chapter)]
+            per_chapter = {chapter: index_chunks(chapters, chapter) for chapter in group}
+            read_hash = {chapter: text_hash(chapters, chapter) for chapter in group}
+            chunks = [chunk for chapter in group for chunk in per_chapter[chapter]]
             dense = [list(vector) for vector in embedder.embed([c.text for c in chunks])]
-            # Remove a chapter's old points only once its new vectors exist.
-            for chapter in group:
-                client.delete(NOVEL_COLLECTION, points_selector=_chapter_filter(chapter), wait=True)
+            # Write first, then remove the chapter's other points: a run
+            # killed in between leaves mixed or short chapters, which the
+            # next check sees (hashes, chunk count) and repairs.
             client.upsert(
                 NOVEL_COLLECTION,
                 [
@@ -206,12 +244,17 @@ def update_meaning_index(
                             "line_end": chunk.line_end,
                             "source_hash": chunk.source_hash,
                             "source_kind": "novel",
+                            "text_hash": read_hash[chunk.chapter],
+                            "chunks": len(per_chapter[chunk.chapter]),
                         },
                     )
                     for i, chunk in enumerate(chunks)
                 ],
                 wait=True,
             )
+            for chapter in group:
+                keep = [stable_point_id(chapter, c.line_start) for c in per_chapter[chapter]]
+                client.delete(NOVEL_COLLECTION, points_selector=_others_in_chapter(chapter, keep), wait=True)
             written += len(chunks)
             if on_batch is not None:
                 on_batch(group)
@@ -309,6 +352,10 @@ def refresh_meaning_index(
             if recorded != check.coverage:
                 write_coverage(coverage_path(project_root), check.coverage)
             return {"state": "current", "embedded": 0, "coverage": check.coverage, "points_written": 0}
+        # Lower the recorded reach before any write, so a run killed
+        # part-way (no finally) never leaves it overstated.
+        if recorded is None or recorded > check.coverage:
+            write_coverage(coverage_path(project_root), check.coverage)
         embedder, sparse_encoder = (models or load_models)()
         try:
             report = update_meaning_index(

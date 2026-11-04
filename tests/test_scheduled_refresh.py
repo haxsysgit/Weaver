@@ -345,7 +345,7 @@ async def test_a_busy_index_waits_and_does_not_fail_the_refresh(tmp_path) -> Non
         tmp_path, update=FakeUpdate(preview(PROBE), applied(5, stopped=3238)), notify=notes, index=index, now=NOW
     )
     assert status["outcome"] == "added"
-    assert status["index"] == {"state": "waiting", "reaches": 3127}
+    assert status["index"] == {"state": "waiting", "reaches": 3127, "waiting_runs": 1}
     assert notes.sent == []
 
 
@@ -360,3 +360,19 @@ async def test_a_broken_index_step_is_recorded_without_failing_the_refresh(tmp_p
     assert status["index"] == {"state": "failed", "code": "ValueError"}
     assert "must not be stored" not in json.dumps(status)
     assert len(notes.sent) == 1 and "weaver library index" in notes.sent[0][1]
+
+
+@pytest.mark.asyncio
+async def test_a_third_busy_week_in_a_row_raises_an_alert_and_settings_sees_the_index(tmp_path) -> None:
+    notes = Notes()
+    for week in range(3):
+        status = await run_scheduled_refresh(
+            tmp_path,
+            update=FakeUpdate(preview(PROBE), applied(0, stopped=3233)),
+            notify=notes,
+            index=FakeIndex({"state": "waiting", "reaches": 3232}),
+            now=NOW + timedelta(days=7 * week),
+        )
+    assert status["index"] == {"state": "waiting", "reaches": 3232, "waiting_runs": 3}
+    assert [title for title, _ in notes.sent] == ["Weaver's search index is falling behind"]
+    assert library_status(tmp_path, now=NOW + timedelta(days=14))["index"]["waiting_runs"] == 3

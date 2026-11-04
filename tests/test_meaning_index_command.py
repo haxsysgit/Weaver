@@ -99,3 +99,10 @@ def test_the_command_says_the_index_is_busy(tmp_path, monkeypatch, capsys) -> No
     finally:
         holder.close()
     assert "in use" in capsys.readouterr().err
+
+
+def test_the_command_says_how_to_build_when_there_is_no_index(tmp_path, monkeypatch, capsys) -> None:
+    shelve(tmp_path / "novels" / "shadow-slave", 1)
+    monkeypatch.setenv("WEAVER_PROJECT_ROOT", str(tmp_path))
+    assert cli.run(["library", "index"]) == 1
+    assert "build_library_index.py" in capsys.readouterr().err

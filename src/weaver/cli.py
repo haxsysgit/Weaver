@@ -339,6 +339,13 @@ def _run_library_index(*, check_only: bool) -> int:
         progress=progress,
     )
     print(json.dumps(result, indent=2, sort_keys=True))
+    if result["state"] == "no_index":
+        print(
+            "There is no search index on this machine. Build one with "
+            "`uv run python scripts/build_library_index.py`.",
+            file=sys.stderr,
+        )
+        return 1
     if result["state"] == "waiting":
         print(
             "The search index is in use (is the Weaver server running?). "
