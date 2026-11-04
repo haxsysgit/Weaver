@@ -376,6 +376,13 @@ ZERO_EVIDENCE_CORRECTION = (
     "that the library does not cover it. If this is not a lore question, just "
     "answer directly."
 )
+# Plan 033: what the reader sees when a turn read but could not publish
+# an answer (owner-approved wording; no em dash).
+HONEST_GAP_ANSWER = (
+    "I couldn't pin that down in the chapters I opened, and I'd rather not "
+    "guess. Tell me roughly when it happens, or a name from the scene, and "
+    "I'll look again."
+)
 FINAL_ANSWER_INSTRUCTION = (
     "This is the final answer phase. The evidence packet above is complete and "
     "no tools are available. Answer the user directly. Before returning the "
@@ -518,6 +525,9 @@ class TurnResult:
     # later (persisted as a run_event by the runner).
     error_category: str = ""
     raw_stop_reason: str = ""
+    # Plan 033: the check a failing turn was rescued from by the gap
+    # answer (recorded in the run_completed reading).
+    rescued_from: str = ""
     # Plan 010 Phase D: context meter surfaced from the assembler snapshot
     # (0 = no snapshot; token_budget 0 = unbounded).
     token_count: int = 0
@@ -536,6 +546,7 @@ class TurnResult:
             "lookups": self.tool_steps,
             "lookup_limit": self.tool_limit,
             "thinking": self.thinking,
+            **({"rescued_from": self.rescued_from} if self.rescued_from else {}),
         }
 
 
@@ -673,6 +684,9 @@ async def run_turn(
     domain: str = "canon",
     reader_note: str = "",
     max_chapter: int | None = None,
+    # Plan 033: when set, a turn that would fail on a protocol check or a
+    # step limit publishes this text instead (see the end of the loop).
+    gap_answer: str | None = None,
 ) -> TurnResult:
     max_steps = min(max(max_model_steps, 1), _MAX_MODEL_STEPS)
     budget = _TurnBudget(tool_budget)
@@ -1637,6 +1651,40 @@ async def run_turn(
         error_category = "protocol_empty_answer"
         safe_failure = safe_error("empty_answer")
 
+    # Plan 033: a turn that read but could not publish still answers the
+    # reader honestly (35 of 372 Plan 032 turns gave the reader nothing).
+    # Provider, persistence, and interruption failures, and a reply from
+    # the wrong model, are never covered over.
+    rescued_from = ""
+    if (
+        gap_answer
+        and not cancel_event.is_set()
+        and (
+            exit_reason == TurnExitReason.LIMIT_REACHED
+            or (
+                exit_reason == TurnExitReason.MODEL_FAILED
+                and error_category.startswith("protocol_")
+                and error_category != "protocol_model_mismatch"
+            )
+        )
+    ):
+        gap = AssistantMessage(
+            message_id=_message_id(),
+            turn_id=turn_id,
+            content=gap_answer,
+            tool_calls=(),
+            status="complete",
+            reasoning_content="",
+        )
+        persisted, published = await persist_answer(gap, (gap_answer,))
+        if persisted and published:
+            rescued_from = error_category or exit_reason.value
+            logger.warning("turn rescued with the gap answer (from %s)", rescued_from)
+            exit_reason = TurnExitReason.COMPLETED
+            safe_failure = ""
+            final_text = gap_answer
+            completed_response = True
+
     return TurnResult(
         turn_id=turn_id,
         exit_reason=exit_reason,
@@ -1653,6 +1701,7 @@ async def run_turn(
         input_characters=input_characters,
         error_category=error_category,
         raw_stop_reason=raw_stop_reason,
+        rescued_from=rescued_from,
         skill_ids=tuple(dict.fromkeys([*routed_plan.ids, *loaded_skills])),
         tool_steps=tool_steps_used,
         tool_limit=budget.limit,

@@ -204,6 +204,7 @@ async def execute_turn(
     execution_policy: ToolExecutionPolicy | None = None,
     packet_builder=None,
     final_pass: bool = True,
+    gap_answer: str | None = None,
 ):
     return await run_turn(
         session_id=session_id,
@@ -222,6 +223,7 @@ async def execute_turn(
         reasoning=reasoning,
         packet_builder=packet_builder,
         final_pass=final_pass,
+        gap_answer=gap_answer,
     )
 
 

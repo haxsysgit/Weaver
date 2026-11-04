@@ -14,6 +14,7 @@ import uuid
 
 from weaver.agent.messages import ConversationMessage
 from weaver.agent.turn import (
+    HONEST_GAP_ANSWER,
     DeltaCallback,
     PacketBuilder,
     ToolEventCallback,
@@ -190,6 +191,7 @@ class ConversationRunner:
             reasoning=reasoning,
             packet_builder=packet_builder,
             final_pass=final_pass,
+            gap_answer=HONEST_GAP_ANSWER,
         )
 
         # Plan 010 Phase D: surface the context meter on the result so the
