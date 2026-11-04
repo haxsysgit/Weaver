@@ -5,8 +5,8 @@
 > an honest answer, and stop Weaver presenting the wrong scene when it
 > cannot find the right one. Then settle, on fresh held-out questions,
 > whether vector search earns its keep. The rule that governs it: every
-> code change is a pre-tested patch script from this plan's deliverables,
-> applied exactly, and the decision rule is fixed here, before any run.
+> code change starts from a pre-tested patch script and must pass the full
+> floor, and the decision rule is fixed here, before any run.
 
 ## Status
 
@@ -24,7 +24,8 @@
   turn; the prompt rule touches every answer (a shared path); a weaker
   executor runs most slices, so every step is scripted and gated.
 - **Executors:** `deepseek-flash` in the DeepSeek harness runs slices 1 to
-  6 and 9 from `deliverables/033-every-turn-answers/runbook.md`. The
+  6 and 9 from the brief in `deliverables/033-every-turn-answers/runbook.md`,
+  with the judgement to fix and decide inside its slices (direction 8). The
   planning agent (Opus) runs slices 7, 8 and 10. The owner gates
   admission, the five sample questions, and the close.
 - **Budget:**
@@ -51,8 +52,9 @@
    follow-up plan, 033.5 "The knowledge pipeline".
 3. (2026-11-03) The planning agent (Opus) writes the 15 held-out questions
    and their keys; the owner approves five samples before the rest.
-4. (2026-11-03) `deepseek-flash` executes the scripted slices from the
-   runbook; it never designs a fix, tunes a prompt, or interprets results.
+4. (2026-11-03, amended 2026-11-04 by direction 8) `deepseek-flash`
+   executes slices 1 to 6 and 9; it does not interpret the held-out
+   verdict.
 5. **The gap answer** (approved by admitting this plan as drafted): a turn
    that read but could not publish answers exactly:
    "I couldn't pin that down in the chapters I opened, and I'd rather not
@@ -65,8 +67,15 @@
    otherwise **retire** it. The bands (chapters 1 to 1000, where notebook
    statements are indexed, and 1001 to 3127, passages only) are reported
    separately. The owner decides.
-7. Live cap $3.00 on the meter. No tuning between runs: findings are
-   recorded, and fixes happen only at the named hand-back (slice 7).
+7. Live cap $3.00 on the meter. No tuning of the held-out test: once its
+   first answer runs, product, prompts, and questions are frozen until all
+   90 are in.
+8. (2026-11-04) The executor gets goals and judgement, not a script: it
+   fixes failing tests, builds, and patches itself (never by weakening a
+   test), may fix the dominant failure site after the diagnosis
+   (test-first), may re-run a command once after an environment crash
+   (never to re-sample a model answer), and records every decision in its
+   report. It stops only for the hard rules in the brief.
 
 ## Scope
 
@@ -130,18 +139,23 @@
 
 ## STOP conditions
 
-- A patch script prints `ERROR`: stop; do not edit the code by hand.
-- Any test, tsc, build, or ruff failure after a patch: stop; do not fix.
-- A live command shows `STOP`, `TOOL ERRORS`, `Traceback`, or a missing
-  search probe for an arm that searches: stop; never re-run it.
-- The meter passes $3.00, or the next command would start above $2.70.
-- Diagnosis: any failed answer with no recorded `run_body` (the harness
-  could not read the state database).
-- Regression gate fails (floor item 6).
-- Fewer answers than expected in any run folder.
-- The server is running on port 8016 at preflight: ask the owner to stop
-  it.
-- Anything the runbook does not cover: stop and report; never improvise.
+The executor stops only for the brief's hard rules (section 1 of the
+runbook):
+
+- anything that would change the held-out test once it has started, or
+  re-sample a model answer;
+- judging that would see a set's key or run records;
+- the meter above $2.70 before a live command (cap $3.00);
+- a commit that would carry the key, private text, or the owner's
+  unrelated work; any push, merge, tag, stash, reset, or force;
+- the server running on port 8016 (ask the owner);
+- weakening a test to get green;
+- a change to what readers see beyond the plan, wider scope, deleting
+  data, or spend past the cap (owner decisions).
+
+Everything else (a failing patch, test, build, or harness crash; a missed
+regression target, after one fix round) is fixed by the executor and
+recorded.
 
 ## Slices
 
@@ -159,10 +173,9 @@
 6. **Regression (live).** The 33 pairs again (runs 6 and 7) and the check
    set (arm A, runs 1 to 3), judged blind; the regression gate. The
    executor writes `EXECUTOR_REPORT_1.md` (private) and stops.
-7. **Hand-back review (Opus).** Read the diagnosis and regression;
-   decide whether the dominant site has a one-line cause worth fixing now
-   (if so, test-first, and the executor re-runs slice 6); show the owner
-   three answers: one gap answer and two missed-scene answers.
+7. **Review of Part 1 (Opus).** Read the diagnosis, any fix the executor
+   made, and the regression; show the owner three answers: one gap answer
+   and two missed-scene answers.
 8. **The held-out questions (Opus).** Recipe below; five samples to the
    owner first; then all 15 frozen in `.weaver/evaluation/plan033/
    questions.json` (private) before any held-out run.

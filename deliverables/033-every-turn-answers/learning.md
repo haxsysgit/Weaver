@@ -4,6 +4,17 @@
 
 **Admitted 2026-11-03.** The owner admitted the plan as drafted, which confirms owner directions 1 to 7, including the gap answer's wording and the decision rule.
 
+## Amendment (owner, 2026-11-04)
+
+After Part 1 stopped on a one-line test expectation, the owner directed
+that the executor get goals and judgement, not a script ("lax your
+instruction a bit, you just have to provide the best and general idea for
+how to get to the best result"). The runbook became a brief with hard
+rules (held-out integrity, blind judging, spend, privacy, git safety, one
+index process, honest tests, owner-only decisions) and freedom inside them
+(plan direction 8). The planning agent kept the hard rules because they
+protect the verdict and the repo, not because of the executor's skill.
+
 ## Observations (2026-11-03, before admission)
 
 - **No-answer turns are not mostly a lookup budget problem.** In Plan
