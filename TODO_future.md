@@ -106,17 +106,19 @@ accepted public release is v3.0.0 at Plan 040.
    arms A and D (about $0.50) decide extend or retire vector search.
    Executed by `deepseek-flash` from a scripted runbook, with Opus for the
    questions and review.
-   - **033.5 Meaning search keeps up** (admitted 2026-11-04,
+   - **033.5 Meaning search keeps up** (admitted 2026-11-04, results
+     2026-11-05, pending the owner's decision: coverage 3232, weekly
+     refresh embeds new chapters, Reader Trials 9 of 12;
      `plans/033.5-meaning-search-keeps-up.md`; rescoped by the 033 verdict):
      embed chapters 3128 to 3232 into the existing index and embed each
      new chapter in the weekly refresh, so the meaning half covers the
      whole shelf (the word half already does). Optional: fit chunks to the
      model's 512-token window (helped vectors alone, not the blend). The
      owner's GPU embeds the novel in minutes.
-   - Before the 033 build reaches `main`: re-run the twelve Reader
-     Experience Trials (about $0.75, owner approval). The check set's
-     what-if trials stayed at 3 of 9: wide comparisons admit a gap instead
-     of looking up the second side (033 review finding 10).
+   - Before the 033 build reaches `main`: fix the three failed Reader
+     Trials from 033.5 (the gap answer only after a reread, read long arcs
+     to their resolution, a deadline on every model call), then re-run
+     them with the owner's approval.
    Measured at Plan 031: semantic search reaches 3127, index notebook
    statements 1000, notebook files 3160, shelf 3232.
 4. **034 Weaver's mind**: the reader card in every turn (chapter, spoiler

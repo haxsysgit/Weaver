@@ -15,7 +15,10 @@ searches had all failed). The recommendation and tables are in
 held-out paraphrase test before extending vector search. Plan 033 closed
 on 2026-11-04 (accepted, $2.58): no turn goes silent, and search is now a
 real hybrid of meaning and words that beat word-only and no-search on
-held-out questions; Plan 033.5 extends its meaning half to the whole shelf.
+held-out questions. Plan 033.5 (admitted 2026-11-04, built by Opus at the
+owner's direction, results 2026-11-05, pending the owner's decision) gave the
+meaning half the whole shelf (coverage 3232) and folded it into the weekly
+refresh; its Reader Trials run passed 9 of 12, so the build stays off `main`.
 Not merged to `main`. The shelf now ends at
 3232, the source moved to `novelphoenix.com`, and a weekly Task Scheduler
 check (Saturday 10:00) appends new chapters. See
@@ -144,13 +147,20 @@ will want screenshots and tests per slice.
 
 ## Known gaps and risks
 
-- **Search reach**: the shelf ends at 3232. Search's word half covers
-  every chapter; its meaning half covers 1 to 3127, and notebook
-  statements stop at 1000. Plan 033.5 embeds the rest.
-- **What-if answers**: the check set's three power-comparison trials
-  stayed at 3 of 9 after Plan 033's give-up rule (review finding 10).
-  Run the twelve Reader Experience Trials before this build reaches
-  `main`.
+- **Search reach**: both halves of search cover chapters 1 to 3232; the
+  Saturday refresh runs `weaver library index` after fetching chapters
+  (a running server holds the index, so that week waits; three waits in a
+  row raise an alert). Notebook statements in the index stop at 1000.
+  Never rebuild the index; `scripts/build_library_index.py` now refuses an
+  existing index without `--replace`. The pre-033.5 copy is at
+  `.weaver/retrieval/index.before-033.5`.
+- **Reader Trials fail 3 of 12 (Plan 033.5, 2026-11-05).** Vague ask
+  (invented canon stated as fact), confusing fight (missed the fight in
+  chs. 2704 to 2716, wrong winner), fanfic spark (no answer to the fit
+  question). The Plan 033 gap answer stood in for a reread three times.
+  A follow-up on the answer path comes before `main`.
+- **No time limit on model calls.** One trial turn ran 8 h 16 min after a
+  provider stream failure; add a per-call and per-turn deadline.
 - **Mobile Settings**: the threads sheet text shows through the Settings
   panel on mobile.
 - **Desktop rail is verified by screenshots, not unit tests.** jsdom tests
@@ -211,12 +221,13 @@ screenshots before claims.
 > codified at the last checkpoint. Plan 031 is closed (accepted 2026-11-01).
 > Plan 032 is closed (accepted 2026-11-03; direction in its
 > `decision.md`). Plan 033 is closed (accepted 2026-11-04; verdict in
-> `deliverables/033-every-turn-answers/results.md`). Plan 033.5 is drafted
-> (`plans/033.5-meaning-search-keeps-up.md`) and waits on the owner's
-> admission; `deepseek-flash` runs slices 2 to 4 from its `runbook.md`.
+> `deliverables/033-every-turn-answers/results.md`). Plan 033.5 is complete
+> and waits on the owner's decision (recommendation in
+> `deliverables/033.5-meaning-search-keeps-up/decision.md`: accept the search
+> work, fix the three failed Reader Trials before `main`).
 > Constraints: every commit starts with `Plan NNN: `;
 > no Claude attribution in commits or PRs; no deploy, push, or tag without
 > the owner; no secrets or private chapters in commits; one server at a time
 > because of the Qdrant lock. UI changes need real desktop and mobile
 > screenshots (`.weaver/tools/shoot.mjs`). Floors: 167 frontend tests + tsc +
-> build; 815 backend tests.
+> build; 896 backend tests.

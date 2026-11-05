@@ -30,3 +30,23 @@ slices; the runbook's hard rules bind it.
 - **H3.** The finished 033 and 033.5 build passes the twelve Reader
   Experience Trials on the evaluator record. Plan 033's check set suggests
   wide what-if answers (Trial 5, the theory) are the most at risk.
+
+## Outcomes (planning agent, 2026-11-05; evidence, not decisions)
+
+- **H1 confirmed.** One in-place update reached 0 missing, 0 changed,
+  coverage 3232 in 373 seconds on CPU, touching no unchanged chapter; a
+  second run wrote nothing.
+- **H2 confirmed.** Searches limited to chapters 3128 to 3232 went from 0
+  to 8 of 8 hits found by meaning; old-chapter searches kept the same top
+  ten.
+- **H3 not confirmed.** 9 of 12 Reader Experience Trials pass the evaluator
+  record (vague ask, confusing fight, fanfic spark fail). Plan 030 passed
+  12 of 12 on the v2.0.0 candidate. The failures trace to the answer path
+  (the gap answer standing in for a reread, stopping early in a long arc,
+  one invented canon link, no model-call deadline), not to the index.
+- **Planning finding corrected.** The 81 chapters thought "changed on disk"
+  were unchanged files with scrape debris that Weaver blanks; the probe had
+  hashed the blanked text. Every chapter from 3047 on carries such a line.
+- **Executor note.** The planning agent built slices 2 to 4 itself (owner,
+  at admission); a fresh subagent's review found two Major defects (crash
+  safety, debris-aware freshness), both repaired before close.
