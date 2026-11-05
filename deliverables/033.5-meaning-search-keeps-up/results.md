@@ -2,7 +2,7 @@
 
 ## Status
 
-**Complete (2026-11-05), pending the owner's decision.** Live spend
+**Complete (2026-11-05). Accepted by the owner; plan closed.** Live spend
 **$0.45** of the $3.00 cap (the Reader Trials; embedding is local).
 
 ## Summary

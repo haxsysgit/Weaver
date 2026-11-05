@@ -15,8 +15,8 @@ searches had all failed). The recommendation and tables are in
 held-out paraphrase test before extending vector search. Plan 033 closed
 on 2026-11-04 (accepted, $2.58): no turn goes silent, and search is now a
 real hybrid of meaning and words that beat word-only and no-search on
-held-out questions. Plan 033.5 (admitted 2026-11-04, built by Opus at the
-owner's direction, results 2026-11-05, pending the owner's decision) gave the
+held-out questions. Plan 033.5 (built by Opus at the owner's direction;
+closed 2026-11-05, accepted) gave the
 meaning half the whole shelf (coverage 3232) and folded it into the weekly
 refresh; its Reader Trials run passed 9 of 12, so the build stays off `main`.
 Not merged to `main`. The shelf now ends at
@@ -221,10 +221,10 @@ screenshots before claims.
 > codified at the last checkpoint. Plan 031 is closed (accepted 2026-11-01).
 > Plan 032 is closed (accepted 2026-11-03; direction in its
 > `decision.md`). Plan 033 is closed (accepted 2026-11-04; verdict in
-> `deliverables/033-every-turn-answers/results.md`). Plan 033.5 is complete
-> and waits on the owner's decision (recommendation in
-> `deliverables/033.5-meaning-search-keeps-up/decision.md`: accept the search
-> work, fix the three failed Reader Trials before `main`).
+> `deliverables/033-every-turn-answers/results.md`). Plan 033.5 is closed
+> (accepted 2026-11-05; meaning search covers 1 to 3232, the Reader Trials
+> passed 9 of 12). The follow-up for the three failed trials comes before
+> `main`.
 > Constraints: every commit starts with `Plan NNN: `;
 > no Claude attribution in commits or PRs; no deploy, push, or tag without
 > the owner; no secrets or private chapters in commits; one server at a time

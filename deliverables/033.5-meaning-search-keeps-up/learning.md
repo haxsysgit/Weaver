@@ -31,6 +31,11 @@ slices; the runbook's hard rules bind it.
   Experience Trials on the evaluator record. Plan 033's check set suggests
   wide what-if answers (Trial 5, the theory) are the most at risk.
 
+## Decision (owner, 2026-11-05)
+
+"Accept, draft follow-up": the search work is accepted and the plan
+closed; the three failed trials go to a follow-up plan.
+
 ## Outcomes (planning agent, 2026-11-05; evidence, not decisions)
 
 - **H1 confirmed.** One in-place update reached 0 missing, 0 changed,

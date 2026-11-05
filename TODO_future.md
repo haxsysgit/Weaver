@@ -106,8 +106,8 @@ accepted public release is v3.0.0 at Plan 040.
    arms A and D (about $0.50) decide extend or retire vector search.
    Executed by `deepseek-flash` from a scripted runbook, with Opus for the
    questions and review.
-   - **033.5 Meaning search keeps up** (admitted 2026-11-04, results
-     2026-11-05, pending the owner's decision: coverage 3232, weekly
+   - **033.5 Meaning search keeps up** (closed 2026-11-05, accepted:
+     coverage 3232, weekly
      refresh embeds new chapters, Reader Trials 9 of 12;
      `plans/033.5-meaning-search-keeps-up.md`; rescoped by the 033 verdict):
      embed chapters 3128 to 3232 into the existing index and embed each

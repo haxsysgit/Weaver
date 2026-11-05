@@ -2,7 +2,7 @@
 
 ## Status
 
-**Pending owner decision.**
+**Accepted 2026-11-05. Plan closed.**
 
 ## Recommendation (planning agent, 2026-11-05)
 
@@ -30,4 +30,8 @@ off `main` until the three failed Reader Trials pass.
 
 ## Decision
 
-Pending.
+**Accepted (owner, 2026-11-05): "Accept, draft follow-up".** Plan 033.5 is
+closed. The meaning index covers chapters 1 to 3232 and the weekly refresh
+keeps it current. The three failed Reader Trials (vague ask, confusing
+fight, fanfic spark) go to a follow-up plan on the answer path before the
+033 and 033.5 build reaches `main`. Not merged, tagged, or deployed.
