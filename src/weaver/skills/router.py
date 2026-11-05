@@ -340,6 +340,20 @@ REPEAT_FOLLOW_UPS = (
     "same list",
     "final answer",
 )
+# Plan 033.6: asking for another of the same, or where the last thing was,
+# continues the thread ("give me one more, but not a wiki dump" was routed
+# as small talk and answered from memory).
+MORE_FOLLOW_UPS = (
+    "give me one more",
+    "tell me one more",
+    "show me one more",
+    "give me another",
+    "tell me another",
+    "anything else",
+    "what else",
+    "where was that",
+    "where is that",
+)
 _CHALLENGE_MAX_WORDS = 18
 _EARLIER_ASKS_SEEN = 6
 _WORD_RE = re.compile(r"[a-z0-9']+")
@@ -388,6 +402,8 @@ def _follow_up_kind(question: str, own_route: str) -> str | None:
         if any(f" {marker} " in padded for marker in CHALLENGE_FOLLOW_UPS):
             return "push"
         if any(f" {marker} " in padded for marker in REPEAT_FOLLOW_UPS):
+            return "carry"
+        if any(f" {marker} " in padded for marker in MORE_FOLLOW_UPS):
             return "carry"
     if _has_any(normalized, BOOK_NOUNS):
         return None

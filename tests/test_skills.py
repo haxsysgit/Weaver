@@ -436,3 +436,27 @@ def test_the_web_prompt_guards_weavers_own_words() -> None:
     assert "never own a claim you never made" in prompt
     assert "give it exactly" in prompt
     assert "re-open them instead" in prompt
+
+
+def test_one_more_keeps_the_thread_s_evidence_skill() -> None:
+    """Plan 033.6: "give me one more, but not a wiki dump" asks for another
+    thread like the last, not small talk. "where was that?" points at the
+    last answer, so the thread's own question stays the base."""
+    earlier = (
+        "tell me something i probably missed.",
+        "wait, where was that?",
+        "why does that matter?",
+    )
+
+    plan = plan_for_turn("give me one more, but not a wiki dump.", earlier_asks=earlier)
+    ids = [skill.id for skill in plan.skills]
+
+    assert "discovery" in ids
+    assert "companion" not in ids
+    assert plan.follow_up == "carry"
+
+
+def test_one_more_with_no_thread_is_its_own_question() -> None:
+    plan = plan_for_turn("give me one more", earlier_asks=())
+
+    assert plan.follow_up is None

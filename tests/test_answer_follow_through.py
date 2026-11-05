@@ -367,3 +367,97 @@ async def test_the_turn_reads_on_once_before_saying_the_outcome_is_not_shown() -
         if message.role in ("user", "system")
     ]
     assert any("chapter 2700" in note for note in notes)
+
+
+def test_a_correction_of_the_private_draft_is_dropped() -> None:
+    from weaver.agent.answer import drop_draft_edit_notes
+
+    draft = "Start with ch. 2439. She fights as a Supreme Titan (ch. 2439)."
+    final = (
+        "Start with ch. 2439. She fights as the Changing Star (ch. 2439).\n\n"
+        "Also, small correction on my end: I called her a Supreme Titan there, "
+        "so read it with that straight. Every finger is a link."
+    )
+
+    cleaned = drop_draft_edit_notes(final, draft)
+
+    assert "correction" not in cleaned
+    assert "Supreme Titan" not in cleaned
+    assert "Every finger is a link." in cleaned
+    assert "Changing Star (ch. 2439)" in cleaned
+
+
+def test_a_correction_the_draft_already_made_stays() -> None:
+    from weaver.agent.answer import drop_draft_edit_notes
+
+    draft = "Correction on my end: earlier I said ch. 118. It is ch. 344."
+    final = "Correction on my end: earlier I said ch. 118. It is ch. 344 (ch. 344)."
+
+    assert drop_draft_edit_notes(final, draft) == final
+
+
+def test_an_answer_with_no_correction_is_unchanged() -> None:
+    from weaver.agent.answer import drop_draft_edit_notes
+
+    final = "He said it there, in the hall (ch. 12). She never answered."
+    assert drop_draft_edit_notes(final, "draft") == final
+
+
+async def test_the_final_reread_never_announces_fixing_the_draft() -> None:
+    provider = FakeModelProvider(
+        "test-provider",
+        models=(_spec(),),
+        responses=(
+            _response(
+                ModelStopReason.TOOL_USE,
+                tool_calls=(ModelToolCall("t1", "read_chapters", '{"chapter": 104}'),),
+            ),
+            _response(ModelStopReason.STOP, content="He was a Saint (ch. 104)."),
+            _response(
+                ModelStopReason.STOP,
+                content=(
+                    "He was a Shadow (ch. 104). Small correction on my end: "
+                    "I called him a Saint there. Read it again."
+                ),
+            ),
+        ),
+    )
+    layer = ModelLayer()
+    layer.register_provider(provider)
+
+    async def packet_builder(results, draft):
+        return (
+            "--- chapter 104, lines 1-40 ---\nHe was a Shadow.\n\n"
+            "--- evidence board ---\ndirect sources: chapter 104 lines 1-40\n"
+        )
+
+    result = await run_turn(
+        session_id="s",
+        turn_id="now",
+        model_layer=layer,
+        model=_spec(),
+        system_prompt="You are Weaver.",
+        history=[UserMessage(turn_id="now", content="what was he?")],
+        tool_registry=_reader_registry(),
+        active_tools=("read_chapters",),
+        execution_policy=ToolExecutionPolicy.read_only(),
+        cancel_event=asyncio.Event(),
+        packet_builder=packet_builder,
+        final_pass=True,
+    )
+
+    assert result.exit_reason == TurnExitReason.COMPLETED
+    assert result.final_text == "He was a Shadow (ch. 104). Read it again."
+
+
+def test_the_last_resort_can_drop_an_uncited_recall() -> None:
+    from weaver.agent.turn import _fallback_variants
+
+    answer = (
+        "The mechanic is refusal (ch. 2439). Now think back to the first "
+        "Nightmare, back when the sky was full of hands. That is the fun part."
+    )
+
+    variants = _fallback_variants(answer, (2439,))
+
+    assert variants[-1] == "The mechanic is refusal (ch. 2439). That is the fun part."

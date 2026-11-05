@@ -24,6 +24,8 @@ from weaver.agent.answer import (
     has_spoiler_finding,
     strip_unsupported_citations,
     cited_chapters,
+    drop_draft_edit_notes,
+    uncited_recalls,
     inspect_publication,
     unopened_text_claims,
 )
@@ -475,8 +477,13 @@ def _fallback_variants(
     without_both = _answer_without_blockquotes(
         strip_unsupported_citations(answer, allowed_chapters)
     )
+    # Plan 033.6: a recalled scene with no chapter goes before the gap answer.
+    without_recalls = without_both
+    for sentence in uncited_recalls(without_both):
+        without_recalls = without_recalls.replace(sentence, "")
+    without_recalls = re.sub(r"[ \t]{2,}", " ", without_recalls).strip()
     variants: list[str] = []
-    for variant in (without_quotes, without_both):
+    for variant in (without_quotes, without_both, without_recalls):
         if variant and variant != answer and variant not in variants:
             variants.append(variant)
     return tuple(variants)
@@ -1310,6 +1317,15 @@ async def run_turn(
                         response_message=response_message,
                     )
                     proposed_deltas = response_deltas
+                    # Plan 033.6: the reader never saw the draft, so a
+                    # "correction" of it is dropped, not published.
+                    cleaned = drop_draft_edit_notes(
+                        proposed_answer.content,
+                        validated_candidate.content,
+                    )
+                    if cleaned and cleaned != proposed_answer.content:
+                        proposed_answer = replace(proposed_answer, content=cleaned)
+                        proposed_deltas = (cleaned,)
 
             findings = inspect_publication(
                 proposed_answer.content,

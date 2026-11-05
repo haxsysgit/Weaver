@@ -739,3 +739,44 @@ def test_a_chapter_the_reader_named_may_be_named_back() -> None:
     assert named_back == ()
     assert {finding.code for finding in cited_as_source} == {"unsupported_chapter"}
     assert {finding.code for finding in other_chapter} == {"unsupported_chapter"}
+
+
+def test_an_uncited_recalled_scene_beside_cited_claims_is_caught() -> None:
+    """Plan 033.6: a canon mechanic was cited, then tied to an earlier scene
+    recalled from memory with no chapter of its own, and stated as fact."""
+    blueprint = build_answer_blueprint(
+        question="tell me something i probably missed",
+        prior_weaver_position="",
+        reader_challenges_prior_answer=False,
+        evidence_packet=PACKET,
+    )
+
+    recalled = inspect_publication(
+        "The convoy splits at the pass (ch. 900). Now think back to the first "
+        "march, back when the scouts saw the lights. That is the same trick.",
+        blueprint,
+        PACKET,
+    )
+    cited_recall = inspect_publication(
+        "The convoy splits at the pass (ch. 900). Think back to the scouts "
+        "at the ford (ch. 901). That is the same trick.",
+        blueprint,
+        PACKET,
+    )
+    labelled = inspect_publication(
+        "The convoy splits at the pass (ch. 900). My read, not canon: think "
+        "back to the first march, it rhymes.",
+        blueprint,
+        PACKET,
+    )
+    quoted = inspect_publication(
+        'She says it plainly: "remember how loud I was, and stop missing me" '
+        "(ch. 900).",
+        blueprint,
+        PACKET,
+    )
+
+    assert {finding.code for finding in recalled} == {"uncited_recall"}
+    assert cited_recall == ()
+    assert labelled == ()
+    assert "uncited_recall" not in {finding.code for finding in quoted}

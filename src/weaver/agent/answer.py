@@ -224,6 +224,85 @@ def _answer_chapters(answer: str, reader_text: str) -> set[int]:
     return chapters
 
 
+# Plan 033.6: a final answer that announces fixing something only its private
+# draft said ("small correction on my end: I called her ... there").
+DRAFT_EDIT_RE = re.compile(
+    r"\bcorrection on my (?:end|part)\b"
+    r"|\bcorrecting myself\b"
+    r"|\bi misspoke\b"
+    r"|\b(?:earlier|above|before),? i (?:said|called|wrote|put)\b"
+    r"|\bi (?:said|called|wrote|put) [^.!?\n]{0,60}\b(?:there|earlier|above)\b"
+    r"|\bmy (?:earlier|first) (?:draft|version)\b"
+    r"|\b(?:in|from) my draft\b",
+    re.IGNORECASE,
+)
+# Sentence ends, but not the period inside "(ch. 12)" or "(chs. 3-4)".
+_SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])(?<!\bch\.)(?<!\bchs\.)\s+")
+# Plan 033.6: a sentence that calls up an earlier scene from memory.
+RECALL_RE = re.compile(
+    r"\b(?:think back to|back when|remember when|remember how|way back in"
+    r"|all the way back|earlier in the (?:book|novel|story))\b",
+    re.IGNORECASE,
+)
+_READ_LABELS = (
+    "my read",
+    "not canon",
+    "if i remember",
+    "if memory serves",
+    "my guess",
+    "headcanon",
+    "i might be wrong",
+)
+
+
+def _sentences(text: str) -> list[str]:
+    return [
+        sentence
+        for line in text.split("\n")
+        for sentence in _SENTENCE_SPLIT_RE.split(line)
+        if sentence.strip()
+    ]
+
+
+def uncited_recalls(answer: str) -> tuple[str, ...]:
+    """Sentences that recall an earlier scene with no chapter and no label.
+
+    Only in an answer that cites chapters: there the uncited sentence reads
+    as canon beside the cited ones.
+    """
+    if not _extract_chapter_citations(answer):
+        return ()
+    found: list[str] = []
+    for sentence in _sentences(answer):
+        own_words = INLINE_QUOTE_RE.sub("", sentence)
+        if not RECALL_RE.search(own_words):
+            continue
+        if _extract_chapter_citations(sentence):
+            continue
+        if any(label in own_words.casefold() for label in _READ_LABELS):
+            continue
+        found.append(sentence)
+    return tuple(found)
+
+
+def drop_draft_edit_notes(answer: str, draft: str) -> str:
+    """Remove sentences that announce an edit the reader never saw.
+
+    A correction the draft already made is about an earlier published
+    answer and stays. One the draft does not make is about the draft.
+    """
+    if not DRAFT_EDIT_RE.search(answer) or DRAFT_EDIT_RE.search(draft):
+        return answer
+    kept_lines: list[str] = []
+    for line in answer.split("\n"):
+        sentences = _SENTENCE_SPLIT_RE.split(line)
+        kept = [sentence for sentence in sentences if not DRAFT_EDIT_RE.search(sentence)]
+        if line.strip() and not kept:
+            continue
+        kept_lines.append(" ".join(kept))
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(kept_lines)).strip()
+
+
 def cited_chapters(text: str) -> tuple[int, ...]:
     """Chapters an answer cites, e.g. (ch. 900) or (chs. 900-901)."""
     return _extract_answer_chapter_citations(text)
@@ -776,6 +855,14 @@ def inspect_publication(
                 )
             )
 
+    if blueprint.needs_evidence and uncited_recalls(weaver_text):
+        findings.append(
+            PublicationFinding(
+                "uncited_recall",
+                "A recalled earlier scene has no chapter and reads as canon.",
+            )
+        )
+
     if (
         blueprint.spoiler_mode in {"guarded", "ask_first"}
         and blueprint.reader_chapter is not None
@@ -897,6 +984,10 @@ REPAIR_RULES = {
         "imagination, or what-if."
     ),
     "unsupported_chapter": "Cite only chapters listed as opened direct sources.",
+    "uncited_recall": (
+        "Open and cite the earlier scene you recall, label it as your read, "
+        "or remove it."
+    ),
 }
 
 

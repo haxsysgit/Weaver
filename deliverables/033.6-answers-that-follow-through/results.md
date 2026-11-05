@@ -2,7 +2,7 @@
 
 ## Status
 
-Slices 2 to 4 complete, 2026-11-05. No model spend. Slices 5 to 8 not
+Slices 2 to 5 complete, 2026-11-05. No model spend. Slices 6 to 8 not
 started.
 
 ## Slice 2: diagnosis (from the Plan 033.5 run records)
@@ -182,3 +182,28 @@ the full floor.
   does.
 - Floor: backend 916 passed, 4 skipped (906 plus 10 new); ruff adds no
   finding on the changed files.
+
+## Slice 5: canon stays canon (built)
+
+- **Follow-ups keep the thread.** "give me one more", "tell me another",
+  "anything else", "what else", and "where was that" now continue the
+  thread's skill instead of starting over. Replayed on every reader message
+  from the Plan 030 v2 and 033.5 trials: 6 of 151 route differently, all
+  in the vague-ask thread (both runs), which now keeps `discovery` (it was
+  small talk, answered from memory). A first try with a bare "one more"
+  also moved "fine, one more test." in the adversarial trial off small
+  talk, so the markers were narrowed.
+- **No announced draft edits.** A final reread that announces a correction
+  its draft never made ("correction on my end", "I called her ... there")
+  has that sentence removed before publishing; a correction the draft
+  already made (about an earlier published answer) stays. Matches 1 of
+  141 published answers: the vague-ask one.
+- **Uncited recalled scenes.** In an answer that cites chapters, a
+  sentence that calls up an earlier scene ("think back to", "back when",
+  "remember when") with no chapter of its own and no "my read" label is a
+  publication finding (`uncited_recall`), repaired once; the last resort
+  can drop the sentence before the gap answer. Words inside quotation
+  marks do not count, and "(ch. 12)" no longer splits a sentence. Matches
+  1 of 129 published canon answers: the vague-ask one.
+- Floor: backend 924 passed, 4 skipped (916 plus 8 new); frontend 185
+  tests, tsc and build pass; ruff adds no finding on the changed files.
