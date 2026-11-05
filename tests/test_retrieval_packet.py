@@ -394,3 +394,30 @@ async def test_a_passage_bigger_than_the_cap_is_shortened_not_dropped(
     assert body[0].startswith(f"{start} ")
     assert body[-1].startswith(f"{end} ")
     assert f"chapter 55 lines {start}-{end}" in packet.text
+
+
+def test_a_reopened_earlier_passage_becomes_a_direct_source(tmp_path: Path) -> None:
+    """Plan 033.6: an earlier turn's passage, re-opened from its stored record
+    alone (no passage text, no inner result), is read again from the library."""
+    service = _service(tmp_path)
+    recalled = ToolResult(
+        ok=True,
+        result={
+            "durable_evidence": {
+                "source_kind": "novel",
+                "chapter": 98,
+                "line_start": 3,
+                "line_end": 10,
+                "source_hash": "abcd1234",
+                "passage_handle": make_passage_handle(98, 3, 10),
+            }
+        },
+    )
+
+    packet = build_packet(
+        service, [_read_result(104, 3, 5), recalled], candidate="x (ch. 98) y (ch. 104)"
+    )
+
+    assert packet is not None
+    assert "--- chapter 98, lines" in packet.text
+    assert re.search(r"direct sources:.*chapter 98", packet.text)

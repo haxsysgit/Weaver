@@ -2,7 +2,7 @@
 
 ## Status
 
-Slices 2 and 3 complete, 2026-11-05. No model spend. Slices 4 to 8 not
+Slices 2 to 4 complete, 2026-11-05. No model spend. Slices 5 to 8 not
 started.
 
 ## Slice 2: diagnosis (from the Plan 033.5 run records)
@@ -147,3 +147,38 @@ the full floor.
   the default limits.
 - Floor: backend 906 passed, 4 skipped (896 plus 10 new); ruff adds no
   finding on the changed files. Frontend untouched.
+
+## Slice 4: follow through (built)
+
+- **Earlier reads count.** `_earlier_evidence` reads both the stored
+  record and the in-memory wrapper. Tests build history through the real
+  save and reload path. Replayed on the 033.5 history: every conversation
+  with reads now credits its chapters (for example 12 distinct chapters in
+  the confusing fight, 13 in the long thread), where it credited 0.
+- **Earlier passages are re-opened, not just credited.** When a draft cites
+  a chapter opened in an earlier turn, that passage's stored record goes
+  into this turn's reading packet, and the packet builder reads it again
+  from the library. The quote checks, the citation check and the final
+  reread all see the text. An earlier passage the draft does not cite is
+  not added.
+- **A chapter the reader named can be named back.** "It fits before
+  chapter 400" passes when the reader asked about chapter 400; "(ch. 400)"
+  as a source still needs the chapter opened.
+- **Last resort trims both.** Before the gap answer, the fallback now also
+  tries the answer without block quotes and without unopened citations
+  together.
+- **Reading on.** A draft that says the outcome is not shown ("no verdict
+  on the page", "the passage stops", "never happens") while the next
+  chapter is unread and inside the reader's limit is sent back once to
+  open it. Measured on every published answer from the Plan 030 v2 and
+  033.5 trials: 3 of 141 match, two of them the confusing-fight answers;
+  the third costs one extra read in a half-memory answer. Not for fanfic,
+  and not when the lookup budget is spent.
+- **Deferred:** a close-spelling hint for exact search (the reader's
+  misspelling found 1 chapter). It needs a name index, which is search
+  work this plan leaves out; the read-on check covers the trial's failure.
+- Unchanged and recorded: a turn that opens nothing still skips the
+  chapter check; its earlier-citation guard now works because the credit
+  does.
+- Floor: backend 916 passed, 4 skipped (906 plus 10 new); ruff adds no
+  finding on the changed files.

@@ -708,3 +708,34 @@ def test_a_fanfic_canon_fit_question_still_checks_quotes() -> None:
 def test_stripping_a_citation_never_leaves_a_broken_sentence(text, allowed, expected) -> None:
     """v2 Trials 6 and 8 showed "The burning version is." and "(, 593)"."""
     assert strip_unsupported_citations(text, allowed_chapters=allowed) == expected
+
+
+def test_a_chapter_the_reader_named_may_be_named_back() -> None:
+    """Plan 033.6: "does it fit before chapter 400?" cannot be answered
+    without saying "chapter 400". Naming it back is not citing it."""
+    blueprint = build_answer_blueprint(
+        question="would this fit before chapter 400?",
+        prior_weaver_position="",
+        reader_challenges_prior_answer=False,
+        evidence_packet=PACKET,
+    )
+
+    named_back = inspect_publication(
+        "It fits before chapter 400: the convoy splits first (chs. 900-901).",
+        blueprint,
+        PACKET,
+    )
+    cited_as_source = inspect_publication(
+        "It fits: the convoy splits first (ch. 400).",
+        blueprint,
+        PACKET,
+    )
+    other_chapter = inspect_publication(
+        "It fits before chapter 410: the convoy splits first (chs. 900-901).",
+        blueprint,
+        PACKET,
+    )
+
+    assert named_back == ()
+    assert {finding.code for finding in cited_as_source} == {"unsupported_chapter"}
+    assert {finding.code for finding in other_chapter} == {"unsupported_chapter"}

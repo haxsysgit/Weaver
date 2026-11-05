@@ -229,25 +229,76 @@ def _build_turn_brief(history: list[ConversationMessage]) -> TurnBrief:
     )
 
 
-def _earlier_opened_chapters(
+def _earlier_evidence(
     history: list[ConversationMessage],
     max_chapter: int | None,
-) -> tuple[int, ...]:
-    """Novel chapters this conversation already opened, within the cap."""
-    chapters: set[int] = set()
+) -> tuple[dict, ...]:
+    """Novel passages this conversation already opened, within the cap.
+
+    Plan 033.6: a stored tool result holds only its evidence record, not the
+    in-memory wrapper (`conversation/items.py`), and history is always
+    reloaded from storage. Both shapes are read here; reading only the
+    wrapper credited 0 of 204 reads in the 033.5 trials.
+    """
+    records: list[dict] = []
+    seen: set[str] = set()
     for message in history:
         if not isinstance(message, ToolResultMessage) or not message.ok:
             continue
-        evidence = (message.result or {}).get("durable_evidence")
+        result = message.result or {}
+        evidence = result.get("durable_evidence", result)
         if not isinstance(evidence, dict) or evidence.get("source_kind") != "novel":
             continue
         try:
             chapter = int(evidence["chapter"])
         except (KeyError, TypeError, ValueError):
             continue
-        if max_chapter is None or chapter <= max_chapter:
-            chapters.add(chapter)
-    return tuple(sorted(chapters))
+        if max_chapter is not None and chapter > max_chapter:
+            continue
+        key = str(evidence.get("passage_handle") or f"chapter:{chapter}")
+        if key in seen:
+            continue
+        seen.add(key)
+        records.append(evidence)
+    return tuple(records)
+
+
+def _earlier_opened_chapters(
+    history: list[ConversationMessage],
+    max_chapter: int | None,
+) -> tuple[int, ...]:
+    """Novel chapters this conversation already opened, within the cap."""
+    return tuple(
+        sorted({int(record["chapter"]) for record in _earlier_evidence(history, max_chapter)})
+    )
+
+
+def _recalled_results(
+    earlier: tuple[dict, ...],
+    candidate: str,
+    opened_now: list[ToolResult],
+) -> list[ToolResult]:
+    """Earlier passages the candidate cites, re-opened for this turn's packet.
+
+    The packet builder re-reads each passage from the library by its record,
+    so the checks and the final reread see the text itself, not a credit.
+    """
+    cited = set(cited_chapters(candidate))
+    if not cited:
+        return []
+    open_handles = {
+        str(result.result["durable_evidence"].get("passage_handle"))
+        for result in opened_now
+        if isinstance(result.result, dict)
+        and isinstance(result.result.get("durable_evidence"), dict)
+    }
+    return [
+        ToolResult(ok=True, result={"durable_evidence": dict(record)})
+        for record in earlier
+        if record.get("passage_handle")
+        and int(record["chapter"]) in cited
+        and str(record["passage_handle"]) not in open_handles
+    ]
 
 
 def _may_use_spoiler_boundary(
@@ -384,6 +435,53 @@ def _answer_without_blockquotes(answer: str) -> str:
     return "\n".join(kept).strip()
 
 
+def _opened_novel_chapters(results: list[ToolResult]) -> set[int]:
+    chapters: set[int] = set()
+    for result in results:
+        evidence = (result.result or {}).get("durable_evidence")
+        if isinstance(evidence, dict) and evidence.get("source_kind") == "novel":
+            try:
+                chapters.add(int(evidence["chapter"]))
+            except (KeyError, TypeError, ValueError):
+                continue
+    return chapters
+
+
+def _chapter_to_read_next(
+    answer: str,
+    opened: set[int],
+    max_chapter: int | None,
+) -> int | None:
+    """The next chapter, when a draft calls the outcome unshown too early."""
+    if not opened or not _UNRESOLVED_RE.search(answer):
+        return None
+    next_chapter = max(opened) + 1
+    if max_chapter is not None and next_chapter > max_chapter:
+        return None
+    return next_chapter
+
+
+def _fallback_variants(
+    answer: str,
+    allowed_chapters: tuple[int, ...],
+) -> tuple[str, ...]:
+    """Last-resort trims of a failed answer, gentlest first.
+
+    Without the block quotes; then also without the unopened citations
+    (Plan 033.6: all three 033.5 gap answers failed on both at once, and
+    each trim alone could not clear them).
+    """
+    without_quotes = _answer_without_blockquotes(answer)
+    without_both = _answer_without_blockquotes(
+        strip_unsupported_citations(answer, allowed_chapters)
+    )
+    variants: list[str] = []
+    for variant in (without_quotes, without_both):
+        if variant and variant != answer and variant not in variants:
+            variants.append(variant)
+    return tuple(variants)
+
+
 # Plan 15 (owner 2026-08-08): the answer call must never truncate. The
 # model writes long answers while thinking is on, and DeepSeek counts
 # reasoning tokens against max_tokens, so the default 4096 cap cut the
@@ -424,6 +522,21 @@ UNOPENED_TEXT_CORRECTION = (
     "so it is written from memory. Search results are not the text. Open "
     "the chapter with read_chapters before you cite, quote, or describe it, "
     "or remove those claims."
+)
+READ_TO_RESOLUTION_CORRECTION = (
+    "Your answer says the outcome is not shown, but your reading stopped at "
+    "chapter {last}. A scene that breaks off at a chapter's end goes on in the "
+    "next one. Open chapter {next} and keep reading until the scene resolves "
+    "before you say how it ends, who won, or that it does not happen."
+)
+# A draft that concludes the text leaves the outcome open. Phrases, not
+# trial wording: they mark "I stopped reading and called it unresolved".
+_UNRESOLVED_RE = re.compile(
+    r"no verdict|the passage stops|stops right there|cliffhanger"
+    r"|doesn'?t say who|does not say who|never happens|doesn'?t happen"
+    r"|does not happen"
+    r"|\b(?:no|not|isn'?t|never)\b[^.\n]{0,60}\bon (?:the page|screen)\b",
+    re.IGNORECASE,
 )
 ZERO_EVIDENCE_CORRECTION = (
     "You answered without opening any evidence this turn. The library is the "
@@ -819,6 +932,7 @@ async def run_turn(
     last_stop_reason = ""
     zero_evidence_reprompted = False
     unopened_text_reprompted = False
+    resolution_reprompted = False
     deepest_thinking: ReasoningEffort | None = None
 
     try:
@@ -836,6 +950,7 @@ async def run_turn(
         history=history,
     )
     turn_brief = _build_turn_brief(history)
+    earlier_evidence = _earlier_evidence(history, max_chapter)
     earlier_opened = _earlier_opened_chapters(history, max_chapter)
     routed_plan = plan_for_turn(
         turn_brief.actual_ask,
@@ -1269,18 +1384,14 @@ async def run_turn(
                         final_text = build_spoiler_boundary_answer(answer_blueprint)
                         completed_response = True
                         break
-                    for stripped_source in (
-                        proposed_answer,
-                        validated_candidate,
-                    ):
-                        stripped_content = _answer_without_blockquotes(
-                            stripped_source.content
+                    for stripped_source, stripped_content in (
+                        (source, variant)
+                        for source in (proposed_answer, validated_candidate)
+                        for variant in _fallback_variants(
+                            source.content,
+                            answer_blueprint.allowed_chapters,
                         )
-                        if (
-                            not stripped_content
-                            or stripped_content == stripped_source.content
-                        ):
-                            continue
+                    ):
                         stripped_findings = inspect_publication(
                             stripped_content,
                             answer_blueprint,
@@ -1444,7 +1555,14 @@ async def run_turn(
 
                 try:
                     packet = await packet_builder(
-                        turn_tool_results,
+                        [
+                            *turn_tool_results,
+                            *_recalled_results(
+                                earlier_evidence,
+                                assistant.content,
+                                turn_tool_results,
+                            ),
+                        ],
                         assistant.content,
                     )
                 except Exception:
@@ -1500,12 +1618,40 @@ async def run_turn(
                 candidate_note = ZERO_EVIDENCE_CORRECTION
                 continue
 
+            # Plan 033.6: a draft that says the outcome is not shown, having
+            # stopped at a chapter break, reads on once before it concludes.
+            next_chapter = (
+                None
+                if resolution_reprompted
+                or domain == "fanfic"
+                or (budget.limit is not None and tool_steps_used >= budget.limit)
+                else _chapter_to_read_next(
+                    assistant.content,
+                    _opened_novel_chapters(turn_tool_results),
+                    max_chapter,
+                )
+            )
+            if next_chapter is not None:
+                resolution_reprompted = True
+                candidate_note = READ_TO_RESOLUTION_CORRECTION.format(
+                    last=next_chapter - 1,
+                    next=next_chapter,
+                )
+                continue
+
             packet: str | None = None
             packet_build_failed = False
             if packet_builder is not None:
                 try:
                     packet = await packet_builder(
-                        turn_tool_results,
+                        [
+                            *turn_tool_results,
+                            *_recalled_results(
+                                earlier_evidence,
+                                assistant.content,
+                                turn_tool_results,
+                            ),
+                        ],
                         assistant.content,
                     )
                 except Exception:

@@ -202,6 +202,28 @@ def _extract_answer_chapter_citations(text: str) -> tuple[int, ...]:
     return _extract_chapter_citations(text)
 
 
+def _in_parentheses(text: str, position: int) -> bool:
+    opened = text.rfind("(", 0, position)
+    return opened != -1 and text.rfind(")", opened, position) == -1
+
+
+def _answer_chapters(answer: str, reader_text: str) -> set[int]:
+    """Chapters the answer cites as sources.
+
+    Plan 033.6: a chapter the reader named may be named back in prose ("it
+    fits before chapter 400"); only a parenthesised citation of it, "(ch.
+    400)", claims it as a source.
+    """
+    named_by_reader = set(_extract_chapter_citations(reader_text))
+    chapters: set[int] = set()
+    for match in CHAPTER_CITATION_RE.finditer(answer):
+        found = set(_chapters_from_matches(iter((match,))))
+        if found <= named_by_reader and not _in_parentheses(answer, match.start()):
+            continue
+        chapters |= found
+    return chapters
+
+
 def cited_chapters(text: str) -> tuple[int, ...]:
     """Chapters an answer cites, e.g. (ch. 900) or (chs. 900-901)."""
     return _extract_answer_chapter_citations(text)
@@ -717,7 +739,7 @@ def inspect_publication(
             )
         )
 
-    answer_chapters = set(_extract_answer_chapter_citations(weaver_text))
+    answer_chapters = _answer_chapters(weaver_text, reader_text or blueprint.question)
     allowed_chapters = set(blueprint.allowed_chapters)
     direct_passages = _direct_passages(evidence_packet)
     refusal = _is_spoiler_refusal(weaver_text)
