@@ -27,3 +27,13 @@ twelve Reader Experience Trials plus the Plan 033 check set in arm A
 - **H3.** With the causes fixed, the build passes all twelve Reader
   Experience Trials on the evaluator record, and the check set's what-if
   answers do not get worse (3 of 9 at Plan 033).
+
+## Slice 2 observations (2026-11-05, no model spend)
+
+- H1 is supported: all three gap answers failed `unsupported_chapter`, and
+  credit for chapters opened in earlier turns never worked on stored
+  history (204 reads, 0 credited). Details in `results.md`.
+- Deadlines: per-call times are not recorded, and the slowest healthy
+  whole turn was 111 s, so the per-call bound starts at 120 s instead of
+  the proposed 90 s; the turn bound stays at 4 minutes (planning agent's
+  call under direction 2).

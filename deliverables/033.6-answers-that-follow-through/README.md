@@ -4,7 +4,7 @@
 | --- | --- | --- |
 | `plan.md` | Pointer to the canonical implementation plan | Current |
 | `learning.md` | Owner-confirmed decisions | Admitted 2026-11-05 |
-| `results.md` | Diagnosis, deterministic observations, the Reader Trials | Not started |
+| `results.md` | Diagnosis, deterministic observations, the Reader Trials | Diagnosis done (slice 2) |
 | `review-ledger.md` | Independent findings, repairs, and rechecks | Not started |
 | `decision.md` | Owner's final accept or reject record | Pending |
 
