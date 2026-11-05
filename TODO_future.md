@@ -115,7 +115,7 @@ accepted public release is v3.0.0 at Plan 040.
      whole shelf (the word half already does). Optional: fit chunks to the
      model's 512-token window (helped vectors alone, not the blend). The
      owner's GPU embeds the novel in minutes.
-   - **033.6 Answers that follow through** (drafted 2026-11-05,
+   - **033.6 Answers that follow through** (admitted 2026-11-05,
      `plans/033.6-answers-that-follow-through.md`): before the 033 build
      reaches `main`, fix the three failed Reader Trials from 033.5 on the
      answer path (diagnose first; deadlines on every model call and turn,

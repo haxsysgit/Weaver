@@ -2,7 +2,7 @@
 
 ## Gate status
 
-**Drafted 2026-11-05, awaiting admission.** Admission confirms the owner
+**Admitted 2026-11-05 (owner: "Admit 033.6").** Admission confirms the owner
 directions and the evidence in the plan, and approves one run of all
 twelve Reader Experience Trials plus the Plan 033 check set in arm A
 (slice 7).
