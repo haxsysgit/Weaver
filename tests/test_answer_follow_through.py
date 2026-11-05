@@ -285,11 +285,13 @@ async def test_an_uncited_earlier_passage_is_not_reopened() -> None:
     assert packets[0] == [2697]
 
 
-def test_the_last_resort_trims_quotes_then_quotes_and_unopened_citations() -> None:
+def test_the_last_resort_trims_quotes_then_sentences_with_unopened_citations() -> None:
+    """Review finding 10: the claim goes with its unopened citation, so
+    nothing is left standing as canon without a source."""
     from weaver.agent.turn import _fallback_variants
 
     answer = (
-        "The ring closes on him (ch. 2692) and he breaks out (ch. 2716).\n"
+        "The ring closes on him (ch. 2692). He breaks out (ch. 2716).\n"
         "> a long quoted passage\n"
         "That is the whole fight."
     )
@@ -298,8 +300,7 @@ def test_the_last_resort_trims_quotes_then_quotes_and_unopened_citations() -> No
 
     assert len(variants) == 2
     assert "> a long" not in variants[0] and "2716" in variants[0]
-    assert "> a long" not in variants[1] and "2716" not in variants[1]
-    assert "(ch. 2692)" in variants[1]
+    assert variants[1] == "The ring closes on him (ch. 2692).\nThat is the whole fight."
     assert _fallback_variants("Nothing to trim (ch. 2692).", (2692,)) == ()
 
 
@@ -461,3 +462,94 @@ def test_the_last_resort_can_drop_an_uncited_recall() -> None:
     variants = _fallback_variants(answer, (2439,))
 
     assert variants[-1] == "The mechanic is refusal (ch. 2439). That is the fun part."
+
+
+def test_recalled_passages_go_first_and_are_capped() -> None:
+    """Review finding 4: the packet trims from the front, so this turn's
+    reads come last and keep their room."""
+    from weaver.agent.tools import ToolResult
+    from weaver.agent.turn import MAX_RECALLED_PASSAGES, _recalled_results
+
+    earlier = tuple(_evidence(2692, start, start + 20) for start in range(1, 200, 21))
+    now = [ToolResult(ok=True, result={"durable_evidence": _evidence(2697)})]
+
+    recalled = _recalled_results(earlier, "It ends here (ch. 2692).", now)
+
+    assert len(recalled) == MAX_RECALLED_PASSAGES
+    # The newest earlier windows are the ones kept.
+    assert recalled[-1].result["durable_evidence"] == earlier[-1]
+
+
+def test_read_on_starts_after_the_chapter_the_answer_is_about() -> None:
+    """Review finding 9: scattered reads must not send it to the wrong place."""
+    from weaver.agent.turn import _chapter_to_read_next
+
+    assert _chapter_to_read_next("No verdict on the page (ch. 5).", {5, 2000}, None) == 6
+
+
+def test_an_answer_that_is_only_a_draft_note_empties() -> None:
+    from weaver.agent.answer import drop_draft_edit_notes
+
+    final = "I misspoke there. He wins it (ch. 900)."
+    assert drop_draft_edit_notes(final, "He wins it (ch. 900).") == "He wins it (ch. 900)."
+    assert drop_draft_edit_notes("I misspoke.", "draft") == ""
+
+
+async def test_a_correction_stays_when_the_reader_challenged_the_last_answer() -> None:
+    """Review finding 5: a pushback turn may owe the reader a correction."""
+    provider = FakeModelProvider(
+        "test-provider",
+        models=(_spec(),),
+        responses=(
+            _response(
+                ModelStopReason.TOOL_USE,
+                tool_calls=(ModelToolCall("t1", "read_chapters", '{"chapter": 104}'),),
+            ),
+            _response(ModelStopReason.STOP, content="He was a Shadow (ch. 104)."),
+            _response(
+                ModelStopReason.STOP,
+                content="Fair push, I misspoke there. He was a Shadow (ch. 104).",
+            ),
+        ),
+    )
+    layer = ModelLayer()
+    layer.register_provider(provider)
+
+    async def packet_builder(results, draft):
+        return (
+            "--- chapter 104, lines 1-40 ---" + chr(10) + "He was a Shadow." + chr(10) * 2
+            + "--- evidence board ---" + chr(10) + "direct sources: chapter 104 lines 1-40" + chr(10)
+        )
+
+    history = [
+        UserMessage(turn_id="earlier", content="what was he?"),
+        AssistantMessage(turn_id="earlier", content="He was a Saint (ch. 104)."),
+        UserMessage(turn_id="now", content="that's wrong, he was not a saint"),
+    ]
+    result = await run_turn(
+        session_id="s",
+        turn_id="now",
+        model_layer=layer,
+        model=_spec(),
+        system_prompt="You are Weaver.",
+        history=history,
+        tool_registry=_reader_registry(),
+        active_tools=("read_chapters",),
+        execution_policy=ToolExecutionPolicy.read_only(),
+        cancel_event=asyncio.Event(),
+        packet_builder=packet_builder,
+        final_pass=True,
+    )
+
+    assert result.final_text == "Fair push, I misspoke there. He was a Shadow (ch. 104)."
+
+
+def test_a_capitalised_citation_does_not_split_a_recall() -> None:
+    """Review finding 6."""
+    from weaver.agent.answer import uncited_recalls
+
+    assert uncited_recalls("Back when he was a slave, he lied (Ch. 900).") == ()
+    assert (
+        uncited_recalls("He lied (ch. 900). I remember when I first read that scene.")
+        == ()
+    )

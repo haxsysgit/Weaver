@@ -74,6 +74,7 @@ def echo_call() -> ModelResponse:
 
 TRICKLE = "trickle"  # a stream that keeps sending a little, forever
 SILENT = "silent"  # a stream that sends nothing, forever
+OPENING = "opening"  # stuck before the stream opens; a stop raises, as in DeepSeek
 
 
 class StallingProvider(FakeModelProvider):
@@ -98,6 +99,8 @@ class StallingProvider(FakeModelProvider):
                 event_type=ModelStreamEventType.RESPONSE_COMPLETE, response=entry
             )
             return
+        if entry == OPENING:
+            await asyncio.sleep(3600)
         try:
             while True:
                 if cancel_event.is_set():
@@ -269,3 +272,44 @@ def test_the_default_limits_fit_the_measured_turns() -> None:
     # Slowest healthy whole turn on record: 111 s (Plan 030 fanfic).
     assert MODEL_CALL_DEADLINE_SECONDS == 120
     assert TURN_DEADLINE_SECONDS == 240
+
+
+async def test_the_reader_stopping_a_call_that_never_opened_is_an_interruption() -> None:
+    provider = StallingProvider(OPENING)
+    cancel = asyncio.Event()
+    asyncio.get_running_loop().call_later(0.05, cancel.set)
+
+    result = await _turn(
+        provider, call_deadline=0.2, turn_deadline=2.0, cancel_event=cancel
+    )
+
+    assert result.exit_reason == TurnExitReason.INTERRUPTED
+
+
+async def test_a_call_that_never_opens_still_times_out() -> None:
+    provider = StallingProvider(OPENING)
+
+    result = await _turn(provider, call_deadline=0.1, turn_deadline=2.0)
+
+    assert result.error_category == "model_timeout"
+
+
+async def test_a_stalled_final_reread_is_not_retried() -> None:
+    provider = StallingProvider(
+        echo_call(),
+        stop("Saint came from the tomb (ch. 104)."),
+        TRICKLE,
+    )
+
+    async def packet_builder(results, draft):
+        return "--- chapter 104, lines 1-2 ---\nSaint came from the tomb."
+
+    result = await _turn(
+        provider,
+        call_deadline=0.1,
+        turn_deadline=2.0,
+        packet_builder=packet_builder,
+    )
+
+    assert result.final_text == "Saint came from the tomb (ch. 104)."
+    assert len(provider.calls) == 3

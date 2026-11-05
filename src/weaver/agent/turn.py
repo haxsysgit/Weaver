@@ -25,6 +25,7 @@ from weaver.agent.answer import (
     strip_unsupported_citations,
     cited_chapters,
     drop_draft_edit_notes,
+    drop_unsupported_sentences,
     uncited_recalls,
     inspect_publication,
     unopened_text_claims,
@@ -37,6 +38,7 @@ from weaver.agent.messages import (
     UserMessage,
     project_messages,
 )
+from weaver.retrieval.packet import MAX_OPENED_PASSAGES
 from weaver.agent.tools import (
     ToolExecutionContext,
     ToolExecutionPolicy,
@@ -275,6 +277,9 @@ def _earlier_opened_chapters(
     )
 
 
+MAX_RECALLED_PASSAGES = 4
+
+
 def _recalled_results(
     earlier: tuple[dict, ...],
     candidate: str,
@@ -294,13 +299,16 @@ def _recalled_results(
         if isinstance(result.result, dict)
         and isinstance(result.result.get("durable_evidence"), dict)
     }
-    return [
+    recalled = [
         ToolResult(ok=True, result={"durable_evidence": dict(record)})
         for record in earlier
         if record.get("passage_handle")
         and int(record["chapter"]) in cited
         and str(record["passage_handle"]) not in open_handles
     ]
+    # Newest earlier reads first; this turn's own reads keep their room.
+    room = min(MAX_RECALLED_PASSAGES, max(0, MAX_OPENED_PASSAGES - len(open_handles)))
+    return recalled[::-1][:room][::-1]
 
 
 def _may_use_spoiler_boundary(
@@ -457,7 +465,8 @@ def _chapter_to_read_next(
     """The next chapter, when a draft calls the outcome unshown too early."""
     if not opened or not _UNRESOLVED_RE.search(answer):
         return None
-    next_chapter = max(opened) + 1
+    cited_and_opened = set(cited_chapters(answer)) & opened
+    next_chapter = max(cited_and_opened or opened) + 1
     if max_chapter is not None and next_chapter > max_chapter:
         return None
     return next_chapter
@@ -469,13 +478,14 @@ def _fallback_variants(
 ) -> tuple[str, ...]:
     """Last-resort trims of a failed answer, gentlest first.
 
-    Without the block quotes; then also without the unopened citations
-    (Plan 033.6: all three 033.5 gap answers failed on both at once, and
-    each trim alone could not clear them).
+    Without the block quotes; then also without the sentences that cite
+    unopened chapters (Plan 033.6: all three 033.5 gap answers failed on both
+    at once, and each trim alone could not clear them). The sentence goes,
+    not just its citation, so no claim stays standing without its source.
     """
     without_quotes = _answer_without_blockquotes(answer)
     without_both = _answer_without_blockquotes(
-        strip_unsupported_citations(answer, allowed_chapters)
+        drop_unsupported_sentences(answer, allowed_chapters)
     )
     # Plan 033.6: a recalled scene with no chapter goes before the gap answer.
     without_recalls = without_both
@@ -1189,9 +1199,10 @@ async def run_turn(
                 if not call_timed_out:
                     break
                 logger.warning("model call ran past its time limit")
-                # One retry per turn, inside what is left of the turn.
+                # One retry per turn, inside what is left of the turn. A
+                # stalled final reread is not retried: a checked draft waits.
                 still_left = turn_deadline_seconds - (time.monotonic() - turn_started)
-                if timeout_retry_used or still_left <= 0:
+                if in_final_phase or timeout_retry_used or still_left <= 0:
                     break
                 timeout_retry_used = True
         except asyncio.CancelledError:
@@ -1208,6 +1219,12 @@ async def run_turn(
                 exit_reason = TurnExitReason.MODEL_FAILED
                 safe_failure = safe_error("model")
                 break
+
+        if response is None and not call_timed_out and cancel_event.is_set():
+            # The reader stopped the turn while the call was still opening.
+            exit_reason = TurnExitReason.INTERRUPTED
+            safe_failure = safe_error("interrupted")
+            break
 
         if call_timed_out and not in_final_phase:
             # Out of time with nothing checked to publish: a clean failure the
@@ -1318,12 +1335,20 @@ async def run_turn(
                     )
                     proposed_deltas = response_deltas
                     # Plan 033.6: the reader never saw the draft, so a
-                    # "correction" of it is dropped, not published.
-                    cleaned = drop_draft_edit_notes(
-                        proposed_answer.content,
-                        validated_candidate.content,
+                    # "correction" of it is dropped, not published. A reader
+                    # who challenged the last answer may be owed one.
+                    cleaned = (
+                        proposed_answer.content
+                        if turn_brief.reader_challenges_prior_answer
+                        else drop_draft_edit_notes(
+                            proposed_answer.content,
+                            validated_candidate.content,
+                        )
                     )
-                    if cleaned and cleaned != proposed_answer.content:
+                    if not cleaned:
+                        proposed_answer = validated_candidate
+                        proposed_deltas = validated_candidate_deltas
+                    elif cleaned != proposed_answer.content:
                         proposed_answer = replace(proposed_answer, content=cleaned)
                         proposed_deltas = (cleaned,)
 
@@ -1572,12 +1597,12 @@ async def run_turn(
                 try:
                     packet = await packet_builder(
                         [
-                            *turn_tool_results,
                             *_recalled_results(
                                 earlier_evidence,
                                 assistant.content,
                                 turn_tool_results,
                             ),
+                            *turn_tool_results,
                         ],
                         assistant.content,
                     )
@@ -1661,12 +1686,12 @@ async def run_turn(
                 try:
                     packet = await packet_builder(
                         [
-                            *turn_tool_results,
                             *_recalled_results(
                                 earlier_evidence,
                                 assistant.content,
                                 turn_tool_results,
                             ),
+                            *turn_tool_results,
                         ],
                         assistant.content,
                     )

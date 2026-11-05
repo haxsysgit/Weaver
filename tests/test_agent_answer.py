@@ -780,3 +780,46 @@ def test_an_uncited_recalled_scene_beside_cited_claims_is_caught() -> None:
     assert cited_recall == ()
     assert labelled == ()
     assert "uncited_recall" not in {finding.code for finding in quoted}
+
+
+def test_a_reader_named_chapter_is_only_exempt_as_a_place_in_the_story() -> None:
+    """Plan 033.6 review: "Chapter 400 is where..." describes the chapter
+    as a source and still needs it opened."""
+    blueprint = build_answer_blueprint(
+        question="what happens in chapter 400?",
+        prior_weaver_position="",
+        reader_challenges_prior_answer=False,
+        evidence_packet=PACKET,
+    )
+
+    described = inspect_publication(
+        "Chapter 400 is where the scout dies. It echoes the pass (ch. 900).",
+        blueprint,
+        PACKET,
+    )
+
+    assert {finding.code for finding in described} == {"unsupported_chapter"}
+
+
+def test_a_reader_named_chapter_past_the_boundary_is_still_a_spoiler() -> None:
+    guarded_packet = (
+        PACKET
+        + "\n--- spoiler framing ---\n"
+        + "The reader is at chapter 950, and parts of this material come from "
+        + "later in the story. Answer the question but protect the story beats."
+    )
+    blueprint = build_answer_blueprint(
+        question="does it fit before chapter 2000?",
+        prior_weaver_position="",
+        reader_challenges_prior_answer=False,
+        evidence_packet=guarded_packet,
+    )
+
+    findings = inspect_publication(
+        "It fits before chapter 2000: the convoy splits first (ch. 900).",
+        blueprint,
+        guarded_packet,
+    )
+
+    assert blueprint.reader_chapter == 950
+    assert "spoiler_citation" in {finding.code for finding in findings}

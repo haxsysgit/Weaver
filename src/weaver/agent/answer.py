@@ -207,18 +207,29 @@ def _in_parentheses(text: str, position: int) -> bool:
     return opened != -1 and text.rfind(")", opened, position) == -1
 
 
+_PLACEMENT_RE = re.compile(
+    r"\b(?:before|after|around|until|till|past|by|from|since|than|near)\s+$",
+    re.IGNORECASE,
+)
+
+
 def _answer_chapters(answer: str, reader_text: str) -> set[int]:
     """Chapters the answer cites as sources.
 
-    Plan 033.6: a chapter the reader named may be named back in prose ("it
-    fits before chapter 400"); only a parenthesised citation of it, "(ch.
-    400)", claims it as a source.
+    Plan 033.6: a chapter the reader named may be named back as a place in
+    the story ("it fits before chapter 400"). Anything else, "(ch. 400)" or
+    "Chapter 400 is where...", still claims it as a source. Spoiler checks
+    use every chapter named, not this set.
     """
     named_by_reader = set(_extract_chapter_citations(reader_text))
     chapters: set[int] = set()
     for match in CHAPTER_CITATION_RE.finditer(answer):
         found = set(_chapters_from_matches(iter((match,))))
-        if found <= named_by_reader and not _in_parentheses(answer, match.start()):
+        if (
+            found <= named_by_reader
+            and not _in_parentheses(answer, match.start())
+            and _PLACEMENT_RE.search(answer[max(0, match.start() - 12) : match.start()])
+        ):
             continue
         chapters |= found
     return chapters
@@ -230,14 +241,15 @@ DRAFT_EDIT_RE = re.compile(
     r"\bcorrection on my (?:end|part)\b"
     r"|\bcorrecting myself\b"
     r"|\bi misspoke\b"
-    r"|\b(?:earlier|above|before),? i (?:said|called|wrote|put)\b"
-    r"|\bi (?:said|called|wrote|put) [^.!?\n]{0,60}\b(?:there|earlier|above)\b"
+    r"|\bi (?:called|wrote|put) [^.!?\n]{0,60}\b(?:there|above)\b"
     r"|\bmy (?:earlier|first) (?:draft|version)\b"
     r"|\b(?:in|from) my draft\b",
     re.IGNORECASE,
 )
 # Sentence ends, but not the period inside "(ch. 12)" or "(chs. 3-4)".
-_SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])(?<!\bch\.)(?<!\bchs\.)\s+")
+_SENTENCE_SPLIT_RE = re.compile(
+    r"(?<=[.!?])(?<!\b[cC][hH]\.)(?<!\b[cC][hH][sS]\.)\s+"
+)
 # Plan 033.6: a sentence that calls up an earlier scene from memory.
 RECALL_RE = re.compile(
     r"\b(?:think back to|back when|remember when|remember how|way back in"
@@ -247,8 +259,9 @@ RECALL_RE = re.compile(
 _READ_LABELS = (
     "my read",
     "not canon",
-    "if i remember",
+    "i remember",
     "if memory serves",
+    "when i first read",
     "my guess",
     "headcanon",
     "i might be wrong",
@@ -262,6 +275,23 @@ def _sentences(text: str) -> list[str]:
         for sentence in _SENTENCE_SPLIT_RE.split(line)
         if sentence.strip()
     ]
+
+
+def drop_unsupported_sentences(answer: str, allowed_chapters: tuple[int, ...]) -> str:
+    """Remove every sentence that cites a chapter outside ``allowed_chapters``."""
+    allowed = set(allowed_chapters)
+    kept_lines: list[str] = []
+    for line in answer.split("\n"):
+        sentences = _SENTENCE_SPLIT_RE.split(line)
+        kept = [
+            sentence
+            for sentence in sentences
+            if set(_extract_chapter_citations(sentence)) <= allowed
+        ]
+        if line.strip() and not kept:
+            continue
+        kept_lines.append(" ".join(kept))
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(kept_lines)).strip()
 
 
 def uncited_recalls(answer: str) -> tuple[str, ...]:
@@ -867,9 +897,10 @@ def inspect_publication(
         blueprint.spoiler_mode in {"guarded", "ask_first"}
         and blueprint.reader_chapter is not None
     ):
+        # Every chapter named counts here, the reader's own included.
         later_citations = sorted(
             chapter
-            for chapter in answer_chapters
+            for chapter in set(_extract_answer_chapter_citations(weaver_text))
             if chapter > blueprint.reader_chapter
         )
         if later_citations:
