@@ -2,8 +2,8 @@
 
 ## Status
 
-Slice 2 (diagnosis) complete, 2026-11-05. No model spend. Slices 3 to 8
-not started.
+Slices 2 and 3 complete, 2026-11-05. No model spend. Slices 4 to 8 not
+started.
 
 ## Slice 2: diagnosis (from the Plan 033.5 run records)
 
@@ -122,3 +122,28 @@ The confusing-fight question misspelled a name.
 
 Each fix is checked by a test built from the real failure's shape, then
 the full floor.
+
+## Slice 3: time limits (built)
+
+- Every model call: 120 s. Every turn: 240 s. A call gets the smaller of
+  its limit and what is left of the turn.
+- The call has its own stop signal, set by the limit or by the reader.
+  Providers answer a stop with an "aborted" reply rather than an error,
+  so the limit is tracked by its own flag: a timeout never reads as the
+  reader pressing stop.
+- A timed-out call is retried once per turn, inside the turn's time. If it
+  still has nothing checked to publish, the turn fails cleanly with
+  `model_timeout` and the reader sees "Weaver took too long to answer.
+  Try again." with the app's existing retry. A timeout is never covered
+  with the gap answer. A stalled final reread publishes the draft that
+  already passed the checks.
+- Each run now records `call_seconds`, the time of every model call.
+- Tests (10, `tests/test_turn_deadlines.py`): a stream that trickles
+  forever and one that goes silent, both shaped like the real provider
+  (stop answered with an aborted reply); retry then answer; repeated stall
+  ends clean and retryable; the turn limit bounds the retry; a call after
+  tools gets only the time left; a stalled reread publishes the checked
+  draft; the reader's stop is still an interruption; durations recorded;
+  the default limits.
+- Floor: backend 906 passed, 4 skipped (896 plus 10 new); ruff adds no
+  finding on the changed files. Frontend untouched.

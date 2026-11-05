@@ -6,6 +6,7 @@ import asyncio
 import json
 import logging
 import re
+import time
 import uuid
 from collections.abc import Awaitable
 from dataclasses import dataclass, field, replace
@@ -66,6 +67,15 @@ logger = logging.getLogger(__name__)
 # absolute guardrail sits above all three tiers so a runaway loop can never
 # exceed it; hermes uses 90 iterations, pi uses no cap at all.
 _MAX_MODEL_STEPS = 100
+
+# Plan 033.6: time limits. The provider client's timeout bounds each network
+# read, so a stream that keeps sending a little never trips it (one 033.5
+# turn ran 8 h 16 min). The slowest healthy whole turn on record took 111 s.
+MODEL_CALL_DEADLINE_SECONDS = 120
+TURN_DEADLINE_SECONDS = 240
+# A silent stall gets this long past the call deadline to close the stream
+# cooperatively before the task is cancelled.
+_CALL_CLOSE_GRACE_SECONDS = 0.25
 
 
 class _TurnBudget:
@@ -300,6 +310,51 @@ async def _complete_buffered_stream(
             "A model stream completed without a final response."
         )
     return final_response, tuple(text_deltas)
+
+
+async def _bounded_call(
+    call: Callable[[asyncio.Event], Awaitable[tuple[ModelResponse, tuple[str, ...]]]],
+    seconds: float,
+    cancel_event: asyncio.Event,
+) -> tuple[ModelResponse | None, tuple[str, ...], bool]:
+    """Run one model call inside a time limit.
+
+    The call gets its own cancel event, set when the reader stops the turn
+    or the limit passes. Providers close the stream and report an aborted
+    response when cancelled, so the limit is tracked with its own flag: a
+    call that ran out of time must not read as the reader pressing stop.
+    Returns the response, its text deltas, and whether the limit passed.
+    """
+    if seconds <= 0:
+        return None, (), True
+    call_cancel = asyncio.Event()
+    timed_out = False
+
+    def expire() -> None:
+        nonlocal timed_out
+        timed_out = True
+        call_cancel.set()
+
+    async def relay() -> None:
+        await cancel_event.wait()
+        call_cancel.set()
+
+    loop = asyncio.get_running_loop()
+    timer = loop.call_later(seconds, expire)
+    relay_task = asyncio.ensure_future(relay())
+    try:
+        response, deltas = await asyncio.wait_for(
+            call(call_cancel), seconds + _CALL_CLOSE_GRACE_SECONDS
+        )
+    except TimeoutError:
+        timed_out = True
+        response, deltas = None, ()
+    finally:
+        timer.cancel()
+        relay_task.cancel()
+    if timed_out and not cancel_event.is_set():
+        return None, (), True
+    return response, deltas, False
 
 
 async def _publish_deltas(
@@ -539,6 +594,8 @@ class TurnResult:
     tool_steps: int = 0
     tool_limit: int | None = None
     thinking: str | None = None
+    # Plan 033.6: how long each model call took, in seconds.
+    call_seconds: tuple[float, ...] = ()
 
     def reading(self) -> dict:
         return {
@@ -546,6 +603,7 @@ class TurnResult:
             "lookups": self.tool_steps,
             "lookup_limit": self.tool_limit,
             "thinking": self.thinking,
+            "call_seconds": list(self.call_seconds),
             **({"rescued_from": self.rescued_from} if self.rescued_from else {}),
         }
 
@@ -687,7 +745,13 @@ async def run_turn(
     # Plan 033: when set, a turn that would fail on a protocol check or a
     # step limit publishes this text instead (see the end of the loop).
     gap_answer: str | None = None,
+    # Plan 033.6: every model call and the whole turn are time-limited.
+    call_deadline_seconds: float = MODEL_CALL_DEADLINE_SECONDS,
+    turn_deadline_seconds: float = TURN_DEADLINE_SECONDS,
 ) -> TurnResult:
+    turn_started = time.monotonic()
+    call_seconds: list[float] = []
+    timeout_retry_used = False
     max_steps = min(max(max_model_steps, 1), _MAX_MODEL_STEPS)
     budget = _TurnBudget(tool_budget)
     if tool_budget is not None:
@@ -966,25 +1030,48 @@ async def run_turn(
 
         response: ModelResponse | None = None
         response_deltas: tuple[str, ...] = ()
-        try:
+
+        async def call_model(
+            call_cancel: asyncio.Event,
+            request: ModelRequest = request,
+        ) -> tuple[ModelResponse, tuple[str, ...]]:
             if on_delta is None:
                 # Plan 008 behavior: drain the stream, no live preview.
-                response = await model_layer.complete(
-                    model,
-                    request,
+                return (
+                    await model_layer.complete(model, request, call_cancel),
+                    (),
+                )
+            # Plan 030: the reader only ever sees the validated answer.
+            # Candidate tokens stay buffered until validation chooses the
+            # one answer that may reach the public callback.
+            return await _complete_buffered_stream(
+                model_layer,
+                model,
+                request,
+                call_cancel,
+                preview=None,
+            )
+
+        call_timed_out = False
+        try:
+            while True:
+                remaining = turn_deadline_seconds - (time.monotonic() - turn_started)
+                call_started = time.monotonic()
+                response, response_deltas, call_timed_out = await _bounded_call(
+                    call_model,
+                    min(call_deadline_seconds, remaining),
                     cancel_event,
                 )
-            else:
-                # Plan 030: the reader only ever sees the validated answer.
-                # Candidate tokens stay buffered until validation chooses the
-                # one answer that may reach the public callback.
-                response, response_deltas = await _complete_buffered_stream(
-                    model_layer,
-                    model,
-                    request,
-                    cancel_event,
-                    preview=None,
-                )
+                if remaining > 0:
+                    call_seconds.append(round(time.monotonic() - call_started, 2))
+                if not call_timed_out:
+                    break
+                logger.warning("model call ran past its time limit")
+                # One retry per turn, inside what is left of the turn.
+                still_left = turn_deadline_seconds - (time.monotonic() - turn_started)
+                if timeout_retry_used or still_left <= 0:
+                    break
+                timeout_retry_used = True
         except asyncio.CancelledError:
             exit_reason = TurnExitReason.INTERRUPTED
             safe_failure = safe_error("interrupted")
@@ -999,6 +1086,15 @@ async def run_turn(
                 exit_reason = TurnExitReason.MODEL_FAILED
                 safe_failure = safe_error("model")
                 break
+
+        if call_timed_out and not in_final_phase:
+            # Out of time with nothing checked to publish: a clean failure the
+            # reader can retry. A stalled final reread falls through to the
+            # checked draft below.
+            exit_reason = TurnExitReason.MODEL_FAILED
+            error_category = "model_timeout"
+            safe_failure = safe_error("model_timeout")
+            break
 
         if response is None:
             # The final reading pass only enhances an answer that already
@@ -1706,4 +1802,5 @@ async def run_turn(
         tool_steps=tool_steps_used,
         tool_limit=budget.limit,
         thinking=deepest_thinking,
+        call_seconds=tuple(call_seconds),
     )

@@ -20,6 +20,7 @@ _MESSAGES = {
     "history_read": "Session history read failed.",
     "tool_schema": "Active tool schema setup failed.",
     "model": "Model stream failed.",
+    "model_timeout": "Weaver took too long to answer. Try again.",
     "model_protocol": "The model returned an unsafe response.",
     "assistant_persistence": "Assistant message persistence failed.",
     "tool_call_persistence": "Tool call persistence failed.",
