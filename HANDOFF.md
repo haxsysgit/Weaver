@@ -223,8 +223,9 @@ screenshots before claims.
 > `decision.md`). Plan 033 is closed (accepted 2026-11-04; verdict in
 > `deliverables/033-every-turn-answers/results.md`). Plan 033.5 is closed
 > (accepted 2026-11-05; meaning search covers 1 to 3232, the Reader Trials
-> passed 9 of 12). The follow-up for the three failed trials comes before
-> `main`.
+> passed 9 of 12). Plan 033.6 (`plans/033.6-answers-that-follow-through.md`)
+> is drafted and waits on the owner's admission: it fixes the three failed
+> trials before `main`.
 > Constraints: every commit starts with `Plan NNN: `;
 > no Claude attribution in commits or PRs; no deploy, push, or tag without
 > the owner; no secrets or private chapters in commits; one server at a time

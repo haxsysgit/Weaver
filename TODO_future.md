@@ -115,10 +115,12 @@ accepted public release is v3.0.0 at Plan 040.
      whole shelf (the word half already does). Optional: fit chunks to the
      model's 512-token window (helped vectors alone, not the blend). The
      owner's GPU embeds the novel in minutes.
-   - Before the 033 build reaches `main`: fix the three failed Reader
-     Trials from 033.5 (the gap answer only after a reread, read long arcs
-     to their resolution, a deadline on every model call), then re-run
-     them with the owner's approval.
+   - **033.6 Answers that follow through** (drafted 2026-11-05,
+     `plans/033.6-answers-that-follow-through.md`): before the 033 build
+     reaches `main`, fix the three failed Reader Trials from 033.5 on the
+     answer path (diagnose first; deadlines on every model call and turn,
+     answer from what was read, read to the resolution, canon stays
+     canon), then run all twelve trials once.
    Measured at Plan 031: semantic search reaches 3127, index notebook
    statements 1000, notebook files 3160, shelf 3232.
 4. **034 Weaver's mind**: the reader card in every turn (chapter, spoiler
