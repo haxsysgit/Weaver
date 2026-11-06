@@ -37,3 +37,16 @@ twelve Reader Experience Trials plus the Plan 033 check set in arm A
   whole turn was 111 s, so the per-call bound starts at 120 s instead of
   the proposed 90 s; the turn bound stays at 4 minutes (planning agent's
   call under direction 2).
+
+## Outcomes (planning agent, 2026-11-06; evidence, not decisions)
+
+- **H1 supported.** All three 033.5 gap answers came from
+  `unsupported_chapter` on chapters opened in earlier turns; with earlier
+  reads credited and re-opened, the live run gave no gap answer.
+- **H2 supported in waking time.** No waking call passed 104 s; the bound
+  turned a provider error into a clean failure the harness retried. Sleep
+  defeats any in-process timer; that is an environment fact.
+- **H3 not supported.** 10 of 12 Reader Trials pass on the evaluator
+  record (long thread and confusing fight fail); the check set did not get
+  worse (4 of 9, from 3 of 9).
+

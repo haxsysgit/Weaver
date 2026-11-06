@@ -2,8 +2,29 @@
 
 ## Status
 
-Slices 2 to 5 complete, 2026-11-05. No model spend. Slices 6 to 8 not
-started.
+Slices 2 to 7 complete, 2026-11-06. Live spend **$0.57** of the $3.00 cap
+(Reader Trials $0.45, check set $0.12). **The Reader Trials gate fails: 10
+of 12 on the evaluator record** (033.5: 9 of 12). Waiting on the owner's
+decision.
+
+## Summary
+
+1. **The three 033.5 failures, one by one.** The vague ask and the fanfic
+   spark now pass. The confusing fight still fails, for a different reason
+   (below).
+2. **No turn gave the gap answer** (033.5: 3). No turn was rescued from a
+   failed publication.
+3. **No stall reached the reader in waking time.** 277 model calls: median
+   2.9 s, 95th percentile 18 s, slowest 104 s, all under the 120 s limit.
+4. **A new failure: the long thread.** Weaver misremembered its own top ten
+   and swapped its third place while saying "no changes".
+5. **The check set did not get worse:** what-if and power answers 4 of 9
+   (Plan 033: 3 of 9), no answer presenting another scene (0 of 9). Its own
+   gate (6 of 9) still fails, as it did before this plan.
+6. **The PC slept during the run** (Windows Modern Standby, power events 506
+   and 507). Every overrun and both failed runs line up with a sleep or
+   wake. Two check answers were lost to it and are counted as no answer,
+   not re-run.
 
 ## Slice 2: diagnosis (from the Plan 033.5 run records)
 
@@ -207,3 +228,98 @@ the full floor.
   1 of 129 published canon answers: the vague-ask one.
 - Floor: backend 924 passed, 4 skipped (916 plus 8 new); frontend 185
   tests, tsc and build pass; ruff adds no finding on the changed files.
+
+## Slice 6: review
+
+One fresh subagent; ten findings, three major, all repaired with tests.
+Details in `review-ledger.md`. Floor after repairs: backend 934 passed, 4
+skipped; frontend 185 tests, tsc and build pass.
+
+## Slice 7: the live run (2026-11-05 14:33 to 2026-11-06 00:36)
+
+Build `f5929cf`. All twelve trials once, one per process, server stopped,
+then the Plan 033 check set in arm A (three runs of six questions).
+Transcripts are private. Quotes were checked against their cited chapters:
+16 of 17 found; the other is Weaver echoing the reader's own phrase in
+quotation marks, not the novel.
+
+### Reader Experience Trials (evaluator record, not the owner's acceptance)
+
+| # | Trial | Verdict | Conversation | Storytelling |
+|---|---|---|---|---|
+| 1 | Vibe check | Pass | A buddy, no lore, asks back. | Not judged (no retelling). |
+| 2 | Hot take | Pass | Disagrees, gives the strongest counter, takes "honest read" well. | Cited scenes, motive clear. |
+| 3 | Half-memory | Pass | Corrects the order, the "she", and "for days" without condescension. | Paints the Memory description well once opened. Turn 1 shows a trim mark where a block quote was cut, and turn 0 declines to narrate before reading. |
+| 4 | First-timer | Pass | Holds the boundary at chapter 300 under three pushes, stays useful. | Not judged. |
+| 5 | Theory | Pass | Tests the theory against canon, labels canon and read, bets a number. | Turn 1's list has two items reduced to fragments (likely a last-resort trim). |
+| 6 | Vague ask | **Pass** (033.5: fail) | One thread, then a second on "one more", no wiki dump. | Both threads checked against chs. 695 and 2978; no invented canon. |
+| 7 | Emotional favourite | Pass | Matches the grief, argues "earned" with receipts, one good line. | Cited facts consistent with chs. 352, 784, 1948, 2973, 3105. |
+| 8 | Low-effort | Pass | Brief, survives "why", "huh", "tldr". | Not judged. |
+| 9 | Long thread | **Fail** (033.5: pass) | Turn 2 says "that was the whole list" about a top ten it had given, then adopts Mordret at third (its list had Anvil third, Mordret absent); turn 5 lists Mordret third under "same three, no changes". | The reasoning per turn is cited and fair; the memory of its own answer is wrong. |
+| 10 | Adversarial | Pass | Unbothered, offers checkable details, handles "predicting words". | Not judged. |
+| 11 | Fanfic spark | **Pass, borderline** (033.5: fail) | Answers the fit question in full this time, with canon checks. | Novel-quality prose, labelled invention. Weakness: turn 3 swaps Nephis for an unnamed woman with a brother among the Hollows, which contradicts canon for Nephis; turn 4 catches it and says so. |
+| 12 | Confusing fight | **Fail** (033.5: fail) | Pushes back that the reader merged two fights, and points at Sunny against the Flesh of Kanakht after ch. 2708, but explains Jet's duel instead. | Says the Cursed Wanderer "kept his life" when Jet killed him (ch. 2706). The fight the reader named (chs. 2709 to 2716, an escape, the Titan sinking) is never told. Turn 4 says "this turn only gave me 2698". |
+
+What changed against 033.5:
+- The read-on check and the 8 lookups took the fight answer from ch. 2699
+  to ch. 2708, but its lookups ran out there.
+- Earlier reads now count: the "picture it" turn painted the arena from
+  two chapters it opened plus one opened two turns before (ch. 2688),
+  where 033.5 gave the gap answer.
+- "One more" kept the discovery skill.
+- The fit question was answered.
+
+### Check set (arm A, 3 runs, 18 answers, judged blind)
+
+| Question | Verdicts |
+|---|---|
+| r15 | 1 correct, 1 partial, 1 wrong (says nobody unmasked him) |
+| r35 | 3 correct |
+| n18 | 2 correct, 1 declined |
+| t1 | 3 correct |
+| t2 | 1 correct, 1 partial, 1 none (lost to sleep) |
+| t3 | 2 partial (thin on Anvil's kit), 1 none (lost to sleep) |
+
+Another scene presented: 0 of 9. Trial answers correct: 4 of 9 (Plan 033
+round 2: 3 of 9).
+
+### Time limits in the live run
+
+- Waking calls stayed under the limits.
+- Three calls ran past them, and all three spanned a sleep: 341 s and
+  2,698 s recorded, and one check turn of 376 s.
+- The two failed runs were a provider error two seconds before the PC
+  slept (long thread, turn 3, retried by the harness) and a timeout at the
+  moment it woke (fanfic, turn 1, retried by the harness).
+- Live runs from now on should hold the PC awake.
+
+### Spend
+
+| Stage | Spend |
+|---|---|
+| Reader Trials (12) | $0.4511 |
+| Check set (18 answers) | $0.1169 |
+| **Total** | **$0.5680** of $3.00 |
+
+## Recommendation (planning agent)
+
+Accept the build's fixes and keep it off `main`, with a short follow-up for
+the two failed trials:
+
+1. **Remember its own answers.** In a long thread, Weaver must quote its
+   own earlier list exactly when the reader refers to it, and say plainly
+   when it changes a position. Check how the turn brief compacts earlier
+   answers (`_compact_position`); the long thread's turn 2 behaved as if
+   only the latest answer was in view.
+2. **Finish the fight that was asked.** When a reader names a fight that
+   the reading shows continues past the last chapter opened, follow it
+   rather than substitute a nearby duel; give the scene skill enough
+   lookups to reach a 10-chapter fight, and never state an outcome
+   ("kept his life") the reading did not reach.
+3. **Never say what the turn opened.** Phrases like "this turn only gave
+   me" are machinery; extend the exposed-machinery check.
+4. **Log last-resort trims** (which variant published) so trim marks like
+   the half-memory and theory fragments can be counted.
+5. **Hold the PC awake during live runs.**
+
+Then re-run all twelve trials once (needs your approval).
