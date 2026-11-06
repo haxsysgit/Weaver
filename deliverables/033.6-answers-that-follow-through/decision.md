@@ -2,7 +2,7 @@
 
 ## Status
 
-**Pending owner decision.**
+**Accepted 2026-11-06. Plan closed.**
 
 ## Recommendation (planning agent, 2026-11-06)
 
@@ -23,4 +23,10 @@ Accept the fixes and close the plan; keep the 033 to 033.6 build off
 
 ## Decision
 
-Pending.
+**Accepted (owner, 2026-11-06): "i accept".** Plan 033.6 is closed. The
+fixes stay (time limits, earlier reads credited and re-opened, read-on,
+canon checks, thread follow-ups). The two failed Reader Trials (long thread,
+confusing fight) go to Plan 033.7, drafted with the remaining roadmap in
+`handoff/` because the owner's Claude session usage ran out; work continues
+in the DeepSeek harness. The 033 to 033.6 build stays off `main`. Not
+merged, tagged, or deployed.

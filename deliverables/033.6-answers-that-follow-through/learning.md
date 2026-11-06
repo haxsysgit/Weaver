@@ -50,3 +50,7 @@ twelve Reader Experience Trials plus the Plan 033 check set in arm A
   record (long thread and confusing fight fail); the check set did not get
   worse (4 of 9, from 3 of 9).
 
+## Decision (owner, 2026-11-06)
+
+"i accept": the plan is closed. The follow-up (Plan 033.7) and the plans to
+040 are drafted in `handoff/`, not in `plans/`, for the DeepSeek harness.

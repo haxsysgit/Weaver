@@ -115,12 +115,16 @@ accepted public release is v3.0.0 at Plan 040.
      whole shelf (the word half already does). Optional: fit chunks to the
      model's 512-token window (helped vectors alone, not the blend). The
      owner's GPU embeds the novel in minutes.
-   - **033.6 Answers that follow through** (admitted 2026-11-05,
-     `plans/033.6-answers-that-follow-through.md`): before the 033 build
-     reaches `main`, fix the three failed Reader Trials from 033.5 on the
-     answer path (diagnose first; deadlines on every model call and turn,
-     answer from what was read, read to the resolution, canon stays
-     canon), then run all twelve trials once.
+   - **033.6 Answers that follow through** (closed 2026-11-06, accepted;
+     Reader Trials 10 of 12, $0.57): time limits on every model call and
+     turn, earlier reads credited and re-opened, read on to the resolution,
+     canon checks, thread follow-ups. Long thread and confusing fight still
+     fail.
+   - **033.7 The last two trials** (drafted 2026-11-06 in
+     `handoff/plans/033.7-the-last-two-trials.md`): Weaver remembers its own
+     answers and finishes the fight that was asked; then all twelve trials.
+   - Plans 034 to 040 are drafted in detail in `handoff/plans/` (2026-11-06)
+     for the DeepSeek harness; the summaries below stay as the index.
    Measured at Plan 031: semantic search reaches 3127, index notebook
    statements 1000, notebook files 3160, shelf 3232.
 4. **034 Weaver's mind**: the reader card in every turn (chapter, spoiler

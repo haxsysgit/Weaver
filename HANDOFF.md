@@ -1,5 +1,11 @@
 # Weaver handoff
 
+**Latest (2026-11-06): read `handoff/README.md` first.** Plan 033.6 is
+closed (accepted; Reader Trials 10 of 12). The next plan (033.7, the last
+two trials) and Plans 034 to 040 are drafted, with goals and success
+criteria, in `handoff/plans/`. The owner continues in the DeepSeek harness
+until Sunday 2026-11-08, 21:00. The text below is older context.
+
 Date: 2026-11-01. Plan 030 is closed: the owner accepted the build and
 v2.0.0 is released offline (merged to `main` and tagged, not deployed). The
 deploy workflow stays disabled and the EC2 box stays stopped; going public is
@@ -223,9 +229,9 @@ screenshots before claims.
 > `decision.md`). Plan 033 is closed (accepted 2026-11-04; verdict in
 > `deliverables/033-every-turn-answers/results.md`). Plan 033.5 is closed
 > (accepted 2026-11-05; meaning search covers 1 to 3232, the Reader Trials
-> passed 9 of 12). Plan 033.6 (`plans/033.6-answers-that-follow-through.md`)
-> is admitted (2026-11-05) and in progress: it fixes the three failed
-> trials before `main`.
+> passed 9 of 12). Plan 033.6 is closed (accepted 2026-11-06; Reader
+> Trials 10 of 12). Next is Plan 033.7, drafted in
+> `handoff/plans/033.7-the-last-two-trials.md`; read `handoff/README.md`.
 > Constraints: every commit starts with `Plan NNN: `;
 > no Claude attribution in commits or PRs; no deploy, push, or tag without
 > the owner; no secrets or private chapters in commits; one server at a time

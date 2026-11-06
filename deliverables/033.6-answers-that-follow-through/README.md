@@ -6,7 +6,7 @@
 | `learning.md` | Owner-confirmed decisions | Admitted 2026-11-05 |
 | `results.md` | Diagnosis, deterministic observations, the Reader Trials | Slices 2 to 7 done |
 | `review-ledger.md` | Independent findings, repairs, and rechecks | Done (slice 6) |
-| `decision.md` | Owner's final accept or reject record | Recommendation written, pending |
+| `decision.md` | Owner's final accept or reject record | Accepted 2026-11-06 |
 
 No novel prose, chats, credentials, private receipts, generated knowledge,
 or raw model reasoning belongs here.
