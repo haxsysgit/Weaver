@@ -1421,10 +1421,13 @@ class TestFinalReadingPhase:
         for call in provider.calls:
             assert call.request.reasoning.enabled is True
 
-    async def test_final_reading_projects_current_positions_drops_old_ones(self) -> None:
+    async def test_final_reading_keeps_the_recent_thread_and_drops_the_oldest(
+        self,
+    ) -> None:
         # The "7 daemons" bug: full conversation history dominated the final
-        # reading call. The compact brief keeps the current positions and drops
-        # older exchanges.
+        # reading call. Plan 033.7 gave that call the thread's own published
+        # exchanges so a callback works (Trial 9), but only a bounded window:
+        # the last four exchanges. Older ones stay out.
         layer, model, provider = scripted_layer(
             tool_response(tool_call("c1", "echo", '{"message": "a"}')),
             stop_response("Draft: located daemon statements."),
@@ -1434,11 +1437,15 @@ class TestFinalReadingPhase:
         ancient_answer = "The dark sea swallowed Nephis. " * 100
         history = [
             UserMessage(
-                message_id="q-1",
-                turn_id="t-1",
+                message_id="q-3",
+                turn_id="t-3",
                 content="who is the shadow god",
             ),
-            AssistantMessage(message_id="a-1", turn_id="t-1", content=ancient_answer),
+            AssistantMessage(message_id="a-3", turn_id="t-3", content=ancient_answer),
+            UserMessage(message_id="q-2", turn_id="t-2", content="what was the spire"),
+            AssistantMessage(message_id="a-2", turn_id="t-2", content="the spire fell."),
+            UserMessage(message_id="q-1", turn_id="t-1", content="and the sea"),
+            AssistantMessage(message_id="a-1", turn_id="t-1", content="the sea rose."),
             UserMessage(
                 message_id="q0",
                 turn_id="t0",
@@ -1469,9 +1476,9 @@ class TestFinalReadingPhase:
         joined = " ".join((m.content or "") for m in final_request.messages)
         assert "PACKET: daemon statements" in joined
         assert "list the 7 daemons" in joined
-        # continuity: the previous Weaver position stays in the brief
+        # continuity: the previous Weaver position stays in the thread
         assert "Anvil gets cooked" in joined
-        # the older exchange is outside the brief and must not leak
+        # the oldest exchange is outside the window and must not leak
         assert "dark sea swallowed Nephis" not in joined
         assert final_request.tools == ()
 
@@ -2411,6 +2418,99 @@ async def test_a_dry_answer_may_cite_a_chapter_the_thread_already_opened() -> No
 
     assert result.final_text == "The grate is the whole joke (ch. 116)."
     assert len(provider.calls) == 2
+
+
+async def test_the_publication_pass_keeps_the_threads_own_answers() -> None:
+    """Trial 9: the publishing call carried the current message alone, so a
+    list given two turns earlier was invisible to it. It sees the thread's
+    own published answers, oldest first, before the current ask."""
+    top_ten = "\n".join(f"{place}. pick {place}" for place in range(1, 11))
+    history = [
+        UserMessage(message_id="m1", content="rank the ten strongest"),
+        AssistantMessage(message_id="m2", content=top_ten + "\nAnvil is third."),
+        UserMessage(message_id="m3", content="nephis over sunny?"),
+        AssistantMessage(message_id="m4", content="Nephis wins that one (ch. 104)."),
+        UserMessage(message_id="m5", content="go back to your third pick"),
+    ]
+    layer, model, provider = scripted_layer(
+        stop_response("Draft: third was Anvil (ch. 104)."),
+        stop_response("Third was Anvil (ch. 104)."),
+    )
+
+    async def packet_builder(results, draft):
+        return _direct_packet("PACKET: chapter 104 prose")
+
+    result = await execute_turn(
+        layer,
+        model,
+        registry=make_registry(),
+        active_tools=("echo",),
+        packet_builder=packet_builder,
+        history=history,
+    )
+
+    assert result.final_text == "Third was Anvil (ch. 104)."
+    final_messages = provider.calls[-1].request.messages
+    spoken = [
+        (message.role, message.content or "")
+        for message in final_messages
+        if message.role in {"user", "assistant"}
+    ]
+    assert spoken[-1] == ("user", "go back to your third pick")
+    earlier_answers = [text for role, text in spoken if role == "assistant"]
+    assert any("Anvil is third." in text for text in earlier_answers)
+    assert any("10. pick 10" in text for text in earlier_answers)
+    positions = [text for _, text in spoken]
+    anvil = next(text for text in positions if "Anvil is third." in text)
+    assert positions.index("rank the ten strongest") < positions.index(anvil)
+    assert positions.index(anvil) < positions.index("go back to your third pick")
+
+
+async def test_the_publication_pass_drops_tool_transcripts_from_the_thread() -> None:
+    """Only what the reader saw rides along: an earlier turn's tool call and
+    its result stay in the packet, not in the publishing call."""
+    history = [
+        UserMessage(message_id="m1", content="what happens in ch 116?"),
+        ToolCallMessage(
+            message_id="m2",
+            call_id="call-1",
+            tool_name="read_chapters",
+            arguments_json='{"chapter": 116}',
+        ),
+        ToolResultMessage(
+            message_id="m3",
+            call_id="call-1",
+            tool_name="read_chapters",
+            ok=True,
+            result={"text": "TOOL TRANSCRIPT TEXT"},
+        ),
+        AssistantMessage(message_id="m4", content="The grate scene (ch. 116)."),
+        UserMessage(message_id="m5", content="huh"),
+    ]
+    layer, model, provider = scripted_layer(
+        stop_response("Draft: the grate (ch. 116)."),
+        stop_response("The grate is the joke (ch. 116)."),
+    )
+
+    async def packet_builder(results, draft):
+        return _direct_packet("PACKET: chapter 116 prose")
+
+    result = await execute_turn(
+        layer,
+        model,
+        registry=make_registry(),
+        active_tools=("echo",),
+        packet_builder=packet_builder,
+        history=history,
+    )
+
+    assert result.final_text == "The grate is the joke (ch. 116)."
+    final_messages = provider.calls[-1].request.messages
+    assert not any(
+        "TOOL TRANSCRIPT TEXT" in (message.content or "")
+        for message in final_messages
+    )
+    assert not any(message.role == "tool" for message in final_messages)
 
 
 async def test_the_final_pass_treats_the_draft_as_private() -> None:

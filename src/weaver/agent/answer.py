@@ -111,6 +111,12 @@ EXPOSED_MACHINERY = (
     "browse_chapters",
     "tool call",
     "notebook hit",
+    # Plan 033.7: Trial 12's answer talked about the harness ("this turn
+    # only gave me 2698", "the passages I opened") instead of the book.
+    "this turn only",
+    "lookups",
+    "lookup budget",
+    "the passages i opened",
 )
 FOLLOW_UP_OPENINGS = (
     "and ",

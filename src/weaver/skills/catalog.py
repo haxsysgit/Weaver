@@ -134,9 +134,13 @@ SCENE_EXPLANATION = Skill(
             ),
         ),
     ),
-    tool_budget=8,
+    # Plan 033.7: a fight in this novel can run ten chapters (Trial 12's ran
+    # from 2709 into 2716). Eight lookups stopped at the setup and a 16,000
+    # character packet cannot hold a resolution that lands on the last page,
+    # so the scene read is sized like an arc read.
+    tool_budget=16,
     reasoning_tier="ascended",
-    packet_cap=16_000,
+    packet_cap=24_000,
 )
 
 

@@ -460,3 +460,44 @@ def test_one_more_with_no_thread_is_its_own_question() -> None:
     plan = plan_for_turn("give me one more", earlier_asks=())
 
     assert plan.follow_up is None
+
+
+def test_the_end_of_a_scene_keeps_the_scene_skill() -> None:
+    """Trial 12: "who actually won?" fell to quick_recall (4 lookups) because
+    it matched no follow-up marker, so no later turn could go back and finish
+    the fight it had just named. The outcome is part of the scene read."""
+    fight = (
+        "explain the fight between sunny and the flesh of kanakht, "
+        "I could not follow it"
+    )
+    for follow_up in (
+        "who actually won?",
+        "who won?",
+        "how did it end?",
+        "who died?",
+    ):
+        plan = plan_for_turn(follow_up, earlier_asks=[fight])
+        ids = [skill.id for skill in plan.skills]
+        assert "scene_explanation" in ids, follow_up
+        assert plan.follow_up == "carry", follow_up
+        assert plan.tool_budget == plan_for_question(fight).tool_budget, follow_up
+    # A follow-up that does name the fight needs no carry: it plans the scene
+    # read on its own.
+    named = plan_for_turn("how did that fight end?", earlier_asks=[fight])
+    assert [skill.id for skill in named.skills] == ["scene_explanation"]
+
+
+def test_the_end_of_a_scene_with_no_thread_is_its_own_question() -> None:
+    plan = plan_for_turn("who actually won?", earlier_asks=())
+
+    assert plan.follow_up is None
+
+
+def test_the_scene_read_is_sized_for_a_long_fight() -> None:
+    """A fight that runs from chapter 2709 into 2716 is ten chapters, about
+    65 KB of prose. Eight lookups stopped at chapter 2708 and a 16,000
+    character packet cannot hold a resolution that lands on the last page."""
+    scene = SKILLS_BY_ID["scene_explanation"]
+
+    assert scene.tool_budget >= 10
+    assert scene.packet_cap >= 24_000

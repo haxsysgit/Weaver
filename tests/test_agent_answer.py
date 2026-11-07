@@ -342,6 +342,49 @@ def test_inspection_flags_style_leaks_without_rewriting_quotes() -> None:
     assert codes == {"ai_opening", "em_dash", "exposed_machinery", "changed_quote"}
 
 
+def test_inspection_flags_machinery_talk_from_the_transcripts() -> None:
+    """Plan 033.7: Trial 12's answer said "this turn only gave me 2698" and
+    "the passages I opened". The reader hears a tool, not a book."""
+    blueprint = build_answer_blueprint(
+        question="who actually won?",
+        prior_weaver_position="",
+        reader_challenges_prior_answer=False,
+        evidence_packet=PACKET,
+    )
+
+    for phrase in (
+        "This turn only gave me 2698 (ch. 900).",
+        "My lookups ran out before the end (ch. 900).",
+        "The passages I opened stop at the gate (ch. 900).",
+    ):
+        codes = {
+            finding.code
+            for finding in inspect_publication(phrase, blueprint, PACKET)
+        }
+        assert "exposed_machinery" in codes, phrase
+
+
+def test_inspection_does_not_flag_ordinary_reading_words() -> None:
+    """The machinery check must not fire on normal speech about the book."""
+    blueprint = build_answer_blueprint(
+        question="who actually won?",
+        prior_weaver_position="",
+        reader_challenges_prior_answer=False,
+        evidence_packet=PACKET,
+    )
+
+    for phrase in (
+        "In this chapter the wardens hold the door (ch. 900).",
+        "My reading of that scene is that the heir loses (ch. 900).",
+        "The passage stops at the gate, so look at what follows (ch. 900).",
+    ):
+        codes = {
+            finding.code
+            for finding in inspect_publication(phrase, blueprint, PACKET)
+        }
+        assert "exposed_machinery" not in codes, phrase
+
+
 def test_inspection_flags_missing_and_unopened_chapter_citations() -> None:
     blueprint = build_answer_blueprint(
         question="What happened to LO49?",

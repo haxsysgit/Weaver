@@ -354,7 +354,27 @@ MORE_FOLLOW_UPS = (
     "where was that",
     "where is that",
 )
+# Plan 033.7: the end of a scene is part of the scene. "who actually won?"
+# after a fight question routes to quick_recall, which matched no follow-up
+# marker, so the turn that named the fight could never go back and finish it
+# (Trial 12: eight lookups spent on a neighbouring duel, five turns left with
+# four lookups and no scene read).
+SCENE_END_FOLLOW_UPS = (
+    "who won",
+    "who lost",
+    "who died",
+    "who survived",
+    "who lived",
+    "how did it end",
+    "how does it end",
+    "how did that end",
+    "how did it finish",
+    "how did the fight end",
+    "how did the scene end",
+)
 _CHALLENGE_MAX_WORDS = 18
+# Words that never change what a follow-up points at.
+_FILLER_WORDS = frozenset({"actually", "really", "even", "just"})
 _EARLIER_ASKS_SEEN = 6
 _WORD_RE = re.compile(r"[a-z0-9']+")
 
@@ -393,7 +413,14 @@ def _follow_up_kind(question: str, own_route: str) -> str | None:
     if own_route not in _FOLLOW_UP_ROUTES:
         return None
     normalized = _normalize(question)
-    words = _WORD_RE.findall(normalized)
+    # "who actually won?" asks the same thing as "who won?". Filler adverbs
+    # never change what a follow-up points at, so they are dropped before the
+    # markers are matched (Trial 12's follow-up was phrased with one).
+    words = [
+        word
+        for word in _WORD_RE.findall(normalized)
+        if word not in _FILLER_WORDS
+    ]
     padded = " " + " ".join(words) + " "
     # A message aimed at Weaver's own earlier answer ("you put mordret third?",
     # "changing star over lost from light? defend it.") is a follow-up even
@@ -404,6 +431,8 @@ def _follow_up_kind(question: str, own_route: str) -> str | None:
         if any(f" {marker} " in padded for marker in REPEAT_FOLLOW_UPS):
             return "carry"
         if any(f" {marker} " in padded for marker in MORE_FOLLOW_UPS):
+            return "carry"
+        if any(f" {marker} " in padded for marker in SCENE_END_FOLLOW_UPS):
             return "carry"
     if _has_any(normalized, BOOK_NOUNS):
         return None

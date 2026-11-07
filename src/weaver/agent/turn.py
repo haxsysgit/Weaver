@@ -188,6 +188,53 @@ def _compact_position(content: str, *, limit: int = 2_000) -> str:
     return text[:half].rstrip() + " [...] " + text[-half:].lstrip()
 
 
+# Plan 033.7: the publishing call used to carry the current reader message
+# alone, so on turn 2 it could not see the top ten it published on turn 0 and
+# answered about a different turn's argument (Trial 9). It now carries the
+# thread's own published exchanges, bounded: enough for a callback several
+# turns back, small enough to stay a window rather than a transcript.
+FINAL_HISTORY_TURNS = 4
+FINAL_HISTORY_ANSWER_CHARS = 4_000
+FINAL_HISTORY_ASK_CHARS = 1_000
+
+
+def _final_history(
+    history: list[ConversationMessage],
+    current: ConversationMessage | None,
+) -> list[ConversationMessage]:
+    """The reader's asks and Weaver's published answers, oldest first.
+
+    Only what the reader saw: tool calls and their results stay out, because
+    their positions and evidence are already projected into the reading
+    packet and the turn brief.
+    """
+    if current is None:
+        return []
+    published = [
+        message
+        for message in history
+        if isinstance(message, (UserMessage, AssistantMessage))
+        and message.content.strip()
+        and not (isinstance(message, AssistantMessage) and message.tool_calls)
+        and message.message_id != current.message_id
+    ]
+    bounded = [
+        replace(
+            message,
+            content=_compact_position(
+                message.content,
+                limit=(
+                    FINAL_HISTORY_ASK_CHARS
+                    if isinstance(message, UserMessage)
+                    else FINAL_HISTORY_ANSWER_CHARS
+                ),
+            ),
+        )
+        for message in published[-(FINAL_HISTORY_TURNS * 2) :]
+    ]
+    return [*bounded, current]
+
+
 def _build_turn_brief(history: list[ConversationMessage]) -> TurnBrief:
     user_messages = [
         message
@@ -1064,9 +1111,7 @@ async def run_turn(
             # assistant message, the model took it for something the reader
             # had seen and corrected it out loud. It rides in the private
             # instructions instead, labelled as never shown.
-            final_history: list[ConversationMessage] = []
-            if current_owner is not None:
-                final_history.append(current_owner)
+            final_history = _final_history(history, current_owner)
             draft = publication_draft or validated_candidate
             request_messages = project_messages(
                 system_prompt=system_prompt,
