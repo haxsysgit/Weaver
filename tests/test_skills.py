@@ -493,6 +493,33 @@ def test_the_end_of_a_scene_with_no_thread_is_its_own_question() -> None:
     assert plan.follow_up is None
 
 
+def test_an_outcome_question_that_names_its_own_scene_is_its_own_question() -> None:
+    """The review of 033.7: a scene-end phrase matched inside the <=18-word
+    marker block, before the named-scope early-out, so "who won in chapter
+    2714?" after a ranking turn planned the ranking skill and carried its
+    shape and obligations. Naming the scene means it is a new question."""
+    earlier = ["rank the ten strongest characters"]
+    for ask in (
+        "who won in chapter 2714?",
+        "who won, nephis or mordret?",
+        "who died in the tomb of ariel?",
+        "who lived in the spire?",
+    ):
+        plan = plan_for_turn(ask, earlier_asks=earlier)
+        ids = [skill.id for skill in plan.skills]
+        assert "ranking" not in ids, ask
+        assert plan.follow_up is None, ask
+
+
+def test_the_end_of_a_scene_after_another_kind_of_answer_is_its_own_question() -> None:
+    """Carrying only makes sense when the thread was a scene read. After a
+    character ranking, "who won?" is a new question, not a continuation."""
+    plan = plan_for_turn("who won?", earlier_asks=["rank the ten strongest"])
+
+    assert plan.follow_up is None
+    assert [skill.id for skill in plan.skills] == ["quick_recall"]
+
+
 def test_the_scene_read_is_sized_for_a_long_fight() -> None:
     """A fight that runs from chapter 2709 into 2716 is ten chapters, about
     65 KB of prose. Eight lookups stopped at chapter 2708 and a 16,000

@@ -399,6 +399,11 @@ def plan_for_turn(
     base = _earlier_skill(earlier_asks, domain=domain)
     if base is None:
         return plan_for_question(question, domain=domain)
+    if kind == "carry_scene" and base != "scene_explanation":
+        # "who won?" continues a scene read. After any other kind of answer
+        # it is a new question about a fight of its own, so it is planned on
+        # its own words rather than inheriting the earlier skill's shape.
+        return plan_for_question(question, domain=domain)
     ids = [base, own]
     if kind == "push":
         ids.append("discussion")
@@ -406,7 +411,10 @@ def plan_for_turn(
     # that is asking about the story.
     ids = [skill for skill in ids if skill != "companion"] or ["companion"]
     plan = plan_for_ids(ids)
-    return SkillPlan(skills=plan.skills, follow_up=kind)
+    return SkillPlan(
+        skills=plan.skills,
+        follow_up="carry" if kind == "carry_scene" else kind,
+    )
 
 
 def _follow_up_kind(question: str, own_route: str) -> str | None:
@@ -432,12 +440,17 @@ def _follow_up_kind(question: str, own_route: str) -> str | None:
             return "carry"
         if any(f" {marker} " in padded for marker in MORE_FOLLOW_UPS):
             return "carry"
-        if any(f" {marker} " in padded for marker in SCENE_END_FOLLOW_UPS):
-            return "carry"
     if _has_any(normalized, BOOK_NOUNS):
         return None
     if not words or len(words) > _FOLLOW_UP_MAX_WORDS:
         return None
+    # "The end of the scene" only continues a scene. Checked here, after the
+    # named-scope early-out and the length limit, because "who won in chapter
+    # 2714?" names its own fight and must not inherit the newest earlier
+    # ask's skill (a ranking turn would otherwise answer a versus question
+    # with ranking obligations).
+    if any(f" {marker} " in padded for marker in SCENE_END_FOLLOW_UPS):
+        return "carry_scene"
     if any(f" {marker} " in padded for marker in PUSH_FOLLOW_UPS):
         return "push"
     if any(f" {marker} " in padded for marker in CARRY_FOLLOW_UPS):

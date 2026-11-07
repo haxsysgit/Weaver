@@ -1476,8 +1476,10 @@ class TestFinalReadingPhase:
         joined = " ".join((m.content or "") for m in final_request.messages)
         assert "PACKET: daemon statements" in joined
         assert "list the 7 daemons" in joined
-        # continuity: the previous Weaver position stays in the thread
-        assert "Anvil gets cooked" in joined
+        # depth: two exchanges back is in the window, and it is not the
+        # latest answer, so the turn brief cannot account for it
+        assert "the sea rose" in joined
+        assert "the shore had a colossus" in joined
         # the oldest exchange is outside the window and must not leak
         assert "dark sea swallowed Nephis" not in joined
         assert final_request.tools == ()
@@ -2418,6 +2420,82 @@ async def test_a_dry_answer_may_cite_a_chapter_the_thread_already_opened() -> No
 
     assert result.final_text == "The grate is the whole joke (ch. 116)."
     assert len(provider.calls) == 2
+
+
+async def test_the_publication_pass_keeps_a_list_from_three_turns_back() -> None:
+    """The plan's requirement, literally: a ten-item list published on turn 0
+    is still in the publishing call of turn 3. Turn 0's answer is not the
+    latest one, so the turn brief's prior position cannot stand in for it."""
+    top_ten = "\n".join(f"{place}. pick {place}" for place in range(1, 11))
+    history = [
+        UserMessage(message_id="m1", content="rank the ten strongest"),
+        AssistantMessage(message_id="m2", content=top_ten + "\nAnvil is third."),
+        UserMessage(message_id="m3", content="nephis over sunny?"),
+        AssistantMessage(message_id="m4", content="Nephis wins that one (ch. 104)."),
+        UserMessage(message_id="m5", content="and mordret over anvil?"),
+        AssistantMessage(message_id="m6", content="Anvil holds third (ch. 104)."),
+        UserMessage(message_id="m7", content="go back to your third pick"),
+    ]
+    layer, model, provider = scripted_layer(
+        stop_response("Draft: third was Anvil (ch. 104)."),
+        stop_response("Third was Anvil (ch. 104)."),
+    )
+
+    async def packet_builder(results, draft):
+        return _direct_packet("PACKET: chapter 104 prose")
+
+    await execute_turn(
+        layer,
+        model,
+        registry=make_registry(),
+        active_tools=("echo",),
+        packet_builder=packet_builder,
+        history=history,
+    )
+
+    final_messages = provider.calls[-1].request.messages
+    earlier_answers = [
+        message.content or ""
+        for message in final_messages
+        if message.role == "assistant"
+    ]
+    assert any("10. pick 10" in text for text in earlier_answers)
+    assert any("Anvil is third." in text for text in earlier_answers)
+
+
+async def test_the_publication_pass_starts_with_the_reader() -> None:
+    """A window cut mid-exchange must not open with an answer to a question
+    the publishing call cannot see."""
+    history = [
+        UserMessage(message_id="m1", content="who is the shadow god"),
+        AssistantMessage(message_id="m2", content="An answer with no ask before it."),
+        UserMessage(message_id="m3", content="and the spire"),
+        AssistantMessage(message_id="m4", content="The spire fell (ch. 104)."),
+        UserMessage(message_id="m5", content="and the sea?"),
+    ]
+    layer, model, provider = scripted_layer(
+        stop_response("Draft: the sea rose (ch. 104)."),
+        stop_response("The sea rose (ch. 104)."),
+    )
+
+    async def packet_builder(results, draft):
+        return _direct_packet("PACKET: chapter 104 prose")
+
+    await execute_turn(
+        layer,
+        model,
+        registry=make_registry(),
+        active_tools=("echo",),
+        packet_builder=packet_builder,
+        history=history,
+    )
+
+    spoken = [
+        message for message in provider.calls[-1].request.messages
+        if message.role in {"user", "assistant"}
+    ]
+    assert spoken[0].role == "user"
+    assert spoken[-1].role == "user"
 
 
 async def test_the_publication_pass_keeps_the_threads_own_answers() -> None:

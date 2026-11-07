@@ -218,6 +218,11 @@ def _final_history(
         and not (isinstance(message, AssistantMessage) and message.tool_calls)
         and message.message_id != current.message_id
     ]
+    # An exchange starts with the reader. A window cut mid-exchange would
+    # open the publishing call with an answer to a question it cannot see.
+    kept = published[-(FINAL_HISTORY_TURNS * 2) :]
+    while kept and not isinstance(kept[0], UserMessage):
+        kept = kept[1:]
     bounded = [
         replace(
             message,
@@ -230,7 +235,7 @@ def _final_history(
                 ),
             ),
         )
-        for message in published[-(FINAL_HISTORY_TURNS * 2) :]
+        for message in kept
     ]
     return [*bounded, current]
 
@@ -1083,9 +1088,11 @@ async def run_turn(
         )
         if in_final_phase:
             # The packet is ephemeral context for one fail-soft final
-            # reading call. The current question and compact turn brief carry
-            # the conversation state; old exchanges and current tool transcripts
-            # stay out because their positions and evidence are already projected.
+            # reading call. This call carries the thread's own published
+            # exchanges (Plan 033.7: without them it could not see a list it
+            # gave two turns ago), but never this turn's tool transcripts:
+            # their positions and evidence are already in the packet and the
+            # turn brief.
             current_owner = next(
                 (
                     message

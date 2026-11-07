@@ -91,18 +91,46 @@ Tests, written red first (`tests/test_agent_answer.py`):
 
 Command: `uv run pytest tests/test_agent_answer.py -q` → 60 passed.
 
-## Floors
+## Slice 5 — independent review and repairs
 
-- `uv run pytest -q`: **941 passed, 4 skipped** on the second run.
-  - The first run was 940 passed, 1 failed: `tests/test_web_server.py::test_fake_stream_can_be_stopped_after_the_first_visible_delta`
+A separate agent reviewed `6415c04..6f74833`; two should-fix findings, both
+repaired. Full record in `review-ledger.md`.
+
+- **Router:** a scene-end phrase overrode the named-scope rule, so "who won
+  in chapter 2714?" after a ranking turn planned the ranking skill and its
+  obligations. The check moved after the named-scope early-out, and the
+  scene-end kind now carries only when the earlier skill is
+  `scene_explanation`. Red proof: with the old rule monkeypatched back in,
+  all four probe phrases plan `['ranking', 'quick_recall']` with `carry`.
+- **Tests:** the plan's literal turn-3 test was missing and the window depth
+  was unpinned (a two-exchange window passed everything). Added
+  `test_the_publication_pass_keeps_a_list_from_three_turns_back` and
+  `test_the_publication_pass_starts_with_the_reader`; the window test now
+  asserts two exchanges back. Red proof: with `_final_history` patched to
+  `[current]`, three tests fail, 11 pass (the guards have nothing to catch on
+  the old code).
+- **`_final_history`:** a window cut mid-exchange no longer opens with an
+  orphan answer; leading assistant messages are dropped.
+- Notes recorded without a code change: the 24,000-character packet holds
+  3-4 chapters, not ten, so a beat citing a trimmed chapter can fire
+  `unsupported_chapter` and burn the one repair; `TURN_DEADLINE_SECONDS=240`
+  does not scale with 16 lookups; a retried turn can repeat an ask in the
+  window; a blockquote reused from an earlier answer can be flagged
+  `changed_quote` against this turn's packet.
+
+## Floors (after the review repairs)
+
+- `uv run pytest -q`: **945 passed, 4 skipped**.
+  - Baseline was 934 passed, 4 skipped at the 033.6 close; this plan adds
+    eleven passing tests (934 + 11 = 945).
+  - An earlier run had one failure,
+    `tests/test_web_server.py::test_fake_stream_can_be_stopped_after_the_first_visible_delta`
     (`48 < 86 // 4`), a stop-after-first-delta timing assertion under full
     suite load, in a file this plan does not touch. It passed alone and as a
-    file (12 passed) twice, and passed in the second full run. Recorded as a
+    file (12 passed) twice, and passed in both later full runs. Recorded as a
     load flake, not a regression.
-- Baseline was 934 passed, 4 skipped at the 033.6 close; this plan adds seven
-  passing tests (934 + 7 = 941).
-- `uvx ruff check` on the changed files: 15 findings, the same set and codes
-  as `HEAD` (16 in the temp copy counts one shebang artifact). No new
-  finding on a changed line.
+- `uvx ruff check` on the changed files: the same codes as `HEAD` on the same
+  lines (import order, two unused unpack targets, a blind `Exception` assert,
+  a mutable class default), shifted only. No new finding on a changed line.
 - `npx vitest run`: 185 passed. `npx tsc --noEmit`: no output. `npm run
   build`: built.
