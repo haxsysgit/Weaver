@@ -3,6 +3,7 @@
 
 Usage:
     uv run python scripts/scaffold_plan.py NNN slug
+    uv run python scripts/scaffold_plan.py NNN.M slug
 
 Creates plans/NNN-slug.md from plans/_TEMPLATE.md and the six deliverable
 files (plan.md, README.md, learning.md, results.md, review-ledger.md,
@@ -18,7 +19,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-NUMBER_RE = re.compile(r"^\d{3}$")
+# Decimal plans (033.5, 033.7) insert work between fixed numbers, so a
+# number may carry one dot and digits after the three-digit parent.
+NUMBER_RE = re.compile(r"^\d{3}(?:\.\d+)?$")
 SLUG_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 
 PLAN_POINTER = """# Plan {name} Pointer
@@ -96,6 +99,9 @@ def demo() -> None:
 
         created = scaffold("020", "demo-plan", root=root)
         assert (root / "plans" / "020-demo-plan.md").read_text() == "# Plan 020: X\n\nbody\n"
+        decimal = scaffold("020.5", "demo-half", root=root)
+        assert decimal[0].name == "020.5-demo-half.md"
+        assert (root / "deliverables" / "020.5-demo-half" / "results.md").exists()
         deliv = root / "deliverables" / "020-demo-plan"
         for expected in ("plan.md", "README.md", "learning.md", "results.md", "review-ledger.md", "decision.md"):
             assert (deliv / expected).exists(), f"missing {expected}"

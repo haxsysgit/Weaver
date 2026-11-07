@@ -89,6 +89,15 @@ ledger and recommendation are in
    reaching the fight asked, and talked about its own machinery ("this turn
    only gave me...").
 
+Both causes were confirmed from the transcripts and the code on 2026-11-07
+and written into `plans/033.7-the-last-two-trials.md`: the publication
+reread is built from the current reader message alone, so it cannot see an
+answer given two turns earlier; and a follow-up to a scene request loses the
+scene skill, so it reads with 4 lookups instead of 8. The owner held the
+plan on 2026-11-07, then admitted it the same day, trimmed to the four
+changes those causes need. The canonical plan is
+`plans/033.7-the-last-two-trials.md`; the draft here is now only context.
+
 ## Rules that do not bend
 
 From `AGENTS.md`, `HANDOFF.md` (repo root) and the owner's standing
