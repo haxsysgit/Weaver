@@ -1,10 +1,11 @@
 # Weaver handoff
 
-**Latest (2026-11-06): read `handoff/README.md` first.** Plan 033.6 is
-closed (accepted; Reader Trials 10 of 12). The next plan (033.7, the last
-two trials) and Plans 034 to 040 are drafted, with goals and success
-criteria, in `handoff/plans/`. The owner continues in the DeepSeek harness
-until Sunday 2026-11-08, 21:00. The text below is older context.
+**Latest (2026-11-14): read `handoff/README.md` first.** Plan 033.7 is
+closed on the owner's directive (stop being stuck on the 033 family, move
+on without approval prompts). The two target trials pass on the
+transcripts; Trial 11's fit follow-up still returns the gap answer after a
+failed publication repair, so the full twelve-trial gate moves to Plan 040.
+Next is Plan 034 (Weaver's mind). The text below is older context.
 
 Date: 2026-11-01. Plan 030 is closed: the owner accepted the build and
 v2.0.0 is released offline (merged to `main` and tagged, not deployed). The

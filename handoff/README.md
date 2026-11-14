@@ -1,5 +1,12 @@
 # Weaver handoff, 2026-11-06
 
+**Update 2026-11-14.** Plan 033.7 closed on the owner's directive: the two
+target trials (long thread, confusing fight) pass on the transcripts, Trial
+11's fit follow-up returned the gap answer after a failed publication
+repair, and the full twelve-trial gate moves to Plan 040. The shelf is at
+3246 (the weekly refresh appended 8 chapters on 2026-11-14). Next is Plan
+034.
+
 This folder carries the work from the Claude (Opus) sessions to the DeepSeek
 harness, where the owner continues until Sunday 2026-11-08, 21:00. It holds
 the state of the project, the rules that are not negotiable, and descriptive

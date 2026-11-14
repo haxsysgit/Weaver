@@ -120,14 +120,18 @@ accepted public release is v3.0.0 at Plan 040.
      turn, earlier reads credited and re-opened, read on to the resolution,
      canon checks, thread follow-ups. Long thread and confusing fight still
      fail.
-   - **033.7 The last two trials** (drafted 2026-11-06 in
-     `handoff/plans/033.7-the-last-two-trials.md`): Weaver remembers its own
-     answers and finishes the fight that was asked; then all twelve trials.
+   - **033.7 The last two trials** (closed 2026-11-14 on the owner's
+     directive): the publication pass keeps the thread's own answers and a
+     named fight is read to its end. Both target trials pass on the
+     transcripts. Trial 11's fit follow-up still returns the gap answer
+     after a failed publication repair, so the full twelve-trial gate moves
+     to Plan 040.
    - Plans 034 to 040 are drafted in detail in `handoff/plans/` (2026-11-06)
-     for the DeepSeek harness; the summaries below stay as the index.
+     for the DeepSeek harness; the summaries below stay as the index. 034 is
+     admitted 2026-11-14 and is the plan in flight.
    Measured at Plan 031: semantic search reaches 3127, index notebook
    statements 1000, notebook files 3160, shelf 3232.
-4. **034 Weaver's mind**: the reader card in every turn (chapter, spoiler
+4. **034 Weaver's mind** (admitted 2026-11-14): the reader card in every turn (chapter, spoiler
    mode, library edge, what Weaver can and cannot see), a lookup tool, an arc
    map with chapter ranges built from the chapters, and the system prompt
    restructured for the 1M window.

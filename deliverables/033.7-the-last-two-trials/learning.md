@@ -9,7 +9,11 @@ the diagnosis was confirmed from the 033.6 transcripts and the code on
 
 ## Accepted decisions
 
-1. **2026-11-07, owner.** Admit 033.7. Trim it as the executor sees fit; do
+1. **2026-11-14, owner.** Stop being stuck on the 033 family, which had lost
+   sight of the actual goals, and continue without approval prompts. The
+   plan closes on this directive. The two target trials pass; the full
+   twelve-trial gate is not re-passed and is carried to Plan 040.
+2. **2026-11-07, owner.** Admit 033.7. Trim it as the executor sees fit; do
    not over-complicate or over-engineer.
 2. **2026-11-07, executor within decision 1.** The plan carries four small
    changes and nothing else:

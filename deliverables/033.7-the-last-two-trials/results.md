@@ -2,7 +2,10 @@
 
 ## Status
 
-In progress. Admitted 2026-11-07.
+Closed 2026-11-14 under the owner's directive of the same day (stop being
+stuck on the 033 family, keep moving, no approval prompts). The two target
+trials pass on the transcripts. The full twelve-trial gate is not re-passed
+on this build and is not claimed; see "Gate status at close".
 
 ## Slice 1 — admission
 
@@ -134,3 +137,54 @@ repaired. Full record in `review-ledger.md`.
   a mutable class default), shifted only. No new finding on a changed line.
 - `npx vitest run`: 185 passed. `npx tsc --noEmit`: no output. `npm run
   build`: built.
+
+## Slice 6 - the live run (2026-11-07 to 2026-11-14)
+
+Build `5640903`. Twelve trials, one process each, server stopped, private
+transcripts.
+
+The first pass ran eleven trials on 2026-11-07 23:41 to 2026-11-08 00:02
+($0.3983). The fanfic process was suspended mid-turn (turn 0 recorded
+6,572 s) and then failed four consecutive turns; that transcript is invalid,
+not a trial result ($0.0088). The fanfic trial was run clean on 2026-11-14
+($0.1023). Run total $0.5094 against the $1.50 cap.
+
+### Verdicts
+
+**Trial 9, long thread: pass.** The top ten holds across nine turns; "rank
+the top three, no changes" and "final answer, no changes" return the same
+three in the same order; the reader's challenge is answered with citations
+instead of a silent edit. One accuracy defect: the retell of ch. 738 puts
+the soul-annihilation aura on the Broken Oath, while the chapter has Sunny
+leave the Broken Oath unaugmented and wrap the four shadows around the
+Mantle, whose aura does the work. The conclusion (the prince survived that
+exchange, Sunny was beaten, Sunny's task was to buy Kai time) is correct.
+Recorded; not the trial's target axis.
+
+**Trial 12, confusing fight: pass.** Correct fight and correct outcome
+(defeated and put into unnatural sleep, not slain), read through ch. 2714.
+The load-bearing quotes check against chs. 2690, 2713 and 2714, and canon is
+separated from the answer's own inference when the reader asks. The visual
+sequence is clear.
+
+**Trial 11, fanfic: fail on the fit follow-up.** Four scene turns in the
+storyteller voice, invention labelled every turn, canon anchors named. The
+fifth turn ("would this actually fit before chapter 400?") returned the gap
+answer: the publication repair failed with `unsupported_chapter` and
+`unopened_quote`, and the fallback replaced the draft instead of trimming
+the offending citation. The reader's direct question got a non-answer. This
+is the 033.5 fit-question failure again, on a new cause: the repair fallback
+in the answer path.
+
+**Other nine trials: ran clean, not re-judged.** Their 033.6 verdicts (pass)
+stand as the working record. A full re-judgement on this build is Plan 040's
+gate.
+
+### Gate status at close
+
+- The two trials this plan targeted pass on the transcripts.
+- The full twelve are not re-passed on this build: Trial 11 fails the fit
+  follow-up, and nine were not re-judged.
+- The plan closes on the owner's 2026-11-14 directive, not on a 12 of 12
+  run.
+- No merge, tag, or deploy.
