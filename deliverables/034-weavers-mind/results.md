@@ -37,3 +37,32 @@ Floors:
 - `ruff`: no new finding on the changed lines. The `I001`, `BLE001` and
   `S110` codes in `app.py` and `RUF059` in `test_web.py` are pre-existing at
   `HEAD`.
+
+## Slice 3 - the name index behind who_is
+
+- `src/weaver/name_index.py`: a chapter-derived index. `names_in` extracts
+  capitalised names (single words and adjacent two-word names, possessives
+  cleaned, stopwords rejected). `NameIndex` resolves exact, containment and
+  close-spelling matches (`difflib`, cutoff 0.72), reports the chapters
+  where the name appears, suggests alternatives, and knows the last chapter
+  it covers. JSON save and load.
+- `src/weaver/retrieval/tools.py`: `LibraryService.name_index()` loads
+  `.weaver/retrieval/names.json` once, rebuilds it when the file is missing
+  or older than the shelf, and saves it. `who_is` falls through to the index
+  when the notebook map misses, returns the name, chapters, first and last
+  appearance and match kind, unions suggestions, and refuses to reveal a
+  name whose first appearance is past `context.max_chapter`. Results are
+  capped to that chapter.
+- `scripts/build_name_index.py`: builds the real index. On 2026-11-16 it
+  indexed 5,488 names from chapters 1-3246 (1.37 MB, private under
+  `.weaver/`). The 033.5 miss now resolves: `kanakt` -> `Kanakht`, chapters
+  1721 to 3243.
+- `tests/test_name_index.py`: eleven tests. `tests/test_retrieval_tools.py`:
+  two who_is tests (a name beyond the notebook, and the boundary cap).
+
+Floors:
+
+- `uv run pytest -q`: 973 passed, 4 skipped.
+- Focused: `tests/test_name_index.py` and `tests/test_retrieval_tools.py`,
+  69 passed.
+- `ruff` on the new files: clean.

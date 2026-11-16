@@ -20,7 +20,8 @@ contain no logic of their own beyond validation and formatting:
   lines) to orient an arc before reading.
 - who_is: resolve any name to its canonical entity page in the story
   map (person, place, power, item, group), with aliases and first
-  known chapter.
+  known chapter. Beyond the map's reach, a chapter-derived name index
+  finds the name, its closest spelling, and where it appears.
 - lore_path: trace the shortest evidence-backed connection between two
   entities in the story map.
 
@@ -35,6 +36,7 @@ from __future__ import annotations
 import functools
 import logging
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
@@ -42,6 +44,7 @@ from pydantic import BaseModel, Field, model_validator
 from weaver.agent.tools import EffectKind, ToolDefinition, ToolExecutionContext, ToolRegistry
 
 from . import library as lib
+from ..name_index import NameIndex, build_name_index
 from .chunker import chunk_chapter
 from .words import Passage, WordIndex, best_per_chapter, fuse, preview
 
@@ -231,6 +234,7 @@ class LibraryService:
         self.notebook = lib.NotebookReader(self.notebook_dir)
         self._words: WordIndex | None = None
         self._words_through = 0
+        self._names: NameIndex | None = None
 
     def _word_index(self) -> WordIndex:
         """BM25 over every chapter on the shelf, built on first use and
@@ -248,6 +252,45 @@ class LibraryService:
             self._words = WordIndex(passages)
             self._words_through = last
         return self._words
+
+    def name_index(self) -> NameIndex:
+        """The chapter-derived name index, loaded or built once (Plan 034)."""
+        if self._names is None:
+            path = (
+                Path(self.index_dir).parent / "names.json"
+                if self.index_dir is not None
+                else None
+            )
+            loaded = None
+            if path is not None and path.exists():
+                try:
+                    loaded = NameIndex.load(path)
+                except (OSError, ValueError):
+                    loaded = None
+            shelf = self.index.last_chapter() or 0
+            if loaded is not None and loaded.through < shelf:
+                # The shelf grew since the file was written; rebuild once.
+                loaded = None
+            if loaded is None:
+                loaded = build_name_index(self._chapter_texts())
+                if path is not None:
+                    try:
+                        loaded.save(path)
+                    except OSError:
+                        logger.warning("could not save the name index", exc_info=True)
+            self._names = loaded
+        return self._names
+
+    def _chapter_texts(self):
+        last = self.index.last_chapter()
+        if last is None:
+            return
+        for number in range(1, last + 1):
+            try:
+                text = self.index.read(number)
+            except FileNotFoundError:
+                continue
+            yield number, text
 
     def _client(self):
         """Lazy client: open once on first use, never at construction."""
@@ -687,18 +730,61 @@ class LibraryService:
         except Exception as exc:
             return {"ok": False, "error_category": "validation", "error": str(exc)}
         found = self.entities.lookup(inp.name)
-        if found is None:
+        if found is not None:
+            return {"ok": True, "result": {"found": True, "entity": found}}
+        index = self.name_index()
+        hit = index.lookup(inp.name)
+        if hit is None:
+            suggestions = self.entities.suggest(inp.name)
+            for name in index.suggest(inp.name):
+                if name not in suggestions:
+                    suggestions.append(name)
             return {
                 "ok": True,
                 "result": {
                     "found": False,
                     "name": inp.name,
-                    "note": "not in the story map (the map covers chapters 1-1000; "
-                    "if the name is older than that, try find_text instead)",
-                    "suggestions": self.entities.suggest(inp.name),
+                    "note": "not in the story map (the map covers chapters 1-1000) "
+                    "and not in the chapter name index; try find_text",
+                    "suggestions": suggestions[:5],
                 },
             }
-        return {"ok": True, "result": {"found": True, "entity": found}}
+        max_chapter = context.max_chapter
+        if max_chapter is not None and hit["first_chapter"] > max_chapter:
+            return {
+                "ok": True,
+                "result": {
+                    "found": False,
+                    "name": inp.name,
+                    "note": "that name first appears past the reader's chapter",
+                    "suggestions": [],
+                },
+            }
+        chapters = [
+            chapter
+            for chapter in hit["chapters"]
+            if max_chapter is None or chapter <= max_chapter
+        ]
+        return {
+            "ok": True,
+            "result": {
+                "found": True,
+                "entity": {
+                    "entity_id": "name:" + hit["name"].lower().replace(" ", "-"),
+                    "kind": "name",
+                    "title": hit["name"],
+                    "aliases": [],
+                    "first_known_chapter": chapters[0],
+                    "last_known_chapter": chapters[-1],
+                    "chapters": chapters[:40],
+                    "chapters_seen": hit["count"],
+                    "matched_as": hit["matched_as"],
+                    "match": hit["match"],
+                    "note": "not in the notebook map; located in the novel's "
+                    "chapter text",
+                },
+            },
+        }
 
     async def lore_path(
         self,
@@ -979,9 +1065,10 @@ def register_reading_tools(
                 "power, item or group - and read that entity's full profile: biography page, "
                 "canonical stats, aliases, and first known chapter. Demon of Dread is Ariel, "
                 "Lost from Light is Sunny, Mongrel is Sunny. Use before searching when you do "
-                "not recognize a name, or to refresh who someone is. The map covers chapters "
-                "1-1000; when a name does not resolve it may simply be beyond the map, so "
-                "fall back to find_text. For who two entities are CONNECTED THROUGH, use "
+                "not recognize a name, or to refresh who someone is. The notebook profile "
+                "covers chapters 1-1000; past that, a chapter name index of the whole shelf "
+                "still finds the name, its closest spelling, and where it appears, with the "
+                "chapters to open. For who two entities are CONNECTED THROUGH, use "
                 "lore_path instead."
             ),
             parameters=WhoIsInput.model_json_schema(),

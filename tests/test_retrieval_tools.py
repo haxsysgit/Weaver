@@ -684,6 +684,61 @@ async def test_who_is_is_name_resolution_only(tmp_path: Path) -> None:
     assert list(schema["properties"].keys()) == ["name"]
 
 
+def _name_novel(tmp_path: Path) -> tuple[Path, Path]:
+    novel = tmp_path / "novel"
+    (novel / "0001-0100").mkdir(parents=True)
+    (novel / "0001-0100" / "chapter-0001.txt").write_text(
+        "Mordret watched the road. Kanakht rose from the sea."
+    )
+    (novel / "0001-0100" / "chapter-0002.txt").write_text(
+        "Kanakht spoke to Mordret. Azarax listened."
+    )
+    (novel / "0001-0100" / "chapter-0003.txt").write_text(
+        "Sunny saw Kanakht. Azarax left."
+    )
+    nb = tmp_path / "nb"
+    for sub in ("people", "places", "powers", "items", "groups", "reading"):
+        (nb / sub).mkdir(parents=True)
+    (nb / "people" / "person-sunny.md").write_text(
+        "<!-- entity-id: person:sunny -->\n# Sunny\n"
+    )
+    return novel, nb
+
+
+@pytest.mark.asyncio
+async def test_who_is_finds_a_name_beyond_the_notebook(tmp_path: Path) -> None:
+    novel, nb = _name_novel(tmp_path)
+    service = LibraryService(novel_dir=novel, notebook_dir=nb)
+    res = await service.who_is({"name": "Kanakt"}, ctx())
+    assert res["ok"] is True
+    assert res["result"]["found"] is True
+    entity = res["result"]["entity"]
+    assert entity["title"] == "Kanakht"
+    assert entity["first_known_chapter"] == 1
+    assert entity["last_known_chapter"] == 3
+    assert entity["match"] == "close"
+
+
+@pytest.mark.asyncio
+async def test_who_is_respects_the_reader_boundary(tmp_path: Path) -> None:
+    novel, nb = _name_novel(tmp_path)
+    service = LibraryService(novel_dir=novel, notebook_dir=nb)
+    bounded = ToolExecutionContext(
+        session_id="s",
+        conversation_id="c",
+        turn_id="t",
+        call_id="1",
+        cancel_event=asyncio.Event(),
+        max_chapter=1,
+    )
+    res = await service.who_is({"name": "Azarax"}, bounded)
+    assert res["result"]["found"] is False
+    assert "past the reader's chapter" in res["result"]["note"]
+    res = await service.who_is({"name": "Kanakht"}, bounded)
+    assert res["result"]["found"] is True
+    assert res["result"]["entity"]["chapters"] == [1]
+
+
 # ---------------------------------------------------------------------------
 # lore_path: shortest connections through the story map
 # ---------------------------------------------------------------------------
