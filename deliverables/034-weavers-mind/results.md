@@ -109,3 +109,28 @@ Floors:
 
 - `uv run pytest -q`: 985 passed, 4 skipped.
 - `ruff` on the new files: clean.
+
+## Slice 6 - the repair keeps the answer
+
+- The 033.7 fanfic failure: the publication repair found `unsupported_chapter`
+  and `unopened_quote`. Its fallback variants removed block quotes and
+  sentences with unopened citations, but no variant removed an inline quote,
+  so the turn ended as `protocol_publication_repair_2` and the gap answer
+  replaced the draft.
+- `agent/answer.py`: `drop_unopened_quotes` removes inline quotes of six or
+  more words that no opened passage shows, and keeps quotes the passages do
+  show.
+- `agent/turn.py`: `_fallback_variants` takes the packet, tries the quote
+  drop first, then the existing trims. The call site passes the final packet.
+- Tests: one in `test_agent_answer.py` (an opened quote is kept, an unopened
+  one is dropped), one in `test_answer_follow_through.py` (a publishable
+  variant exists after the trim).
+- Not yet proven on the live fanfic turn; slice 8 measures it.
+
+Floors:
+
+- Focused: 189 passed (`test_agent_answer.py`, `test_answer_follow_through.py`,
+  `test_agent_turn.py`).
+- `uv run pytest -q`: 985 passed, 4 skipped.
+- `ruff`: no new finding. The `I001`, `UP035` and `PIE810` codes in `turn.py`
+  and `I001` in `test_agent_answer.py` are pre-existing at `HEAD`.

@@ -442,6 +442,39 @@ def unopened_text_claims(
     return tuple(codes)
 
 
+def drop_unopened_quotes(answer: str, evidence_packet: str | None) -> str:
+    """Remove inline quotes that no passage opened this turn shows (Plan 034).
+
+    The gentlest repair for an ``unopened_quote`` finding: the claim and its
+    citation stay, the quotation goes. Quotes the opened passages do show are
+    left alone, so an honest quote survives.
+    """
+    passages = _opened_passages(evidence_packet)
+    if not passages:
+        return answer
+
+    def keep(match: re.Match[str]) -> str:
+        quoted = match.group(1)
+        if len(quoted.split()) < QUOTE_MIN_WORDS:
+            return match.group(0)
+        fragments = [
+            _plain(fragment)
+            for fragment in ELISION_RE.split(quoted)
+            if len(fragment.split()) >= FRAGMENT_MIN_WORDS
+        ]
+        if fragments and all(
+            any(fragment in passage for passage in passages)
+            for fragment in fragments
+        ):
+            return match.group(0)
+        return ""
+
+    cleaned = INLINE_QUOTE_RE.sub(keep, answer)
+    cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
+    cleaned = re.sub(r"\s+([.,;:!?])", r"\1", cleaned)
+    return cleaned.strip()
+
+
 def _invalid_chapter_ranges(text: str) -> tuple[str, ...]:
     invalid: list[str] = []
     for match in CHAPTER_CITATION_RE.finditer(text):

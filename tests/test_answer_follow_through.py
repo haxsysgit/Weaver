@@ -304,6 +304,38 @@ def test_the_last_resort_trims_quotes_then_sentences_with_unopened_citations() -
     assert _fallback_variants("Nothing to trim (ch. 2692).", (2692,)) == ()
 
 
+def test_the_last_resort_drops_an_unopened_quote_instead_of_the_answer() -> None:
+    """Plan 034: an unopened quote is repairable without losing the answer.
+
+    The 033.7 fanfic turn failed on an unopened quote after the repair and
+    fell back to the gap answer. Dropping just the quote leaves a publishable
+    variant.
+    """
+    from weaver.agent.answer import build_answer_blueprint, inspect_publication
+    from weaver.agent.turn import _fallback_variants
+
+    packet = (
+        "--- chapter 1 lines 1-12 ---\n"
+        "The coffee had cost most of his savings, the real deal.\n\n"
+        "--- evidence board ---\n"
+        "direct sources: chapter 1 lines 1-12\n"
+    )
+    answer = (
+        'The coffee "had cost most of his savings, the real deal" (ch. 1). '
+        'He said "you checked every mirror but the one in your hand" (ch. 1).'
+    )
+    variants = _fallback_variants(answer, (1,), packet)
+    assert variants
+    blueprint = build_answer_blueprint(
+        question="what did he say?",
+        prior_weaver_position="",
+        reader_challenges_prior_answer=False,
+        evidence_packet=packet,
+    )
+    clean = [variant for variant in variants if not inspect_publication(variant, blueprint, packet)]
+    assert clean, variants
+
+
 def test_a_draft_that_stops_at_a_break_is_sent_to_the_next_chapter() -> None:
     from weaver.agent.turn import _chapter_to_read_next
 

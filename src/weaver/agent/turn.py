@@ -26,6 +26,7 @@ from weaver.agent.answer import (
     cited_chapters,
     drop_draft_edit_notes,
     drop_unsupported_sentences,
+    drop_unopened_quotes,
     uncited_recalls,
     inspect_publication,
     unopened_text_claims,
@@ -527,17 +528,21 @@ def _chapter_to_read_next(
 def _fallback_variants(
     answer: str,
     allowed_chapters: tuple[int, ...],
+    evidence_packet: str | None = None,
 ) -> tuple[str, ...]:
     """Last-resort trims of a failed answer, gentlest first.
 
-    Without the block quotes; then also without the sentences that cite
-    unopened chapters (Plan 033.6: all three 033.5 gap answers failed on both
-    at once, and each trim alone could not clear them). The sentence goes,
-    not just its citation, so no claim stays standing without its source.
+    The unopened quote goes first, so the claim and its citation stay (Plan
+    034: the 033.7 fanfic turn failed on an unopened quote after the repair
+    and fell back to the gap answer). Then without the block quotes; then
+    also without the sentences that cite unopened chapters. The sentence
+    goes, not just its citation, so no claim stays standing without its
+    source.
     """
-    without_quotes = _answer_without_blockquotes(answer)
+    without_unopened = drop_unopened_quotes(answer, evidence_packet)
+    without_quotes = _answer_without_blockquotes(without_unopened)
     without_both = _answer_without_blockquotes(
-        drop_unsupported_sentences(answer, allowed_chapters)
+        drop_unsupported_sentences(without_unopened, allowed_chapters)
     )
     # Plan 033.6: a recalled scene with no chapter goes before the gap answer.
     without_recalls = without_both
@@ -545,7 +550,7 @@ def _fallback_variants(
         without_recalls = without_recalls.replace(sentence, "")
     without_recalls = re.sub(r"[ \t]{2,}", " ", without_recalls).strip()
     variants: list[str] = []
-    for variant in (without_quotes, without_both, without_recalls):
+    for variant in (without_unopened, without_quotes, without_both, without_recalls):
         if variant and variant != answer and variant not in variants:
             variants.append(variant)
     return tuple(variants)
@@ -1483,6 +1488,7 @@ async def run_turn(
                         for variant in _fallback_variants(
                             source.content,
                             answer_blueprint.allowed_chapters,
+                            final_packet,
                         )
                     ):
                         stripped_findings = inspect_publication(

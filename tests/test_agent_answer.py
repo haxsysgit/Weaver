@@ -625,6 +625,19 @@ def test_exact_text_claims_need_the_text_open_this_turn(answer, packet, expected
     assert unopened_text_claims(answer, packet) == expected
 
 
+def test_the_repair_drops_an_unopened_quote_and_keeps_an_opened_one() -> None:
+    from weaver.agent.answer import drop_unopened_quotes
+
+    answer = (
+        'The coffee "had cost most of his savings, the real deal" (ch. 1). '
+        'He said "you checked every mirror but the one in your hand" (ch. 1).'
+    )
+    cleaned = drop_unopened_quotes(answer, OPENED_START)
+    assert "had cost most of his savings" in cleaned
+    assert "every mirror" not in cleaned
+    assert "  " not in cleaned
+
+
 def test_weaver_may_quote_the_reader_back() -> None:
     from weaver.agent.answer import unopened_text_claims
 
