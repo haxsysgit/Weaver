@@ -66,3 +66,24 @@ Floors:
 - Focused: `tests/test_name_index.py` and `tests/test_retrieval_tools.py`,
   69 passed.
 - `ruff` on the new files: clean.
+
+## Slice 4 - the arc map
+
+- `src/weaver/arc_map.py`: `Arc`, `ArcMap`, `parse_arc_ledger`. The map is
+  parsed from the private continuity ledger at
+  `.weaver/knowledge/shadow-slave/arcs.md`, which was written from reading
+  the novel. It places a chapter in its arc, builds a prompt block capped at
+  the reader's chapter (an arc that crosses the cap is clipped and marked
+  "so far"), and states how far the map reaches.
+- The real ledger parses 28 arcs through chapter 1816. The shelf is 3246, so
+  later chapters are unmapped and the block says so.
+- Checked against the source at the sample points: ch95 ends with the volume
+  one marker, ch350 with volume two; ch601 opens *Kingdom of Hope*, ch751
+  *Master Sunless*, ch1061 *Dire Strait*. These match the ledger's headings.
+- `tests/test_arc_map.py`: six tests.
+
+Floors:
+
+- Focused: 6 passed.
+- `uv run pytest -q`: 979 passed, 4 skipped.
+- `ruff` on the new files: clean.
