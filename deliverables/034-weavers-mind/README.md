@@ -10,8 +10,9 @@
 
 Plan status: **admitted 2026-11-14; build, review and live run complete
 2026-11-16.** The owner's close is pending. Trial 12 records a short
-fabricated quote and the Plan 033 check set was not run; both are close
-decisions, not silent passes.
+fabricated quote and the Plan 033 check set failed (3 of 9 scene
+substitutions, 2 of 9 trial answers correct); both are close decisions, not
+silent passes.
 
 No novel prose, chats, credentials, private receipts, generated knowledge,
 or raw model reasoning belongs here.

@@ -193,3 +193,21 @@ Gate status:
 - The Plan 033 check set was not run; that gate stays open.
 - The full twelve are not re-passed on this build. The owner's close is the
   next decision; no merge, tag, or deploy.
+
+### Check set (Plan 033 regression)
+
+- Three runs of six questions (r15, r35, n18, t1, t2, t3) through arm A:
+  18 answers, $0.1599.
+- Blind packet: `SEED=34034`; 18 answers, 11 quotes, 1 quote not in a cited
+  chapter. That one is the reader's own question quoted back in r35, not a
+  fabrication.
+- Gate: **3 of 9 scene answers substitute another scene** (gate: at most 1),
+  and **2 of 9 trial answers are correct** (gate: at least 6). Fail.
+- Why: the r15 answers use the ch. 689 confession instead of Belle's ch. 871
+  question; one r35 answer uses the ch. 1580 theft and denies the ch. 2976
+  kill; the t2 and t3 answers admit Azarax's and Anvil's cards are absent and
+  answer from inference. The reader card and name index did not fix the
+  missing facts.
+- Verdicts are the blind judge's (a separate agent read the blind file and
+  the questions). The evaluator verified the r35 substitution against ch.
+  2976 and the r15 substitution against ch. 689.

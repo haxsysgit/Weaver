@@ -4,8 +4,9 @@
 reviewed and live-run on build `3001712`; the owner's close is pending.
 The reader card, chapter name index, arc map and publication-repair fix
 landed; the live twelve-trial run cost $0.5257, both old blockers pass, Trial
-12 records a short fabricated quote, and the Plan 033 check set was not run.
-Plan 033.7 is closed (2026-11-14). The text below is older context.
+12 records a short fabricated quote, and the Plan 033 check set failed (3 of
+9 scene substitutions, 2 of 9 trial answers correct). Plan 033.7 is closed
+(2026-11-14). The text below is older context.
 
 Date: 2026-11-01. Plan 030 is closed: the owner accepted the build and
 v2.0.0 is released offline (merged to `main` and tagged, not deployed). The

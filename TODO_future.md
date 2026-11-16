@@ -136,7 +136,8 @@ accepted public release is v3.0.0 at Plan 040.
    mode, library edge, what Weaver can and cannot see), a lookup tool, an arc
    map with chapter ranges built from the chapters, and the system prompt
    restructured for the 1M window. Live run: both old blockers pass; Trial 12
-   records a short fabricated quote; the check set was not run.
+   records a short fabricated quote; the check set failed (3 of 9 scene
+   substitutions, 2 of 9 trial answers correct).
 5. **035 Weaver's voice and memory**: the lorekeeper voice with life and
    imagery but no essay shape (sample answers to the owner first); per-device
    opinions in defined categories, recorded by a narrow tool and fed back

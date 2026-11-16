@@ -17,7 +17,9 @@
   prompts). The goal and success criteria were drafted by the owner in
   `handoff/plans/034-weavers-mind.md` on 2026-11-06. Build, review and the
   live run are complete on 2026-11-16. The owner's close is pending; Trial
-  12 records a short-quote accuracy defect and the check set was not run.
+  12 records a short-quote accuracy defect and the check set was run the same
+  day: 3 of 9 scene substitutions against a gate of 1, and 2 of 9 trial
+  answers correct against a gate of 6. Fail, recorded in `results.md`.
 - **Depends on:** Plan 033.7, closed 2026-11-14. Inherited defect: Trial
   11's fit follow-up returns the gap answer when the publication repair
   fails. Slice 6 fixes it because this plan's gate needs the twelve.
