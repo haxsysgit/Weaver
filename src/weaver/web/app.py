@@ -320,8 +320,8 @@ def _arc_block(runtime, prefs, domain: str) -> str | None:
     """
     if domain != "canon" or runtime.project_root is None:
         return None
-    protect = prefs is not None and prefs.spoiler_mode == "protect"
-    limit = prefs.reader_chapter if protect else None
+    protect = prefs is None or prefs.spoiler_mode == "protect"
+    limit = prefs.reader_chapter if protect and prefs is not None else None
     if protect and limit is None:
         return None
     from weaver.arc_map import load_arc_map

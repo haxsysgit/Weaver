@@ -529,17 +529,27 @@ def _fallback_variants(
     answer: str,
     allowed_chapters: tuple[int, ...],
     evidence_packet: str | None = None,
+    *,
+    reader_text: str = "",
+    fix_unopened_quote: bool = True,
 ) -> tuple[str, ...]:
     """Last-resort trims of a failed answer, gentlest first.
 
     The unopened quote goes first, so the claim and its citation stay (Plan
     034: the 033.7 fanfic turn failed on an unopened quote after the repair
-    and fell back to the gap answer). Then without the block quotes; then
-    also without the sentences that cite unopened chapters. The sentence
-    goes, not just its citation, so no claim stays standing without its
-    source.
+    and fell back to the gap answer). The drop only runs when the findings
+    actually include an unopened quote: prose answers opt out of that check,
+    and their invented dialogue must not be stripped for another finding.
+    Then without the block quotes; then also without the sentences that cite
+    unopened chapters. The sentence goes, not just its citation, so no claim
+    stays standing without its source.
     """
-    without_unopened = drop_unopened_quotes(answer, evidence_packet)
+    if fix_unopened_quote:
+        without_unopened = drop_unopened_quotes(
+            answer, evidence_packet, reader_text=reader_text
+        )
+    else:
+        without_unopened = answer
     without_quotes = _answer_without_blockquotes(without_unopened)
     without_both = _answer_without_blockquotes(
         drop_unsupported_sentences(without_unopened, allowed_chapters)
@@ -1489,6 +1499,11 @@ async def run_turn(
                             source.content,
                             answer_blueprint.allowed_chapters,
                             final_packet,
+                            reader_text=answer_blueprint.question,
+                            fix_unopened_quote=any(
+                                finding.code == "unopened_quote"
+                                for finding in fallback_findings
+                            ),
                         )
                     ):
                         stripped_findings = inspect_publication(

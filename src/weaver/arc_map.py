@@ -70,10 +70,15 @@ class ArcMap:
         for arc in self.arcs:
             if arc.start > limit:
                 continue
-            end = min(arc.end, limit)
+            if arc.end > limit:
+                # The arc's name can name a future event (a death, a return).
+                # On a clipped arc show the range only, never the title.
+                lines.append(
+                    f"- {arc.start}-{limit} (continues past this chapter)"
+                )
+                continue
             volume = f", vol. {arc.volume}" if arc.volume else ""
-            tail = "" if end == arc.end else " (so far)"
-            lines.append(f"- {arc.start}-{end} {arc.name}{volume}{tail}")
+            lines.append(f"- {arc.start}-{arc.end} {arc.name}{volume}")
         if self.arcs:
             lines.append(f"(mapped through chapter {self.through})")
         return "\n".join(lines)

@@ -55,7 +55,8 @@ def test_a_chapter_is_placed_in_its_arc() -> None:
 def test_the_prompt_block_stops_at_the_reader_chapter() -> None:
     block = _map().prompt_block(30)
     assert "1-10 The First Nightmare, vol. 1" in block
-    assert "11-30 Academy Days, vol. 1 (so far)" in block
+    assert "11-30 (continues past this chapter)" in block
+    assert "Academy Days" not in block
     assert "Demon of Change" not in block
 
 

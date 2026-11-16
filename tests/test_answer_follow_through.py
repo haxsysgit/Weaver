@@ -336,6 +336,29 @@ def test_the_last_resort_drops_an_unopened_quote_instead_of_the_answer() -> None
     assert clean, variants
 
 
+def test_the_last_resort_leaves_invented_dialogue_alone_without_the_quote_finding() -> None:
+    """Plan 034 review: prose answers skip the unopened-quote check, so the
+    quote drop must not run for them or it deletes invented dialogue."""
+    from weaver.agent.turn import _fallback_variants
+
+    packet = (
+        "--- chapter 1 lines 1-12 ---\n"
+        "The coffee had cost most of his savings, the real deal.\n\n"
+        "--- evidence board ---\n"
+        "direct sources: chapter 1 lines 1-12\n"
+    )
+    answer = (
+        'Invented scene. "You came back after all this time," she said. '
+        "He left the room (ch. 9)."
+    )
+    variants = _fallback_variants(
+        answer, (1,), packet, fix_unopened_quote=False
+    )
+    assert variants
+    for variant in variants:
+        assert "came back after all this time" in variant
+
+
 def test_a_draft_that_stops_at_a_break_is_sent_to_the_next_chapter() -> None:
     from weaver.agent.turn import _chapter_to_read_next
 

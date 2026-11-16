@@ -104,10 +104,14 @@ Floors:
   compared with the 033.7 run. No prompt rule was added or removed here; the
   full rule audit stays open for the owner's close.
 - Tests: three in `test_reader_card.py`, one in `test_arc_map.py`.
+- Review follow-up: `_arc_block` treated a device with no saved prefs as
+  spoilers-allowed and injected the full map. It now treats no prefs as
+  protect with no boundary, and `tests/test_arc_block.py` covers the four
+  cases.
 
 Floors:
 
-- `uv run pytest -q`: 985 passed, 4 skipped.
+- `uv run pytest -q`: 989 passed, 4 skipped.
 - `ruff` on the new files: clean.
 
 ## Slice 6 - the repair keeps the answer
@@ -134,3 +138,26 @@ Floors:
 - `uv run pytest -q`: 985 passed, 4 skipped.
 - `ruff`: no new finding. The `I001`, `UP035` and `PIE810` codes in `turn.py`
   and `I001` in `test_agent_answer.py` are pre-existing at `HEAD`.
+
+## Slice 7 - independent review and repairs
+
+A separate agent with no part in the build reviewed `448147e..HEAD`. It ran
+long and was stopped after an interim report with four findings; all four are
+repaired. Full record in `review-ledger.md`.
+
+- A clipped arc leaked its name, which could name a future death or return.
+  A clipped arc now shows the range only.
+- `who_is` leaked the future three ways: the boundary note confirmed the name
+  existed later, suggestions were not filtered, and `chapters_seen` was the
+  shelf-wide count. All three are fixed, and a notebook page's body is
+  withheld before chapter 1000.
+- The quote drop deleted the reader's own quote. It now keeps fragments from
+  the reader's message.
+- The quote drop ran on prose answers, where invented dialogue is legal. It
+  now runs only when the findings include `unopened_quote`.
+
+Floors:
+
+- Focused review set: 278 passed.
+- `uv run pytest -q`: 991 passed, 4 skipped.
+- `ruff`: no new finding; the remaining codes are pre-existing.

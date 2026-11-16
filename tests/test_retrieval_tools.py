@@ -733,10 +733,14 @@ async def test_who_is_respects_the_reader_boundary(tmp_path: Path) -> None:
     )
     res = await service.who_is({"name": "Azarax"}, bounded)
     assert res["result"]["found"] is False
-    assert "past the reader's chapter" in res["result"]["note"]
+    assert "not in what the reader has read" in res["result"]["note"]
+    assert res["result"]["suggestions"] == []
     res = await service.who_is({"name": "Kanakht"}, bounded)
     assert res["result"]["found"] is True
     assert res["result"]["entity"]["chapters"] == [1]
+    assert res["result"]["entity"]["chapters_seen"] == 1
+    res = await service.who_is({"name": "Sunny"}, bounded)
+    assert res["result"]["entity"]["body"] == ""
 
 
 # ---------------------------------------------------------------------------

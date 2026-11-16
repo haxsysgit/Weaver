@@ -58,6 +58,7 @@ SEARCH_DEPTH = 60  # passages each half of the hybrid ranks before fusion
 # (passages are embedded without it). Plan 033 round 2.
 QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
 FIND_TEXT_BUDGET = 20_000  # stay under the tool's 24,000-character cap
+NOTEBOOK_MAP_THROUGH = 1000  # the notebook story map's last chapter
 
 
 class SearchStoryInput(BaseModel):
@@ -729,14 +730,35 @@ class LibraryService:
             inp = WhoIsInput(**arguments)
         except Exception as exc:
             return {"ok": False, "error_category": "validation", "error": str(exc)}
+        max_chapter = context.max_chapter
         found = self.entities.lookup(inp.name)
         if found is not None:
+            if max_chapter is not None and max_chapter < NOTEBOOK_MAP_THROUGH:
+                # The notebook page was written from knowledge up to chapter
+                # 1000; its body can spoil a reader who is earlier.
+                found = {
+                    **found,
+                    "body": "",
+                    "note": "profile withheld: the notebook page reaches chapters "
+                    "the reader has not read",
+                }
             return {"ok": True, "result": {"found": True, "entity": found}}
         index = self.name_index()
         hit = index.lookup(inp.name)
         if hit is None:
-            suggestions = self.entities.suggest(inp.name)
+            suggestions = [
+                name
+                for name in self.entities.suggest(inp.name)
+                if max_chapter is None
+                or (self.entities.pages.get(name, {}).get("first_known") or 0)
+                <= max_chapter
+            ]
             for name in index.suggest(inp.name):
+                entry = index.lookup(name)
+                if max_chapter is not None and (
+                    entry is None or entry["first_chapter"] > max_chapter
+                ):
+                    continue
                 if name not in suggestions:
                     suggestions.append(name)
             return {
@@ -745,18 +767,18 @@ class LibraryService:
                     "found": False,
                     "name": inp.name,
                     "note": "not in the story map (the map covers chapters 1-1000) "
-                    "and not in the chapter name index; try find_text",
+                    "and not in what the reader has read; try find_text",
                     "suggestions": suggestions[:5],
                 },
             }
-        max_chapter = context.max_chapter
         if max_chapter is not None and hit["first_chapter"] > max_chapter:
             return {
                 "ok": True,
                 "result": {
                     "found": False,
                     "name": inp.name,
-                    "note": "that name first appears past the reader's chapter",
+                    "note": "not in what the reader has read; answer within "
+                    "their chapters",
                     "suggestions": [],
                 },
             }
@@ -777,7 +799,7 @@ class LibraryService:
                     "first_known_chapter": chapters[0],
                     "last_known_chapter": chapters[-1],
                     "chapters": chapters[:40],
-                    "chapters_seen": hit["count"],
+                    "chapters_seen": len(chapters),
                     "matched_as": hit["matched_as"],
                     "match": hit["match"],
                     "note": "not in the notebook map; located in the novel's "

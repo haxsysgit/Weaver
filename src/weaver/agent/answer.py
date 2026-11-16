@@ -442,15 +442,21 @@ def unopened_text_claims(
     return tuple(codes)
 
 
-def drop_unopened_quotes(answer: str, evidence_packet: str | None) -> str:
+def drop_unopened_quotes(
+    answer: str,
+    evidence_packet: str | None,
+    *,
+    reader_text: str = "",
+) -> str:
     """Remove inline quotes that no passage opened this turn shows (Plan 034).
 
     The gentlest repair for an ``unopened_quote`` finding: the claim and its
-    citation stay, the quotation goes. Quotes the opened passages do show are
-    left alone, so an honest quote survives.
+    citation stay, the quotation goes. Quotes the opened passages do show, and
+    quotes of the reader's own message, are left alone.
     """
     passages = _opened_passages(evidence_packet)
-    if not passages:
+    reader = _plain(reader_text)
+    if not passages and not reader:
         return answer
 
     def keep(match: re.Match[str]) -> str:
@@ -463,7 +469,7 @@ def drop_unopened_quotes(answer: str, evidence_packet: str | None) -> str:
             if len(fragment.split()) >= FRAGMENT_MIN_WORDS
         ]
         if fragments and all(
-            any(fragment in passage for passage in passages)
+            any(fragment in passage for passage in passages) or fragment in reader
             for fragment in fragments
         ):
             return match.group(0)

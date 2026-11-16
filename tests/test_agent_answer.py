@@ -638,6 +638,18 @@ def test_the_repair_drops_an_unopened_quote_and_keeps_an_opened_one() -> None:
     assert "  " not in cleaned
 
 
+def test_the_repair_keeps_the_readers_own_quote() -> None:
+    from weaver.agent.answer import drop_unopened_quotes
+
+    answer = 'You told me: "you checked every mirror but the one in your hand".'
+    cleaned = drop_unopened_quotes(
+        answer,
+        OPENED_START,
+        reader_text="okay, you checked every mirror but the one in your hand?",
+    )
+    assert "every mirror" in cleaned
+
+
 def test_weaver_may_quote_the_reader_back() -> None:
     from weaver.agent.answer import unopened_text_claims
 
