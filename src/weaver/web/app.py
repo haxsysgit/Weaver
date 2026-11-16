@@ -33,6 +33,7 @@ from weaver.model_layer.deepseek import (
     current_sponsored_turn,
 )
 from weaver.model_layer.fake_chat import current_fake_retry
+from weaver.reader_card import card_from_state
 from weaver.shelf import NO_SHELF_CEILING
 from weaver.sponsored import SponsoredTurn, SponsoredUnavailable
 
@@ -303,35 +304,6 @@ def _turn_profile(
     """
     plan = plan_for_turn(question, earlier_asks=earlier_asks, domain=domain)
     return plan.tool_budget, plan.reasoning_tier, plan.packet_cap, plan.final_pass
-
-
-def _reader_note(prefs) -> str:
-    """The spoiler position the model must see before it writes anything.
-
-    The reading packet carries this too, but the packet is only built after
-    the candidate answer, so the answer itself needs the boundary up front.
-    """
-    if prefs is None or prefs.spoiler_mode != "protect":
-        return ""
-    if prefs.reader_chapter is None:
-        # No boundary saved yet: talk like a friend who does not know how
-        # far you are, instead of spoiling blindly or refusing everything.
-        return (
-            "You do not know how far the reader has read; they have not saved "
-            "a chapter. If they mention where they are in this conversation, "
-            "treat that chapter as their boundary. Before you reveal a major "
-            "story beat (a death, a hidden identity, a twist, an ending, who "
-            "someone turns out to be), ask once, casually, how far they have "
-            "read, unless they already told you. Early setup and general "
-            "questions need no check."
-        )
-    return (
-        f"The reader is at chapter {prefs.reader_chapter}. Protect the story: "
-        "never reveal, confirm, deny, or hint at anything past that chapter. "
-        "A question about whether a character survives, dies, or appears later "
-        "gets no yes or no, not even a hint. Say it is past their chapter. "
-        "Never open a refusal with yes or no: a bare no reads as an answer."
-    )
 
 
 def _derived_title(first_message: str) -> str:
@@ -797,15 +769,30 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
             if runtime.prefs is not None and owner_device is not None
             else None
         )
-        reader_note = _reader_note(turn_prefs)
+        conversation_domain, _ = await runtime.session.conversation_domain(
+            conversation_id
+        )
+        # Plan 034: the reader card states the boundary, the shelf edge, the
+        # finder reach and the thread kind before the model reads anything.
+        from weaver.corpus.schedule import library_status
+
+        refresh = (
+            library_status(runtime.project_root)
+            if runtime.project_root is not None
+            else None
+        )
+        reader_note = card_from_state(
+            turn_prefs,
+            shelf_edge=runtime.shelf.last_chapter(),
+            search_through=runtime.search_through,
+            refresh=refresh,
+            domain=conversation_domain,
+        )
         max_chapter = (
             turn_prefs.reader_chapter
             if turn_prefs is not None
             and turn_prefs.spoiler_mode == "protect"
             else None
-        )
-        conversation_domain, _ = await runtime.session.conversation_domain(
-            conversation_id
         )
 
         # Plan 15 final reading phase: after a candidate passes the

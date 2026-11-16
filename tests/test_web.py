@@ -378,8 +378,8 @@ async def test_concurrent_turns_use_their_own_device_boundary(tmp_path) -> None:
 
 async def test_turn_without_saved_boundary_asks_before_spoiling(tmp_path) -> None:
     """Start fresh: a device that saved nothing gets no cap, even when another
-    device has saved one. Slice 4: it is not answered blind either; the model
-    is told it does not know the reader's position and must ask first."""
+    device has saved one. Plan 034: the reader card says it does not know the
+    position and tells the model to ask first."""
     runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
     seen: list[tuple[int | None, str]] = []
 
@@ -417,12 +417,13 @@ async def test_turn_without_saved_boundary_asks_before_spoiling(tmp_path) -> Non
     assert len(seen) == 1
     cap, note = seen[0]
     assert cap is None
-    assert "do not know how far the reader has read" in note
+    assert "<reader_card>" in note
+    assert "no boundary saved" in note
     assert "ask once" in note
     assert "chapter 200" not in note
 
 
-async def test_a_reader_who_allows_spoilers_gets_no_note(tmp_path) -> None:
+async def test_a_reader_who_allows_spoilers_gets_a_card_without_a_cap(tmp_path) -> None:
     runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
     seen: list[tuple[int | None, str]] = []
 
@@ -446,7 +447,13 @@ async def test_a_reader_who_allows_spoilers_gets_no_note(tmp_path) -> None:
     finally:
         await runtime.close()
 
-    assert seen == [(None, "")]
+    assert len(seen) == 1
+    cap, note = seen[0]
+    assert cap is None
+    assert "<reader_card>" in note
+    assert "Spoiler mode: none" in note
+    assert "do not withhold" in note
+    assert "never reveal" not in note
 
 
 async def test_create_conversation_returns_201(client) -> None:
