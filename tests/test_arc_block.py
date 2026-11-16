@@ -39,3 +39,18 @@ def test_spoilers_allowed_gets_the_whole_mapped_range(tmp_path) -> None:
 
 def test_a_fanfic_thread_gets_no_canon_map(tmp_path) -> None:
     assert _arc_block(_runtime(tmp_path), _prefs(5), "fanfic") is None
+
+
+def test_the_block_carries_the_volumes_the_chapters_mark(tmp_path) -> None:
+    runtime = _runtime(tmp_path)
+    shelf = tmp_path / "novels" / "shadow-slave" / "0001-0100"
+    shelf.mkdir(parents=True)
+    for number in range(1, 21):
+        tail = "[End of volume one: Opening.]" if number == 12 else "text"
+        (shelf / f"chapter-{number:04d}.txt").write_text(
+            f"Chapter {number}: Title\n{tail}\n", encoding="utf-8"
+        )
+    block = _arc_block(runtime, _prefs(15), "canon")
+    assert block is not None
+    assert "1-12 Volume 1: Opening" in block
+    assert "13-15 (volume continues past this chapter)" in block

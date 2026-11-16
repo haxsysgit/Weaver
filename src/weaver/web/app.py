@@ -333,11 +333,45 @@ def _arc_block(runtime, prefs, domain: str) -> str | None:
         / "shadow-slave"
         / "arcs.md"
     )
+    edge, volumes = _shelf_volumes(runtime.project_root / "novels" / "shadow-slave")
     try:
-        block = load_arc_map(path).prompt_block(limit)
+        block = load_arc_map(path, volumes=volumes, shelf_edge=edge).prompt_block(limit)
     except OSError:
         return None
     return block or None
+
+
+_VOLUME_CACHE: dict[tuple[str, int], tuple] = {}
+
+
+def _shelf_volumes(novel_dir: Path) -> tuple[int | None, tuple]:
+    """The shelf edge and the volume ends its chapters mark.
+
+    Scanned once per shelf edge (about a second for the whole shelf), so a
+    weekly refresh that adds chapters extends the map on the next turn.
+    """
+    from weaver.arc_map import volume_ends
+    from weaver.retrieval.library import ChapterIndex
+
+    if not novel_dir.is_dir():
+        return None, ()
+    index = ChapterIndex(novel_dir)
+    edge = index.last_chapter()
+    if edge is None:
+        return None, ()
+    key = (str(novel_dir), edge)
+    if key not in _VOLUME_CACHE:
+
+        def chapters():
+            for number in range(1, edge + 1):
+                try:
+                    yield number, index.read(number)
+                except FileNotFoundError:
+                    continue
+
+        _VOLUME_CACHE.clear()
+        _VOLUME_CACHE[key] = tuple(volume_ends(chapters()))
+    return edge, _VOLUME_CACHE[key]
 
 
 async def _name_thread(runtime: ChatRuntime, conversation_id: str, first_message: str, answer: str) -> None:

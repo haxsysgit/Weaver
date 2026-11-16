@@ -625,6 +625,47 @@ def test_exact_text_claims_need_the_text_open_this_turn(answer, packet, expected
     assert unopened_text_claims(answer, packet) == expected
 
 
+TWO_OPENED = """--- chapter 1 lines 1-12 ---
+He sat on a rusty bench outside the station.
+
+--- chapter 2 lines 1-12 ---
+The sea below was grey and endless and cold.
+
+--- evidence board ---
+direct sources: chapter 1 lines 1-12; chapter 2 lines 1-12
+"""
+
+
+@pytest.mark.parametrize(
+    ("answer", "packet", "expected"),
+    [
+        # Plan 034 Trial 12: a three-word invention slipped under the old
+        # six-word floor.
+        ('Their teamwork is called "natural and seamless" (ch. 1).', OPENED_START, ("unopened_quote",)),
+        ('He waits "on a rusty bench" (ch. 1).', OPENED_START, ()),
+        # A short quote cited to an opened chapter must be in that chapter.
+        ('The sea is "grey and endless" (ch. 1).', TWO_OPENED, ("unopened_quote",)),
+        ('The sea is "grey and endless" (ch. 2).', TWO_OPENED, ()),
+        # A quoted name or title is not a claim about the text.
+        ('They call him "Lord of Shadows" now.', None, ()),
+        ('Two words "real deal" stay below the floor.', None, ()),
+    ],
+)
+def test_short_quotes_need_the_text_open_this_turn(answer, packet, expected) -> None:
+    from weaver.agent.answer import unopened_text_claims
+
+    assert unopened_text_claims(answer, packet) == expected
+
+
+def test_the_repair_unquotes_a_short_invention_and_keeps_the_sentence() -> None:
+    from weaver.agent.answer import drop_unopened_quotes
+
+    answer = 'Their teamwork is called "natural and seamless" and it still fails (ch. 1).'
+    cleaned = drop_unopened_quotes(answer, OPENED_START)
+
+    assert cleaned == "Their teamwork is called natural and seamless and it still fails (ch. 1)."
+
+
 def test_the_repair_drops_an_unopened_quote_and_keeps_an_opened_one() -> None:
     from weaver.agent.answer import drop_unopened_quotes
 

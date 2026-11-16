@@ -211,3 +211,49 @@ Gate status:
 - Verdicts are the blind judge's (a separate agent read the blind file and
   the questions). The evaluator verified the r35 substitution against ch.
   2976 and the r15 substitution against ch. 689.
+
+## Slice 8.5 - repairs after the close review (2026-11-16)
+
+A second review at the owner's close (Claude, with no part in slices 2 to 8)
+re-ran the floors (991 passed, 4 skipped; 185 frontend; `tsc` clean), then
+probed the built index and the map against the real shelf. Four defects,
+each fixed red first. The owner asked for the fixes before the close.
+
+1. **Short invented quotes.** Trial 12's "natural and seamless" was three
+   words, under the six-word floor. The check now covers quotes of three or
+   more words. A quote with a chapter citation right after it must be in
+   that chapter when the chapter is open (the "boundless oceans" miscite
+   shape). A quoted name or title ("Lord of Shadows") is exempt. The repair
+   takes a short quote's marks off and keeps its words, so the sentence
+   still reads; long unopened quotes are still dropped.
+2. **Titles resolved to the commonest word inside them.** Probe on the real
+   index: "Lord of Shadows" -> Shadow (all 3,246 chapters), "the Sword
+   Saint" and "Saint Tyris of Rivers" -> Saint. Now titles joined by "of"
+   or "of the" are indexed as one name, containment matches whole words
+   only, and the most specific name wins. "Sunny's sister" finds Sunny.
+3. **Ordinary words indexed as names.** A single word the chapters write in
+   lower case at least as often as capitalised ("Everything") is dropped.
+   The real index went from 5,488 names to 2,993. Rebuilt under `.weaver/`.
+4. **The arc map stopped at 1816 with holes.** The chapters mark each
+   volume's end ("[End of volume one: ...]"), so the map now carries
+   volumes 1 to 13 across chapters 1 to 3246; volume 12's end is unmarked
+   and the line says so. A volume the reader is still inside shows its range
+   only, never its name. The scan runs once per shelf edge (1.3 s, then
+   0.06 s), so the weekly refresh extends the map on the next turn. The
+   ledger parser also reads headings with no dash (arcs 33 to 35).
+
+Checked on the real shelf, not only in tests: the probe lookups above, and
+the volume block for a reader at 1700 (volumes 1 to 7, then "1591-1700
+(volume continues past this chapter)").
+
+Not done here: the prompt restructure's before-and-after measurement and
+reread budget, a full second review of the whole 034 diff, and the check
+set's retrieval depth. Trial 12 is not re-run; a re-run needs the owner.
+
+Floors:
+
+- `uv run pytest -q`: 1008 passed, 4 skipped (991 + 17 new tests).
+- `ruff`: no new finding; the codes left in `app.py` and
+  `test_agent_answer.py` match `HEAD`.
+- No frontend file changed; `npx vitest run` 185 passed and `tsc` clean at
+  `fa33d74`.

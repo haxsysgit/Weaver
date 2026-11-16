@@ -81,3 +81,50 @@ def test_json_round_trip(tmp_path) -> None:
     loaded = NameIndex.load(path)
     assert len(loaded) == len(index)
     assert loaded.lookup("sunny")["chapters"] == index.lookup("sunny")["chapters"]
+
+
+# Review of Plan 034 (2026-11-16): titles and multi-word asks resolved to the
+# most common word inside them ("Lord of Shadows" -> "Shadow", "the Sword
+# Saint" -> "Saint"), and sentence-initial words were indexed as names.
+TITLE_CHAPTERS = [
+    (1, "They named him Lord of Shadows that night. A Saint knelt. Another Saint rose."),
+    (2, "The Lord of Shadows waited. Saint Tyris spoke. Each Saint listened. Everything was quiet."),
+    (3, "Saint Tyris left. The Sword Saint drew. A Saint fell. Everything felt wrong."),
+    (4, "The Sword Saint returned. One Saint stayed. They saw everything, everything and everything."),
+]
+
+
+def _titles() -> NameIndex:
+    return build_name_index(TITLE_CHAPTERS, min_count=1)
+
+
+def test_a_title_with_of_is_one_name() -> None:
+    assert "Lord of Shadows" in names_in("They named him Lord of Shadows that night.")
+    hit = _titles().lookup("lord of shadows")
+    assert hit is not None
+    assert hit["name"] == "Lord of Shadows"
+    assert hit["chapters"] == [1, 2]
+
+
+def test_a_longer_ask_resolves_to_the_most_specific_name() -> None:
+    index = _titles()
+    assert index.lookup("the Sword Saint")["name"] == "Sword Saint"
+    assert index.lookup("Saint Tyris of Rivers")["name"] == "Saint Tyris"
+
+
+def test_a_part_of_a_word_is_not_a_match() -> None:
+    # "saint" is inside "sainted" only as letters, not as a word.
+    hit = _titles().lookup("the sainted")
+    assert hit is None or hit["match"] != "contains"
+
+
+def test_a_possessive_ask_finds_the_name() -> None:
+    hit = _titles().lookup("Tyris's sword")
+    assert hit is not None
+    assert hit["name"] == "Tyris"
+    assert hit["match"] == "contains"
+
+
+def test_a_common_word_at_a_sentence_start_is_not_a_name() -> None:
+    index = _titles()
+    assert index.lookup("Everything") is None or index.lookup("Everything")["name"] != "Everything"

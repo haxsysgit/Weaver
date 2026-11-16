@@ -354,6 +354,15 @@ PASSAGE_HEADER_RE = re.compile(
 ELISION_RE = re.compile("\\.\\.\\.|\u2026")
 QUOTE_MIN_WORDS = 6
 FRAGMENT_MIN_WORDS = 3
+# Plan 034: a three-word invention ("natural and seamless") slipped under
+# the six-word floor. Quotes of three to five words are checked too; the
+# repair takes their quote marks off instead of deleting the words.
+SHORT_QUOTE_MIN_WORDS = 3
+QUOTE_CITATION_RE = re.compile(r"\s*\(([^()\n]{1,40})\)")
+CHAPTER_PASSAGE_RE = re.compile(
+    r"^--- chapter (\d+),? lines \d+-\d+ ---\n(.*?)(?=^--- |\Z)",
+    re.MULTILINE | re.DOTALL,
+)
 OPENING_LINES = 5
 OPENING_MARKERS = (
     "first line",
@@ -397,6 +406,60 @@ def _opened_chapter_starts(evidence_packet: str | None) -> set[int]:
     }
 
 
+def _passages_by_chapter(evidence_packet: str | None) -> dict[int, tuple[str, ...]]:
+    if not evidence_packet:
+        return {}
+    found: dict[int, list[str]] = {}
+    for match in CHAPTER_PASSAGE_RE.finditer(evidence_packet):
+        lines = match.group(2).splitlines()
+        while lines and lines[0].startswith("beat: "):
+            lines.pop(0)
+        found.setdefault(int(match.group(1)), []).append(_plain("\n".join(lines)))
+    return {chapter: tuple(texts) for chapter, texts in found.items()}
+
+
+def _is_a_name(quoted: str) -> bool:
+    """A quoted name or title ("Lord of Shadows"), not a claim about the text."""
+    words = [word for word in quoted.split() if len(word) > 3]
+    return bool(words) and all(word[:1].isupper() for word in words)
+
+
+def _quote_verdict(
+    answer: str,
+    match: re.Match[str],
+    passages: tuple[str, ...],
+    by_chapter: dict[int, tuple[str, ...]],
+    reader: str,
+) -> str | None:
+    """None when a quote is not checked or is supported; else "long" or "short"."""
+    quoted = match.group(1)
+    size = len(quoted.split())
+    if size < SHORT_QUOTE_MIN_WORDS:
+        return None
+    kind = "long" if size >= QUOTE_MIN_WORDS else "short"
+    if kind == "short" and _is_a_name(quoted):
+        return None
+    fragments = [
+        _plain(fragment)
+        for fragment in ELISION_RE.split(quoted)
+        if len(fragment.split()) >= FRAGMENT_MIN_WORDS
+    ]
+    if not fragments:
+        return None
+    if all(fragment in reader for fragment in fragments):
+        return None
+    pool = passages
+    citation = QUOTE_CITATION_RE.match(answer, match.end())
+    if citation is not None:
+        cited = [c for c in _extract_answer_chapter_citations(citation.group(1)) if c in by_chapter]
+        if cited:
+            # A quote cited to an opened chapter must be in that chapter.
+            pool = tuple(text for chapter in cited for text in by_chapter[chapter])
+    if all(any(fragment in passage for passage in pool) for fragment in fragments):
+        return None
+    return kind
+
+
 def unopened_text_claims(
     answer: str,
     evidence_packet: str | None,
@@ -405,31 +468,19 @@ def unopened_text_claims(
 ) -> tuple[str, ...]:
     """Finding codes for exact-text claims no passage opened this turn shows.
 
-    ``unopened_quote``: an inline quote of six or more words that is not in
-    an opened passage (or the reader's own message). ``unopened_opening``: a
+    ``unopened_quote``: an inline quote of three or more words that is not in
+    an opened passage (or the reader's own message), or, when a citation
+    follows it, not in the opened chapter it cites. Quoted names are exempt. ``unopened_opening``: a
     claim about how a chapter opens without that chapter's first lines open.
     """
     codes: list[str] = []
     passages = _opened_passages(evidence_packet)
+    by_chapter = _passages_by_chapter(evidence_packet)
     reader = _plain(reader_text)
     for match in INLINE_QUOTE_RE.finditer(answer):
-        quoted = match.group(1)
-        if len(quoted.split()) < QUOTE_MIN_WORDS:
-            continue
-        fragments = [
-            _plain(fragment)
-            for fragment in ELISION_RE.split(quoted)
-            if len(fragment.split()) >= FRAGMENT_MIN_WORDS
-        ]
-        if not fragments:
-            continue
-        if all(
-            any(fragment in passage for passage in passages) or fragment in reader
-            for fragment in fragments
-        ):
-            continue
-        codes.append("unopened_quote")
-        break
+        if _quote_verdict(answer, match, passages, by_chapter, reader) is not None:
+            codes.append("unopened_quote")
+            break
     starts = _opened_chapter_starts(evidence_packet)
     for paragraph in re.split(r"\n\s*\n", answer):
         folded = paragraph.casefold()
@@ -451,28 +502,24 @@ def drop_unopened_quotes(
     """Remove inline quotes that no passage opened this turn shows (Plan 034).
 
     The gentlest repair for an ``unopened_quote`` finding: the claim and its
-    citation stay, the quotation goes. Quotes the opened passages do show, and
-    quotes of the reader's own message, are left alone.
+    citation stay, the quotation goes. A short quote keeps its words without
+    the quote marks. Quotes the opened passages do show, and quotes of the
+    reader's own message, are left alone.
     """
     passages = _opened_passages(evidence_packet)
+    by_chapter = _passages_by_chapter(evidence_packet)
     reader = _plain(reader_text)
     if not passages and not reader:
         return answer
 
     def keep(match: re.Match[str]) -> str:
-        quoted = match.group(1)
-        if len(quoted.split()) < QUOTE_MIN_WORDS:
+        verdict = _quote_verdict(answer, match, passages, by_chapter, reader)
+        if verdict is None:
             return match.group(0)
-        fragments = [
-            _plain(fragment)
-            for fragment in ELISION_RE.split(quoted)
-            if len(fragment.split()) >= FRAGMENT_MIN_WORDS
-        ]
-        if fragments and all(
-            any(fragment in passage for passage in passages) or fragment in reader
-            for fragment in fragments
-        ):
-            return match.group(0)
+        if verdict == "short":
+            # A short phrase keeps its words as paraphrase, so the sentence
+            # still reads; only the claim that it is the book's text goes.
+            return match.group(1)
         return ""
 
     cleaned = INLINE_QUOTE_RE.sub(keep, answer)

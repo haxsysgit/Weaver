@@ -38,7 +38,11 @@ STOPWORDS = frozenset(
 # swallow the name that follows it.
 _TOKEN_RE = re.compile(r"[A-Z][a-z]{2,}(?:'s)?")
 _SPACE_RE = re.compile(r"[ \t]+")
+# A title joins its words with "of" or "of the": "Lord of Shadows".
+_CONNECTOR_RE = re.compile(r"[ \t]+of(?:[ \t]+the)?[ \t]+")
 _POSSESSIVE_RE = re.compile(r"'s$")
+_LOWER_RE = re.compile(r"\b[a-z]{3,}\b")
+_WORD_RE = re.compile(r"[a-z0-9']+")
 
 
 def _clean(raw: str) -> str:
@@ -62,9 +66,26 @@ def names_in(text: str) -> set[str]:
             continue
         next_start, _, next_name, next_stop = tokens[position + 1]
         gap = text[end:next_start]
-        if not next_stop and _SPACE_RE.fullmatch(gap):
+        if next_stop:
+            continue
+        if _SPACE_RE.fullmatch(gap):
             found.add(f"{name} {next_name}")
+        elif _CONNECTOR_RE.fullmatch(gap):
+            found.add(f"{name}{_SPACE_RE.sub(' ', gap)}{next_name}")
     return found
+
+
+def _words(text: str) -> tuple[str, ...]:
+    words = _WORD_RE.findall(text.lower().replace("’", "'"))
+    return tuple(_POSSESSIVE_RE.sub("", word) for word in words)
+
+
+def _contains_words(outer: tuple[str, ...], inner: tuple[str, ...]) -> bool:
+    """True when ``inner`` appears in ``outer`` as whole words, in order."""
+    size = len(inner)
+    return size > 0 and any(
+        outer[start : start + size] == inner for start in range(len(outer) - size + 1)
+    )
 
 
 @dataclass(frozen=True)
@@ -123,13 +144,20 @@ class NameIndex:
         exact = self._by_norm.get(needle)
         if exact is not None:
             return self.entries[exact], "exact", 1.0
+        # Whole words only, and the most specific name wins: "the Sword Saint"
+        # is the Sword Saint, not the commonest word inside it ("Saint").
+        asked = _words(needle)
         contains = [
             self.entries[display]
             for norm, display in self._by_norm.items()
-            if needle in norm or norm in needle
+            if _contains_words(asked, _words(norm))
+            or _contains_words(_words(norm), asked)
         ]
         if contains:
-            entry = max(contains, key=lambda item: (item.count, -len(item.name)))
+            entry = max(
+                contains,
+                key=lambda item: (len(_words(item.name)), len(item.name), item.count),
+            )
             return entry, "contains", 0.9
         close = difflib.get_close_matches(
             needle, list(self._by_norm), n=1, cutoff=0.72
@@ -192,16 +220,30 @@ def build_name_index(
 
     A name seen in fewer than ``min_count`` chapters is dropped: one-off
     capitalisation is usually noise, not a character a reader will ask about.
+    A single word that the chapters write in lower case at least as often as
+    capitalised ("Everything" at a sentence start) is an ordinary word, not
+    a name.
     """
     counts: Counter[str] = Counter()
     seen: dict[str, list[int]] = {}
+    capitalised: Counter[str] = Counter()
+    lower: Counter[str] = Counter()
     for number, text in chapters:
         for name in names_in(text):
             counts[name] += 1
             seen.setdefault(name, []).append(number)
+        capitalised.update(
+            _clean(token).lower() for token in _TOKEN_RE.findall(text)
+        )
+        lower.update(_LOWER_RE.findall(text))
+
+    def ordinary(name: str) -> bool:
+        key = name.lower()
+        return " " not in name and lower[key] >= capitalised[key]
+
     entries = {
         name: NameEntry(name, tuple(sorted(seen[name])), counts[name])
         for name in counts
-        if counts[name] >= min_count
+        if counts[name] >= min_count and not ordinary(name)
     }
     return NameIndex(entries)
