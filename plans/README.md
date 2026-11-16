@@ -52,6 +52,7 @@ evidence, review, and human decision gates must also be complete.
 | 037 - The Soul Sea and the themes | Not yet drafted | Plan 036 closed | Soul Sea redesign and novel-grounded themes on 036's engine |
 | 038 - Echoes and small delights | Not yet drafted | Plan 037 closed; optional | Echo companion, Memories, spoiler fog, "I just read chapter N" |
 | 039 - Weaver's home on the web | Not yet drafted | Plan 038 closed or skipped | Domain, Cloudflare Tunnel, EC2 or new host, staging, backups, monitoring |
+| [039.1 - Finding the deciding passage](039.1-finding-the-deciding-passage.md) | Drafted 2026-11-16 | Plan 039 closed (owner's number; may be renumbered, e.g. 034.5) | The Plan 033 check set: find the exact scene described and both sides' key facts before answering; diagnose from tool traces first, then fix the measured layer, prove on a held-out set |
 | 040 - Weaver v3.0.0 qualification and release | Not yet drafted | Plan 039 closed | All twelve trials on the final build, performance audit, owner acceptance, public v3.0.0 |
 
 ## Execution order
