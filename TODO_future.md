@@ -128,13 +128,15 @@ accepted public release is v3.0.0 at Plan 040.
      to Plan 040.
    - Plans 034 to 040 are drafted in detail in `handoff/plans/` (2026-11-06)
      for the DeepSeek harness; the summaries below stay as the index. 034 is
-     admitted 2026-11-14 and is the plan in flight.
+     built and live-run 2026-11-16; the owner's close is pending.
    Measured at Plan 031: semantic search reaches 3127, index notebook
    statements 1000, notebook files 3160, shelf 3232.
-4. **034 Weaver's mind** (admitted 2026-11-14): the reader card in every turn (chapter, spoiler
+4. **034 Weaver's mind** (admitted 2026-11-14; build and live run complete
+   2026-11-16, owner close pending): the reader card in every turn (chapter, spoiler
    mode, library edge, what Weaver can and cannot see), a lookup tool, an arc
    map with chapter ranges built from the chapters, and the system prompt
-   restructured for the 1M window.
+   restructured for the 1M window. Live run: both old blockers pass; Trial 12
+   records a short fabricated quote; the check set was not run.
 5. **035 Weaver's voice and memory**: the lorekeeper voice with life and
    imagery but no essay shape (sample answers to the owner first); per-device
    opinions in defined categories, recorded by a narrow tool and fed back

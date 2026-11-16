@@ -161,3 +161,35 @@ Floors:
 - Focused review set: 278 passed.
 - `uv run pytest -q`: 991 passed, 4 skipped.
 - `ruff`: no new finding; the remaining codes are pre-existing.
+
+## Slice 8 - the live run
+
+Build `3001712`. Twelve trials, one process each, server stopped, wake lock
+held. The first loop died after eight trials (the shell's native-error
+handling stopped it at low_effort); the remaining four ran in a second loop.
+No transcript was lost.
+
+- Spend: $0.5257 for the twelve. A stray harness invocation (an unsupported
+  `--help` flag started it) ran two and a half turns, spent $0.0311 and wrote
+  no transcripts; it is not a result.
+- Usage: 3,112,957 cache hits, 1,003,258 misses, 171,681 output tokens; 75.6%
+  hit rate.
+- All twelve completed with no failed or retried turns.
+
+Verdicts (evaluator):
+
+| Trial | Verdict | Notes |
+| --- | --- | --- |
+| Long thread (9) | Pass | The top three hold across nine turns; "no changes" means no changes; the Mordret and Cassie challenges are answered with exact quotes from chs. 3147 and 2808. |
+| Confusing fight (12) | Fail on accuracy | The fight, outcome (lulled asleep, not slain) and canon-versus-read separation are correct. One quoted phrase, "natural and seamless", is not in ch. 2710 or the shelf; the chapter says "Cohesion and cooperation were vital... no vulnerabilities left". "Boundless oceans" is cited to 2710 but is in 2711. |
+| Fanfic (11) | Pass | The opening scene is invented and labelled, with canon anchors (chs. 766-767). The fit follow-up now answers "No" with chs. 766, 771 and 772 and names where the scene belongs. |
+| Other nine | Ran clean, not re-judged | Their 033.7 verdicts (pass) stand. |
+
+Gate status:
+
+- Both old blockers pass.
+- Trial 12 fails on a short fabricated quote. The checker only inspects
+  quotes of six or more words, so a three-word invention slips through.
+- The Plan 033 check set was not run; that gate stays open.
+- The full twelve are not re-passed on this build. The owner's close is the
+  next decision; no merge, tag, or deploy.

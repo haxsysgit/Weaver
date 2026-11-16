@@ -1,11 +1,11 @@
 # Weaver handoff
 
-**Latest (2026-11-14): read `handoff/README.md` first.** Plan 033.7 is
-closed on the owner's directive (stop being stuck on the 033 family, move
-on without approval prompts). The two target trials pass on the
-transcripts; Trial 11's fit follow-up still returns the gap answer after a
-failed publication repair, so the full twelve-trial gate moves to Plan 040.
-Next is Plan 034 (Weaver's mind). The text below is older context.
+**Latest (2026-11-16): read `handoff/README.md` first.** Plan 034 is built,
+reviewed and live-run on build `3001712`; the owner's close is pending.
+The reader card, chapter name index, arc map and publication-repair fix
+landed; the live twelve-trial run cost $0.5257, both old blockers pass, Trial
+12 records a short fabricated quote, and the Plan 033 check set was not run.
+Plan 033.7 is closed (2026-11-14). The text below is older context.
 
 Date: 2026-11-01. Plan 030 is closed: the owner accepted the build and
 v2.0.0 is released offline (merged to `main` and tagged, not deployed). The

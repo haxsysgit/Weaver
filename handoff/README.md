@@ -1,5 +1,10 @@
 # Weaver handoff, 2026-11-06
 
+**Update 2026-11-16.** Plan 034 is built, reviewed and live-run on build
+`3001712`; the owner's close is pending. The live twelve-trial run cost
+$0.5257, both old blockers pass, Trial 12 records a short fabricated quote,
+and the Plan 033 check set was not run. The shelf is at 3246.
+
 **Update 2026-11-14.** Plan 033.7 closed on the owner's directive: the two
 target trials (long thread, confusing fight) pass on the transcripts, Trial
 11's fit follow-up returned the gap answer after a failed publication
