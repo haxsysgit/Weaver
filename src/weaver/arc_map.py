@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from pathlib import Path
 
 _HEADING_RE = re.compile(
     r"^##\s+ARC\s+(?P<id>[\d.]+)\s*[—–-]\s*(?P<name>[^(]+?)\s*"
@@ -63,6 +64,8 @@ class ArcMap:
         limit = self.through if through_chapter is None else min(
             through_chapter, self.through
         )
+        if not self.arcs:
+            return ""
         lines = ["Story arcs so far (chapter ranges):"]
         for arc in self.arcs:
             if arc.start > limit:
@@ -98,3 +101,8 @@ def parse_arc_ledger(text: str) -> ArcMap:
             )
         )
     return ArcMap(arcs)
+
+
+def load_arc_map(path: Path) -> ArcMap:
+    """Read the private continuity ledger into a map."""
+    return parse_arc_ledger(path.read_text(encoding="utf-8"))

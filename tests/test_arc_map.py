@@ -63,3 +63,7 @@ def test_the_prompt_block_keeps_the_whole_map_without_a_cap() -> None:
     block = _map().prompt_block()
     assert "96-350 Demon of Change, vol. 2" in block
     assert block.splitlines()[0] == "Story arcs so far (chapter ranges):"
+
+
+def test_an_empty_ledger_has_no_block() -> None:
+    assert parse_arc_ledger("").prompt_block() == ""

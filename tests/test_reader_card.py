@@ -93,6 +93,15 @@ def test_the_card_stays_short() -> None:
     assert len(_card()) < 1600
 
 
+def test_the_card_carries_the_arc_map() -> None:
+    card = _card(arc_map="Story arcs so far (chapter ranges):\n- 1-10 First")
+    assert "Story arcs so far" in card
+
+
+def test_the_card_omits_an_empty_arc_map() -> None:
+    assert "Story arcs so far" not in _card()
+
+
 def test_the_web_card_reads_the_saved_facts() -> None:
     prefs = SimpleNamespace(reader_chapter=88, spoiler_mode="protect")
     card = card_from_state(
@@ -128,3 +137,15 @@ def test_the_web_card_falls_back_to_the_check_date() -> None:
         domain="canon",
     )
     assert "last refreshed 2026-11-15" in card
+
+
+def test_the_web_card_passes_the_arc_map_through() -> None:
+    card = card_from_state(
+        None,
+        shelf_edge=3246,
+        search_through=3246,
+        refresh=None,
+        domain="canon",
+        arc_map="Story arcs so far (chapter ranges):\n- 1-10 First",
+    )
+    assert "Story arcs so far" in card

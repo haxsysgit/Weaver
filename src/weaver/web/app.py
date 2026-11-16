@@ -312,6 +312,34 @@ def _derived_title(first_message: str) -> str:
     return " ".join(words).title() or "New chat"
 
 
+def _arc_block(runtime, prefs, domain: str) -> str | None:
+    """The arc map up to the reader's chapter, or None when it would spoil.
+
+    A protected reader with no saved boundary gets no map: the model asks
+    first. A reader who allows spoilers gets the whole mapped range.
+    """
+    if domain != "canon" or runtime.project_root is None:
+        return None
+    protect = prefs is not None and prefs.spoiler_mode == "protect"
+    limit = prefs.reader_chapter if protect else None
+    if protect and limit is None:
+        return None
+    from weaver.arc_map import load_arc_map
+
+    path = (
+        runtime.project_root
+        / ".weaver"
+        / "knowledge"
+        / "shadow-slave"
+        / "arcs.md"
+    )
+    try:
+        block = load_arc_map(path).prompt_block(limit)
+    except OSError:
+        return None
+    return block or None
+
+
 async def _name_thread(runtime: ChatRuntime, conversation_id: str, first_message: str, answer: str) -> None:
     """One LLM call to name the thread; stores it. The sidebar refetches."""
     from weaver.model_layer import ModelMessage, ModelRequest
@@ -787,6 +815,7 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
             search_through=runtime.search_through,
             refresh=refresh,
             domain=conversation_domain,
+            arc_map=_arc_block(runtime, turn_prefs, conversation_domain),
         )
         max_chapter = (
             turn_prefs.reader_chapter

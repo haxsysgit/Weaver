@@ -21,6 +21,7 @@ class ReaderCard:
     search_through: int | None = None
     last_refresh: str | None = None
     thread_kind: str = "canon"
+    arc_map: str = ""
 
 
 def _position(card: ReaderCard) -> str:
@@ -110,6 +111,8 @@ def render_reader_card(card: ReaderCard) -> str:
         "passages; never treat it as the source of truth."
     )
     parts.append(_thread(card))
+    if card.arc_map:
+        parts.append(card.arc_map)
     body = "\n".join(parts)
     return f"<reader_card>\n{body}\n</reader_card>"
 
@@ -121,6 +124,7 @@ def card_from_state(
     search_through: int | None,
     refresh: dict | None,
     domain: str,
+    arc_map: str | None = None,
 ) -> str:
     """Build the card from live app state: prefs, the shelf, and the status.
 
@@ -140,5 +144,6 @@ def card_from_state(
             search_through=search_through,
             last_refresh=last_refresh,
             thread_kind="fanfic" if domain == "fanfic" else "canon",
+            arc_map=arc_map or "",
         )
     )

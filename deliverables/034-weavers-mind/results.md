@@ -87,3 +87,25 @@ Floors:
 - Focused: 6 passed.
 - `uv run pytest -q`: 979 passed, 4 skipped.
 - `ruff` on the new files: clean.
+
+## Slice 5 - the map reaches the model
+
+- `reader_card.py` carries an optional arc block; `card_from_state` passes it
+  through. `arc_map.py` gains `load_arc_map` and returns no block for an
+  empty ledger.
+- `web/app.py`: `_arc_block` reads the continuity ledger and clips the map at
+  the reader's chapter. A protected reader with no saved boundary gets no
+  map; a reader who allows spoilers gets the whole mapped range. The map is
+  part of the per-turn card, so the stable prompt prefix (personality, rules,
+  skill catalogue, shelf line) still precedes all per-turn text.
+- Sizes: 2,216 characters with the full 28-arc map for a reader at chapter
+  3160; 947 characters for a reader at 100.
+- The cache and cost measurement is the live run's usage block (slice 8),
+  compared with the 033.7 run. No prompt rule was added or removed here; the
+  full rule audit stays open for the owner's close.
+- Tests: three in `test_reader_card.py`, one in `test_arc_map.py`.
+
+Floors:
+
+- `uv run pytest -q`: 985 passed, 4 skipped.
+- `ruff` on the new files: clean.
