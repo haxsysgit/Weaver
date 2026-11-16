@@ -1,5 +1,9 @@
 # Weaver handoff, 2026-11-06
 
+**Update 2026-11-16 (close).** Plan 034 closed, accepted with gaps
+recorded; Trial 12 passes on `44cdd1e`; the check set moves to Plan 039.1
+(drafted). Plans run strictly in number order. Next is Plan 035.
+
 **Update 2026-11-16.** Plan 034 is built, reviewed and live-run on build
 `3001712`; the owner's close is pending. The live twelve-trial run cost
 $0.5257, both old blockers pass, Trial 12 records a short fabricated quote,

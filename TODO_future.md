@@ -127,12 +127,13 @@ accepted public release is v3.0.0 at Plan 040.
      after a failed publication repair, so the full twelve-trial gate moves
      to Plan 040.
    - Plans 034 to 040 are drafted in detail in `handoff/plans/` (2026-11-06)
-     for the DeepSeek harness; the summaries below stay as the index. 034 is
-     built and live-run 2026-11-16; the owner's close is pending.
+     for the DeepSeek harness; the summaries below stay as the index. 034
+     closed 2026-11-16 (accepted, gaps recorded). Plans run strictly in
+     number order (owner, 2026-11-16).
    Measured at Plan 031: semantic search reaches 3127, index notebook
    statements 1000, notebook files 3160, shelf 3232.
-4. **034 Weaver's mind** (admitted 2026-11-14; build and live run complete
-   2026-11-16, owner close pending): the reader card in every turn (chapter, spoiler
+4. **034 Weaver's mind** (closed 2026-11-16, accepted with gaps recorded;
+   Trial 12 passes on the repaired build): the reader card in every turn (chapter, spoiler
    mode, library edge, what Weaver can and cannot see), a lookup tool, an arc
    map with chapter ranges built from the chapters, and the system prompt
    restructured for the 1M window. Live run: both old blockers pass; Trial 12
@@ -155,6 +156,9 @@ accepted public release is v3.0.0 at Plan 040.
    is about $80 a year; check `.app` and `.ink`), Cloudflare Tunnel, host
    decision before the AWS free plan ends about 2027-02-14, staging, backups,
    monitoring, secrets, and the first public deploy since v1.2.1.
+    **039.1 Finding the deciding passage** (drafted 2026-11-16): the Plan 033
+    check set. Weaver stops reading with lookups left; diagnose each miss
+    from tool traces, fix the measured layer, prove on a held-out set.
 10. **040 Weaver v3.0.0**: all twelve trials on the final build, performance
     audit, owner acceptance, tag, deploy.
 11. **Checkpoint 031-040**, before Plan 041: the same ritual as above.

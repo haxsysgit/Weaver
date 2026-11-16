@@ -2,7 +2,8 @@
 
 ## Status
 
-In progress. Admitted 2026-11-14.
+Closed 2026-11-16, accepted by the owner with gaps recorded (`decision.md`).
+Admitted 2026-11-14.
 
 ## Baseline
 
@@ -292,3 +293,17 @@ Verdict (evaluator): **pass, both axes.**
 Gate status after the re-run: both 033.7 blockers and Trial 12 pass on the
 evaluator record. Nine trials were not re-judged on this build, and the
 check set still fails (2 of 9). The owner's close is the next decision.
+
+## Measured budget (at close)
+
+| Item | Spend |
+| --- | --- |
+| Twelve-trial live run (`3001712`) | $0.5257 |
+| Check set, 18 answers | $0.1599 |
+| Stray harness invocation (not a result) | $0.0311 |
+| Trial 12 re-run (`44cdd1e`), attempt 1 never reached the provider | $0.0000 |
+| Trial 12 re-run, attempt 2 | $0.0628 |
+| **Live total** | **$0.7795** of the $3.00 cap |
+
+The agents' own context spend (the DeepSeek harness for slices 1 to 8 and
+the Claude close review) was not metered in this record.

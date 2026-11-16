@@ -1,12 +1,12 @@
 # Weaver handoff
 
-**Latest (2026-11-16): read `handoff/README.md` first.** Plan 034 is built,
-reviewed and live-run on build `3001712`; the owner's close is pending.
-The reader card, chapter name index, arc map and publication-repair fix
-landed; the live twelve-trial run cost $0.5257, both old blockers pass, Trial
-12 records a short fabricated quote, and the Plan 033 check set failed (3 of
-9 scene substitutions, 2 of 9 trial answers correct). Plan 033.7 is closed
-(2026-11-14). The text below is older context.
+**Latest (2026-11-16): read `handoff/README.md` first.** Plan 034 is closed,
+accepted with gaps recorded: the reader card, the chapter name index, the
+volume and arc map, and the repair that trims instead of wiping landed;
+Trial 12 passes on `44cdd1e`; the Plan 033 check set still fails and moves
+to Plan 039.1 (drafted). Plans run strictly in number order (owner,
+2026-11-16). Next is Plan 035, Weaver's voice and memory. The text below is
+older context.
 
 Date: 2026-11-01. Plan 030 is closed: the owner accepted the build and
 v2.0.0 is released offline (merged to `main` and tagged, not deployed). The
