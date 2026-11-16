@@ -257,3 +257,38 @@ Floors:
   `test_agent_answer.py` match `HEAD`.
 - No frontend file changed; `npx vitest run` 185 passed and `tsc` clean at
   `fa33d74`.
+
+## Trial 12 re-run (2026-11-16, owner approved)
+
+Build `44cdd1e` (the slice 8.5 repairs). One process, server stopped, wake
+lock held, private transcript.
+
+- **Attempt 1 is not a result.** Every call failed in about 12 s with
+  `error_category: connection`, no model call was made, $0 spent. The run
+  started from a sandboxed shell that cannot open outbound connections; a
+  reachability probe confirmed it. Recorded, not retried silently.
+- **Attempt 2:** six turns, none failed or retried, 31 model calls, $0.0628
+  (cache 398,336 hits, 129,462 misses; 75.5% hit rate).
+
+Verdict (evaluator): **pass, both axes.**
+
+- Accuracy: every cited claim checked against chs. 2710, 2712, 2713 and
+  2714 and holds: the shoulder joint blown off and regrown, the flame wall
+  and the stalemate with the red sea, the vicious cycle of the two curses,
+  the order (curse first, cohort after), Nephis's "defeat but not kill"
+  line, the sleep that will not hold for long, the collapse and the escape
+  to the Chain Breaker. No inline quotes this run, so nothing to fabricate;
+  the one inference (the Titan reaching the Dark Castle without the flame
+  wall) is labelled as Weaver's read.
+- Storytelling: a real retelling. The arena is built in layers (failing
+  hexagon dome, boiling lake, burning shore, the walls of water closing in)
+  and the reader is told what to picture. Sequence and stakes are clear.
+- Conversation: "who actually won?" gets a two-part answer instead of a
+  rerun; "was that canon or your read?" separates the text from the
+  framing; "simpler" is simpler. No machinery talk.
+- One loose phrase: turn 5 says the curse does "the killing work" and the
+  next sentence says it never dies. Not an accuracy failure; noted.
+
+Gate status after the re-run: both 033.7 blockers and Trial 12 pass on the
+evaluator record. Nine trials were not re-judged on this build, and the
+check set still fails (2 of 9). The owner's close is the next decision.
