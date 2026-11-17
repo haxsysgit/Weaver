@@ -64,3 +64,27 @@ buddy's rule that a quick question gets a quick answer. The owner decides.
 - Floor: `uv run pytest -q` 1012 passed, 4 skipped. `uvx ruff check` on the
   changed files: no new finding (the import-order notes match `HEAD`). No
   frontend file changed, so vitest, tsc and the build were not re-run.
+
+## Slice 5: the write scan and the per-device store (2026-11-17)
+
+- `src/weaver/reader_memory.py`: `scan_text` and `ReaderMemory`, in the
+  same private SQLite file as the device preferences, keyed by device id.
+  Tables: opinions (one per category), profile (four named fields), notes
+  (corrections with a status, conventions; capped at 2,200 characters),
+  story frames (per fanfic thread, owned by one device), and memory events.
+- The scan refuses: instruction and override talk, role lines, angle
+  brackets, links and domains, code, secrets and long token runs, talk of
+  other readers or device ids, oversize or empty text, and any character
+  outside Latin text (zero-width marks, lookalike letters from other
+  scripts). A refusal is an event with its reason; the refused text is
+  never stored.
+- The snapshot is data, labelled as such. Under spoiler protection an entry
+  citing a chapter past the reader's boundary is held back, and with no
+  boundary saved every chapter-citing entry is held back, with a count.
+- Corrected twice becomes a rule, unless the correction is disputed. Over
+  the cap, the oldest non-rule notes are curated; if that cannot make room,
+  the write is refused.
+- Tests, red first: 54 in `tests/test_reader_memory.py` (17 hostile shapes
+  through all three write paths, 7 ordinary sentences kept, device
+  isolation, spoiler hold-back, categories, change of mind, escalation,
+  disputed corrections, the cap, the story frame).
