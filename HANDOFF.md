@@ -1,5 +1,13 @@
 # Weaver handoff
 
+**Moved (2026-11-17).** The repo now lives at
+`C:\Users\haxsy\linux-migration\weaver` and goes to Ubuntu with the
+migration kit beside it (`../README.md`). Work continues on branch
+`plan-035` (pushed; `plan-030` is deleted). The Windows weekly refresh task
+and the `weaver.cmd` launchers are removed, so the library does not refresh
+until a Linux timer replaces them (first Linux job). On Linux, drop the
+`UV_PYTHON_INSTALL_DIR` prefix.
+
 **Latest (2026-11-17).** Plan 035 is closed, accepted by the owner with
 gaps recorded. The chat voice is now the lorekeeper (the
 buddy pack is removed; an old `.env` with `WEAVER_VOICE=buddy` stops
