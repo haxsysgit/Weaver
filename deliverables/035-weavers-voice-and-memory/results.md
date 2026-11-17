@@ -2,8 +2,8 @@
 
 ## Status
 
-Slice 2 (voice samples) done 2026-11-17. Waiting on the owner's voice choice
-(slice 3). Nothing built.
+Slices 2 to 4 done 2026-11-17: samples shown, the owner chose the
+lorekeeper, and it is now the chat voice. Next: the write scan and store.
 
 ## Slice 2: voice samples
 
