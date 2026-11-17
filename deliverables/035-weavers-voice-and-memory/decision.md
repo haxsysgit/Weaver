@@ -6,11 +6,12 @@
 
 ## What the owner is asked
 
-1. Approve a re-run of the twelve Reader Trials on the final build
-   (`14efea8` or later). The verdicts on `0be52cd` (11 of 12, adversarial
-   failing) do not cover the final-pass repair, which changes every answer.
-   About $0.55, inside the $3.50 cap (about $0.78 spent).
-2. After the re-run, accept or reject Plan 035.
+The re-run is done (approved 2026-11-17): 10 of 12 pass on `26a0ce7`; the
+five targeted trials pass; adversarial and confusing fail through the
+gap-answer rescue after failed publication repairs. Accept or reject Plan
+035. Evaluator recommendation: accept with that gap recorded and give the
+gap-answer rescue its own plan slot (the owner picks the number), since it
+predates this plan and fails the same way across builds.
 
 ## Evaluator decisions taken under the standing directive, for the owner to veto
 

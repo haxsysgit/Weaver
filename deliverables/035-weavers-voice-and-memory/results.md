@@ -211,3 +211,46 @@ re-run needs the owner's approval (about $0.55).
 Samples $0.0853, trials $0.5478, probes $0.1052 metered plus about $0.04
 estimated for runs 3 and 4 (killed before printing their meter), timing
 call $0.0003. About **$0.78** of the $3.50 cap.
+
+## Slice 10 re-run: twelve trials on the final build `26a0ce7` (2026-11-17)
+
+Approved by the owner ("Yes, re-run trials"). `run_v2_trials.py --out
+plan035-26a0ce7`, one process, server stopped. 65 turns, all completed,
+none retried; two turns rescued by the gap answer. Metered **$0.5937**
+(357 calls, the memory step included). Every transcript read. Quote check:
+54 quoted spans in canon answers; all found in their cited chapters (four
+script misses were noise, Weaver's own phrase, the reader's words, and a
+Spell line confirmed by hand in ch. 77). No fabricated canon quote.
+
+| Trial | Verdict | Notes |
+| --- | --- | --- |
+| 1 Vibe check | Pass | Warm, short, no lore dump, notes the novel is still being written; opens by calling the Estuary "that ending", which it is not. |
+| 2 Hot take | Pass | Argues from the Rain scenes with receipts; sharpens rather than abandons its read on push. |
+| 3 Half-memory | Pass, both axes | Fight, whisper, then tomb, with chs. 1247 to 1249; flags which detail is Nephis's guess; paints the scene. |
+| 4 First-timer | Pass (weak) | Never reveals or hints past ch. 300. One reply wrongly apologises for having spoiled something at ch. 297 (inside the reader's range) and opens with a bare "No". |
+| 5 Theory | Pass | Tests the theory against the Spell's construction and chronology; clear bet. |
+| 6 Vague ask | Pass | Picks one thread (the cell under the cathedral) and follows it with chapters. |
+| 7 Emotional favourite | Pass, both axes | Matches the energy; one-line answer is a verified quote. |
+| 8 Low-effort | Pass | Survives "why", "huh" and "tldr"; the prep turn flips the verdict and the tldr stays consistent. |
+| 9 Long thread | Pass | Callbacks right, refuses a false "you said", final lists consistent; one odd aside in the "sovereign" answer. |
+| 10 Adversarial | **Fail** | Turn 4 ("you're still just predicting words") got the gap answer after two failed publication repairs (`unsupported_chapter`, `changed_quote`). Same trial failed the same way on `0be52cd`. |
+| 11 Fanfic spark | Pass, both axes | Labelled invention, canon anchors, Sunny in character on push, fit question answered with chapters. |
+| 12 Confusing fight | **Fail** | The opening ask got the gap answer after nine lookups and ten opened chapters, two failed repairs (`unsupported_chapter`, `long_quote`, `changed_quote`, `unlabelled_invention`). Later turns explain the arena, turning point and power interaction well, though one says nobody won a kill while another has Jet cutting down the Wanderer. |
+
+**10 of 12 pass in the evaluator record.** All five trials this plan
+targets pass (vibe, hot take, emotional favourite, long thread, fanfic).
+The floor's "no trial regresses" is not met: adversarial and confusing
+fail, both through the gap-answer rescue after failed publication repairs,
+the same failure family as Plans 033.5 to 034. Nothing in the memory path
+touches the repair; whether the final-pass reader note (the card now
+reaches that pass) makes repairs fail more often cannot be told from two
+runs (one rescue on `0be52cd`, two on `26a0ce7`).
+
+**Memory in the run.** The memory step wrote 38 records (one a change of
+mind) and refused 11. Seven refusals were `line_break_or_quote`: opinions
+and notes quoting a canon line with straight double quotes. Since values are
+now rendered JSON-escaped, the straight-quote refusal is stricter than it
+needs to be; a follow-up can turn straight quotes into curly ones before the
+scan instead of refusing. Not changed here, so the run stands for the build.
+
+**Live spend for the plan:** about **$1.37** of the $3.50 cap.
