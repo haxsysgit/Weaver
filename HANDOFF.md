@@ -7,8 +7,9 @@ startup). Weaver keeps a per-device memory (opinions, the reader in their
 own words, notes, a fanfic thread's frame) written by a small step after
 each live turn through four narrow, scanned tools. Two old bugs were fixed
 on the way: stream frames were never recognised as terminal, and the final
-reading pass dropped the reader card. The twelve trials need a re-run on
-the final build (owner approval). See
+reading pass dropped the reader card. The re-run on the final build
+`26a0ce7` passed 10 of 12 in the evaluator record (adversarial and
+confusing fail through the gap-answer rescue); owner decision pending. See
 `deliverables/035-weavers-voice-and-memory/results.md`.
 
 **Latest (2026-11-16): read `handoff/README.md` first.** Plan 034 is closed,
