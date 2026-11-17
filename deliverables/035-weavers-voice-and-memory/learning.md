@@ -25,6 +25,13 @@ open questions in the plan doc.
 - Opinions, the profile and the notes live server side per device, beside
   the device preferences, never in a commit, log or report.
 
+## Slice 2 (2026-11-17)
+
+The owner chose to compare the buddy with a lorekeeper ("Buddy vs
+lorekeeper"). Six samples ran in both voices; observations and the
+evaluator's recommendation are in `results.md`. The gate stays open until
+the owner picks.
+
 ## Hypotheses
 
 - The buddy voice already passes the conversation axis in most trials; what

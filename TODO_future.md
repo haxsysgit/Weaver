@@ -215,6 +215,11 @@ accepted public release is v3.0.0 at Plan 040.
   reservations, coarse abuse protection, safe cost accounting, and the global
   ceiling as the final financial boundary.
 - Memory panel design for the chat UI.
+- Broken character in answers (seen 2026-11-17, Plan 035 samples): one
+  answer carried a U+FFFD replacement character inside a quote whose source
+  chapter has none. A multibyte character is split somewhere between the
+  provider stream and the stored answer. Find the decode point and add a
+  test with a character split across chunks.
 - Spoiler-free mode.
 - Chapter-link integration: DECIDED OUT (2026-08-14). No chapter links in
   the product. Weaver references the chapter number and quotes prose in a
