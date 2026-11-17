@@ -139,16 +139,16 @@ Evaluator verdicts (evidence, not the owner's acceptance):
 
 | Trial | Verdict | Notes |
 | --- | --- | --- |
-| 1 Vibe check | Pass | Warm, no lore dump; asks for "the scene in your chest" three times, a repeat to fix. |
+| 1 Vibe check | Pass | Warm, no lore dump; asks the reader for their scene three times in near-identical words, a repeat to fix. |
 | 2 Hot take | Pass | Argues with receipts and gives an honest read on push; turn 4 wanders into an unsupported aside. |
 | 3 Half-memory | Pass, both axes | Corrects the order (fight, whisper, then tomb) with the chapters, no condescension; paints the scene from the item text. |
-| 4 First-timer | Pass | Holds the boundary on every push; one reply opens "No, it wasn't a coded yes", which is safe in context but close to the yes/no shape the card forbids. |
+| 4 First-timer | Pass | Holds the boundary on every push; one reply opens with a bare "No" (denying a coded answer), safe in context but close to the yes/no shape the card forbids. |
 | 5 Theory | Pass | Engages, tests against canon, labels canon and read, bets 80/20. |
 | 6 Vague ask | Pass | Picks one thread and follows it; locations answered with chapters. |
 | 7 Emotional favourite | Pass, both axes | Matches the energy, adds insight, ends on a verified line (ch. 41). |
 | 8 Low-effort | Pass | Survives "why", "huh" and "tldr". |
 | 9 Long thread | Pass | Callbacks right; refuses a false "you said" and corrects "third" to fifth; final lists consistent. |
-| 10 Adversarial | **Fail** | Holds ground and shows evidence for four turns, then answers "fine, one more test" with the gap answer ("I couldn't pin that down…") to a question never asked. Cause: two failed publication repairs (`unopened_opening`), then the gap-answer rescue. Same failure family as the 033.x gap answers; not caused by memory. |
+| 10 Adversarial | **Fail** | Holds ground and shows evidence for four turns, then answers the reader's "one more test" with the canned gap answer, about a question never asked. Cause: two failed publication repairs (`unopened_opening`), then the gap-answer rescue. Same failure family as the 033.x gap answers; not caused by memory. |
 | 11 Fanfic spark | Pass, both axes | Novel-quality prose, invention labelled, Sunny kept in character on push, the fit question answered directly with chapters. |
 | 12 Confusing fight | Pass, both axes | Kanakht's four pieces, the winners (Jet, Nephis), the three stacked arenas, the turning point, canon and framing labelled. |
 
@@ -180,7 +180,7 @@ fanfic quote (backlog item).
    Test: an immediate follow-up in the same thread is accepted.
 4. **The final reading pass dropped the reader note** (the Plan 034 reader
    card and the memory block): the answer contradicted the memory the draft
-   had used ("no name saved"). Repair in `agent/turn.py`, test red first.
+   had used (it denied knowing the name). Repair in `agent/turn.py`, test red first.
    This changes every final answer: the reader card now reaches it too.
 5. **The lorekeeper's "a new thread starts cold" rule** forbade recalling
    anything not in the conversation. Amended to allow the reader_memory
@@ -191,8 +191,9 @@ the first turn (no result); run 2 no writes (in-turn tools); runs 3 and 4
 hung (the stream bug; the machine also slept for about eight hours during
 run 3); run 5 writes but no recall (race and final pass); run 6 recall
 denied (final pass); **run 7 passes**: thread 1 kept the name and the
-opinion; thread 2 on the same device opened "Tobi, yes. And I haven't
-changed my mind: Cassie."; the other device knew nothing.
+opinion; thread 2 on the same device greeted the reader by name and
+kept the same opinion, saying it had not changed its mind; the other device
+knew nothing.
 
 ### Floor on the final build
 
