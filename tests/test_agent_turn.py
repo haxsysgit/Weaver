@@ -2626,3 +2626,38 @@ async def test_the_final_pass_treats_the_draft_as_private() -> None:
         and "Draft: the slave is still alive." in (message.content or "")
         for message in final_request.messages
     )
+
+
+async def test_the_reader_note_reaches_the_final_reading_pass() -> None:
+    """Plan 035 slice 10: the final pass dropped the reader note, so the
+    answer could not see the reader card or what Weaver remembered and
+    said "no name saved" to a reader whose name was in memory."""
+    layer, model, provider = scripted_layer(
+        tool_response(tool_call("c1", "echo", '{"message": "a"}')),
+        stop_response("Draft: hi Tobi."),
+        stop_response("Final: hi Tobi (ch. 6)."),
+    )
+
+    async def packet_builder(results, draft):
+        return _direct_packet("PACKET: chapter 6 prose")
+
+    result = await run_turn(
+        session_id="s",
+        turn_id="t",
+        model_layer=layer,
+        model=model,
+        system_prompt="You are Weaver.",
+        history=[],
+        tool_registry=make_registry(),
+        active_tools=("echo",),
+        execution_policy=ToolExecutionPolicy.read_only(),
+        cancel_event=asyncio.Event(),
+        packet_builder=packet_builder,
+        reader_note='<reader_memory>\n- name: "Tobi"\n</reader_memory>',
+    )
+
+    assert result.final_text == "Final: hi Tobi (ch. 6)."
+    assert len(provider.calls) == 3
+    for call in provider.calls:
+        system = call.request.messages[0]
+        assert '"Tobi"' in (system.content or "")

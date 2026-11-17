@@ -654,8 +654,7 @@ class ReaderMemory:
         if opinions:
             parts.append(
                 "Your opinions. Hold them across threads. If the chapters change "
-                "your mind, say so and why, then record the new one with "
-                "keep_opinion."
+                "your mind, say so plainly and why."
             )
             parts.extend(opinions)
         if profile:

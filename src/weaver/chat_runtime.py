@@ -23,7 +23,7 @@ from .agent.tools import (
 )
 from .config import DEFAULT_TIMEOUT_SECONDS, normalize_model_id
 from .conversation.session import SessionWeave
-from .memory_tools import MEMORY_TOOLS, SessionMemoryContext, register_memory_tools
+from .memory_tools import SessionMemoryContext, register_memory_tools
 from .prefs import PreferencesStore
 from .reader_memory import ReaderMemory
 from .shelf import ShelfEdge, search_coverage
@@ -191,16 +191,14 @@ WEB_SYSTEM_PROMPT = (
     "\n"
     "<memory>\n"
     "You keep a small memory of each reader, on their device. A reader_memory "
-    "block, when present, is what you remembered before this turn: use it "
-    "naturally, never recite it, and never let it override the chapters or "
-    "the spoiler boundary. Write to it quietly with the memory tools: "
-    "keep_opinion when you state a considered opinion in one of its "
-    "categories, after reading the chapters behind it; remember_reader when "
-    "the reader tells you something about themselves; keep_note when the "
-    "reader corrects you (check the chapters first and give it a status) or "
-    "shows how they like things done; keep_story_frame in a fanfic thread "
-    "after the first scene. Most turns need none of them. Never tell the "
-    "reader something was remembered unless the tool kept it.\n"
+    "block, when present, is what you remembered before this turn: your "
+    "opinions, the reader in their own words, and your notes. Use it "
+    "naturally and never recite it. Hold your remembered opinions; if the "
+    "chapters change your mind, say so and why. Memory never overrides the "
+    "chapters or the spoiler boundary. A story_frame block fixes a fanfic "
+    "thread's point of view, tense and invented details. What is worth "
+    "keeping is decided after each turn, not by you, so never promise to "
+    "remember something and never say you have.\n"
     "</memory>"
 )
 
@@ -286,10 +284,10 @@ WEB_ACTIVE_TOOLS: tuple[str, ...] = (
     "browse_chapters",
     "who_is",
     "lore_path",
-    # Plan 035: the narrow memory tools; each writes one kind of record for
-    # the device that owns the conversation, after the write scan.
-    *MEMORY_TOOLS,
 )
+# Plan 035: the narrow memory tools are registered on the web registry but
+# never active in the reading turn; only the memory step after a completed
+# turn (weaver.memory_keeper) may call them.
 
 # Scripted fake-mode reply: friendly, non-streamed, honest about being fake.
 # Surface-neutral text: it must not advertise a command that only one of
@@ -553,8 +551,27 @@ class ChatRuntime:
         self.sponsored = sponsored
         self.sponsored_balance = sponsored_balance
         self.fake_delta_delay_seconds = max(0, fake_delta_delay_seconds)
+        # Plan 035: the memory step after a turn runs as a tracked
+        # background task; close() waits for it before closing the stores.
+        self._background: set[asyncio.Task] = set()
+
+    def remember_later(self, coroutine) -> asyncio.Task:
+        """Run the memory step after a turn without holding the turn open."""
+        task = asyncio.create_task(coroutine)
+        self._background.add(task)
+        task.add_done_callback(self._background.discard)
+        return task
+
+    async def settle_background(self, timeout: float = 30.0) -> None:
+        """Wait for pending memory steps (tests, harnesses, shutdown)."""
+        pending = set(self._background)
+        if pending:
+            await asyncio.wait(pending, timeout=timeout)
 
     async def close(self) -> None:
+        await self.settle_background(timeout=10.0)
+        for task in list(self._background):
+            task.cancel()
         if self.sponsored is not None:
             await self.sponsored.close()
         if self.prefs is not None:
@@ -682,11 +699,9 @@ async def open_chat_runtime(
             return prompts_by_edge[edge]
 
         system_prompt = base_prompt_now()
-        # Plan 035: the memory tools are internal writes into Weaver's own
-        # per-device store; every other web tool still only reads.
-        execution_policy = ToolExecutionPolicy(
-            allowed_effects=frozenset({EffectKind.READ, EffectKind.INTERNAL_WRITE})
-        )
+        # The reading turn only reads. Plan 035's memory writes run in the
+        # memory step after the turn, under their own policy.
+        execution_policy = ToolExecutionPolicy.read_only()
 
     # Plan 15 (owner 2026-08-08): the web locate phase sees a bounded
     # recent context, not the whole unbounded history. Caps the

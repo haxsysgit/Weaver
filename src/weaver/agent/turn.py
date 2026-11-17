@@ -1135,8 +1135,13 @@ async def run_turn(
             # instructions instead, labelled as never shown.
             final_history = _final_history(history, current_owner)
             draft = publication_draft or validated_candidate
+            # Plan 035: the reader note (the reader card and what Weaver
+            # remembers) reaches the final pass too; without it the answer
+            # contradicted the memory the draft had used.
             request_messages = project_messages(
-                system_prompt=system_prompt,
+                system_prompt=(
+                    system_prompt + "\n\n" + reader_note if reader_note else system_prompt
+                ),
                 history=final_history,
             )
             final_instructions = (

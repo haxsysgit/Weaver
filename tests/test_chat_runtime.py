@@ -9,7 +9,7 @@ from importlib.resources import files
 
 import pytest
 
-from weaver.agent.tools import EffectKind
+from weaver.agent.tools import EffectKind, ToolExecutionPolicy
 from weaver.chat_runtime import open_chat_runtime, web_system_prompt
 from weaver.prompts import load_personality
 from weaver.conversation.session import SessionWeave
@@ -46,7 +46,7 @@ async def test_developer_profile_keeps_plan_010_tool_set(tmp_path) -> None:
         await runtime.close()
 
 
-async def test_web_profile_reads_and_writes_only_reader_memory(tmp_path) -> None:
+async def test_web_profile_reads_and_keeps_memory_tools_inactive(tmp_path) -> None:
     runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
     try:
         assert runtime.surface == "web"
@@ -58,10 +58,6 @@ async def test_web_profile_reads_and_writes_only_reader_memory(tmp_path) -> None
             "browse_chapters",
             "who_is",
             "lore_path",
-            "keep_opinion",
-            "remember_reader",
-            "keep_note",
-            "keep_story_frame",
         )
         registry = runtime.session._tool_registry
         assert registry.has("load_skill")
@@ -73,22 +69,12 @@ async def test_web_profile_reads_and_writes_only_reader_memory(tmp_path) -> None
         assert registry.has("lore_path")
         assert not registry.has("echo")
         policy = runtime.session._execution_policy
-        # Plan 035: the memory tools are the only writers, and they write
-        # only into Weaver's own per-device store.
-        assert policy.allows(EffectKind.READ)
-        assert policy.allows(EffectKind.INTERNAL_WRITE)
-        assert not policy.allows(EffectKind.EXTERNAL_EFFECT)
-        writers = {
-            name
-            for name in runtime.session._active_tools
-            if registry._tools[name].effect_kind != EffectKind.READ
-        }
-        assert writers == {
-            "keep_opinion",
-            "remember_reader",
-            "keep_note",
-            "keep_story_frame",
-        }
+        # Plan 035: the reading turn only reads. The memory tools are
+        # registered for the memory step after a turn, never active here.
+        assert policy == ToolExecutionPolicy.read_only()
+        for name in ("keep_opinion", "remember_reader", "keep_note", "keep_story_frame"):
+            assert registry.has(name)
+            assert registry._tools[name].effect_kind == EffectKind.INTERNAL_WRITE
     finally:
         await runtime.close()
 

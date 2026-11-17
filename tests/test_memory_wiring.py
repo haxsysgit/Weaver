@@ -8,37 +8,37 @@ from types import SimpleNamespace
 
 from weaver.agent.tools import EffectKind, ToolExecutionContext
 from weaver.chat_runtime import WEB_ACTIVE_TOOLS, open_chat_runtime, web_system_prompt
+from weaver.memory_keeper import MEMORY_WRITE_POLICY
 from weaver.memory_tools import MEMORY_TOOLS
 from weaver.prompts import load_personality
 from weaver.web.app import _memory_block
 
 
-def test_the_memory_tools_are_active_on_the_web() -> None:
-    assert set(MEMORY_TOOLS) <= set(WEB_ACTIVE_TOOLS)
+def test_the_reading_turn_cannot_write_memory() -> None:
+    assert not set(MEMORY_TOOLS) & set(WEB_ACTIVE_TOOLS)
 
 
-def test_the_web_prompt_explains_the_memory() -> None:
+def test_the_web_prompt_explains_the_memory_without_promising_it() -> None:
     prompt = web_system_prompt(load_personality("lorekeeper"), 3160)
     assert "<memory>" in prompt
-    assert "never let it override the chapters" in prompt
+    assert "never overrides the chapters" in prompt
+    assert "never promise to remember" in prompt
     for name in MEMORY_TOOLS:
-        assert name in prompt
+        assert name not in prompt
 
 
-async def test_a_tool_call_writes_to_the_owning_device_and_reaches_its_turn(tmp_path) -> None:
+async def test_a_memory_write_lands_on_the_owning_device_and_reaches_its_turn(tmp_path) -> None:
     runtime = await open_chat_runtime(tmp_path, live=False, surface="web")
     try:
         session = runtime.session
-        policy = session._execution_policy
-        assert policy.allows(EffectKind.INTERNAL_WRITE)
-        assert not policy.allows(EffectKind.EXTERNAL_EFFECT)
+        assert not session._execution_policy.allows(EffectKind.INTERNAL_WRITE)
         mine = await session.start_conversation("hi, i'm Ari", device_id="device-a")
         theirs = await session.start_conversation("hello", device_id="device-b")
         result = await session._tool_registry.dispatch(
             "remember_reader",
             json.dumps({"field": "name", "value": "Ari", "reader_words": "i'm Ari"}),
-            active_names=WEB_ACTIVE_TOOLS,
-            policy=policy,
+            active_names=MEMORY_TOOLS,
+            policy=MEMORY_WRITE_POLICY,
             context=ToolExecutionContext(
                 session_id=mine,
                 turn_id="t",

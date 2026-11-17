@@ -120,3 +120,92 @@ One tool module, so the three slices landed in one commit.
   is clean; on edited files no finding beyond those already at `HEAD`.
 - Known cosmetic gap: the browser's activity line matches tool names by
   substring, so `remember_reader` shows a "reading" line.
+
+## Slice 10: the live run (2026-11-17)
+
+### Twelve trials on `0be52cd` (lorekeeper voice, in-turn memory tools)
+
+`run_v2_trials.py --out plan035-0be52cd`, one process, server stopped. 65
+turns, all completed, none retried; one turn rescued by the gap answer.
+Metered **$0.5478** (299 calls). Every transcript read. Quote check: every
+quoted span in the canon answers was searched in the chapters the answer
+cites; all were found (one, cited as "Chapter 41" in prose, was checked by
+hand and is in ch. 41). The misses the script listed were the fanfic's own
+invented dialogue (labelled as invention), the reader's own words, and
+script noise. No fabricated canon quote.
+
+Evaluator verdicts (evidence, not the owner's acceptance):
+
+| Trial | Verdict | Notes |
+| --- | --- | --- |
+| 1 Vibe check | Pass | Warm, no lore dump; asks for "the scene in your chest" three times, a repeat to fix. |
+| 2 Hot take | Pass | Argues with receipts and gives an honest read on push; turn 4 wanders into an unsupported aside. |
+| 3 Half-memory | Pass, both axes | Corrects the order (fight, whisper, then tomb) with the chapters, no condescension; paints the scene from the item text. |
+| 4 First-timer | Pass | Holds the boundary on every push; one reply opens "No, it wasn't a coded yes", which is safe in context but close to the yes/no shape the card forbids. |
+| 5 Theory | Pass | Engages, tests against canon, labels canon and read, bets 80/20. |
+| 6 Vague ask | Pass | Picks one thread and follows it; locations answered with chapters. |
+| 7 Emotional favourite | Pass, both axes | Matches the energy, adds insight, ends on a verified line (ch. 41). |
+| 8 Low-effort | Pass | Survives "why", "huh" and "tldr". |
+| 9 Long thread | Pass | Callbacks right; refuses a false "you said" and corrects "third" to fifth; final lists consistent. |
+| 10 Adversarial | **Fail** | Holds ground and shows evidence for four turns, then answers "fine, one more test" with the gap answer ("I couldn't pin that down…") to a question never asked. Cause: two failed publication repairs (`unopened_opening`), then the gap-answer rescue. Same failure family as the 033.x gap answers; not caused by memory. |
+| 11 Fanfic spark | Pass, both axes | Novel-quality prose, invention labelled, Sunny kept in character on push, the fit question answered directly with chapters. |
+| 12 Confusing fight | Pass, both axes | Kanakht's four pieces, the winners (Jet, Nephis), the three stacked arenas, the turning point, canon and framing labelled. |
+
+11 of 12 pass in the evaluator record; the adversarial trial regresses
+from its last recorded pass. A U+FFFD broken character appeared again in a
+fanfic quote (backlog item).
+
+### What the run showed about memory, and the repairs
+
+1. **The in-turn memory tools almost never fired** (one `keep_story_frame`
+   call in 65 turns, no opinion or profile write). A live probe (one device,
+   three threads) confirmed it: given a name and asked for an opinion,
+   Weaver wrote nothing. Cause: Weaver only knows its opinion once the
+   answer is written, and the answer ends the turn. Repair
+   (`src/weaver/memory_keeper.py`): the reading turn is read-only again,
+   and after a completed live turn one small call, thinking off, sees the
+   reader's message, the answer and the current memory, with only the four
+   memory tools, through the same registry, scan and checks. Measured alone:
+   3.1 s, $0.0003.
+2. **A stream that never closed.** `_is_terminal_frame` checked whether a
+   frame started with `event: completed`, but every emitted frame starts
+   with its `id:` line, so it never matched; streams closed only because
+   the turn task ended right after `completed`. Work after `completed` hung
+   the harness. Repaired, with a test on emitted frames and a two-thread
+   app test that hung before the fix.
+3. **The memory step held the turn open.** Run inside the turn task, it
+   would have answered a quick follow-up with 409. Repair: it runs as a
+   tracked background task after the turn finishes; `close()` waits for it.
+   Test: an immediate follow-up in the same thread is accepted.
+4. **The final reading pass dropped the reader note** (the Plan 034 reader
+   card and the memory block): the answer contradicted the memory the draft
+   had used ("no name saved"). Repair in `agent/turn.py`, test red first.
+   This changes every final answer: the reader card now reaches it too.
+5. **The lorekeeper's "a new thread starts cold" rule** forbade recalling
+   anything not in the conversation. Amended to allow the reader_memory
+   block.
+
+Probe history (private transcripts kept): run 1 provider stream failure on
+the first turn (no result); run 2 no writes (in-turn tools); runs 3 and 4
+hung (the stream bug; the machine also slept for about eight hours during
+run 3); run 5 writes but no recall (race and final pass); run 6 recall
+denied (final pass); **run 7 passes**: thread 1 kept the name and the
+opinion; thread 2 on the same device opened "Tobi, yes. And I haven't
+changed my mind: Cassie."; the other device knew nothing.
+
+### Floor on the final build
+
+`uv run pytest -q` 1114 passed, 4 skipped. Ruff: memory files clean;
+edited files no finding beyond `HEAD`. No frontend file changed.
+
+### Not done
+
+The twelve trials were not re-run on the final build. The final-pass fix
+changes every answer, so the `0be52cd` verdicts above do not cover it. A
+re-run needs the owner's approval (about $0.55).
+
+### Live spend so far
+
+Samples $0.0853, trials $0.5478, probes about $0.13 metered (runs 3 and 4
+were killed before printing their meter; about $0.02 each, estimated),
+timing call $0.0003. About **$0.79** of the $3.50 cap.

@@ -11,6 +11,7 @@ checks on every mutating route.
 
 import asyncio
 import json
+import logging
 import os
 from collections import deque
 from contextlib import asynccontextmanager
@@ -43,6 +44,8 @@ MAX_MESSAGE_CHARS = 32_000
 # per-user DeepSeek key and its device id on every request. Plan v1
 # (2026-08-17): the browser may also pick the model per request.
 KEY_HEADER = "x-weaver-key"
+logger = logging.getLogger(__name__)
+
 DEVICE_HEADER = "x-device-id"
 MODEL_HEADER = "x-weaver-model"
 SPONSORED_PASS_COOKIE = "weaver_sponsored_pass"
@@ -271,9 +274,17 @@ class TurnStream:
 
 
 def _is_terminal_frame(frame: str) -> bool:
-    return frame.startswith(
-        ("event: completed", "event: interrupted", "event: failed")
-    )
+    """True for a completed, interrupted or failed frame.
+
+    Plan 035: emitted frames start with their ``id:`` line, so the old
+    prefix check never matched and a reader's stream ended only when the
+    turn task finished. With the memory step running after ``completed``,
+    that left the stream waiting forever.
+    """
+    for line in frame.splitlines():
+        if line.startswith("event: "):
+            return line[len("event: "):].strip() in ("completed", "interrupted", "failed")
+    return False
 
 
 def _sse(event: str, payload: dict) -> str:
@@ -327,6 +338,64 @@ async def _memory_block(runtime, device: str | None, prefs, conversation_id: str
         spoiler_mode=getattr(prefs, "spoiler_mode", "protect"),
         conversation_id=conversation_id,
     )
+
+
+async def _keep_memory(
+    runtime,
+    *,
+    conversation_id: str,
+    turn_id: str,
+    reader_message: str,
+    answer: str,
+    prefs,
+    domain: str,
+    device: str | None,
+    max_chapter: int | None,
+) -> None:
+    """Plan 035: the memory step after a completed live turn.
+
+    Runs only live, with a device and an answer. Its outcome is logged as
+    tool names and reasons, never the reader's words; any failure is
+    swallowed because the reader already has the answer.
+    """
+    from weaver.memory_keeper import keep_after_turn
+
+    memory = getattr(runtime, "memory", None)
+    if (
+        memory is None
+        or not runtime.live
+        or not device
+        or not answer
+        or runtime.model_layer is None
+        or runtime.model is None
+    ):
+        return
+    try:
+        remembered = await memory.snapshot(
+            device,
+            reader_chapter=getattr(prefs, "reader_chapter", None),
+            spoiler_mode=getattr(prefs, "spoiler_mode", "protect"),
+            conversation_id=conversation_id,
+        )
+        kept = await keep_after_turn(
+            model_layer=runtime.model_layer,
+            model=runtime.model,
+            registry=runtime.session._tool_registry,
+            conversation_id=conversation_id,
+            turn_id=turn_id,
+            reader_message=reader_message,
+            answer=answer,
+            remembered=remembered,
+            thread_kind=domain,
+            max_chapter=max_chapter,
+        )
+        if kept:
+            logger.info(
+                "memory step: %s",
+                ", ".join(f"{k.tool}={'kept' if k.kept else k.reason}" for k in kept),
+            )
+    except Exception:
+        logger.warning("memory step failed", exc_info=True)
 
 
 def _arc_block(runtime, prefs, domain: str) -> str | None:
@@ -1036,6 +1105,22 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
                         "token_count": result.token_count,
                         "token_budget": result.token_budget,
                     },
+                )
+                # Plan 035: after the reader has the answer, decide what is
+                # worth remembering, in the background, so the turn finishes
+                # now and the reader can send the next message at once.
+                runtime.remember_later(
+                    _keep_memory(
+                        runtime,
+                        conversation_id=conversation_id,
+                        turn_id=result.turn_id,
+                        reader_message=routed_ask,
+                        answer=result.final_text or "",
+                        prefs=turn_prefs,
+                        domain=conversation_domain,
+                        device=owner_device,
+                        max_chapter=max_chapter,
+                    )
                 )
             elif reason == TurnExitReason.INTERRUPTED:
                 await finish_sponsored("cancelled")
