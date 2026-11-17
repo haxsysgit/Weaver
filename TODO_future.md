@@ -139,7 +139,7 @@ accepted public release is v3.0.0 at Plan 040.
    restructured for the 1M window. Live run: both old blockers pass; Trial 12
    records a short fabricated quote; the check set failed (3 of 9 scene
    substitutions, 2 of 9 trial answers correct).
-5. **035 Weaver's voice and memory** (admitted 2026-11-16; built 2026-11-17, lorekeeper chosen; trial re-run and owner decision pending): the lorekeeper voice with life and
+5. **035 Weaver's voice and memory** (closed 2026-11-17, accepted with gaps recorded; lorekeeper chosen; trials 10 of 12): the lorekeeper voice with life and
    imagery but no essay shape (sample answers to the owner first); per-device
    opinions in defined categories, recorded by a narrow tool and fed back
    every turn; the storyteller voice per fanfic thread; re-run the affected
@@ -220,6 +220,15 @@ accepted public release is v3.0.0 at Plan 040.
   chapter has none. A multibyte character is split somewhere between the
   provider stream and the stored answer. Find the decode point and add a
   test with a character split across chunks.
+- Gap-answer rescue replaces real answers (Plan 035 re-run, 2026-11-17):
+  when the publication repair fails twice, the reader gets "I couldn't pin
+  that down" even after ten chapters were read (confusing, opening turn) or
+  for a question that needs no chapter (adversarial, "you're still just
+  predicting words"). Same failure family since Plan 033.5. Needs its own
+  plan slot; the owner picks the number.
+- Memory scan refuses straight double quotes (Plan 035 re-run): 7 of 49
+  memory writes refused for quoting a canon line. Values are rendered
+  JSON-escaped, so turn straight quotes into curly ones before the scan.
 - Spoiler-free mode.
 - Chapter-link integration: DECIDED OUT (2026-08-14). No chapter links in
   the product. Weaver references the chapter number and quotes prose in a

@@ -1,7 +1,7 @@
 # Weaver handoff
 
-**Latest (2026-11-17).** Plan 035 is built, reviewed and live-run; the
-owner's decision is pending. The chat voice is now the lorekeeper (the
+**Latest (2026-11-17).** Plan 035 is closed, accepted by the owner with
+gaps recorded. The chat voice is now the lorekeeper (the
 buddy pack is removed; an old `.env` with `WEAVER_VOICE=buddy` stops
 startup). Weaver keeps a per-device memory (opinions, the reader in their
 own words, notes, a fanfic thread's frame) written by a small step after
@@ -9,7 +9,7 @@ each live turn through four narrow, scanned tools. Two old bugs were fixed
 on the way: stream frames were never recognised as terminal, and the final
 reading pass dropped the reader card. The re-run on the final build
 `26a0ce7` passed 10 of 12 in the evaluator record (adversarial and
-confusing fail through the gap-answer rescue); owner decision pending. See
+confusing fail through the gap-answer rescue). Next is Plan 036. See
 `deliverables/035-weavers-voice-and-memory/results.md`.
 
 **Latest (2026-11-16): read `handoff/README.md` first.** Plan 034 is closed,

@@ -6,7 +6,7 @@
 | `learning.md` | Owner-confirmed decisions | Learning gate closed 2026-11-17: lorekeeper |
 | `results.md` | Deterministic observations and commands | Slices 2 to 10 recorded |
 | `review-ledger.md` | Independent findings, repairs, and rechecks | Slice 9 done, all findings repaired or recorded |
-| `decision.md` | Owner's final accept or reject record | Pending: accept or reject (re-run done, 10 of 12) |
+| `decision.md` | Owner's final accept or reject record | Accepted 2026-11-17 with gaps recorded |
 
 No novel prose, chats, credentials, private receipts, generated knowledge,
 or raw model reasoning belongs here.

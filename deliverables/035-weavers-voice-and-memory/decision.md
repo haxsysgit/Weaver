@@ -2,9 +2,21 @@
 
 ## Status
 
-**Pending owner decision.** Built, reviewed and live-run on 2026-11-17.
+**Accepted by the owner, 2026-11-17** ("alright accept"), with gaps
+recorded. Built, reviewed and live-run on 2026-11-17; closed on the same
+day.
 
-## What the owner is asked
+## Gaps accepted
+
+- Adversarial and confusing fail on `26a0ce7` through the gap-answer rescue
+  after two failed publication repairs. The rescue predates this plan; it
+  goes to the backlog for its own plan slot (the owner picks the number).
+- The memory scan refuses values with straight double quotes (7 of 49
+  memory writes in the re-run); a follow-up turns them into curly quotes.
+- First-timer: one reply apologises for a spoiler that was inside the
+  reader's range.
+
+## What the owner was asked
 
 The re-run is done (approved 2026-11-17): 10 of 12 pass on `26a0ce7`; the
 five targeted trials pass; adversarial and confusing fail through the
