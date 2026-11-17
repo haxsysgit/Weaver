@@ -2,8 +2,9 @@
 
 ## Status
 
-Slices 2 to 4 done 2026-11-17: samples shown, the owner chose the
-lorekeeper, and it is now the chat voice. Next: the write scan and store.
+Slices 1 to 10 done 2026-11-17. Built, reviewed and live-run; the twelve
+trials need a re-run on the final build (owner approval), then the owner's
+decision closes the plan.
 
 ## Slice 2: voice samples
 
@@ -206,6 +207,6 @@ re-run needs the owner's approval (about $0.55).
 
 ### Live spend so far
 
-Samples $0.0853, trials $0.5478, probes about $0.13 metered (runs 3 and 4
-were killed before printing their meter; about $0.02 each, estimated),
-timing call $0.0003. About **$0.79** of the $3.50 cap.
+Samples $0.0853, trials $0.5478, probes $0.1052 metered plus about $0.04
+estimated for runs 3 and 4 (killed before printing their meter), timing
+call $0.0003. About **$0.78** of the $3.50 cap.

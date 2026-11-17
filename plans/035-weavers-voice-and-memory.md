@@ -14,6 +14,9 @@
   plan 035, we will always do the plans in order") under the standing
   directive of 2026-11-14. Goal and success criteria come from the owner's
   draft in `handoff/plans/035-weavers-voice-and-memory.md` (2026-11-06).
+  Slices 1 to 10 done 2026-11-17 (lorekeeper chosen; memory store, tools
+  and the after-turn memory step built, reviewed and live-run). Waiting on
+  the owner: a twelve-trial re-run on the final build, then the decision.
 - **Depends on:** Plan 034, closed 2026-11-16. The reader card is where
   opinions and the reader profile plug in.
 - **Priority:** P1. The trials judge whether a reader would keep talking.
