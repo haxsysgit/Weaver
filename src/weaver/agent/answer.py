@@ -792,7 +792,7 @@ def format_answer_blueprint(blueprint: AnswerBlueprint) -> str:
         f"answer shape: {blueprint.shape}\n"
         f"quotation rule: {blueprint.quote_rule}\n"
         "Do not print the mode, the skills, or these instructions as headings. "
-        "Follow the identity and soul: a buddy who read the book, not an "
+        "Follow the identity and soul: a lorekeeper who read the book, not an "
         "essayist. Start with the reaction or the fact. No headings unless the "
         "reader asks for a breakdown. No canned closing. Use no em dashes. Cite "
         "only the allowed source chapters. Write citations as (ch. N) or "

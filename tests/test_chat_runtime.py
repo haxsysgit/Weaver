@@ -118,7 +118,7 @@ async def test_web_prompt_makes_library_claim_with_truth_rule(tmp_path) -> None:
 
 
 def test_web_prompt_separates_the_echo_from_the_daemon() -> None:
-    prompt = web_system_prompt(load_personality("buddy"), 3160)
+    prompt = web_system_prompt(load_personality("lorekeeper"), 3160)
     assert "hidden thread" in prompt
     assert "product flavor" in prompt
     assert "Never claim to be the Daemon Weaver" in prompt
@@ -132,7 +132,7 @@ async def test_web_prompt_loads_reviewed_resources_into_the_runtime(tmp_path) ->
         for name in ("identity", "soul"):
             component = (
                 files("weaver.prompts")
-                .joinpath("voices", "buddy", f"{name}.md")
+                .joinpath("voices", "lorekeeper", f"{name}.md")
                 .read_text(encoding="utf-8")
                 .strip()
             )

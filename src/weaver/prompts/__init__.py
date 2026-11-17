@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 from importlib.resources import files
 
-DEFAULT_VOICE = "buddy"
+DEFAULT_VOICE = "lorekeeper"
 
 
 def available_voices() -> tuple[str, ...]:

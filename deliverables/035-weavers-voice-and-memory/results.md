@@ -48,3 +48,19 @@ favourite character. 14 turns, all completed, none retried. Metered
 
 **Evaluator's recommendation.** The lorekeeper as the chat voice, keeping the
 buddy's rule that a quick question gets a quick answer. The owner decides.
+
+## Slice 4: the voice (2026-11-17)
+
+- The lorekeeper pack from the samples is now the chat voice:
+  `DEFAULT_VOICE = "lorekeeper"`, the answer blueprint names it, and the
+  buddy pack is removed (git keeps it). `WEAVER_VOICE=buddy` now fails
+  loudly at startup with the list of voices, never a silent fallback.
+  `.env.example`, `README.md` and `docs/architecture.md` name the new pack.
+- Tests, red first (5 failed for the expected reasons, then green): the
+  packaged voices are exactly lorekeeper and storyteller; the default is the
+  lorekeeper; the retired buddy is refused; no pack carries an em dash; the
+  lorekeeper keeps the chat shape rules and names the forbidden generic
+  phrases.
+- Floor: `uv run pytest -q` 1012 passed, 4 skipped. `uvx ruff check` on the
+  changed files: no new finding (the import-order notes match `HEAD`). No
+  frontend file changed, so vitest, tsc and the build were not re-run.

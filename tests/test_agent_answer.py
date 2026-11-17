@@ -36,7 +36,7 @@ def test_narration_uses_reviewed_voice_without_forcing_the_ending_first() -> Non
     assert blueprint.skills == ("scene_explanation",)
     assert "open inside a supported moment" in instruction
     assert "identity and soul" in instruction
-    assert "buddy who read the book" in instruction
+    assert "lorekeeper who read the book" in instruction
     assert "Four to eight paragraphs" in instruction
     assert "One exact quote per key beat" in instruction
     assert "Direct quotations must be 25 words or fewer" in instruction
