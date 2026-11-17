@@ -23,7 +23,9 @@ from .agent.tools import (
 )
 from .config import DEFAULT_TIMEOUT_SECONDS, normalize_model_id
 from .conversation.session import SessionWeave
+from .memory_tools import MEMORY_TOOLS, SessionMemoryContext, register_memory_tools
 from .prefs import PreferencesStore
+from .reader_memory import ReaderMemory
 from .shelf import ShelfEdge, search_coverage
 from .prompts import load_personality
 from .reading_arms import ReadingArm, arm_prompt
@@ -185,7 +187,21 @@ WEB_SYSTEM_PROMPT = (
     "'<find_text: ...>', angle-bracket stage directions, or a JSON block as "
     "prose. Use the tool-call mechanism attached to your reply, or write the "
     "answer.\n"
-    "</output>"
+    "</output>\n"
+    "\n"
+    "<memory>\n"
+    "You keep a small memory of each reader, on their device. A reader_memory "
+    "block, when present, is what you remembered before this turn: use it "
+    "naturally, never recite it, and never let it override the chapters or "
+    "the spoiler boundary. Write to it quietly with the memory tools: "
+    "keep_opinion when you state a considered opinion in one of its "
+    "categories, after reading the chapters behind it; remember_reader when "
+    "the reader tells you something about themselves; keep_note when the "
+    "reader corrects you (check the chapters first and give it a status) or "
+    "shows how they like things done; keep_story_frame in a fanfic thread "
+    "after the first scene. Most turns need none of them. Never tell the "
+    "reader something was remembered unless the tool kept it.\n"
+    "</memory>"
 )
 
 CANON_DOMAIN_PROMPT = (
@@ -270,6 +286,9 @@ WEB_ACTIVE_TOOLS: tuple[str, ...] = (
     "browse_chapters",
     "who_is",
     "lore_path",
+    # Plan 035: the narrow memory tools; each writes one kind of record for
+    # the device that owns the conversation, after the write scan.
+    *MEMORY_TOOLS,
 )
 
 # Scripted fake-mode reply: friendly, non-streamed, honest about being fake.
@@ -504,6 +523,7 @@ class ChatRuntime:
         mode_label: str,
         live: bool,
         prefs: PreferencesStore | None = None,
+        memory: ReaderMemory | None = None,
         library=None,
         model_layer: ModelLayer | None = None,
         model=None,
@@ -524,6 +544,8 @@ class ChatRuntime:
         self.mode_label = mode_label
         self.live = live
         self.prefs = prefs
+        # Plan 035: what Weaver remembers per device (web surface only).
+        self.memory = memory
         self.library = library
         # Plan 15 slice 5: the thread-naming call runs on this layer.
         self.model_layer = model_layer
@@ -537,6 +559,8 @@ class ChatRuntime:
             await self.sponsored.close()
         if self.prefs is not None:
             await self.prefs.close()
+        if self.memory is not None:
+            await self.memory.close()
         await self.session.close()
         # Plan 033: release the embedded search index. It allows one client
         # per process, and Plan 032 found a second runtime failing every
@@ -636,6 +660,9 @@ async def open_chat_runtime(
             register_skill_tool(registry)
         elif not live:
             registry = _fake_web_tool_registry(fake_delay_seconds)
+        memory = ReaderMemory(state_dir / "weaver.sqlite3")
+        memory_context = SessionMemoryContext()
+        register_memory_tools(registry, memory, memory_context)
         # Plan 032: an evaluation arm narrows the tools; the product passes none.
         active_tools = WEB_ACTIVE_TOOLS if arm is None else ("load_skill", *arm.tools)
         # Plan 031: the prompt names the live shelf edge and what meaning
@@ -655,7 +682,11 @@ async def open_chat_runtime(
             return prompts_by_edge[edge]
 
         system_prompt = base_prompt_now()
-        execution_policy = ToolExecutionPolicy.read_only()
+        # Plan 035: the memory tools are internal writes into Weaver's own
+        # per-device store; every other web tool still only reads.
+        execution_policy = ToolExecutionPolicy(
+            allowed_effects=frozenset({EffectKind.READ, EffectKind.INTERNAL_WRITE})
+        )
 
     # Plan 15 (owner 2026-08-08): the web locate phase sees a bounded
     # recent context, not the whole unbounded history. Caps the
@@ -681,6 +712,11 @@ async def open_chat_runtime(
     await sw.open()
     prefs = PreferencesStore(state_dir / "weaver.sqlite3")
     await prefs.open()
+    if surface == "web":
+        await memory.open()
+        memory_context.session = sw
+    else:
+        memory = None
     sponsored = None
     sponsored_balance = None
     sponsored_config = config_from_environment()
@@ -688,6 +724,8 @@ async def open_chat_runtime(
         sponsored_secret = os.environ.get("WEAVER_SPONSORED_PASS_SECRET", "")
         if len(sponsored_secret.encode()) < 32:
             await prefs.close()
+            if memory is not None:
+                await memory.close()
             await sw.close()
             raise ValueError(
                 "sponsored access requires WEAVER_SPONSORED_PASS_SECRET "
@@ -711,6 +749,7 @@ async def open_chat_runtime(
         mode_label=mode_label,
         live=live,
         prefs=prefs,
+        memory=memory,
         library=library if surface == "web" else None,
         model_layer=model_layer,
         model=model,

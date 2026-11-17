@@ -312,6 +312,23 @@ def _derived_title(first_message: str) -> str:
     return " ".join(words).title() or "New chat"
 
 
+async def _memory_block(runtime, device: str | None, prefs, conversation_id: str) -> str:
+    """Plan 035: what Weaver remembers about this device, frozen for one turn.
+
+    Only the device that owns the conversation is read. Entries that cite
+    chapters past the reader's boundary are held back by the store.
+    """
+    memory = getattr(runtime, "memory", None)
+    if memory is None or not device:
+        return ""
+    return await memory.snapshot(
+        device,
+        reader_chapter=getattr(prefs, "reader_chapter", None),
+        spoiler_mode=getattr(prefs, "spoiler_mode", "protect"),
+        conversation_id=conversation_id,
+    )
+
+
 def _arc_block(runtime, prefs, domain: str) -> str | None:
     """The arc map up to the reader's chapter, or None when it would spoil.
 
@@ -851,6 +868,11 @@ def create_app(runtime: ChatRuntime) -> FastAPI:
             domain=conversation_domain,
             arc_map=_arc_block(runtime, turn_prefs, conversation_domain),
         )
+        memory_note = await _memory_block(
+            runtime, owner_device, turn_prefs, conversation_id
+        )
+        if memory_note:
+            reader_note = f"{reader_note}\n{memory_note}"
         max_chapter = (
             turn_prefs.reader_chapter
             if turn_prefs is not None

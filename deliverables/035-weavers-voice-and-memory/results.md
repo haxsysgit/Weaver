@@ -88,3 +88,35 @@ buddy's rule that a quick question gets a quick answer. The owner decides.
   through all three write paths, 7 ordinary sentences kept, device
   isolation, spoiler hold-back, categories, change of mind, escalation,
   disputed corrections, the cap, the story frame).
+
+## Slices 6 to 8: opinions, the reader's profile, notes, the story frame (2026-11-17)
+
+One tool module, so the three slices landed in one commit.
+
+- `src/weaver/memory_tools.py`: four narrow tools, each able to write one
+  kind of record: `keep_opinion`, `remember_reader`, `keep_note`,
+  `keep_story_frame`. The device is never an argument; it is the device
+  that owns the turn's conversation. An opinion or note citing a chapter
+  past the reader's boundary is refused. A profile write, and a correction,
+  must copy words the reader actually wrote in this conversation, or it is
+  refused (`not_the_readers_words`), so a guess cannot become memory. The
+  story frame works in fanfic threads only; once set, its point of view and
+  tense stay fixed and later calls only add invented details and anchors.
+  A change of opinion returns `changed_from` and an instruction to tell the
+  reader why. A refused write tells the model not to claim it remembered.
+- Wiring: the web registry and `WEB_ACTIVE_TOOLS` carry the four tools; the
+  web policy now allows internal writes (the four memory tools are the only
+  writers; every other web tool still only reads; external effects stay
+  blocked). The store opens with the web runtime and closes with it. Each
+  turn appends the owner device's snapshot to the reader card, frozen for
+  that turn. The system prompt gained a short `<memory>` section.
+- Behaviour change: `test_web_profile_has_reading_tools_and_read_only_policy`
+  pinned the read-only web policy. It now pins the new rule (only the four
+  memory tools write) under a new name.
+- Tests: 10 in `tests/test_memory_tools.py`, 4 in
+  `tests/test_memory_wiring.py`. These were written right after the tool
+  code, not red first; the store tests in slice 5 were red first.
+- Floor: `uv run pytest -q` 1080 passed, 4 skipped. Ruff on the new files
+  is clean; on edited files no finding beyond those already at `HEAD`.
+- Known cosmetic gap: the browser's activity line matches tool names by
+  substring, so `remember_reader` shows a "reading" line.
