@@ -713,7 +713,12 @@ async def open_chat_runtime(
     prefs = PreferencesStore(state_dir / "weaver.sqlite3")
     await prefs.open()
     if surface == "web":
-        await memory.open()
+        try:
+            await memory.open()
+        except BaseException:
+            await prefs.close()
+            await sw.close()
+            raise
         memory_context.session = sw
     else:
         memory = None

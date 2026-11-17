@@ -71,17 +71,38 @@ class SessionMemoryContext:
         )
 
 
+_SMALL_WORDS = frozenset(
+    (
+        "the", "and", "you", "are", "was", "his", "her", "for", "not", "but",
+        "its", "she", "him", "has", "have", "with", "that", "this", "what",
+        "who", "why", "how", "they", "them", "their", "there", "just", "like",
+        "really",
+    )
+)
+
+
 def _plain(text: str) -> str:
     return " ".join(re.findall(r"[a-z0-9']+", text.casefold()))
 
 
-def _said_by_reader(words: Any, messages: tuple[str, ...]) -> bool:
-    """True when ``words`` appear in something the reader wrote here."""
+def _content_words(text: str) -> set[str]:
+    return {
+        word
+        for word in _plain(text).split()
+        if len(word) >= 3 and word not in _SMALL_WORDS
+    }
+
+
+def _said_by_reader(words: Any, messages: tuple[str, ...], value: str) -> bool:
+    """True when ``words`` appear in something the reader wrote here and
+    share at least one real word with the value being kept, so the value
+    cannot drift away from what the reader said."""
     if not isinstance(words, str) or len(words) > READER_WORDS_LIMIT:
         return False
-    wanted = _plain(words)
-    if len(wanted) < 2:
+    shared = _content_words(words) & _content_words(value)
+    if not shared:
         return False
+    wanted = _plain(words)
     return any(f" {wanted} " in f" {_plain(message)} " for message in messages)
 
 
@@ -123,12 +144,16 @@ def _list(arguments: dict, name: str) -> list | None:
 
 
 def _beyond(chapters: list, max_chapter: int | None) -> bool:
+    """A whole chapter number past the reader's boundary. Other values are
+    left for the store, which refuses them as bad chapters."""
     if max_chapter is None:
         return False
-    try:
-        return any(int(chapter) > max_chapter for chapter in chapters)
-    except (TypeError, ValueError):
-        return False
+    return any(
+        isinstance(chapter, int)
+        and not isinstance(chapter, bool)
+        and chapter > max_chapter
+        for chapter in chapters
+    )
 
 
 def register_memory_tools(
@@ -162,7 +187,7 @@ def register_memory_tools(
         if None in (field, value):
             return _refused("invalid_arguments")
         messages = await context.reader_messages(ctx.session_id)
-        if not _said_by_reader(arguments.get("reader_words"), messages):
+        if not _said_by_reader(arguments.get("reader_words"), messages, value):
             return _refused("not_the_readers_words")
         return _result(await memory.remember_reader(device, field=field, value=value))
 
@@ -178,16 +203,16 @@ def register_memory_tools(
             return _refused("invalid_arguments")
         if _beyond(chapters, ctx.max_chapter):
             return _refused("past_reader_chapter")
-        if kind == "correction":
-            messages = await context.reader_messages(ctx.session_id)
-            if not _said_by_reader(arguments.get("reader_words"), messages):
-                return _refused("not_the_readers_words")
+        messages = await context.reader_messages(ctx.session_id)
+        if not _said_by_reader(arguments.get("reader_words"), messages, text):
+            return _refused("not_the_readers_words")
         outcome = await memory.keep_note(
             device,
             kind=kind,
             text=text,
             status=status if isinstance(status, str) else None,
             chapters=chapters,
+            turn_id=ctx.turn_id,
         )
         return _result(outcome)
 
@@ -280,12 +305,13 @@ def register_memory_tools(
         ToolDefinition(
             name="keep_note",
             description=(
-                "Keep a short note for later threads. A correction is when the "
-                "reader corrects you or a fact: check the chapters first, then "
-                "set status checked (the chapters agree), disputed (they do "
-                "not; push back), or reader_said (not checked yet). A "
-                "convention is how this reader likes things done. Never mention "
-                "this tool to the reader."
+                "Keep a short note for later threads, grounded in words the "
+                "reader wrote here. A correction is when the reader corrects "
+                "you or a fact: check the chapters first, then set status "
+                "checked (the chapters agree), disputed (they do not; push "
+                "back), or reader_said (not checked yet). A convention is how "
+                "this reader likes things done. Never mention this tool to the "
+                "reader."
             ),
             parameters={
                 "type": "object",
@@ -294,15 +320,9 @@ def register_memory_tools(
                     "text": {"type": "string", "description": "One plain sentence."},
                     "status": {"type": "string", "enum": list(CORRECTION_STATUSES)},
                     "chapters": chapters_schema,
-                    "reader_words": {
-                        **reader_words_schema,
-                        "description": (
-                            "For a correction: the reader's own words from this "
-                            "conversation, copied exactly."
-                        ),
-                    },
+                    "reader_words": reader_words_schema,
                 },
-                "required": ["kind", "text"],
+                "required": ["kind", "text", "reader_words"],
             },
             handler=keep_note,
             effect_kind=EffectKind.INTERNAL_WRITE,

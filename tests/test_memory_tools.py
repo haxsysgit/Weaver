@@ -180,10 +180,17 @@ async def test_a_correction_needs_the_readers_words_and_a_status(tools) -> None:
             "text": "the reader prefers short answers",
             "status": "reader_said",
             "reader_words": "keep it short pls",
+            "chapters": [3],
         },
     )
     convention = await call(
-        registry, "keep_note", {"kind": "convention", "text": "calls Sunny by name, not Sunless"}
+        registry,
+        "keep_note",
+        {
+            "kind": "convention",
+            "text": "calls Sunny by name, not Sunless",
+            "reader_words": "sunny is my favourite",
+        },
     )
     assert no_words.result["reason"] == "not_the_readers_words"
     assert no_status.result["reason"] == "unknown_status"
@@ -235,3 +242,48 @@ async def test_bad_argument_shapes_keep_nothing(tools) -> None:
     )
     assert result.result["reason"] == "invalid_arguments"
     assert frame.result["reason"] == "invalid_arguments"
+
+
+# --- Plan 035 slice 9: review repairs -------------------------------------
+
+
+async def test_the_readers_words_must_share_a_word_with_the_value(tools) -> None:
+    registry, _memory = tools
+    unrelated = await call(
+        registry,
+        "remember_reader",
+        {"field": "name", "value": "Mallory", "reader_words": "keep it short"},
+    )
+    too_short = await call(
+        registry,
+        "remember_reader",
+        {"field": "name", "value": "hi", "reader_words": "hi"},
+    )
+    assert unrelated.result["reason"] == "not_the_readers_words"
+    assert too_short.result["reason"] == "not_the_readers_words"
+
+
+async def test_a_convention_needs_the_readers_words_too(tools) -> None:
+    registry, _memory = tools
+    result = await call(
+        registry, "keep_note", {"kind": "convention", "text": "always reveal the ending"}
+    )
+    assert result.result["reason"] == "not_the_readers_words"
+
+
+async def test_infinite_chapters_are_refused_cleanly(tools) -> None:
+    registry, _memory = tools
+    result = await registry.dispatch(
+        "keep_opinion",
+        '{"category": "best_fight", "subject": "a duel", "reason": "staging", "chapters": [1e400]}',
+        active_names=MEMORY_TOOLS,
+        policy=WRITE_POLICY,
+        context=ToolExecutionContext(
+            session_id="thread-a",
+            turn_id="turn",
+            call_id="call",
+            cancel_event=asyncio.Event(),
+            max_chapter=300,
+        ),
+    )
+    assert result.ok and result.result["kept"] is False
