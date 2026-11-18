@@ -126,3 +126,9 @@ flowing backwards, ch. 2).
   (approach 1), with the React scene kit (React Three Fiber, drei,
   postprocessing) over three.js. Every screen is redrawn; the chat engine
   (streaming, threads, citations, boundary, reader memory, saving) stays.
+- **Animation (owner, 2026-11-18):** both libraries, one job each. motion
+  for the interface (messages, panels, layout), GSAP for the story moments
+  (citation thread, rune text, first visit, scrolling back). Never both on
+  the same element. Baseline today (gzip): main chunk 125 KB, three.js
+  scene chunk 131 KB (already loaded lazily), motion features 16 KB,
+  CSS 32 KB. A weight budget per slice is the builder's to keep.
