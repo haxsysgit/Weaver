@@ -114,3 +114,11 @@ flowing backwards, ch. 2).
   types and legacies is out of scope; it goes to `TODO_future.md` at close.
 - My two calls stand (owner agreed): fanfic is gold and chat is silver; a
   citation thread draws once, then fades.
+- **Two layers (owner, 2026-11-18):** Weaver's own layer (threads, the
+  woven presence, memory fragments, weaves, citation threads) stays the
+  same for every novel; the novel layer (Shadow Slave now: Soul Sea home,
+  the void, the Spell's runes) is a theme.
+- **The novel is inspiration, not a blueprint (owner, 2026-11-18).** The
+  design takes the feel from the chapters and invents freely, especially
+  where the novel says nothing. Canon rules still apply to what Weaver
+  *says* about the story, not to how the app looks.
