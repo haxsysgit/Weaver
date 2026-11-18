@@ -126,10 +126,11 @@ accepted public release is v3.0.0 at Plan 040.
      transcripts. Trial 11's fit follow-up still returns the gap answer
      after a failed publication repair, so the full twelve-trial gate moves
      to Plan 040.
-   - Plans 034 to 040 are drafted in detail in `handoff/plans/` (2026-11-06)
-     for the DeepSeek harness; the summaries below stay as the index. 034
-     closed 2026-11-16 (accepted, gaps recorded). Plans run strictly in
-     number order (owner, 2026-11-16).
+   - Plans 034 to 040 were drafted in detail in `handoff/plans/` (2026-11-06)
+     for the DeepSeek harness; that folder is now a record, and pre-draft
+     work lives in `plans/discussion/` (2026-11-18). 034 closed 2026-11-16
+     (accepted, gaps recorded). Plans that build on each other run in number
+     order; independent plans may run in two lanes (owner, 2026-11-18).
    Measured at Plan 031: semantic search reaches 3127, index notebook
    statements 1000, notebook files 3160, shelf 3232.
 4. **034 Weaver's mind** (closed 2026-11-16, accepted with gaps recorded;

@@ -1,5 +1,10 @@
 # Weaver handoff, 2026-11-06
 
+**Retired 2026-11-18.** Pre-draft planning now lives in `plans/discussion/`
+and becomes a numbered plan through `scripts/scaffold_plan.py` (see
+`.agents/skills/arinze-plans/SKILL.md`). This folder stays as the record of
+the 2026-11-06 handoff; new pre-draft work does not go here.
+
 **Update 2026-11-17.** Plan 035 built, reviewed and live-run (lorekeeper
 voice, per-device memory behind a write scan, the memory step after each
 turn). The re-run on `26a0ce7` passed 10 of 12 in the evaluator record;

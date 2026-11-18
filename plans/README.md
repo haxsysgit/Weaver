@@ -1,8 +1,14 @@
 # Weaver Plans
 
-This directory is the numbered index for admitted Weaver experiments. A plan
-does not become accepted merely because its code exists. Its learning,
-evidence, review, and human decision gates must also be complete.
+This directory is the numbered index for Weaver work. A plan does not become
+accepted merely because its code exists. Its learning, evidence, review, and
+human decision gates must also be complete.
+
+Statuses, in execution order: **Idea (provisional)**, **Drafted**,
+**Admitted**, **Closed**. An idea is brainstormed in `plans/discussion/`
+(with a provisional number, nothing runs from it) and becomes a drafted plan
+through `scripts/scaffold_plan.py`. At most 3 plans are drafted at once and at
+most 2 run at once, each in its own lane.
 
 | Plan | Status | Depends on | Scope |
 | --- | --- | --- | --- |
@@ -50,11 +56,11 @@ evidence, review, and human decision gates must also be complete.
 | [035 - Weaver's voice and memory](035-weavers-voice-and-memory.md) | Closed 2026-11-17, accepted with gaps recorded (10 of 12 trials) | Plan 034 closed | Voice samples to the owner first, then opinions Weaver keeps, the reader's profile and Weaver's notes per device behind a write scan, and the fanfic thread's voice |
 | [035.5 - Weaver on Linux](035.5-weaver-on-linux.md) | Closed 2026-11-18, accepted | Plan 035 closed | Baseline on Ubuntu, the weekly refresh as a systemd user timer with desktop alerts, a model cache that survives reboots, Linux docs; line endings and file modes proposed to the owner |
 | [036 - Into the Spell](036-into-the-spell.md) | Admitted 2026-11-18 | Plan 035.5 closed | Discovery: read how the novel shows the Spell, gather immersive references, make three or four directions with images, choose one with the owner, write the design and the build plans |
-| 037 - The Soul Sea and the themes | Not yet drafted | Plan 036 closed | Soul Sea redesign and novel-grounded themes on 036's engine |
-| 038 - Echoes and small delights | Not yet drafted | Plan 037 closed; optional | Echo companion, Memories, spoiler fog, "I just read chapter N" |
-| 039 - Weaver's home on the web | Not yet drafted | Plan 038 closed or skipped | Domain, Cloudflare Tunnel, EC2 or new host, staging, backups, monitoring |
+| 037 - The Soul Sea and the themes | Idea (provisional) | Plan 036 closed | Soul Sea redesign and novel-grounded themes on 036's engine |
+| 038 - Echoes and small delights | Idea (provisional) | Plan 037 closed; optional | Echo companion, Memories, spoiler fog, "I just read chapter N" |
+| 039 - Weaver's home on the web | Idea (provisional) | Plan 038 closed or skipped | Domain, Cloudflare Tunnel, EC2 or new host, staging, backups, monitoring |
 | [039.1 - Finding the deciding passage](039.1-finding-the-deciding-passage.md) | Drafted 2026-11-16 | Plan 039 closed (owner: plans always run in number order) | The Plan 033 check set: find the exact scene described and both sides' key facts before answering; diagnose from tool traces first, then fix the measured layer, prove on a held-out set |
-| 040 - Weaver v3.0.0 qualification and release | Not yet drafted | Plan 039 closed | All twelve trials on the final build, performance audit, owner acceptance, public v3.0.0 |
+| 040 - Weaver v3.0.0 qualification and release | Idea (provisional) | Plan 039 closed | All twelve trials on the final build, performance audit, owner acceptance, public v3.0.0 |
 
 ## Execution order
 
@@ -112,7 +118,9 @@ Plan 031 is drafted or admitted.
 Native Android and iOS remain deferred until Plan 013 proves a concrete PWA
 limitation.
 
-Only one numbered plan may be active in implementation or review at a time.
+One plan may be running per lane. Independent plans may run in two lanes at
+once, each with a declared write-set, its own worktree and its own data paths
+(owner, 2026-11-18); plans that build on each other run in number order.
 Plan 008's final owner decision is recorded as **Accepted** in
 `deliverables/008-wire-conversation-loop/decision.md` (2026-07-31).
 Plan 009 is **Accepted** (2026-07-31); its decision is recorded in

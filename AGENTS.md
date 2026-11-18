@@ -2,26 +2,35 @@
 
 ## Scope
 
-- Work on one explicitly admitted numbered plan at a time. Parallel plans
-  only under the `arinze-plans` skill rules (disjoint files, serial owner
-  gates, budget cap).
+- Work on one explicitly admitted numbered plan per lane. Sequence follows
+  declared dependencies, not proximity: a plan that uses another plan's
+  output runs after it, and independent plans run concurrently only with a
+  declared write-set, its own worktree and its own data paths, under the
+  `arinze-plans` rules.
+- At most 3 plans drafted, at most 2 running.
 - Read the smallest relevant repository slice.
 
 ## Planning workflow
 
 - The numbered-plan system is codified in the `arinze-plans` skill:
-  lifecycle, gates, plan anatomy, deliverables, budgets, parallel rules.
-  Load it before drafting, admitting, or closing any plan.
-- Status ladder has three states only: drafted → admitted → closed.
-  Implementation and review happen inside admitted; there is no separate
-  status for them.
-- New plans start from `plans/_TEMPLATE.md` via
-  `uv run python scripts/scaffold_plan.py NNN slug` (creates the plan doc
-  and the six deliverable files). Fill every section; no plan doc from
+  lifecycle, gates, plan anatomy, deliverables, budgets, discussion, lanes,
+  versions. Load it before brainstorming, drafting, admitting, or closing
+  any plan.
+- Four states only: idea → drafted → admitted → closed. An idea lives in
+  `plans/discussion/`; drafting freezes its direction. Implementation and
+  review happen inside admitted; there are no separate states for them.
+- Brainstorm in `plans/discussion/` via
+  `uv run python scripts/scaffold_plan.py NNN slug --discussion`. Draft from
+  `plans/_TEMPLATE.md` via `uv run python scripts/scaffold_plan.py NNN slug`
+  (creates the six deliverable files). Fill every section; no plan doc from
   memory.
+- Before admission, re-vet the plan against HEAD and record `Verified at`.
 - Every plan carries a Budget (estimated tokens + cost, fake vs live) in
   its Status block. Subagents are the default executor where available;
   on a tight budget, run sequential and solo.
+- Commits start with `Plan NNN - Slice K: `, `Plan NNN: `,
+  `Discussion NNN: `, `Checkpoint MMM: `, or `Plans: `. Nothing else. A
+  release plan ships `vX.Y.Z`; no plan, no tag.
 
 ## Learning and decisions
 
@@ -278,3 +287,16 @@ Lessons from Plans 021-030, each from a bug that tests let through:
   NOT hit the Secrets Manager Agent daemon directly. MUST use
   `{{resolve:secretsmanager:secret-id:SecretString:json-key}}` with
   `asm-exec` so the secret resolves at runtime without entering context.
+
+## Workspace boundaries
+
+This workspace is Weaver. The HaxJobs campaign lives in `~/HJharness` and belongs to
+its own profile and its own agent, Hax. Keep the two apart:
+
+- Do not use the campaign's tools or data here (`hj`, `hj-policy`, `hax-activity`, its ledger,
+  applicant model, plans or work logs), and do not apply its rules to Weaver work. This profile
+  does not load them; reaching for them by path is the same mistake.
+- Do not carry job-search context into a Weaver session, or Weaver work into a HaxJobs session.
+  If a request is about the job search, say so and stop: it belongs in HaxJobs.
+- This profile is the shipped `web` composition, with no campaign plugins, persona or
+  instruction files. Weaver itself runs with `uv run weaver web --port 8787`.

@@ -1,17 +1,27 @@
 # Plan {{NNN}}: {{Title}}
 
 > **Executor instructions:** One or two sentences: what this plan does, in
-> plain terms, and the one rule that governs how it must be run.
+> plain terms, and the one rule that governs how it must be run. Write it
+> for an agent that never saw the drafting session: name files and lines,
+> assume no shared context, no "as discussed".
 
 ## Status
 
 - **Tooling:** repo commands via `uv` (pytest, ruff, pip check).
 - **State:** drafted (awaiting owner admission).
-- **Depends on:** plans that must be closed before this one, with reason.
+- **Depends on:** plans that must be closed before this one, with reason;
+  write `none` when independent.
+- **Lane:** single. When parallel, the write-set as the paths this plan may
+  write, plus its own worktree, port and data paths.
 - **Priority:** P1/P2/P3
 - **Effort:** S/M/L
 - **Risk:** Low/Medium/High (and why)
-- **Budget:** estimated tokens + cost, fake vs live
+- **Budget:** estimated tokens + cost, fake vs live; who executes.
+- **Release:** none, or `vX.Y.Z` if this plan ships a version.
+- **Verified at:** commit sha the plan's file references were checked
+  against; `pending` until the re-vet before admission.
+- **Drafted in / executed in:** model and harness, for example
+  `Claude Code (Opus 5.5)` / `DSH (deepseek-flash)`.
 
 ## Owner direction (locked decisions)
 

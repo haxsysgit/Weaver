@@ -8,17 +8,26 @@ scaffold script replaces them.
 # Plan {{NNN}}: {{Title}}
 
 > **Executor instructions:** One or two sentences: what this plan does, in
-> plain terms, and the one rule that governs how it must be run.
+> plain terms, and the one rule that governs how it must be run. Written for
+> an agent that never saw the drafting session.
 
 ## Status
 
 - **Tooling:** repo commands via `uv` (pytest, ruff, ...).
-- **State:** drafted / admitted / closed (one of the three).
-- **Depends on:** plans that must be closed before this one, with reason.
+- **State:** drafted / admitted / closed (one of the three; `idea` lives in
+  `plans/discussion/` and never reaches this template).
+- **Depends on:** plans whose output this one uses, with reason; `none` when
+  independent.
+- **Lane:** `single`, or `parallel` plus the write-set (paths this plan may
+  write), worktree, port and data paths.
 - **Priority:** P1/P2/P3
 - **Effort:** S/M/L
 - **Risk:** Low/Medium/High (and why)
-- **Budget:** estimated tokens + cost, fake vs live
+- **Budget:** estimated tokens + cost, fake vs live; who executes.
+- **Release:** `none`, or `vX.Y.Z` when this plan ships a version.
+- **Verified at:** commit sha the file references were checked against;
+  `pending` until the re-vet before admission.
+- **Drafted in / executed in:** model and harness.
 
 ## Owner direction (locked decisions)
 

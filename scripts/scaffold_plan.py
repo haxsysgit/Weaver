@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
-"""Scaffold a new numbered plan: plans/NNN-slug.md + deliverables/NNN-slug/.
+"""Scaffold a numbered plan, or an idea in discussion.
 
 Usage:
     uv run python scripts/scaffold_plan.py NNN slug
     uv run python scripts/scaffold_plan.py NNN.M slug
+    uv run python scripts/scaffold_plan.py NNN slug --discussion
 
-Creates plans/NNN-slug.md from plans/_TEMPLATE.md and the six deliverable
-files (plan.md, README.md, learning.md, results.md, review-ledger.md,
-decision.md). Refuses to overwrite existing paths.
+A drafted plan is plans/NNN-slug.md from plans/_TEMPLATE.md plus the six
+deliverable files (plan.md, README.md, learning.md, results.md,
+review-ledger.md, decision.md).
+
+--discussion writes plans/discussion/NNN-slug.md instead: a pre-draft idea
+with no deliverables, nothing runs from it. It creates the folder when
+missing and never touches plans/README.md (the index is edited by hand at
+gate moments). Both modes refuse to overwrite existing paths.
 """
 
 from __future__ import annotations
@@ -15,6 +21,7 @@ from __future__ import annotations
 import re
 import sys
 import tempfile
+from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -50,6 +57,41 @@ def _stub(title: str, state: str) -> str:
     return f"# {title}\n\n{state}\n"
 
 
+DISCUSSION_STUB = """# Plan {number}: {{Title}}
+
+Status: idea. Provisional number; nothing runs from this doc.
+Opened: {opened}
+Depends on (guess): none
+
+## What it is
+
+## The owner's direction so far
+
+## Open questions
+
+## Candidate directions
+
+## What would have to be true to close it
+"""
+
+
+def discuss(number: str, slug: str, root: Path = ROOT) -> list[Path]:
+    """Create plans/discussion/NNN-slug.md. Raises on bad input or a clash."""
+    if not NUMBER_RE.match(number):
+        raise ValueError(f"plan number must be 3 digits, got {number!r}")
+    if not SLUG_RE.match(slug):
+        raise ValueError(f"slug must be lowercase-hyphenated, got {slug!r}")
+    folder = root / "plans" / "discussion"
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder / f"{number}-{slug}.md"
+    if path.exists():
+        raise FileExistsError(f"{path.name} already exists")
+    path.write_text(
+        DISCUSSION_STUB.format(number=number, opened=date.today().isoformat())
+    )
+    return [path]
+
+
 def scaffold(number: str, slug: str, root: Path = ROOT) -> list[Path]:
     """Create the plan doc and deliverable files. Raises on bad input."""
     if not NUMBER_RE.match(number):
@@ -77,11 +119,15 @@ def scaffold(number: str, slug: str, root: Path = ROOT) -> list[Path]:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 2:
+    discussion = "--discussion" in argv
+    args = [arg for arg in argv if not arg.startswith("--")]
+    if len(args) != 2:
         print(__doc__)
         return 2
     try:
-        created = scaffold(argv[0], argv[1])
+        created = (
+            discuss(args[0], args[1]) if discussion else scaffold(args[0], args[1])
+        )
     except (ValueError, FileExistsError, FileNotFoundError) as error:
         print(f"error: {error}")
         return 1
@@ -116,6 +162,22 @@ def demo() -> None:
             try:
                 scaffold(*bad, root=root)
                 raise AssertionError(f"scaffold must refuse {bad}")
+            except ValueError:
+                pass
+
+        idea = discuss("040", "demo-idea", root=root)
+        assert idea[0] == root / "plans" / "discussion" / "040-demo-idea.md"
+        assert "Status: idea" in idea[0].read_text()
+        assert not (root / "deliverables" / "040-demo-idea").exists()
+        try:
+            discuss("040", "demo-idea", root=root)
+            raise AssertionError("discuss must refuse existing names")
+        except FileExistsError:
+            pass
+        for bad in (("40", "demo"), ("040", "Bad_Slug")):
+            try:
+                discuss(*bad, root=root)
+                raise AssertionError(f"discuss must refuse {bad}")
             except ValueError:
                 pass
     print("demo ok")
