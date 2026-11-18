@@ -132,3 +132,9 @@ flowing backwards, ch. 2).
   the same element. Baseline today (gzip): main chunk 125 KB, three.js
   scene chunk 131 KB (already loaded lazily), motion features 16 KB,
   CSS 32 KB. A weight budget per slice is the builder's to keep.
+- **Design approved (owner, 2026-11-18):** `design.md` in this folder.
+  Execution split (owner, same day): every build slice is marked `flash`
+  (DeepSeek Flash in DSH: mechanical slices with a clear pass or fail) or
+  `claude` (Claude Code: the slices that set the look), and Claude reviews
+  every flash slice. Estimate: 3 to 5M working tokens to build, plus 1 to
+  2.5M for reviews, across about 18 slices.

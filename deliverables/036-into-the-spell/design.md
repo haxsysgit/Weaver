@@ -1,7 +1,9 @@
 # Plan 036 design: a new face for Weaver
 
-Status: draft for owner approval, 2026-11-18. Builder check done the same
-day. Sections 7.6 and 7.7 confirmed by the owner the same day. Written from the Plan 036
+Status: **approved by the owner, 2026-11-18** ("approve it"). Builder
+check done the same day. Execution split: each build slice is marked
+`flash` (DeepSeek Flash in DSH) or `claude` (Claude Code), and Claude
+reviews every flash slice. Written from the Plan 036
 brainstorm; every owner decision below is recorded with its date in
 `results.md`. Items marked **(my call)** were decided by the executor and
 can be overruled.
