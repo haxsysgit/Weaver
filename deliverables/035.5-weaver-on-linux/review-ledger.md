@@ -31,6 +31,6 @@ the owner may ask for one before close.
 
 ## Not reviewed
 
-- The timer has not fired for real: enabling it is the owner's call.
+- The timer is enabled (2026-11-18) but has not fired yet; the first run is Sat 2026-11-21 10:00.
 - The first Saturday run will download the dense embedding model
   (about 1.3 GB) into the new cache inside the unit's 30-minute limit.

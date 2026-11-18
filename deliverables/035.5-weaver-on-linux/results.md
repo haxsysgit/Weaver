@@ -15,7 +15,7 @@ from fnm. Branch `plan-035` from `76b1053`. Dates 2026-11-18.
 | Live turn (`uv run weaver web --port 8016`) | library at 3246 (shelf and search); one question answered with a chapter cite; no server errors | not re-run (no answer-path change) |
 | `weaver library inspect shadow-slave` | 3246 valid, 0 missing or broken; 3281 `owner_only_permission_required` | unchanged (owner decision) |
 | `weaver refresh` (preview) | one probe at chapter 3247, an unattended action | unchanged |
-| `weaver schedule status` | `ERROR the weekly task uses Windows Task Scheduler` | reads the systemd timer |
+| `weaver schedule status` | `ERROR the weekly task uses Windows Task Scheduler` | timer active and enabled, next run Sat 2026-11-21 10:00 GMT |
 
 The Windows floors at the close of 033.6 were 934 passed and 4 skipped; the
 four skips were POSIX-only mode tests, which now run and pass.
@@ -46,7 +46,10 @@ four skips were POSIX-only mode tests, which now run and pass.
    Windows task's limit), `Nice=10`. `install` reloads and runs `enable
    --now`; `remove` disables and deletes; `status` reads `systemctl --user
    show`. The CLI picks the branch with `sys.platform`; Windows is
-   untouched. Not installed: the owner decides.
+   untouched. Installed and enabled on 2026-11-18 on the owner's yes
+   (`uv run weaver schedule install`); `systemctl --user list-timers` shows
+   the next run on Sat 2026-11-21 10:00 GMT and `systemd-analyze --user
+   verify` accepts the installed units. It has not fired yet.
 5. **Alerts.** The scheduled run on Linux calls `notify-send
    --app-name=Weaver` and also prints the alert for the journal. A test
    notification sent from inside a transient systemd user unit (the
@@ -97,7 +100,7 @@ four skips were POSIX-only mode tests, which now run and pass.
 
 ## Open owner decisions
 
-1. Enable the timer (`uv run weaver schedule install`).
+1. ~~Enable the timer~~: done 2026-11-18 (owner: "Yes, enable it").
 2. Line endings: restore the 49 CRLF-only files to LF; optionally convert
    the 22 edited files to LF; optionally add a `.gitattributes` LF rule.
 3. File modes: harden `novels/` and the private files now, or let the first
