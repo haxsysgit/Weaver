@@ -122,3 +122,7 @@ flowing backwards, ch. 2).
   design takes the feel from the chapters and invents freely, especially
   where the novel says nothing. Canon rules still apply to what Weaver
   *says* about the story, not to how the app looks.
+- **How to build (owner, 2026-11-18):** a new face on the same chat engine
+  (approach 1), with the React scene kit (React Three Fiber, drei,
+  postprocessing) over three.js. Every screen is redrawn; the chat engine
+  (streaming, threads, citations, boundary, reader memory, saving) stays.
