@@ -1,1 +1,5 @@
+# Keep LF in the repository and in working copies on every platform.
+# Windows tools wrote CRLF and churned whole files (Plan 035.5).
+* text=auto eol=lf
+
 src/weaver/web/dist/assets/*.js -whitespace
