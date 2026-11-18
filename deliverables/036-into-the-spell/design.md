@@ -1,8 +1,7 @@
 # Plan 036 design: a new face for Weaver
 
 Status: draft for owner approval, 2026-11-18. Builder check done the same
-day. Sections 7.6 and 7.7 (getting around, Settings) are proposals the
-owner has not yet confirmed. Written from the Plan 036
+day. Sections 7.6 and 7.7 confirmed by the owner the same day. Written from the Plan 036
 brainstorm; every owner decision below is recorded with its date in
 `results.md`. Items marked **(my call)** were decided by the executor and
 can be overruled.
@@ -206,7 +205,7 @@ opening the Soul Sea. It can be deferred, as today.
 - The old "Appraisal" step is retired (no game layer). The choice between
   three Soul Seas lives in Settings > Appearance and is retired there.
 
-### 7.6 Getting around (proposed, owner to confirm)
+### 7.6 Getting around (owner confirmed, 2026-11-18)
 
 The owner wants a new way of using Weaver, not today's layout restyled
 (2026-11-18: "todays look need a huge revamp"). Today's app is used only
@@ -227,7 +226,7 @@ as a list of things a reader can do; its layout is not kept.
 - **Settings** opens from a small mark in the top right corner, on the sea
   and in the room.
 
-### 7.7 Settings (proposed, owner to confirm)
+### 7.7 Settings (owner confirmed, 2026-11-18)
 
 Built from what a reader needs, not from today's panel. Plain labels.
 
