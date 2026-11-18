@@ -83,3 +83,18 @@ flowing backwards, ch. 2).
 | B. The Soul Sea | Home is a dark sea under one sun; each kept thread is a sphere of light over the water (fanfic in gold) | chs. 16, 278 | Turns the thread list into a place; calm on phones | It is a home screen, not the chat itself |
 | C. Scenes behind the words | The place the conversation is in fills the room; scrolling back rewinds to earlier places, colour draining | the novel's places | The most immersive and the most "Shadow Slave" | Every place needs art; spoiler-gating by place; heaviest on phones |
 | D. Weaver weaves | Weaver has a presence: a woven oval with seven embers that tightens while thinking and flares per chapter read | ch. 278 | Gives Weaver a face without a face; doubles as the thinking state | The prototype art is crude; a real version needs care to not look like a yarn ball |
+
+## Slice 5: Brainstorm (2026-11-18)
+
+- **Owner's pick: blend A, B and D.** B (the Soul Sea) is home; A (the
+  void) is the room you talk in; D (the woven presence with seven embers)
+  is Weaver's presence and its thinking state. C's place scenes wait for art.
+- **Owner's correction:** "scrolling back" means scrolling up through the
+  old messages of a chat. Behind older messages the weave runs backwards
+  (the reversed dream of ch. 2) and runs forward again on the way back
+  down; older stretches are marked by when they were said, not by chapter.
+- **Far future, not 036:** a storytelling mode where Weaver walks the reader
+  through the story from chapter 1 to the latest, showing progression and
+  scenes. Goes to `TODO_future.md` at close.
+- Prototype of the blended room: `private/design-labs/036/e-room.html`
+  (normal and `?older`), images `shots/e1-*` and `shots/e2-*`.
