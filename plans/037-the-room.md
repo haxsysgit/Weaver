@@ -17,6 +17,8 @@
   `/usr/bin/google-chrome-stable` for screenshots
   (`.weaver/tools/shoot.mjs`). No Blender in this plan. Fake mode only:
   `uv run weaver web --port 8016 --fake`.
+  Flash slices run in DSH's desktop profile (smoke-tested 2026-11-18:
+  node, npm, uv, `read_image`, `AGENTS.md`, repo skills; no HaxJobs tools).
 - **State:** drafted (awaiting owner admission).
 - **Depends on:** Plan 036 closed (it holds the approved design this plan
   builds).

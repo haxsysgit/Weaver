@@ -143,3 +143,13 @@ flowing backwards, ch. 2).
   "The weave room and sound" kept as discussion docs under
   `plans/discussion/` (three-draft cap; they are drafted when the plan
   before them closes).
+- **DSH is ready for the flash slices (2026-11-18).** Desktop profile,
+  `deepseek-flash`. A read-only smoke test in a fresh DSH session on the
+  weaver folder found node 24.22.3, npm, npx, uv 0.13.8, vitest 5.0.1,
+  `uv run --frozen` working; `AGENTS.md` and the repo skills
+  (`arinze-plans` among them) loaded; `read_image` read a screenshot
+  correctly; the only MCP server is `blender` (added to
+  `~/.dsh/profiles/desktop/cordis.patch.yml` the same day, with the
+  absolute `uvx` path). No HaxJobs (`hj`) tools in that session; an
+  earlier DSH session on the weaver folder had them, so Weaver work runs
+  only in the desktop profile.
