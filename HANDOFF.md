@@ -7,7 +7,8 @@ user timer (Saturday 10:00, `Persistent=true`) and alerts go through
 `notify-send`; the embedding models live in `~/.cache/weaver/fastembed`
 because `/tmp` is cleared at boot. No `UV_PYTHON_INSTALL_DIR` prefix and no
 `weaver.cmd`: run `uv run weaver web --port 8787`. See
-`deliverables/035.5-weaver-on-linux/results.md`.
+`deliverables/035.5-weaver-on-linux/results.md`. Plan 035.5 closed
+2026-11-18 (accepted); the weekly timer is enabled. Next is Plan 036.
 
 **Latest (2026-11-17).** Plan 035 is closed, accepted by the owner with
 gaps recorded. The chat voice is now the lorekeeper (the
