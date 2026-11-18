@@ -138,3 +138,8 @@ flowing backwards, ch. 2).
   `claude` (Claude Code: the slices that set the look), and Claude reviews
   every flash slice. Estimate: 3 to 5M working tokens to build, plus 1 to
   2.5M for reviews, across about 18 slices.
+- **Build plans (owner numbers, 2026-11-18):** Plan 037 "The room" drafted
+  in `plans/037-the-room.md`; 037.1 "Home and the first visit" and 037.2
+  "The weave room and sound" kept as discussion docs under
+  `plans/discussion/` (three-draft cap; they are drafted when the plan
+  before them closes).
