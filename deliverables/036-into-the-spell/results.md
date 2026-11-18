@@ -98,3 +98,19 @@ flowing backwards, ch. 2).
   scenes. Goes to `TODO_future.md` at close.
 - Prototype of the blended room: `private/design-labs/036/e-room.html`
   (normal and `?older`), images `shots/e1-*` and `shots/e2-*`.
+
+### Owner decisions, 2026-11-18 (second round)
+
+- **Weaver opens on the Soul Sea.** Home is the sea; from there the reader
+  starts a new chat or returns to the last one.
+- **Naming (owner's concept):** Weaver's memory is the whole world of the
+  novel; each chat is a **memory fragment**, a recollection where Weaver
+  recalls the novel and talks with the reader.
+- **Scope: Weaver is a novel lorekeeper, not only for Shadow Slave.** Lord
+  of the Mysteries is the likely next novel, and its world would come in as
+  a theme the reader can switch to. 036 builds Weaver's own look plus the
+  Shadow Slave world only.
+- **No game layer in 036.** A random First Nightmare with Aspects, Soul Sea
+  types and legacies is out of scope; it goes to `TODO_future.md` at close.
+- My two calls stand (owner agreed): fanfic is gold and chat is silver; a
+  citation thread draws once, then fades.
