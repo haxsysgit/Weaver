@@ -61,3 +61,25 @@ Lesson: a literal geometric translation of the canon looks generic. What the
 canon stresses is fineness, scale, light, danger in looking too long, and a
 Spell that answers. The directions are defined by moments of experience
 first, geometry second.
+
+## Slice 4: Four directions (2026-11-18)
+
+Throwaway prototypes in `private/design-labs/036/` (canvas 2D, no
+dependencies), captured in real Chrome at 1440x900 and 390x844 into
+`private/design-labs/036/shots/`. Not committed: they use the owner's saved
+images as stand-in art. Chat sample lines are illustrative; only ch. 2 and
+ch. 3 citations were checked; the others are marked `ch. ?`.
+
+The owner's steer for this slice (2026-11-18): Weaver is at its core an
+agent harness for novels, so chatting with Weaver is the centre; keep it
+simple; ground everything in Shadow Slave; the references are not the
+target. The owner's example: scrolling back through old chat changes the
+scene, like time reversing (the novel's own image: Sunny's dream of time
+flowing backwards, ch. 2).
+
+| Direction | The idea | Canon | Strength | Cost and risk |
+| --- | --- | --- | --- | --- |
+| A. The Spell speaks | The chat lives in the void between dream and reality; a cited chapter ties a gold thread to a star; scrolling back makes the weave stream backwards | chs. 2, 15, 351, 743 | Closest to the chat; cheap to render; the citation thread makes retrieval visible | The void alone can drift back toward "chat with a starry background" |
+| B. The Soul Sea | Home is a dark sea under one sun; each kept thread is a sphere of light over the water (fanfic in gold) | chs. 16, 278 | Turns the thread list into a place; calm on phones | It is a home screen, not the chat itself |
+| C. Scenes behind the words | The place the conversation is in fills the room; scrolling back rewinds to earlier places, colour draining | the novel's places | The most immersive and the most "Shadow Slave" | Every place needs art; spoiler-gating by place; heaviest on phones |
+| D. Weaver weaves | Weaver has a presence: a woven oval with seven embers that tightens while thinking and flares per chapter read | ch. 278 | Gives Weaver a face without a face; doubles as the thinking state | The prototype art is crude; a real version needs care to not look like a yarn ball |
