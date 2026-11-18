@@ -27,6 +27,7 @@ Loaded values are injected into ``os.environ`` so existing readers
 """
 
 import os
+import sys
 import tomllib
 from pathlib import Path
 from types import MappingProxyType
@@ -95,6 +96,33 @@ def _resolve_chat_model(model: str) -> str:
     )
 
 
+MODEL_CACHE_ENV = "FASTEMBED_CACHE_PATH"
+
+
+def default_model_cache() -> Path | None:
+    """A cache for the embedding models that survives a reboot.
+
+    fastembed keeps its models under the temp folder by default. Windows
+    keeps %TEMP% across reboots, but Linux clears /tmp at boot, so every
+    restart re-downloaded about 1.3 GB before the first search. Off
+    Windows the models live in the user's cache folder instead
+    ($XDG_CACHE_HOME/weaver/fastembed, else ~/.cache/weaver/fastembed).
+    """
+    if sys.platform == "win32":
+        return None
+    base = os.environ.get("XDG_CACHE_HOME") or str(Path.home() / ".cache")
+    return Path(base) / "weaver" / "fastembed"
+
+
+def use_persistent_model_cache() -> None:
+    """Point fastembed at `default_model_cache()` unless the owner chose one."""
+    if os.environ.get(MODEL_CACHE_ENV):
+        return
+    cache = default_model_cache()
+    if cache is not None:
+        os.environ[MODEL_CACHE_ENV] = str(cache)
+
+
 def load_startup_config() -> Mapping[str, Any]:
     """Load `.env` then `.weaver/config.toml` from the current directory.
 
@@ -108,6 +136,7 @@ def load_startup_config() -> Mapping[str, Any]:
     if dotenv_path.is_file():
         for key, value in _parse_dotenv(dotenv_path).items():
             os.environ[key] = value
+    use_persistent_model_cache()
 
     config_path = Path.cwd() / CONFIG_FILE
     if not config_path.is_file():

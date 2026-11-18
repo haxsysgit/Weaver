@@ -1,12 +1,13 @@
 # Weaver handoff
 
-**Moved (2026-11-17).** The repo now lives at
-`C:\Users\haxsy\linux-migration\weaver` and goes to Ubuntu with the
-migration kit beside it (`../README.md`). Work continues on branch
-`plan-035` (pushed; `plan-030` is deleted). The Windows weekly refresh task
-and the `weaver.cmd` launchers are removed, so the library does not refresh
-until a Linux timer replaces them (first Linux job). On Linux, drop the
-`UV_PYTHON_INSTALL_DIR` prefix.
+**On Linux (2026-11-18).** The repo lives at `~/weaver` on Ubuntu (copied
+from Windows on 2026-11-17; the old checkout is read-only history). Plan
+035.5 made it Linux-first: `weaver schedule install` now writes a systemd
+user timer (Saturday 10:00, `Persistent=true`) and alerts go through
+`notify-send`; the embedding models live in `~/.cache/weaver/fastembed`
+because `/tmp` is cleared at boot. No `UV_PYTHON_INSTALL_DIR` prefix and no
+`weaver.cmd`: run `uv run weaver web --port 8787`. See
+`deliverables/035.5-weaver-on-linux/results.md`.
 
 **Latest (2026-11-17).** Plan 035 is closed, accepted by the owner with
 gaps recorded. The chat voice is now the lorekeeper (the
@@ -77,17 +78,20 @@ PWA. DeepSeek only. Do not push `main`, deploy, or tag without the owner.
 
 ```bash
 uv run weaver web --port 8016 --fake            # UI
-npm --prefix src/weaver/web/frontend run build  # rebuild served bundle
-npx vitest run                                  # 183 frontend tests (repo root)
+npm run build                                   # rebuild served bundle (repo root)
+npx vitest run                                  # 185 frontend tests (repo root)
 uv run pytest tests/test_web.py -q              # web tests
 weaver refresh                                  # preview what the source has
 weaver refresh --scheduled                      # what the weekly task runs
 weaver schedule status                          # or install / remove
 ```
 
-The weekly task "Weaver library refresh" runs `pythonw -m weaver refresh
---scheduled` every Saturday at 10:00 local time, as the signed-in user, and
-catches up on the next start if the PC was off. It appends only; any other
+The weekly refresh runs `uv run --frozen weaver refresh --scheduled` every
+Saturday at 10:00 local time, as the signed-in user, and catches up on the
+next start if the PC was off. On Linux it is the systemd user timer
+`weaver-library-refresh.timer` (`systemctl --user list-timers`; run log in
+`journalctl --user -u weaver-library-refresh`); on Windows it was the Task
+Scheduler task "Weaver library refresh". It appends only; any other
 action is recorded as `needs_owner`. Status lives in
 `.weaver/corpus/shadow-slave/library-status.json` and shows in Settings.
 
@@ -210,8 +214,11 @@ will want screenshots and tests per slice.
 - **Local owner key switch.** `WEAVER_LOCAL_OWNER_KEY=1` in `.env` lets
   chats on this machine use `DEEPSEEK_KEY` with no allowance. Off by default;
   never set it on a shared or tunnelled server.
-- **Windows dev setup.** Every `uv` command needs
-  `UV_PYTHON_INSTALL_DIR=$USERPROFILE/.uv/python` (MSIX `%APPDATA%`).
+- **Linux dev setup.** Python 3.11 comes from uv, Node from fnm. The old
+  Windows prefix (`UV_PYTHON_INSTALL_DIR=$USERPROFILE/.uv/python`) is not
+  needed. Library files are owner-only (700/600); a copy from another
+  machine arrives 755/644 and `weaver library inspect` flags it until the
+  next refresh hardens it.
 - Live spend is about $5 of a $20 cap, not reconciled to the cent.
 
 ## Session log (condensed, latest stretch)
@@ -241,8 +248,7 @@ screenshots before claims.
 
 ## Handoff prompt for the next agent
 
-> Work in the Weaver repo on Windows (every `uv` command needs
-> `UV_PYTHON_INSTALL_DIR=$USERPROFILE/.uv/python`). Weaver is a Shadow Slave
+> Work in the Weaver repo at `~/weaver` on Ubuntu. Weaver is a Shadow Slave
 > reading companion. Plan 030 is closed and v2.0.0 is released offline. Read
 > `HANDOFF.md`, `TODO_future.md` (roadmap 031 to 040), and the Plan 030
 > deliverables first, and `docs/checkpoints/021-030.md` for the methods

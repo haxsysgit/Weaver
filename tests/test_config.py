@@ -191,3 +191,44 @@ async def test_fake_web_works_with_configured_model(tmp_path, monkeypatch) -> No
         assert result.exit_reason == "completed"
     finally:
         await runtime.close()
+
+
+def test_linux_models_live_in_the_user_cache_not_tmp(tmp_path, monkeypatch) -> None:
+    # /tmp is cleared at boot on Linux; the models must survive a restart.
+    monkeypatch.setattr(config.sys, "platform", "linux")
+    monkeypatch.delenv("FASTEMBED_CACHE_PATH")
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
+    monkeypatch.chdir(tmp_path)
+
+    config.load_startup_config()
+
+    assert os.environ["FASTEMBED_CACHE_PATH"] == str(tmp_path / "cache" / "weaver" / "fastembed")
+
+
+def test_linux_model_cache_falls_back_to_home_cache(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(config.sys, "platform", "linux")
+    monkeypatch.delenv("XDG_CACHE_HOME", raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    assert config.default_model_cache() == tmp_path / ".cache" / "weaver" / "fastembed"
+
+
+def test_a_chosen_model_cache_wins(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(config.sys, "platform", "linux")
+    monkeypatch.delenv("FASTEMBED_CACHE_PATH")
+    _write(tmp_path, ".env", "FASTEMBED_CACHE_PATH=/srv/models\n")
+    monkeypatch.chdir(tmp_path)
+
+    config.load_startup_config()
+
+    assert os.environ["FASTEMBED_CACHE_PATH"] == "/srv/models"
+
+
+def test_windows_keeps_fastembed_default(tmp_path, monkeypatch) -> None:
+    # %TEMP% survives a reboot on Windows; moving it would re-download there.
+    monkeypatch.setattr(config.sys, "platform", "win32")
+    monkeypatch.delenv("FASTEMBED_CACHE_PATH")
+    monkeypatch.chdir(tmp_path)
+
+    config.load_startup_config()
+
+    assert "FASTEMBED_CACHE_PATH" not in os.environ

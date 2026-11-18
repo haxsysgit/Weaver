@@ -116,8 +116,9 @@ def _parser() -> argparse.ArgumentParser:
 
     schedule = subcommands.add_parser(
         "schedule",
-        help="Manage the weekly library refresh in Windows Task Scheduler "
-        "(Saturdays 10:00, catches up after the PC was off).",
+        help="Manage the weekly library refresh: a systemd user timer on "
+        "Linux, Task Scheduler on Windows (Saturdays 10:00, catches up "
+        "after the PC was off).",
     )
     schedule.add_argument(
         "schedule_command",
@@ -297,10 +298,14 @@ def _project_root() -> Path:
 
 
 def _notifier():
-    if os.name == "nt":
+    if sys.platform == "win32":
         from .corpus.schedule_windows import windows_toast
 
         return windows_toast
+    if sys.platform.startswith("linux"):
+        from .corpus.schedule_linux import desktop_notify
+
+        return desktop_notify
     return lambda title, body: print(f"ALERT {title}: {body}")
 
 
@@ -359,14 +364,32 @@ def _run_library_index(*, check_only: bool) -> int:
 def _run_schedule(command: str) -> int:
     from .corpus.schedule import library_status
 
-    if os.name != "nt":
-        print("ERROR the weekly task uses Windows Task Scheduler; on a server use cron (Plan 039)")
+    if sys.platform == "win32":
+        from .corpus.schedule_windows import (
+            describe_weekly_task,
+            install_weekly_task,
+            remove_weekly_task,
+        )
+
+        tool = "PowerShell"
+    elif sys.platform.startswith("linux"):
+        from .corpus.schedule_linux import (
+            describe_weekly_timer as describe_weekly_task,
+        )
+        from .corpus.schedule_linux import (
+            install_weekly_timer as install_weekly_task,
+        )
+        from .corpus.schedule_linux import (
+            remove_weekly_timer as remove_weekly_task,
+        )
+
+        tool = "systemctl"
+    else:
+        print(
+            "ERROR the weekly refresh knows Windows Task Scheduler and systemd "
+            f"user timers; this platform is {sys.platform}"
+        )
         return 2
-    from .corpus.schedule_windows import (
-        describe_weekly_task,
-        install_weekly_task,
-        remove_weekly_task,
-    )
 
     if command == "install":
         result = install_weekly_task(_project_root())
@@ -380,7 +403,7 @@ def _run_schedule(command: str) -> int:
     if output:
         print(output)
     if getattr(result, "returncode", 1) != 0:
-        print(f"ERROR {error.splitlines()[0] if error else 'PowerShell failed'}")
+        print(f"ERROR {error.splitlines()[0] if error else f'{tool} failed'}")
         return 1
     if command == "install":
         print("installed: weekly on Saturday at 10:00 (remove with `weaver schedule remove`)")

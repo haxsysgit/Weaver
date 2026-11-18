@@ -237,9 +237,10 @@ Lessons from Plans 021-030, each from a bug that tests let through:
   path shapes (zero-padded, sharded chapters), locks (one server at a
   time), and whether a background server is still alive.
 - Take a "before" baseline from `git show HEAD:path` or a separate
-  worktree, never by stashing the owner's uncommitted work. On this
-  Windows checkout `core.filemode` makes a stash pop fail on executable
-  bits, and `uv run` can rewrite `uv.lock`.
+  worktree, never by stashing the owner's uncommitted work. A stash pop
+  can fail on mode or line-ending differences (it did on the old Windows
+  checkout through `core.filemode`), and `uv run` can rewrite `uv.lock`
+  (unattended runs use `uv run --frozen`).
 
 ## Completion
 
