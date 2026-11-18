@@ -13,7 +13,7 @@ from fnm. Branch `plan-035` from `76b1053`. Dates 2026-11-18.
 | `npx vite build` (to a scratch folder) | builds; byte-identical to the committed `src/weaver/web/dist` | unchanged |
 | `uvx ruff check` on new files | n/a | clean |
 | Live turn (`uv run weaver web --port 8016`) | library at 3246 (shelf and search); one question answered with a chapter cite; no server errors | not re-run (no answer-path change) |
-| `weaver library inspect shadow-slave` | 3246 valid, 0 missing or broken; 3281 `owner_only_permission_required` | unchanged (owner decision) |
+| `weaver library inspect shadow-slave` | 3246 valid, 0 missing or broken; 3281 `owner_only_permission_required` | 3246 valid, 0 issues (modes tightened on the owner's yes) |
 | `weaver refresh` (preview) | one probe at chapter 3247, an unattended action | unchanged |
 | `weaver schedule status` | `ERROR the weekly task uses Windows Task Scheduler` | timer active and enabled, next run Sat 2026-11-21 10:00 GMT |
 
@@ -87,7 +87,7 @@ four skips were POSIX-only mode tests, which now run and pass.
 - **Screenshot harness** `.weaver/tools/shoot.mjs` already defaults to
   `/usr/bin/google-chrome-stable`, which exists here.
 
-## Line endings (diagnosis, proposal pending)
+## Line endings
 
 - 49 modified files differ from `HEAD` only by CRLF: every line ends in CR,
   and stripping CR gives `HEAD` byte for byte.
@@ -98,11 +98,25 @@ four skips were POSIX-only mode tests, which now run and pass.
 - There is no `.gitattributes` text rule; `core.autocrlf` is false on both
   machines. Linux writes LF, so new churn should stop.
 
+Done on the owner's yes ("fix line endings", 2026-11-18):
+
+- The 49 CRLF-only files were restored from the index (working tree only;
+  each was checked byte-identical to `HEAD` after stripping CR first).
+- `.gitattributes` now holds `* text=auto eol=lf`, and the 12 CRLF files in
+  the index were renormalized to LF (line endings only).
+- The owner's 22 edited CRLF files were left as they are; git stores them
+  with LF when the owner commits them.
+
 ## Open owner decisions
 
-1. ~~Enable the timer~~: done 2026-11-18 (owner: "Yes, enable it").
-2. Line endings: restore the 49 CRLF-only files to LF; optionally convert
-   the 22 edited files to LF; optionally add a `.gitattributes` LF rule.
-3. File modes: harden `novels/` and the private files now, or let the first
-   refresh harden `novels/shadow-slave`.
-4. A launcher for the DSH `web` profile on 8787.
+All four were settled on 2026-11-18:
+
+1. Timer: enabled (owner: "Yes, enable it").
+2. Line endings: fixed as above (owner: "fix line endings").
+3. File modes: group and other access removed from `novels/`, `private/`,
+   `.weaver/`, `.env` and `weaver.sqlite3*` (29,606 paths; owner bits
+   unchanged; `.env` and the database are now 600, folders 700). `library
+   inspect` reports 0 issues, and a fake-mode server still reads the
+   library at 3246.
+4. DSH launcher: dropped (owner: the DSH desktop app is enough). The line
+   in the owner's uncommitted `AGENTS.md` section no longer names one.
