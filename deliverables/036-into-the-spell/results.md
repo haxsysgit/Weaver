@@ -29,29 +29,24 @@ What the novel shows, in the executor's words:
 7. **Places**: the owner's saved images of the Chained Isles and the
    Forgotten Shore.
 
-## Slice 3: Reference board (in progress)
+## Slice 3: Reference board
 
-Leads found (web search plus known studios), each checked live on
-2026-11-18 unless noted:
+Leads from web search plus known studios, then walked in the owner's own
+Chrome on 2026-11-18 (headless capture had left most of them black).
+Screenshots are private in `private/design-references/036/references/`.
 
-| Reference | What to take from it |
-| --- | --- |
-| messenger.abeto.co (Abeto) | A small world you walk around and message in; chat and place in one; built to run on phones |
-| bruno-simon.com | Exploring a playful world is the navigation |
-| lusion.co, oryzo.ai (Lusion) | Cinematic scroll storytelling; Oryzo renders fully on a phone-size screen |
-| activetheory.net (Active Theory) | Portal hubs; their fantasy-franchise rituals (sorting and Patronus style) turn lore into an interactive moment |
-| map.leagueoflegends.com (Riot) | A lore world explored region by region |
-| Cartographia Imperialis (fan-made 40K galaxy map) | A fan site whose lore is a 3D map; site unreachable on 2026-11-18 |
-| dogstudio.co | Dark, cinematic studio aesthetic |
-| henryheffernan.com | A working app living inside a 3D room (the chat-inside-the-world question) |
-| Dracarys (Awwwards SOTD 2024) | Dark-fantasy GPU particles: fire, frost, water |
-| Wandering Nets (Matt Ebb) | Networks of light grown by random walks; closest to the Strings of Fate |
-
-**Capture method failed for most.** Headless Chrome on this machine's GPU
-rendered igloo.inc and Oryzo but left Lusion, Active Theory, Bruno Simon,
-Messenger and Dogstudio on their loaders or black, and the Runeterra map
-without its art, even after a 40-second wait and a click. The owner's own
-browser is the reliable way to see them.
+| Reference | What was seen | What to take for Weaver |
+| --- | --- | --- |
+| messenger.abeto.co (Abeto) | An illustrated small-planet world; the conversation is a dialogue box set inside the scene, beside the character | Chat as part of the world, not a panel over it |
+| activetheory.net (Active Theory) | The portal is one glowing thread loop over drifting particles; scrolling dissolves one particle world and rebuilds the next; an "Ask me anything" chat sits in the corner | Threads as the portal; dissolve to sparks between places; a chat that lives inside the experience |
+| bruno-simon.com | A warm, lit night diorama you drive a toy car around | Exploring is the menu; the diorama look of the owner's Ivory Island image |
+| map.leagueoflegends.com (Riot) | A painted world map you zoom across, gold-ringed place markers | Places of the novel as a map to travel |
+| henryheffernan.com | A working computer inside a 3D room | An app that works inside a 3D scene |
+| dracarys.robertborghesi.is (Awwwards SOTD 2024) | A frosted dark-fantasy title and "hold to start the experience" | A small ritual before entering |
+| lusion.co, oryzo.ai (Lusion) | Oryzo tells its story in scroll scenes and works fully at phone size | Cinematic on a phone is possible when scenes are simple |
+| igloo.inc | One object lit from within, monospace text that decodes, numbered points joined by lines | The owner's first example; decoding text fits the Spell's voice |
+| Cartographia Imperialis (fan-made 40K map) | Unreachable | A fan site whose lore is a 3D map |
+| Wandering Nets (Matt Ebb) | The live piece no longer loads | Networks of light grown by random walks |
 
 ## Slice 4 groundwork: two Blender spikes (throwaway)
 
