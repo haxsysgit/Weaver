@@ -1,8 +1,8 @@
 # Plan 036 design: a new face for Weaver
 
 Status: draft for owner approval, 2026-11-18. Builder check done the same
-day; two questions for the owner are open (the desktop rail, and which
-Settings stay). Written from the Plan 036
+day. Sections 7.6 and 7.7 (getting around, Settings) are proposals the
+owner has not yet confirmed. Written from the Plan 036
 brainstorm; every owner decision below is recorded with its date in
 `results.md`. Items marked **(my call)** were decided by the executor and
 can be overruled.
@@ -206,16 +206,45 @@ opening the Soul Sea. It can be deferred, as today.
 - The old "Appraisal" step is retired (no game layer). The choice between
   three Soul Seas lives in Settings > Appearance and is retired there.
 
-### 7.6 Settings
+### 7.6 Getting around (proposed, owner to confirm)
 
-Same panel position as today; redrawn to match the world, with plain
-labels. Sections: Reader position, Your DeepSeek key, Privacy and
-controls, Motion and quality (Full, Light, Still; plus Sound on or off),
-Replay the first visit. "Star web" becomes part of Motion and quality.
-The settings audit fixes stay (per-device preferences, visible save
-state, explicit boundary).
+The owner wants a new way of using Weaver, not today's layout restyled
+(2026-11-18: "todays look need a huge revamp"). Today's app is used only
+as a list of things a reader can do; its layout is not kept.
 
-### 7.7 Sound
+- **The sea is the hub.** Everything starts there: a new fragment, a new
+  weave, returning to the last fragment, opening "all fragments".
+- **The desktop rail is retired.** The 280px column (logo, new button,
+  search, Chats and Fanfic lists, Archived, Settings) goes on every
+  screen size.
+- **In the room,** the Weaver mark at the top left takes you back to the
+  sea in one tap. A **fragments drawer** jumps between fragments without
+  going home: on desktop it opens from the left edge or a key, on a phone
+  with a swipe from the left edge; it shows recent fragments as small
+  lights with their titles, and closes as soon as one is picked.
+- **"All fragments"** is the full list: search, pin, rename, archive,
+  delete, save as Markdown, and the archived ones.
+- **Settings** opens from a small mark in the top right corner, on the sea
+  and in the room.
+
+### 7.7 Settings (proposed, owner to confirm)
+
+Built from what a reader needs, not from today's panel. Plain labels.
+
+| Section | Holds |
+| --- | --- |
+| Reading | how far you have read (the spoiler boundary); text size |
+| Motion and sound | Full, Light or Still; sound on or off |
+| Your key and model | your own DeepSeek key, Flash or Pro (folded away, for readers who bring a key) |
+| Your data | the DeepSeek notice, delete conversations, forget this device |
+| First visit | replay it |
+
+Gone: the four themes, glass, reading density, the Soul Sea choice, Star
+web (folded into Motion and sound), the Appraisal. The settings audit
+fixes stay (per-device preferences, visible save state, explicit
+boundary).
+
+### 7.8 Sound
 
 Off by default; switched on in Settings. A low hum in the void, a soft
 thread pluck when Weaver starts answering, a rising shimmer when a
