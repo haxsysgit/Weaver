@@ -194,10 +194,11 @@ folder.
 
 ## STOP conditions
 
-- The owner's uncommitted `package.json` and `package-lock.json` changes
-  (at drafting time: vitest 3.2.4 to 5.0.1, line endings) are still
-  uncommitted when slice 2 starts. Ask the owner to settle them first;
-  never commit, revert or fold them into a slice.
+- The working tree has uncommitted changes to `package.json` or
+  `package-lock.json` that this plan did not make when slice 2 starts.
+  Ask the owner to settle them first; never commit, revert or fold them
+  into a slice. (The owner's vitest 5.0.1 bump was committed in
+  `33427e5` at the owner's word.)
 - A pinned library refuses to install with React 19.2 or three 0.185
   (peer range), or needs a different major version.
 - Any step needs a Python, API, prompt or server change.

@@ -1,5 +1,18 @@
 # Weaver handoff
 
+**Latest (2026-11-18, evening).** Plan 036 (Into the Spell) is closed,
+accepted: discovery only, no product code. The approved design for
+Weaver's new face is `deliverables/036-into-the-spell/design.md`: the
+Soul Sea as home, the void as the chat room, Weaver's woven presence as
+its face and thinking state, chats as memory fragments and fanfic as
+weaves, Weaver's own layer apart from one world per novel, React Three
+Fiber with drei and postprocessing, motion plus GSAP, quality levels Full,
+Light and Still. Next is Plan 037 (The room), drafted and awaiting the
+owner's admission; its slices are marked flash (DeepSeek Flash in DSH's
+desktop profile, smoke-tested the same day) or claude, and Claude reviews
+every flash slice. 037.1 and 037.2 are discussion docs. The owner's
+vitest 5 bump is committed (`33427e5`).
+
 **On Linux (2026-11-18).** The repo lives at `~/weaver` on Ubuntu (copied
 from Windows on 2026-11-17; the old checkout is read-only history). Plan
 035.5 made it Linux-first: `weaver schedule install` now writes a systemd
@@ -8,7 +21,7 @@ user timer (Saturday 10:00, `Persistent=true`) and alerts go through
 because `/tmp` is cleared at boot. No `UV_PYTHON_INSTALL_DIR` prefix and no
 `weaver.cmd`: run `uv run weaver web --port 8787`. See
 `deliverables/035.5-weaver-on-linux/results.md`. Plan 035.5 closed
-2026-11-18 (accepted); the weekly timer is enabled. Next is Plan 036.
+2026-11-18 (accepted); the weekly timer is enabled.
 
 **Latest (2026-11-17).** Plan 035 is closed, accepted by the owner with
 gaps recorded. The chat voice is now the lorekeeper (the

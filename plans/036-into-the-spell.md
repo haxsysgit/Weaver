@@ -11,7 +11,8 @@
 - **Tooling:** the library's exact search and chapter reads (bounded packet
   below), web research, Blender 5.3 through the Blender MCP (Cycles on the
   RTX 4060), WebGL prototypes captured in real Chrome, HTML mockups.
-- **State:** admitted 2026-11-18 on the owner's word ("alright i admit
+- **State:** closed 2026-11-18, accepted by the owner ("alright close 036").
+  Admitted 2026-11-18 on the owner's word ("alright i admit
   whatever you want to do"), after the owner set the direction the same day.
 - **Depends on:** Plan 035.5, closed 2026-11-18 (the Linux machine this is
   made on).

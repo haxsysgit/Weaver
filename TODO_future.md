@@ -145,12 +145,24 @@ accepted public release is v3.0.0 at Plan 040.
    opinions in defined categories, recorded by a narrow tool and fed back
    every turn; the storyteller voice per fanfic thread; re-run the affected
    trials.
-6. **036 The Spell in 3D**: read how the novel shows the Spell first; Blender
-   (connected), React Three Fiber, drei, postprocessing, Theatre.js, glTF with
-   meshopt and KTX2; a performance budget before any art.
-7. **037 The Soul Sea and the themes**: Soul Sea redesign and themes from the
-   novel's own places, on 036's engine.
-8. **038 Echoes and small delights** (optional, may slip past v3): an Echo
+6. **036 Into the Spell** (closed 2026-11-18, accepted): discovery only.
+   The owner blended three directions (the Soul Sea as home, the void as
+   the room, Weaver's woven presence) and approved the design in
+   `deliverables/036-into-the-spell/design.md`: a new face on the same
+   chat engine, React Three Fiber with drei and postprocessing, motion for
+   the interface and GSAP for the story moments, Weaver's layer apart from
+   one world per novel.
+7. **037 The room** (drafted 2026-11-18, `plans/037-the-room.md`): the void
+   and its threads, Weaver's presence, citation threads, scrolling back,
+   quality levels. Slices marked flash (DeepSeek Flash in DSH) or claude.
+    **037.1 Home and the first visit** (idea,
+    `plans/discussion/037.1-home-and-the-first-visit.md`): the Soul Sea,
+    getting around without the rail, the first visit, Settings.
+    **037.2 The weave room and sound** (idea,
+    `plans/discussion/037.2-the-weave-room-and-sound.md`): the fanfic room,
+    sound, Blender stills, the last phone pass.
+8. **038 Echoes and small delights** (optional, may slip past v3; after
+   037.2): an Echo
    companion (Rive or a small model), Memories as saved answers, spoiler fog,
    "I just read chapter N".
 9. **039 Weaver's home on the web**: a domain on Cloudflare (not `.ss`; `.ai`
@@ -202,6 +214,18 @@ accepted public release is v3.0.0 at Plan 040.
   wants to learn quantization by doing it, and accepts reduced retrieval
   accuracy, since the loop never depended heavily on rag results. The
   deep-dive lesson is part of the v1 build.
+
+## Far future (owner, 2026-11-18, from Plan 036)
+
+- **Storytelling mode:** Weaver walks the reader through the story from
+  chapter 1 to the latest, showing progression and scenes. Not a current
+  focus.
+- **A game layer:** a random First Nightmare with Aspects, Soul Sea types
+  and legacies. Kept out of the face plans on purpose.
+- **Other novels:** Lord of the Mysteries as a second world (its own home
+  and things to interact with), switched as a theme.
+- **Marked invention in weaves:** a gold underline on passages Weaver
+  invented, which needs Weaver to mark invention in its output.
 
 ## Product backlog (owner gates that stay open)
 
